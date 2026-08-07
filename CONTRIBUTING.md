@@ -82,6 +82,31 @@ A change is complete only when:
 - The pull request is reviewed
 - The change is compatible with canonical requirements
 
+## Continuous Integration & Local Verification
+
+Before submitting a pull request, contributors must run local validation commands to ensure CI checks will pass:
+
+### Frontend Verification
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+### Backend Verification
+```bash
+cd backend
+./mvnw verify
+```
+
+On Windows (PowerShell):
+```powershell
+cd backend
+.\mvnw.cmd verify
+```
+
+Pull requests must pass all automated GitHub Actions CI checks (`Frontend CI` and `Backend CI`) before being merged.
+
 ## Conflict Resolution
 
 Resolve conflicts using:

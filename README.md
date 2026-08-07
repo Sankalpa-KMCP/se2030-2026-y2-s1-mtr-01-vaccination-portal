@@ -130,6 +130,15 @@ GET http://localhost:8080/actuator/health
 
 Both `frontend/` and `backend/` contain `.env.example` templates outlining required local environment variables (e.g. `VITE_API_BASE_URL`, `SERVER_PORT`, `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`). Do not commit real `.env` files.
 
+## Continuous Integration
+
+GitHub Actions workflows automatically validate pull requests and merged commits targeting `develop` and `main`.
+
+- **Frontend CI** (`.github/workflows/frontend-ci.yml`): Runs on Node 24 (`ubuntu-latest`) to execute `npm ci`, `npm run lint`, and `npm run build`.
+- **Backend CI** (`.github/workflows/backend-ci.yml`): Runs on Java 21 Temurin (`ubuntu-latest`) to execute `./mvnw --batch-mode --no-transfer-progress verify`. Backend tests run against the in-memory H2 database test profile (`application-test.properties`) and do not require a live MySQL server.
+
+*Note: Deployment triggers are not configured in CI. Automated business feature tests will be added incrementally alongside new features.*
+
 ## Security and Privacy
 
 Contributors must never commit:
