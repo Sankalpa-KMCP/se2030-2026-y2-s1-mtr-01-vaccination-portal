@@ -14,7 +14,7 @@ The Web-Based Vaccination Portal supports vaccination-program operations for cit
 
 ## Current Status
 
-Repository initialization and project foundation
+Frontend and backend application foundations initialized. Business modules (MF-01 through MF-05) are ready to be developed on feature branches.
 
 ## Canonical Documentation
 
@@ -28,8 +28,8 @@ Contributors must review the canonical documents before making functional or arc
 ## Repository Structure
 
 - `docs/` — Canonical project documents (AI-readable Markdown source of truth and the human-readable master document)
-- `frontend/` — Frontend application source
-- `backend/` — Backend application, REST APIs, and integrations
+- `frontend/` — Frontend application source (React, Vite, Bootstrap 5)
+- `backend/` — Backend application, REST APIs, and integrations (Java 21, Spring Boot, Maven, MySQL)
 - `database/` — Database migrations, seed data, and design diagrams
 - `tests/` — Cross-module, integration, system, end-to-end, security, and acceptance tests
 - `.github/` — GitHub issue and pull-request templates
@@ -47,14 +47,97 @@ Contributors must review the canonical documents before making functional or arc
 
 The canonical v3.3 project specification defines the following technology baseline:
 
-- Frontend: React, Vite, and Bootstrap 5
-- Backend: Java 21 with Spring Boot
-- Database: MySQL
-- Build tool: Maven
+- Frontend: React 19, Vite 8, and Bootstrap 5
+- Backend: Java 21 with Spring Boot 4.1
+- Database: MySQL 8.4.10 LTS (with Docker Compose support)
+- Build tool: Maven (with embedded wrapper)
 
-## Setup
+## Application Setup & Commands
 
-Implementation and environment setup instructions will be added as the application foundation is created.
+### Prerequisites
+
+- **Java**: JDK 21 or higher
+- **Node.js**: v18+ or v20+ (with npm)
+- **Container Engine**: Docker Desktop or Docker Engine with Docker Compose (for local database setup)
+- **Database**: MySQL 8.4.10 LTS (required for backend production runtime execution)
+
+### Local Database Development (Docker Compose)
+
+The repository provides a Docker Compose environment for local database development. See [database/README.md](file:///e:/SE%20PROJECT_Vac/se2030-2026-y2-s1-mtr-01-vaccination-portal/database/README.md) for full database workflow instructions.
+
+Start local MySQL database:
+```bash
+docker compose --env-file database/.env up -d mysql
+```
+
+Database connection: `jdbc:mysql://localhost:3306/vaccination_portal`
+*Note: No business database schema migrations exist yet.*
+
+### Frontend Development
+
+From `frontend/`:
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+```
+
+### Backend Development
+
+From `backend/`:
+
+#### Windows (PowerShell)
+Run tests:
+```powershell
+.\mvnw.cmd test
+```
+
+Verify build:
+```powershell
+.\mvnw.cmd verify
+```
+
+Run application (requires MySQL configured via environment variables):
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+#### Unix-like (macOS / Linux)
+Run tests:
+```bash
+./mvnw test
+```
+
+Verify build:
+```bash
+./mvnw verify
+```
+
+Run application:
+```bash
+./mvnw spring-boot:run
+```
+
+### Backend Health Endpoint
+
+When the backend application is running, check Actuator health:
+```text
+GET http://localhost:8080/actuator/health
+```
+
+### Environment Variables Setup
+
+Both `frontend/` and `backend/` contain `.env.example` templates outlining required local environment variables (e.g. `VITE_API_BASE_URL`, `SERVER_PORT`, `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`). Do not commit real `.env` files.
+
+## Continuous Integration
+
+GitHub Actions workflows automatically validate pull requests and merged commits targeting `develop` and `main`.
+
+- **Frontend CI** (`.github/workflows/frontend-ci.yml`): Runs on Node 24 (`ubuntu-latest`) to execute `npm ci`, `npm run lint`, and `npm run build`.
+- **Backend CI** (`.github/workflows/backend-ci.yml`): Runs on Java 21 Temurin (`ubuntu-latest`) to execute `./mvnw --batch-mode --no-transfer-progress verify`. Backend tests run against the in-memory H2 database test profile (`application-test.properties`) and do not require a live MySQL server.
+
+*Note: Deployment triggers are not configured in CI. Automated business feature tests will be added incrementally alongside new features.*
 
 ## Security and Privacy
 
