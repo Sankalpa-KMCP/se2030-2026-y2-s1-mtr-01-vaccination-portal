@@ -5,12 +5,15 @@
 
 # Dependencies
 node_modules/
+frontend/node_modules/
 vendor/
 
 # Build output
 dist/
+frontend/dist/
 build/
 target/
+backend/target/
 out/
 coverage/
 

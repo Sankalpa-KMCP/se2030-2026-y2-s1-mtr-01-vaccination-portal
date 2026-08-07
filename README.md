@@ -14,7 +14,7 @@ The Web-Based Vaccination Portal supports vaccination-program operations for cit
 
 ## Current Status
 
-Repository initialization and project foundation
+Frontend and backend application foundations initialized. Business modules (MF-01 through MF-05) are ready to be developed on feature branches.
 
 ## Canonical Documentation
 
@@ -28,8 +28,8 @@ Contributors must review the canonical documents before making functional or arc
 ## Repository Structure
 
 - `docs/` — Canonical project documents (AI-readable Markdown source of truth and the human-readable master document)
-- `frontend/` — Frontend application source
-- `backend/` — Backend application, REST APIs, and integrations
+- `frontend/` — Frontend application source (React, Vite, Bootstrap 5)
+- `backend/` — Backend application, REST APIs, and integrations (Java 21, Spring Boot, Maven, MySQL)
 - `database/` — Database migrations, seed data, and design diagrams
 - `tests/` — Cross-module, integration, system, end-to-end, security, and acceptance tests
 - `.github/` — GitHub issue and pull-request templates
@@ -47,14 +47,75 @@ Contributors must review the canonical documents before making functional or arc
 
 The canonical v3.3 project specification defines the following technology baseline:
 
-- Frontend: React, Vite, and Bootstrap 5
-- Backend: Java 21 with Spring Boot
-- Database: MySQL
-- Build tool: Maven
+- Frontend: React 19, Vite 8, and Bootstrap 5
+- Backend: Java 21 with Spring Boot 4.1
+- Database: MySQL 8.0+
+- Build tool: Maven (with embedded wrapper)
 
-## Setup
+## Application Setup & Commands
 
-Implementation and environment setup instructions will be added as the application foundation is created.
+### Prerequisites
+
+- **Java**: JDK 21 or higher
+- **Node.js**: v18+ or v20+ (with npm)
+- **Database**: MySQL 8.0+ (required for backend production runtime execution)
+
+### Frontend Development
+
+From `frontend/`:
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+```
+
+### Backend Development
+
+From `backend/`:
+
+#### Windows (PowerShell)
+Run tests:
+```powershell
+.\mvnw.cmd test
+```
+
+Verify build:
+```powershell
+.\mvnw.cmd verify
+```
+
+Run application (requires MySQL configured via environment variables):
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+#### Unix-like (macOS / Linux)
+Run tests:
+```bash
+./mvnw test
+```
+
+Verify build:
+```bash
+./mvnw verify
+```
+
+Run application:
+```bash
+./mvnw spring-boot:run
+```
+
+### Backend Health Endpoint
+
+When the backend application is running, check Actuator health:
+```text
+GET http://localhost:8080/actuator/health
+```
+
+### Environment Variables Setup
+
+Both `frontend/` and `backend/` contain `.env.example` templates outlining required local environment variables (e.g. `VITE_API_BASE_URL`, `SERVER_PORT`, `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`). Do not commit real `.env` files.
 
 ## Security and Privacy
 
