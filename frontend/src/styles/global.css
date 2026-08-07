@@ -1,0 +1,22 @@
+/* Global Application Custom Styles */
+
+:root {
+  --portal-primary: #0d6efd;
+  --portal-bg-subtle: #f8f9fa;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--portal-bg-subtle);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
