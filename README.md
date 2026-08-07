@@ -49,7 +49,7 @@ The canonical v3.3 project specification defines the following technology baseli
 
 - Frontend: React 19, Vite 8, and Bootstrap 5
 - Backend: Java 21 with Spring Boot 4.1
-- Database: MySQL 8.0+
+- Database: MySQL 8.4.10 LTS (with Docker Compose support)
 - Build tool: Maven (with embedded wrapper)
 
 ## Application Setup & Commands
@@ -58,7 +58,20 @@ The canonical v3.3 project specification defines the following technology baseli
 
 - **Java**: JDK 21 or higher
 - **Node.js**: v18+ or v20+ (with npm)
-- **Database**: MySQL 8.0+ (required for backend production runtime execution)
+- **Container Engine**: Docker Desktop or Docker Engine with Docker Compose (for local database setup)
+- **Database**: MySQL 8.4.10 LTS (required for backend production runtime execution)
+
+### Local Database Development (Docker Compose)
+
+The repository provides a Docker Compose environment for local database development. See [database/README.md](file:///e:/SE%20PROJECT_Vac/se2030-2026-y2-s1-mtr-01-vaccination-portal/database/README.md) for full database workflow instructions.
+
+Start local MySQL database:
+```bash
+docker compose --env-file database/.env up -d mysql
+```
+
+Database connection: `jdbc:mysql://localhost:3306/vaccination_portal`
+*Note: No business database schema migrations exist yet.*
 
 ### Frontend Development
 
