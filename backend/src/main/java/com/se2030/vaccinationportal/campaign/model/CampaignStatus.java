@@ -1,0 +1,66 @@
+package com.se2030.vaccinationportal.campaign.model;
+
+/**
+ * Separate lifecycle status model for vaccination campaigns.
+ * Defined by canonical specification WBVP-SE2030 section 6.6 / E.5.
+ */
+public enum CampaignStatus {
+    /**
+     * Editable and hidden from citizens.
+     */
+    DRAFT,
+
+    /**
+     * Internally approved with future publication/service dates.
+     */
+    SCHEDULED,
+
+    /**
+     * Citizen-visible; screening and booking depend on configured windows.
+     */
+    PUBLISHED,
+
+    /**
+     * Service period is underway.
+     */
+    ACTIVE,
+
+    /**
+     * Temporarily blocks new screening and booking while preserving records.
+     */
+    SUSPENDED,
+
+    /**
+     * Service work closed; no new bookings; history retained.
+     */
+    COMPLETED,
+
+    /**
+     * Cancelled with recorded reason and impact preview.
+     */
+    CANCELLED,
+
+    /**
+     * Retention policy permits archival; immutable historical record.
+     */
+    ARCHIVED;
+
+    /**
+     * Checks if the campaign status permits active booking/screening intake (MF02-BR-03).
+     * Only PUBLISHED and ACTIVE campaigns may accept new bookings/screening.
+     *
+     * @return true if status is PUBLISHED or ACTIVE
+     */
+    public boolean isIntakePermitted() {
+        return this == PUBLISHED || this == ACTIVE;
+    }
+
+    /**
+     * Checks if this status is terminal.
+     *
+     * @return true if status is COMPLETED, CANCELLED, or ARCHIVED
+     */
+    public boolean isTerminal() {
+        return this == COMPLETED || this == CANCELLED || this == ARCHIVED;
+    }
+}
