@@ -4,10 +4,13 @@ document_type: "Canonical AI context and master requirements baseline"
 module: "SE2030 - Software Engineering"
 canonical_project_id: "WBVP-SE2030"
 document_version: "3.3-AI"
-content_revision: "2026-08-04-R6"
-last_updated: "2026-08-04"
+content_revision: "2026-08-08-R8"
+last_updated: "2026-08-08"
 project_status: "Planning and requirements baseline; implementation not assumed"
 major_functions: 5
+lab02_personas: 6
+lab02_user_stories: 30
+lab02_sprints: 4
 mf01: "Pre-Vaccination Screening and Eligibility Rule Management"
 mf02: "Vaccination Campaign, Center and Session Management"
 mf03: "Appointment, Waitlist and Check-In Management"
@@ -34,7 +37,7 @@ This file is the canonical, self-contained context package for the Web-Based Vac
 
 ## AI Consumption Contract
 
-1. Treat this document as the project source of truth for revision `2026-08-04-R6`.
+1. Treat this document as the project source of truth for revision `2026-08-08-R8`.
 2. Use exactly five major functions unless the user explicitly changes the scope.
 3. Do not infer that any planned feature is implemented. The default implementation state is `NOT_VERIFIED`.
 4. Values marked `USER_DATA_REQUIRED` are genuinely unknown external facts. Never invent them.
@@ -60,7 +63,7 @@ This file is the canonical, self-contained context package for the Web-Based Vac
 
 1. `Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md` is the normative semantic source for this release.
 2. `Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx` is the synchronized human-readable derivative. Its diagrams, pagination and visual layout are presentational; they do not override the Markdown semantics.
-3. Both files must carry document version `3.3-AI` and content revision `2026-08-04-R6`. A release with mismatched values is invalid.
+3. Both files must carry document version `3.3-AI` and content revision `2026-08-08-R8`. A release with mismatched values is invalid.
 4. Generated code, schemas, OpenAPI contracts, test plans and summaries must identify canonical project `WBVP-SE2030` and the revision used.
 5. If the two files ever conflict, use the Markdown file and regenerate the DOCX before implementation continues.
 
@@ -106,6 +109,8 @@ The following values were not supplied. AI systems must preserve them as unknown
 | Written approval for five-function assessment mapping | `USER_DATA_REQUIRED` | Evidence not supplied |
 
 > **Assessment alignment:** The supplied assignment specification describes six major functions and six-member groups, while this project baseline uses five combined functions and five members. This document does not claim lecturer approval. The team must retain written approval or explain the mapping during assessment.
+>
+> **Lab 02 reporting alignment:** Lab 02 separately requires six personas, a minimum of four user stories per persona, a prioritized Product Backlog, four sprints, and member-wise task allocation. The current team report uses six assessment personas and 30 user stories (five per persona) distributed once across four sprints. These Lab `US-xx` IDs are reporting/traceability labels; they do not create a sixth implementation function and do not replace canonical `PB`, `FR`, `UC`, `TC`, or business-rule identifiers.
 
 ## Status Vocabulary Used in This Document
 
@@ -513,15 +518,15 @@ Published questionnaire versions are immutable. Changes require a new version nu
 
 These are separate enums. Do not combine them. `EXPIRED` is an effective state: current eligibility becomes false immediately when `valid_until` or the campaign end passes, even if a scheduled job has not yet persisted the label.
 
-## 5.5 User Stories
+## 5.5 Function-Level User Story Examples (Canonical)
 
 | ID | User story |
 |---|---|
-| US-01 | As an Admin, I can create, view, update and delete an unused screening question so MF-01 demonstrates safe CRUD |
-| US-02 | As an Admin, I can publish an immutable questionnaire version after validation |
-| US-03 | As a Citizen, I can complete the correct questionnaire for the selected campaign |
-| US-04 | As a Healthcare Officer, I can review the submission and record a reasoned final decision |
-| US-05 | As a Citizen, I can see a different eligibility status for each campaign |
+| MF01-US-01 | As an Admin, I can create, view, update and delete an unused screening question so MF-01 demonstrates safe CRUD |
+| MF01-US-02 | As an Admin, I can publish an immutable questionnaire version after validation |
+| MF01-US-03 | As a Citizen, I can complete the correct questionnaire for the selected campaign |
+| MF01-US-04 | As a Healthcare Officer, I can review the submission and record a reasoned final decision |
+| MF01-US-05 | As a Citizen, I can see a different eligibility status for each campaign |
 
 ## 5.6 Acceptance Criteria
 
@@ -1286,6 +1291,59 @@ Priority uses MoSCoW: `MUST`, `SHOULD`, `COULD`.
 | PB-27 Audit log | MUST | Critical actions captured and read-restricted |
 | PB-28 Predictive analytics/SMS/multilingual | COULD | Implement only after all MUST stories pass |
 
+## 14.1 Lab 02 Assessment Product Backlog Alignment
+
+The canonical `PB-xx` backlog above remains the implementation-oriented Product Backlog. The current Lab 02 report also maintains an assessment-facing persona backlog. Lab story IDs are **traceability labels only**: they do not replace or narrow canonical functional requirements, use cases, tests, business rules, or module ownership.
+
+Current Lab 02 reporting baseline:
+
+- six personas: Citizen, Healthcare Officer, Campaign Officer, Center Manager, Inventory Officer and Vaccinator;
+- 30 user stories (`US-01` through `US-30`), five per persona;
+- priorities expressed as High / Medium / Low in the Lab report;
+- exactly four assessment sprint allocations;
+- each `US-xx` item appears exactly once in the Sprint Plan and has an owner.
+
+| Lab story | Persona | Exact current Lab 02 user story | Priority | Primary technical area | Sprint | Owner(s) |
+|---|---|---|---|---|---:|---|
+| `US-01` | Citizen | As a Citizen, I want to register and verify my account using my email, so that I can securely access the vaccination portal. | High | Shared Access | Sprint 1 | Member 1 / Member 3 |
+| `US-02` | Citizen | As a Citizen, I want to complete the campaign-specific screening questionnaire, so that my eligibility for vaccination can be assessed. | High | MF-01 | Sprint 2 | Member 1 |
+| `US-03` | Citizen | As a Citizen, I want to search for and book an available appointment slot at a nearby vaccination center, so that I can get vaccinated at a convenient time. | High | MF-03 | Sprint 3 | Member 3 |
+| `US-04` | Citizen | As a Citizen, I want to view and download my digital vaccination certificate, so that I can prove my vaccination status when required. | Medium | MF-05 | Sprint 4 | Member 5 |
+| `US-05` | Healthcare Officer | As a Healthcare Officer, I want to review a citizen's screening submission, so that I can make an informed eligibility decision. | High | MF-01 | Sprint 2 | Member 1 |
+| `US-06` | Healthcare Officer | As a Healthcare Officer, I want to record a final eligibility status with a reason and validity period, so that a citizen's booking eligibility is accurately controlled. | High | MF-01 | Sprint 2 | Member 1 |
+| `US-07` | Healthcare Officer | As a Healthcare Officer, I want to request corrections on an incomplete or unclear screening submission, so that I have sufficient information before deciding. | Medium | MF-01 | Sprint 2 | Member 1 |
+| `US-08` | Healthcare Officer | As a Healthcare Officer, I want to revoke a previously issued eligibility assessment with a reason, so that inaccurate assessments do not remain valid. | Low | MF-01 | Sprint 4 | Member 1 |
+| `US-09` | Campaign Officer | As a Campaign Officer, I want to create and manage a vaccination campaign's lifecycle and target group, so that citizens can be screened and booked for the right campaign. | High | MF-02 | Sprint 1 | Member 2 |
+| `US-10` | Campaign Officer | As a Campaign Officer, I want to link a campaign to a single published questionnaire version, so that screening stays consistent with campaign requirements. | High | MF-02 | Sprint 1 | Member 2 |
+| `US-11` | Campaign Officer | As a Campaign Officer, I want to define a campaign's dose programme, so that the correct dose numbers and intervals are followed. | High | MF-02 | Sprint 1 | Member 2 |
+| `US-12` | Campaign Officer | As a Campaign Officer, I want to assign vaccination centers to a campaign, so that services are offered only at approved locations. | High | MF-02 | Sprint 1 | Member 2 |
+| `US-13` | Center Manager | As a Center Manager, I want to configure a center's operating hours, closures and recurring sessions, so that available booking capacity is accurate. | High | MF-02 | Sprint 1 | Member 2 |
+| `US-14` | Center Manager | As a Center Manager, I want to assign staff and resources to sessions, so that sessions can run without scheduling conflicts. | High | MF-02 | Sprint 2 | Member 2 |
+| `US-15` | Center Manager | As a Center Manager, I want to approve session capacity based on available staff and resources, so that the center is not overbooked. | High | MF-02 | Sprint 3 | Member 2 |
+| `US-16` | Center Manager | As a Center Manager, I want to preview the impact of rescheduling or cancelling a session, so that affected appointments are handled without silently breaking citizen bookings. | Medium | MF-02 | Sprint 4 | Member 2 |
+| `US-17` | Inventory Officer | As an Inventory Officer, I want to register vaccine batches with manufacturer, lot number and expiry date, so that stock can be tracked accurately. | High | MF-04 | Sprint 2 | Member 4 |
+| `US-18` | Inventory Officer | As an Inventory Officer, I want to allocate and transfer stock between centers, so that vaccine supply matches demand across locations. | High | MF-04 | Sprint 3 | Member 4 |
+| `US-19` | Inventory Officer | As an Inventory Officer, I want to record stock receipts, transfers and adjustments as append-only transactions, so that inventory history remains auditable. | Medium | MF-04 | Sprint 3 | Member 4 |
+| `US-20` | Inventory Officer | As an Inventory Officer, I want to receive low-stock and near-expiry alerts, so that I can act before shortages or wastage occur. | Low | MF-04 | Sprint 4 | Member 4 |
+| `US-21` | Vaccinator | As a Vaccinator, I want to view a list of checked-in and eligible appointments, so that I know who is ready for vaccination. | Medium | MF-03 / MF-05 | Sprint 3 | Member 3 / Member 5 |
+| `US-22` | Vaccinator | As a Vaccinator, I want to create and edit an unfinalized vaccination draft, so that I can record dose details before finalizing. | High | MF-05 | Sprint 3 | Member 5 |
+| `US-23` | Vaccinator | As a Vaccinator, I want to confirm physical administration before finalizing a draft, so that only actually-administered doses are recorded. | High | MF-05 | Sprint 4 | Member 5 |
+| `US-24` | Vaccinator | As a Vaccinator, I want the system to atomically finalize the vaccination, so that the record, stock deduction, appointment completion and certificate are all created consistently. | High | MF-05 (cross-module finalization) | Sprint 4 | Member 5 |
+| `US-25` | Citizen | As a Citizen, I want to reschedule or cancel my appointment when my plans change, so that the released slot can be used by another citizen. | Medium | MF-03 | Sprint 3 | Member 3 |
+| `US-26` | Healthcare Officer | As a Healthcare Officer, I want to authorize rescreening when an ineligible or revoked assessment needs to be reviewed again, so that a citizen can submit a new screening when appropriate. | Medium | MF-01 | Sprint 4 | Member 1 |
+| `US-27` | Campaign Officer | As a Campaign Officer, I want to define the campaign's service areas and booking period, so that citizens can see and book the campaign only in the intended locations and time window. | High | MF-02 | Sprint 1 | Member 2 |
+| `US-28` | Center Manager | As a Center Manager, I want to view session capacity and utilization information, so that I can identify underused or overloaded sessions and plan center resources better. | Medium | MF-02 | Sprint 4 | Member 2 |
+| `US-29` | Inventory Officer | As an Inventory Officer, I want to quarantine or recall a vaccine batch when it should no longer be used, so that unsafe or unavailable stock cannot be selected for vaccination. | Medium | MF-04 | Sprint 2 | Member 4 |
+| `US-30` | Vaccinator | As a Vaccinator, I want to delete an incorrect unfinalized vaccination draft before administration is confirmed, so that mistakes can be corrected without changing permanent vaccination records. | Medium | MF-05 | Sprint 3 | Member 5 |
+
+Traceability rules:
+
+1. `US-01` is shared account/access work; it is not MF-01 business ownership.
+2. `US-21` crosses MF-03 and MF-05: MF-03 owns the checked-in appointment state; MF-05 consumes that state for the Vaccinator work queue.
+3. `US-24` is led by MF-05 but finalization crosses MF-03 appointment completion and MF-04 stock deduction inside the canonical atomic transaction.
+4. Lab stories intentionally summarize some technical requirements. Canonical behaviors such as questionnaire versioning, waitlist promotion, check-in reversal, session recurrence idempotency, stock-transfer correlation, certificate revoke/reissue, transactional outbox, security and concurrency remain required even when they do not have a dedicated Lab `US-xx` row.
+5. If the Lab report changes, this table and all function handoffs must be revalidated against the new `US-xx` allocation before progress is reported.
+
 # 15. Use Case Catalogue
 
 | ID | Use case | Primary actor | Outcome |
@@ -1487,7 +1545,7 @@ A feature is done only when:
 ## 19.2 Working Practices
 
 - Maintain one prioritized product backlog with requirement, use-case and test IDs.
-- Plan one sprint at a time; do not create every sprint backlog at project start.
+- Keep the four-sprint high-level plan required for Lab 02, but refine the detailed Sprint Backlog, acceptance criteria and implementation tasks at the beginning of each sprint rather than pretending every task is fixed upfront.
 - Use feature branches and pull requests.
 - Require at least one peer review before merge.
 - Integrate continuously; do not leave five isolated modules until the end.
@@ -1508,8 +1566,8 @@ repository-root/
 │       ├── appointment/      MF-03
 │       ├── inventory/        MF-04
 │       └── administration/   MF-05
-├── database/                 design notes and seed-data documentation
-├── docs/                     diagrams, reports, decisions and evidence index
+├── database/                 Flyway migrations, controlled seed data and database evidence
+├── docs/                     canonical files, handoffs, architecture, assessment and evidence
 ├── docker-compose.yml
 ├── README.md
 └── .github/                  issue and pull-request templates
@@ -1529,16 +1587,23 @@ Names and student IDs remain `USER_DATA_REQUIRED`. All members contribute to sha
 
 # 21. Project Timeline
 
-The baseline uses six two-week sprints; dates are assigned when the academic calendar is supplied.
+The canonical Scrum baseline uses **four assessment-aligned sprints** to match Lab 02. The current Lab report uses three-week working windows (Weeks 1-3, 4-6, 7-9 and 10-12). Those windows are team planning periods, not a duration mandated by the Lab sheet. Detailed Sprint Backlog tasks are refined at the start of each sprint.
 
-| Sprint | Focus | Integrated demonstration |
+| Sprint | Team focus | Integrated demonstration |
 |---|---|---|
-| Sprint 0 | Repository, architecture, database baseline, authentication skeleton | Login and role-protected API |
-| Sprint 1 | MF-01 configuration, versioning, campaign lifecycle/targeting/dose programme | Published questionnaire linked to a valid campaign |
-| Sprint 2 | Citizen screening, eligibility review, center calendars, recurrence, resources and capacity | Eligible citizen can see validated session availability |
-| Sprint 3 | Booking, waitlist, check-in, inventory receipts/transfers | Checked-in appointment and selectable stock |
-| Sprint 4 | Draft CRUD, atomic finalization, certificate version 1 | Complete citizen-to-certificate vertical slice |
-| Sprint 5 | Revocation/reissue, dashboards, reports, security and regression | Release candidate with evidence package |
+| Sprint 1 | Shared foundation, MF-01 screening configuration/versioning, and MF-02 campaign/center foundations | Published questionnaire can be linked to a valid campaign; basic center planning foundation is available |
+| Sprint 2 | Citizen screening/eligibility, MF-02 session/resource setup, MF-04 batch/inventory foundation, and MF-03 booking-contract preparation | Reviewed eligible citizen, validated session availability and valid stock foundation are available |
+| Sprint 3 | MF-03 booking/reschedule/waitlist/check-in, MF-04 stock movements, and MF-05 vaccination-draft workflow | Checked-in appointment, selectable stock and editable vaccination draft are available |
+| Sprint 4 | MF-02 schedule-change handling, MF-05 atomic finalization/certificates, alerts/dashboards, security, regression and evidence | Release candidate demonstrates the end-to-end citizen-to-certificate flow |
+
+Current Lab 02 story allocation:
+
+- **Sprint 1:** `US-01`, `US-09`, `US-10`, `US-11`, `US-12`, `US-13`, `US-27`
+- **Sprint 2:** `US-02`, `US-05`, `US-06`, `US-07`, `US-14`, `US-17`, `US-29`
+- **Sprint 3:** `US-03`, `US-15`, `US-18`, `US-19`, `US-21`, `US-22`, `US-25`, `US-30`
+- **Sprint 4:** `US-04`, `US-08`, `US-16`, `US-20`, `US-23`, `US-24`, `US-26`, `US-28`
+
+The story allocation above is assessment-facing. Canonical technical work that has no dedicated Lab story is still planned inside the relevant sprint where its dependency becomes necessary.
 
 # 22. Risk Register
 
@@ -1640,7 +1705,7 @@ The following are `FUTURE_OPTION` and must not displace core delivery:
 | DEC-019 | Hard deletion is strictly limited | Protects eligibility, appointment, stock, vaccination and certificate history |
 | DEC-020 | In-app and email are baseline; SMS is future scope | Keeps communication useful and implementation feasible |
 | DEC-021 | Public verification uses opaque tokens and minimum data | Protects privacy while supporting trust |
-| DEC-022 | Six two-week sprints and one-sprint-at-a-time backlog planning | Supports Scrum without pretending all sprint details are known upfront |
+| DEC-022 | Four assessment-aligned sprints with one-sprint-at-a-time detailed refinement | Matches Lab 02 reporting while keeping detailed Sprint Backlog tasks adaptive |
 | DEC-023 | MF-02 includes administrative location targeting and versioned dose-programme configuration | Strengthens campaign planning without transferring medical-rule ownership from MF-01 |
 | DEC-024 | Recurring rules generate individually stored sessions with idempotent occurrence keys | Supports repeat scheduling, single-occurrence edits and auditability |
 | DEC-025 | Center closures and physical resources are first-class planning records | Prevents invalid scheduling and makes MF-02 more than basic CRUD |
@@ -1918,7 +1983,7 @@ A package is releasable only when all checks below pass.
 
 | Check | Required result |
 |---|---|
-| Version synchronization | Markdown metadata, AI contract, DOCX visible footer and DOCX custom properties all use `3.3-AI` / `2026-08-04-R6` |
+| Version synchronization | Markdown metadata, AI contract, DOCX visible footer and DOCX custom properties all use `3.3-AI` / `2026-08-08-R8` |
 | Canonical authority | Markdown is marked normative and DOCX is marked as its synchronized derivative |
 | Identifier integrity | Requirement, business-rule, test-case and decision identifiers are unique within their namespaces |
 | Status integrity | Every status used by a rule or transition appears in its entity-specific enum; no global status enum is introduced |
