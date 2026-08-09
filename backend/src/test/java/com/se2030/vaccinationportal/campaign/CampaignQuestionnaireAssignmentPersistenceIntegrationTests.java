@@ -337,8 +337,8 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
     }
 
     @Test
-    @DisplayName("Transaction rollback preserves previous open-ended assignment if new version creation fails")
-    void transactionRollbackPreservesPreviousAssignmentOnFailure() {
+    @DisplayName("Rejected assignment preserves previous open-ended assignment when new version validation fails")
+    void rejectedAssignmentPreservesPreviousOpenEndedAssignment() {
         CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
                 campaignA.getId(),
                 100L,
@@ -346,7 +346,7 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
         );
         assertNull(v1.getActiveTo());
 
-        // Attempt second version with an unpublished ID (999L), which will fail validation
+        // Attempt second version with an unpublished ID (999L), which fails publication precondition
         assertThrows(IllegalArgumentException.class, () ->
                 assignmentService.assignQuestionnaireVersion(
                         campaignA.getId(),
@@ -357,7 +357,7 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
 
         // Verify v1 is still open-ended (activeTo IS NULL)
         CampaignQuestionnaireAssignment reloaded = assignmentRepository.findById(v1.getId()).orElseThrow();
-        assertNull(reloaded.getActiveTo(), "Failed version creation must preserve v1 activeTo as null");
+        assertNull(reloaded.getActiveTo(), "Precondition failure must preserve v1 activeTo as null");
     }
 
     @Test
