@@ -9,10 +9,13 @@
 **Last updated:** 2026-08-09
 **Latest implementation integration:** merged into `develop` via PR #16
 **Latest canonical documentation integration:** merged into `develop` via PR #17
-**Latest verified `develop` HEAD:** `bd22cb973bad83c8456897805bc2df95b65593d0`
+**Latest evidence integration:** merged into `develop` via PR #18
+**Latest verified `develop` HEAD:** `c120ee8530c055a6769b68777fd1342abeca193b`
 **Backend implementation checkpoint:** `201768ecd7efb01f4d008db6174c34771edbb6e7`
-**Canonical documentation sync branch:** `docs/sync-canonical-master-r8`
-**Canonical documentation sync branch HEAD:** `16d4193cf2b16f6cc8a19f778b48b16d59e633d6`
+**Canonical documentation sync checkpoint (PR #17):** `bd22cb973bad83c8456897805bc2df95b65593d0`
+**Sprint 1 evidence integration checkpoint (PR #18):** `c120ee8530c055a6769b68777fd1342abeca193b`
+**Sprint 1 evidence source branch:** `docs/mf02-sprint1-evidence-pr17`
+**Sprint 1 evidence source branch HEAD:** `735a046a473be273ec88fda51309d47c079b6c77`
 
 > Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation evidence; the canonical Markdown remains the requirements source of truth.
 
@@ -46,20 +49,20 @@ Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundation
 
 ## Current Verification Snapshot
 
-### Overall `develop` checkpoint after documentation integration
+### Overall `develop` checkpoint after evidence integration (PR #18)
 
 ```text
 Latest verified origin/develop:
-bd22cb973bad83c8456897805bc2df95b65593d0
+c120ee8530c055a6769b68777fd1342abeca193b
 
 Latest merge:
-PR #17
-bd22cb973bad83c8456897805bc2df95b65593d0
+PR #18
+c120ee8530c055a6769b68777fd1342abeca193b
 
-PR #17:
-docs/sync-canonical-master-r8 -> develop
+PR #18:
+docs/mf02-sprint1-evidence-pr17 -> develop
 
-PR #17 status:
+PR #18 status:
 MERGED
 
 Backend CI:
@@ -69,7 +72,7 @@ Frontend CI:
 SUCCESS
 ```
 
-PR #17 changed only the synchronized canonical DOCX. It did not modify the authoritative canonical Markdown or application code.
+PR #18 introduced the refreshed Sprint 1 evidence record (`docs/evidence/sprint-1/MF02_Sprint1_Evidence.md`). It did not modify the authoritative canonical Markdown, canonical DOCX, or application code.
 
 ### Backend implementation / integration checkpoint
 
@@ -366,6 +369,25 @@ Completed after the backend hardening checkpoint:
 
 This documentation activity is not counted inside the 49 MF-02 implementation/evidence commits listed below because it is a separate project-wide canonical-document synchronization history.
 
+### 8. Sprint 1 evidence record integration
+
+Completed after the canonical documentation synchronization checkpoint:
+
+* added and verified the refreshed MF-02 Sprint 1 evidence record on dedicated branch `docs/mf02-sprint1-evidence-pr17`;
+* verified commit `c0e6f80` (`docs(mf02): record sprint 1 documentation merge evidence`) and correction commit `735a046` (`docs(mf02): correct sprint 1 evidence record`);
+* pushed `docs/mf02-sprint1-evidence-pr17` and verified local/remote HEAD equality at `735a046a473be273ec88fda51309d47c079b6c77`;
+* created PR #18 from `docs/mf02-sprint1-evidence-pr17` to `develop`;
+* verified PR #18 changed strictly 1 file: `docs/evidence/sprint-1/MF02_Sprint1_Evidence.md`;
+* verified Backend CI `SUCCESS` and Frontend CI `SUCCESS` on PR #18;
+* merged PR #18 into `develop` using a normal merge commit;
+* verified merge commit `c120ee8530c055a6769b68777fd1342abeca193b`;
+* verified resulting `origin/develop` HEAD at `c120ee8530c055a6769b68777fd1342abeca193b`;
+* confirmed original evidence commits `c0e6f80` and `735a046` are preserved in history;
+* confirmed canonical Markdown and canonical DOCX remained unchanged;
+* remote evidence branch remains present at `origin/docs/mf02-sprint1-evidence-pr17`.
+
+This evidence documentation activity is recorded separately and is not counted inside the 49 MF-02 implementation/evidence commits.
+
 ## Important Canonical Distinctions Preserved
 
 ### MF02-BR-02
@@ -525,6 +547,7 @@ This 27-commit checkpoint was later merged into `develop` through PR #12. The me
 * PR #12 merge checkpoint: **1 merge commit (`eb4a4d9`)**, recorded for branch/PR traceability but not counted as one of the 49 implementation/evidence commits
 * center/hardening integration checkpoint: **PR #16 merge commit `201768e`**, also recorded for traceability and not counted as one of the 49 implementation/evidence commits
 * canonical documentation synchronization: **2 documentation commits (`8a26fe6`, `16d4193`) plus PR #17 merge commit `bd22cb9`**, recorded separately and not counted as part of the 49 MF-02 implementation/evidence commits
+* Sprint 1 evidence record integration: **2 evidence documentation commits (`c0e6f80`, `735a046`) plus PR #18 merge commit `c120ee8`**, recorded separately and not counted as part of the 49 MF-02 implementation/evidence commits
 
 The 22-commit center/hardening checkpoint includes MF-02-specific commits plus supporting backend-wide clock/README commits required by the MF-02 hardening work.
 
@@ -561,6 +584,24 @@ Confirmed state:
 * Backend CI: `SUCCESS`;
 * Frontend CI: `SUCCESS`;
 * no merge conflict was reported.
+
+### Sprint 1 evidence integration
+
+Confirmed state:
+
+* documentation branch: `docs/mf02-sprint1-evidence-pr17`;
+* documentation branch local/remote HEAD was verified at `735a046a473be273ec88fda51309d47c079b6c77`;
+* the branch contained exactly 2 evidence commits (`c0e6f80`, `735a046`) above the prior `develop` baseline (`bd22cb9`);
+* PR #18 was created from `docs/mf02-sprint1-evidence-pr17` to `develop`;
+* PR #18 was merged successfully using a normal merge commit;
+* PR #18 merge commit is `c120ee8530c055a6769b68777fd1342abeca193b`;
+* latest verified `origin/develop` after PR #18 is `c120ee8530c055a6769b68777fd1342abeca193b`;
+* PR #18 changed exactly one intended file: `docs/evidence/sprint-1/MF02_Sprint1_Evidence.md`;
+* the authoritative canonical Markdown and canonical DOCX were unchanged;
+* Backend CI: `SUCCESS`;
+* Frontend CI: `SUCCESS`;
+* no merge conflict was reported;
+* remote branch `origin/docs/mf02-sprint1-evidence-pr17` remains present.
 
 Peer-review details should only be added when concrete evidence is captured from the relevant PR interface.
 
@@ -607,7 +648,19 @@ Frontend CI:
 SUCCESS
 ```
 
-These CI results verify the documentation integration PR. They do not replace the previously recorded 97-test backend hardening verification.
+### Evidence PR CI evidence
+
+PR #18:
+
+```text
+Backend CI:
+SUCCESS
+
+Frontend CI:
+SUCCESS
+```
+
+These CI results verify the documentation and evidence integration PRs. They do not replace the previously recorded 97-test backend hardening verification.
 
 ## Current Repository State
 
@@ -615,14 +668,17 @@ These CI results verify the documentation integration PR. They do not replace th
 
 ```text
 origin/develop:
-bd22cb973bad83c8456897805bc2df95b65593d0
+c120ee8530c055a6769b68777fd1342abeca193b
 
 Latest integration:
-PR #17
-docs/sync-canonical-master-r8 -> develop
+PR #18
+docs/mf02-sprint1-evidence-pr17 -> develop
 
-PR #17 merge:
-bd22cb973bad83c8456897805bc2df95b65593d0
+PR #18 merge:
+c120ee8530c055a6769b68777fd1342abeca193b
+
+Evidence file:
+docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
 
 Canonical DOCX:
 docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx
@@ -630,7 +686,7 @@ docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx
 Temporary _R8_SYNCED duplicate:
 absent
 
-Canonical Markdown change in PR #17:
+Canonical Markdown change in PR #18:
 none
 ```
 
@@ -672,8 +728,36 @@ MERGED
 Documentation PR merge commit:
 bd22cb973bad83c8456897805bc2df95b65593d0
 
-Latest verified origin/develop:
+Latest verified origin/develop after PR #17:
 bd22cb973bad83c8456897805bc2df95b65593d0
+
+Backend CI:
+SUCCESS
+
+Frontend CI:
+SUCCESS
+```
+
+### Sprint 1 evidence checkpoint
+
+```text
+Evidence source branch:
+docs/mf02-sprint1-evidence-pr17
+
+Evidence source branch HEAD:
+735a046a473be273ec88fda51309d47c079b6c77
+
+Evidence PR:
+#18
+
+Evidence PR status:
+MERGED
+
+Evidence PR merge commit:
+c120ee8530c055a6769b68777fd1342abeca193b
+
+Latest verified origin/develop:
+c120ee8530c055a6769b68777fd1342abeca193b
 
 Backend CI:
 SUCCESS
@@ -718,9 +802,19 @@ Already captured for the canonical documentation synchronization checkpoint:
 * Backend CI `SUCCESS`
 * Frontend CI `SUCCESS`
 
+Already captured for the Sprint 1 evidence record integration checkpoint:
+
+* evidence branch push/synchronization confirmation
+* PR #18
+* PR #18 merge into `develop`
+* merge commit `c120ee8530c055a6769b68777fd1342abeca193b`
+* single-file evidence scope verification
+* confirmation that canonical Markdown and canonical DOCX were unchanged
+* Backend CI `SUCCESS`
+* Frontend CI `SUCCESS`
+
 Still to capture:
 
-* commit/PR evidence for this refreshed Sprint 1 evidence record once it is placed in the repository
 * peer-review evidence where required and not yet captured
 * CI result(s) for later MF-02 implementation/integration changes where required by the Definition of Done
 * `OperatingHours` commit/test evidence once started
@@ -751,6 +845,8 @@ Still to capture:
 * R8 canonical DOCX synchronization merged through PR #17
 * successful Backend CI and Frontend CI on PR #17
 * canonical Markdown integrity preserved through the documentation merge
+* refreshed Sprint 1 evidence record integrated and merged through PR #18
+* successful Backend CI and Frontend CI on PR #18
 
 ### Not completed / likely carry-forward candidates if Sprint 1 closes before completion
 
@@ -774,6 +870,7 @@ Final carry-forward decisions should be recorded only at Sprint 1 close.
 * The final hardening pass ended deliberately once no blockers or fix-before-continuing issues remained, avoiding endless cleanup.
 * Canonical DOCX synchronization was isolated on a dedicated documentation branch rather than mixed into MF-02 implementation history.
 * Post-merge verification confirmed PR #17 preserved the authoritative canonical Markdown and changed only the intended DOCX.
+* Sprint 1 evidence integration was merged cleanly through PR #18 with passing CI checks and preserved commit history.
 
 ### Improve next sprint / remaining Sprint 1 work
 
@@ -786,24 +883,18 @@ Final carry-forward decisions should be recorded only at Sprint 1 close.
 
 No new MF-02 domain slice has been started after the backend hardening checkpoint.
 
-The canonical DOCX synchronization sequence has now been completed through PR #17.
+The canonical DOCX synchronization sequence (PR #17) and Sprint 1 evidence integration sequence (PR #18) have both been completed and merged into `develop`.
 
-The current documentation/evidence sequence is:
-
-1. Add this refreshed MF-02 Sprint 1 evidence record to the repository as a separate documentation change/commit based on the latest `origin/develop`.
-2. Verify that the evidence change contains only the intended Sprint 1 evidence Markdown and preserves the authoritative implementation history.
-3. Push the dedicated evidence branch and create a PR to `develop`.
-4. Capture the evidence-record PR/merge and CI evidence when available.
-5. Re-verify the resulting `develop` documentation state.
+The documentation and evidence checkpoints are now fully synchronized with `develop`.
 
 When MF-02 feature development resumes:
 
-6. Inspect the canonical MF-02 requirements, MF-02 handoff, current repository code and relevant existing tests before planning the next slice.
-7. Plan `OperatingHours` as the next center-calendar slice before implementation.
-8. Implement `OperatingHours` only after its design/plan has been reviewed.
-9. Implement `CenterClosure` later as the temporary-exception layer over normal operating hours.
-10. Implement `CampaignCenterAssignment` with canonical effective-dated operational assignment rules.
-11. Add the `SessionRecurrenceRule` foundation.
-12. Complete remaining Sprint 1 publication checks, migrations, API/UI integration and Definition-of-Done evidence.
+1. Inspect the canonical MF-02 requirements, MF-02 handoff, current repository code and relevant existing tests before planning the next slice.
+2. Plan `OperatingHours` as the next center-calendar slice before implementation.
+3. Implement `OperatingHours` only after its design/plan has been reviewed.
+4. Implement `CenterClosure` later as the temporary-exception layer over normal operating hours.
+5. Implement `CampaignCenterAssignment` with canonical effective-dated operational assignment rules.
+6. Add the `SessionRecurrenceRule` foundation.
+7. Complete remaining Sprint 1 publication checks, migrations, API/UI integration and Definition-of-Done evidence.
 
-**Current stopping point:** backend hardening is complete and merged into `develop` through PR #16; the synchronized canonical R8 DOCX is merged into `develop` through PR #17; this refreshed Sprint 1 evidence record now needs to be integrated as a separate documentation change; `OperatingHours` has not been started.
+**Current stopping point:** backend hardening is complete and merged into `develop` through PR #16; the synchronized canonical R8 DOCX is merged into `develop` through PR #17; the refreshed Sprint 1 evidence record is merged into `develop` through PR #18; `OperatingHours` has not been started.
