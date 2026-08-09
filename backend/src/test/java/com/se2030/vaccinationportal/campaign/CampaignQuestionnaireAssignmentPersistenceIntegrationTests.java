@@ -22,8 +22,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -40,12 +43,20 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
 
+    public static final LocalDate FIXED_EVALUATION_DATE = LocalDate.of(2026, 8, 9);
+
     @TestConfiguration
     static class TestPortConfig {
         @Bean
         @Primary
         public TestQuestionnaireVersionPublicationPort testQuestionnaireVersionPublicationPort() {
             return new TestQuestionnaireVersionPublicationPort();
+        }
+
+        @Bean
+        @Primary
+        public Clock testClock() {
+            return Clock.fixed(Instant.parse("2026-08-09T00:00:00Z"), ZoneOffset.UTC);
         }
     }
 
@@ -380,5 +391,95 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
 
         List<CampaignQuestionnaireAssignment> history = assignmentService.getAssignmentHistory(campaignA.getId());
         assertEquals(2, history.size(), "Both versions must be retained permanently as historical records");
+    }
+
+    @Test
+    @DisplayName("Replacement assignment with past effectiveStartDate is rejected and preserves history (MF02-BR-17)")
+    void replacementAssignmentWithPastEffectiveStartDateIsRejected() {
+        // Initial assignment active from 2026-07-01 (before fixed today 2026-08-09)
+        CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                100L,
+                LocalDate.of(2026, 7, 1)
+        );
+        assertNull(v1.getActiveTo());
+
+        // Attempt replacement with effectiveStartDate = 2026-08-01 (after activeFrom, but in the past relative to 2026-08-09)
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            assignmentService.assignQuestionnaireVersion(
+                    campaignA.getId(),
+                    101L,
+                    LocalDate.of(2026, 8, 1)
+            );
+        });
+
+        assertTrue(ex.getMessage().contains("cannot be in the past") || ex.getMessage().contains("MF02-BR-17"));
+
+        // Verify original assignment remains open-ended (activeTo is null)
+        CampaignQuestionnaireAssignment refreshedV1 = assignmentRepository.findById(v1.getId()).orElseThrow();
+        assertNull(refreshedV1.getActiveTo(), "Existing assignment must remain open-ended when past replacement is rejected");
+
+        // Verify only 1 assignment is persisted
+        assertEquals(1, assignmentRepository.countByCampaignId(campaignA.getId()));
+    }
+
+    @Test
+    @DisplayName("Replacement assignment with effectiveStartDate today succeeds and closes previous on yesterday (MF02-BR-17)")
+    void replacementAssignmentEffectiveTodaySucceeds() {
+        // Initial assignment active from 2026-07-01
+        CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                100L,
+                LocalDate.of(2026, 7, 1)
+        );
+
+        // Replacement assignment effective today (2026-08-09)
+        CampaignQuestionnaireAssignment v2 = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                101L,
+                FIXED_EVALUATION_DATE
+        );
+
+        assertNotNull(v2.getId());
+        assertEquals(101L, v2.getQuestionnaireVersionId());
+        assertEquals(FIXED_EVALUATION_DATE, v2.getActiveFrom());
+        assertNull(v2.getActiveTo());
+
+        // Previous assignment closed on yesterday (2026-08-08)
+        CampaignQuestionnaireAssignment refreshedV1 = assignmentRepository.findById(v1.getId()).orElseThrow();
+        assertEquals(LocalDate.of(2026, 8, 8), refreshedV1.getActiveTo());
+
+        assertEquals(2, assignmentRepository.countByCampaignId(campaignA.getId()));
+    }
+
+    @Test
+    @DisplayName("Replacement assignment with future effectiveStartDate succeeds and closes previous on day prior (MF02-BR-17)")
+    void replacementAssignmentEffectiveFutureSucceeds() {
+        // Initial assignment active from 2026-07-01
+        CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                100L,
+                LocalDate.of(2026, 7, 1)
+        );
+
+        LocalDate futureDate = LocalDate.of(2026, 8, 20);
+
+        // Replacement assignment effective in future (2026-08-20)
+        CampaignQuestionnaireAssignment v2 = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                101L,
+                futureDate
+        );
+
+        assertNotNull(v2.getId());
+        assertEquals(101L, v2.getQuestionnaireVersionId());
+        assertEquals(futureDate, v2.getActiveFrom());
+        assertNull(v2.getActiveTo());
+
+        // Previous assignment closed on day prior (2026-08-19)
+        CampaignQuestionnaireAssignment refreshedV1 = assignmentRepository.findById(v1.getId()).orElseThrow();
+        assertEquals(LocalDate.of(2026, 8, 19), refreshedV1.getActiveTo());
+
+        assertEquals(2, assignmentRepository.countByCampaignId(campaignA.getId()));
     }
 }
