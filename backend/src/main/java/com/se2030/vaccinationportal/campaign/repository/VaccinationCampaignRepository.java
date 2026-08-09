@@ -2,7 +2,9 @@ package com.se2030.vaccinationportal.campaign.repository;
 
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,6 +19,18 @@ import java.util.Optional;
  */
 @Repository
 public interface VaccinationCampaignRepository extends JpaRepository<VaccinationCampaign, Long> {
+
+    /**
+     * Find a campaign by ID and acquire a pessimistic write lock (SELECT ... FOR UPDATE).
+     * Serializes concurrent effective-dated configuration changes (dose programmes, questionnaire
+     * assignments, campaign-center assignments) per WBVP-SE2030 Section 12.4.
+     *
+     * @param id Unique campaign identifier
+     * @return Optional containing the locked VaccinationCampaign if found
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM VaccinationCampaign c WHERE c.id = :id")
+    Optional<VaccinationCampaign> findByIdForUpdate(@Param("id") Long id);
 
     /**
      * Find a campaign by its unique business code.
