@@ -50,6 +50,10 @@ public class CampaignDoseProgrammeService {
         VaccinationCampaign campaign = campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
+        if (activeFrom == null) {
+            throw new IllegalArgumentException("Active from date is required");
+        }
+
         validateNoOverlap(campaignId, null, activeFrom, null);
 
         CampaignDoseProgramme programme = new CampaignDoseProgramme(
@@ -89,6 +93,10 @@ public class CampaignDoseProgrammeService {
                                                  LocalDate effectiveStartDate) {
         VaccinationCampaign campaign = campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
+        if (effectiveStartDate == null) {
+            throw new IllegalArgumentException("Effective start date is required");
+        }
 
         List<CampaignDoseProgramme> existingHistory = doseProgrammeRepository.findByCampaignIdOrderByVersionNumberDesc(campaignId);
 
