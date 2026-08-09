@@ -51,12 +51,12 @@ public class CampaignDoseProgrammeService {
                                                         boolean previousEvidenceRequired,
                                                         Integer expectedServiceMinutes,
                                                         LocalDate activeFrom) {
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
-
         if (activeFrom == null) {
             throw new IllegalArgumentException("Active from date is required");
         }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
         validateNoOverlap(campaignId, null, activeFrom, null);
 
@@ -95,12 +95,12 @@ public class CampaignDoseProgrammeService {
                                                  boolean previousEvidenceRequired,
                                                  Integer expectedServiceMinutes,
                                                  LocalDate effectiveStartDate) {
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
-
         if (effectiveStartDate == null) {
             throw new IllegalArgumentException("Effective start date is required");
         }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
         LocalDate today = LocalDate.now(clock);
         if (effectiveStartDate.isBefore(today)) {
