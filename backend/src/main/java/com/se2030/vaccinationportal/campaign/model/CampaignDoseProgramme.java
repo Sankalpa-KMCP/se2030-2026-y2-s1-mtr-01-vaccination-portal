@@ -31,7 +31,8 @@ import java.util.Set;
  * Domain entity representing a Campaign Dose Programme.
  * Defines programme constraints (dose category, permitted dose numbers, minimum intervals,
  * evidence requirements, and expected service minutes) for a campaign.
- * Preserves effective-dated versioning per canonical baseline WBVP-SE2030 / MF02-BR-02.
+ * Preserves effective-dated versioning (BR-028 / DEC-030) ensuring at most one active version during configuration,
+ * with exactly one effective version required at campaign publication (MF02-BR-02).
  */
 @Entity
 @Table(
