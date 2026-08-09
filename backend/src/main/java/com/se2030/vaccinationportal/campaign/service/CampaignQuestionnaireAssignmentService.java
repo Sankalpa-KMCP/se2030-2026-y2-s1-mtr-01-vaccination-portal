@@ -58,9 +58,6 @@ public class CampaignQuestionnaireAssignmentService {
             Long questionnaireVersionId,
             LocalDate effectiveStartDate) {
 
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
-
         if (questionnaireVersionId == null || questionnaireVersionId <= 0) {
             throw new IllegalArgumentException("Questionnaire version ID must be positive: " + questionnaireVersionId);
         }
@@ -81,6 +78,9 @@ public class CampaignQuestionnaireAssignmentService {
                     "Questionnaire version " + questionnaireVersionId + " is not in PUBLISHED status in MF-01"
             );
         }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
         // Handle existing open-ended assignment closure and overlap prevention
         Optional<CampaignQuestionnaireAssignment> currentOpenEndedOpt = assignmentRepository.findOpenEndedAssignment(campaignId);
