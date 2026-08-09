@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRep
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -21,11 +22,14 @@ public class CampaignDoseProgrammeService {
 
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final VaccinationCampaignRepository campaignRepository;
+    private final Clock clock;
 
     public CampaignDoseProgrammeService(CampaignDoseProgrammeRepository doseProgrammeRepository,
-                                       VaccinationCampaignRepository campaignRepository) {
+                                       VaccinationCampaignRepository campaignRepository,
+                                       Clock clock) {
         this.doseProgrammeRepository = doseProgrammeRepository;
         this.campaignRepository = campaignRepository;
+        this.clock = clock;
     }
 
     /**
@@ -96,6 +100,13 @@ public class CampaignDoseProgrammeService {
 
         if (effectiveStartDate == null) {
             throw new IllegalArgumentException("Effective start date is required");
+        }
+
+        LocalDate today = LocalDate.now(clock);
+        if (effectiveStartDate.isBefore(today)) {
+            throw new IllegalArgumentException(
+                    "New dose programme version effective date cannot be in the past [MF02-BR-18]: " + effectiveStartDate
+            );
         }
 
         List<CampaignDoseProgramme> existingHistory = doseProgrammeRepository.findByCampaignIdOrderByVersionNumberDesc(campaignId);
