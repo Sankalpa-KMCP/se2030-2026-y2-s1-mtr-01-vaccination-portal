@@ -339,4 +339,61 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
         CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
         assertNull(refreshedV1.getActiveTo());
     }
+
+    @Test
+    @DisplayName("createInitialProgramme with null activeFrom throws IllegalArgumentException and persists nothing")
+    void createInitialProgrammeWithNullActiveFromThrowsException() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            doseProgrammeService.createInitialProgramme(
+                    testCampaign.getId(),
+                    DoseCategory.PRIMARY,
+                    "1,2",
+                    21,
+                    false,
+                    10,
+                    null
+            );
+        });
+
+        assertTrue(ex.getMessage().contains("Active from date is required"));
+        assertEquals(0, doseProgrammeRepository.findByCampaignIdOrderByVersionNumberDesc(testCampaign.getId()).size());
+    }
+
+    @Test
+    @DisplayName("createNewVersion with null effectiveStartDate throws IllegalArgumentException and preserves existing programme")
+    void createNewVersionWithNullEffectiveStartDateThrowsException() {
+        CampaignDoseProgramme v1 = doseProgrammeService.createInitialProgramme(
+                testCampaign.getId(),
+                DoseCategory.PRIMARY,
+                "1,2",
+                21,
+                false,
+                10,
+                LocalDate.of(2026, 9, 1)
+        );
+        assertNull(v1.getActiveTo());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            doseProgrammeService.createNewVersion(
+                    testCampaign.getId(),
+                    DoseCategory.BOOSTER,
+                    "3",
+                    90,
+                    true,
+                    10,
+                    null
+            );
+        });
+
+        assertTrue(ex.getMessage().contains("Effective start date is required"));
+
+        // Verify existing programme remains open-ended (activeTo is null)
+        CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
+        assertNull(refreshedV1.getActiveTo(), "Existing programme must remain open-ended when new version creation fails");
+
+        // Verify no additional version was persisted
+        List<CampaignDoseProgramme> history = doseProgrammeService.getProgrammeHistory(testCampaign.getId());
+        assertEquals(1, history.size());
+        assertEquals(1, history.get(0).getVersionNumber());
+    }
 }
