@@ -169,7 +169,7 @@ public class CampaignDoseProgrammeService {
     }
 
     /**
-     * Enforces the single effective version rule (MF02-BR-02) by checking for overlapping periods.
+     * Enforces effective period non-overlap (BR-028 / DEC-030) ensuring at most one active version at any date.
      *
      * @param campaignId ID of the VaccinationCampaign
      * @param excludeId Programme ID to exclude from check (if updating)
