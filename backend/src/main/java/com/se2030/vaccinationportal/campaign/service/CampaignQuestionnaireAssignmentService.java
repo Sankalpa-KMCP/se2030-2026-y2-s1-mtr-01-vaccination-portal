@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepos
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -30,14 +31,17 @@ public class CampaignQuestionnaireAssignmentService {
     private final CampaignQuestionnaireAssignmentRepository assignmentRepository;
     private final VaccinationCampaignRepository campaignRepository;
     private final QuestionnaireVersionPublicationPort publicationPort;
+    private final Clock clock;
 
     public CampaignQuestionnaireAssignmentService(
             CampaignQuestionnaireAssignmentRepository assignmentRepository,
             VaccinationCampaignRepository campaignRepository,
-            @Autowired(required = false) QuestionnaireVersionPublicationPort publicationPort) {
+            @Autowired(required = false) QuestionnaireVersionPublicationPort publicationPort,
+            Clock clock) {
         this.assignmentRepository = assignmentRepository;
         this.campaignRepository = campaignRepository;
         this.publicationPort = publicationPort;
+        this.clock = clock;
     }
 
     /**
@@ -83,6 +87,13 @@ public class CampaignQuestionnaireAssignmentService {
 
         if (currentOpenEndedOpt.isPresent()) {
             CampaignQuestionnaireAssignment current = currentOpenEndedOpt.get();
+
+            LocalDate today = LocalDate.now(clock);
+            if (effectiveStartDate.isBefore(today)) {
+                throw new IllegalArgumentException(
+                        "Questionnaire assignment effective date cannot be in the past [MF02-BR-17]: " + effectiveStartDate
+                );
+            }
 
             if (!effectiveStartDate.isAfter(current.getActiveFrom())) {
                 throw new IllegalArgumentException(
