@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepos
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +19,7 @@ import java.util.Optional;
  * <p>Enforces:</p>
  * <ul>
  *   <li>Questionnaire versions must be in PUBLISHED status via {@link QuestionnaireVersionPublicationPort}.</li>
- *   <li>No overlapping effective periods for the same campaign (MF02-BR-02).</li>
+ *   <li>No overlapping effective periods for the same campaign (BR-028 / DEC-030; prerequisite for MF02-BR-02 publication).</li>
  *   <li>Atomic version transition: closing previous open-ended version at {@code effectiveStartDate - 1 day}.</li>
  *   <li>Immutable historical retention without hard deletion.</li>
  * </ul>
@@ -30,14 +31,17 @@ public class CampaignQuestionnaireAssignmentService {
     private final CampaignQuestionnaireAssignmentRepository assignmentRepository;
     private final VaccinationCampaignRepository campaignRepository;
     private final QuestionnaireVersionPublicationPort publicationPort;
+    private final Clock clock;
 
     public CampaignQuestionnaireAssignmentService(
             CampaignQuestionnaireAssignmentRepository assignmentRepository,
             VaccinationCampaignRepository campaignRepository,
-            @Autowired(required = false) QuestionnaireVersionPublicationPort publicationPort) {
+            @Autowired(required = false) QuestionnaireVersionPublicationPort publicationPort,
+            Clock clock) {
         this.assignmentRepository = assignmentRepository;
         this.campaignRepository = campaignRepository;
         this.publicationPort = publicationPort;
+        this.clock = clock;
     }
 
     /**
@@ -53,9 +57,6 @@ public class CampaignQuestionnaireAssignmentService {
             Long campaignId,
             Long questionnaireVersionId,
             LocalDate effectiveStartDate) {
-
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
         if (questionnaireVersionId == null || questionnaireVersionId <= 0) {
             throw new IllegalArgumentException("Questionnaire version ID must be positive: " + questionnaireVersionId);
@@ -78,11 +79,21 @@ public class CampaignQuestionnaireAssignmentService {
             );
         }
 
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
         // Handle existing open-ended assignment closure and overlap prevention
         Optional<CampaignQuestionnaireAssignment> currentOpenEndedOpt = assignmentRepository.findOpenEndedAssignment(campaignId);
 
         if (currentOpenEndedOpt.isPresent()) {
             CampaignQuestionnaireAssignment current = currentOpenEndedOpt.get();
+
+            LocalDate today = LocalDate.now(clock);
+            if (effectiveStartDate.isBefore(today)) {
+                throw new IllegalArgumentException(
+                        "Questionnaire assignment effective date cannot be in the past [MF02-BR-17]: " + effectiveStartDate
+                );
+            }
 
             if (!effectiveStartDate.isAfter(current.getActiveFrom())) {
                 throw new IllegalArgumentException(

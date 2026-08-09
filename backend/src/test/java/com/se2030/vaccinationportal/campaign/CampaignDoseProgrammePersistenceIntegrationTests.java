@@ -16,11 +16,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,8 +38,20 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(CampaignDoseProgrammePersistenceIntegrationTests.TestClockConfig.class)
 @Transactional
 class CampaignDoseProgrammePersistenceIntegrationTests {
+
+    public static final LocalDate FIXED_EVALUATION_DATE = LocalDate.of(2026, 8, 9);
+
+    @TestConfiguration
+    static class TestClockConfig {
+        @Bean
+        @Primary
+        public Clock testClock() {
+            return Clock.fixed(Instant.parse("2026-08-09T00:00:00Z"), ZoneOffset.UTC);
+        }
+    }
 
     @Autowired
     private VaccineTypeRepository vaccineTypeRepository;
@@ -338,5 +357,180 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
         // Verify version 1 activeTo remains null (unmodified)
         CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
         assertNull(refreshedV1.getActiveTo());
+    }
+
+    @Test
+    @DisplayName("createInitialProgramme with null activeFrom throws IllegalArgumentException and persists nothing")
+    void createInitialProgrammeWithNullActiveFromThrowsException() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            doseProgrammeService.createInitialProgramme(
+                    testCampaign.getId(),
+                    DoseCategory.PRIMARY,
+                    "1,2",
+                    21,
+                    false,
+                    10,
+                    null
+            );
+        });
+
+        assertTrue(ex.getMessage().contains("Active from date is required"));
+        assertEquals(0, doseProgrammeRepository.findByCampaignIdOrderByVersionNumberDesc(testCampaign.getId()).size());
+    }
+
+    @Test
+    @DisplayName("createNewVersion with null effectiveStartDate throws IllegalArgumentException and preserves existing programme")
+    void createNewVersionWithNullEffectiveStartDateThrowsException() {
+        CampaignDoseProgramme v1 = doseProgrammeService.createInitialProgramme(
+                testCampaign.getId(),
+                DoseCategory.PRIMARY,
+                "1,2",
+                21,
+                false,
+                10,
+                LocalDate.of(2026, 9, 1)
+        );
+        assertNull(v1.getActiveTo());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            doseProgrammeService.createNewVersion(
+                    testCampaign.getId(),
+                    DoseCategory.BOOSTER,
+                    "3",
+                    90,
+                    true,
+                    10,
+                    null
+            );
+        });
+
+        assertTrue(ex.getMessage().contains("Effective start date is required"));
+
+        // Verify existing programme remains open-ended (activeTo is null)
+        CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
+        assertNull(refreshedV1.getActiveTo(), "Existing programme must remain open-ended when new version creation fails");
+
+        // Verify no additional version was persisted
+        List<CampaignDoseProgramme> history = doseProgrammeService.getProgrammeHistory(testCampaign.getId());
+        assertEquals(1, history.size());
+        assertEquals(1, history.get(0).getVersionNumber());
+    }
+
+    @Test
+    @DisplayName("createNewVersion with past effectiveStartDate is rejected and preserves history (MF02-BR-18)")
+    void createNewVersionWithPastEffectiveStartDateIsRejected() {
+        // Initial programme active from 2026-07-01 (before fixed today 2026-08-09)
+        CampaignDoseProgramme v1 = doseProgrammeService.createInitialProgramme(
+                testCampaign.getId(),
+                DoseCategory.PRIMARY,
+                "1,2",
+                21,
+                false,
+                10,
+                LocalDate.of(2026, 7, 1)
+        );
+        assertNull(v1.getActiveTo());
+
+        // Attempt replacement version with effectiveStartDate = 2026-08-01 (after activeFrom, but in the past relative to 2026-08-09)
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            doseProgrammeService.createNewVersion(
+                    testCampaign.getId(),
+                    DoseCategory.BOOSTER,
+                    "3",
+                    90,
+                    true,
+                    15,
+                    LocalDate.of(2026, 8, 1)
+            );
+        });
+
+        assertTrue(ex.getMessage().contains("cannot be in the past") || ex.getMessage().contains("MF02-BR-18"));
+
+        // Verify original programme remains open-ended (activeTo is null)
+        CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
+        assertNull(refreshedV1.getActiveTo(), "Existing programme must remain open-ended when past version replacement is rejected");
+
+        // Verify no second version was persisted
+        List<CampaignDoseProgramme> history = doseProgrammeService.getProgrammeHistory(testCampaign.getId());
+        assertEquals(1, history.size());
+        assertEquals(1, history.get(0).getVersionNumber());
+    }
+
+    @Test
+    @DisplayName("createNewVersion with effectiveStartDate today succeeds and closes previous version on yesterday (MF02-BR-18)")
+    void createNewVersionEffectiveTodaySucceeds() {
+        // Initial programme active from 2026-07-01
+        CampaignDoseProgramme v1 = doseProgrammeService.createInitialProgramme(
+                testCampaign.getId(),
+                DoseCategory.PRIMARY,
+                "1,2",
+                21,
+                false,
+                10,
+                LocalDate.of(2026, 7, 1)
+        );
+
+        // Replacement version effective today (2026-08-09)
+        CampaignDoseProgramme v2 = doseProgrammeService.createNewVersion(
+                testCampaign.getId(),
+                DoseCategory.BOOSTER,
+                "3",
+                90,
+                true,
+                15,
+                FIXED_EVALUATION_DATE
+        );
+
+        assertNotNull(v2.getId());
+        assertEquals(2, v2.getVersionNumber());
+        assertEquals(FIXED_EVALUATION_DATE, v2.getActiveFrom());
+        assertNull(v2.getActiveTo());
+
+        // Previous version closed on yesterday (2026-08-08)
+        CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
+        assertEquals(LocalDate.of(2026, 8, 8), refreshedV1.getActiveTo());
+
+        List<CampaignDoseProgramme> history = doseProgrammeService.getProgrammeHistory(testCampaign.getId());
+        assertEquals(2, history.size());
+    }
+
+    @Test
+    @DisplayName("createNewVersion with future effectiveStartDate succeeds and closes previous version on day prior (MF02-BR-18)")
+    void createNewVersionEffectiveFutureSucceeds() {
+        // Initial programme active from 2026-07-01
+        CampaignDoseProgramme v1 = doseProgrammeService.createInitialProgramme(
+                testCampaign.getId(),
+                DoseCategory.PRIMARY,
+                "1,2",
+                21,
+                false,
+                10,
+                LocalDate.of(2026, 7, 1)
+        );
+
+        LocalDate futureDate = LocalDate.of(2026, 8, 20);
+
+        // Replacement version effective in future (2026-08-20)
+        CampaignDoseProgramme v2 = doseProgrammeService.createNewVersion(
+                testCampaign.getId(),
+                DoseCategory.BOOSTER,
+                "3",
+                90,
+                true,
+                15,
+                futureDate
+        );
+
+        assertNotNull(v2.getId());
+        assertEquals(2, v2.getVersionNumber());
+        assertEquals(futureDate, v2.getActiveFrom());
+        assertNull(v2.getActiveTo());
+
+        // Previous version closed on day prior (2026-08-19)
+        CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
+        assertEquals(LocalDate.of(2026, 8, 19), refreshedV1.getActiveTo());
+
+        List<CampaignDoseProgramme> history = doseProgrammeService.getProgrammeHistory(testCampaign.getId());
+        assertEquals(2, history.size());
     }
 }

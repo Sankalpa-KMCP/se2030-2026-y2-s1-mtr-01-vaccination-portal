@@ -27,7 +27,8 @@ import java.util.Objects;
  *   <li>MF-01 owns detailed questionnaire versions and eligibility rules.</li>
  *   <li>MF-02 owns the campaign and the effective-dated selection of a published questionnaire version.</li>
  *   <li>{@code questionnaire_version_id} is a scalar cross-module reference until MF-01 is implemented.</li>
- *   <li>A campaign must have at most one effective assignment at any instant (MF02-BR-02).</li>
+ *   <li>Effective-history invariant (BR-028 / DEC-030): overlapping effective periods are prohibited, ensuring at most one active assignment at any instant during configuration.</li>
+ *   <li>Publication prerequisite (MF02-BR-02): campaign publication requires exactly one effective assignment linked to a PUBLISHED questionnaire version.</li>
  *   <li>Questionnaire assignment changes apply only to future screening submissions (MF02-BR-17).</li>
  * </ul>
  */

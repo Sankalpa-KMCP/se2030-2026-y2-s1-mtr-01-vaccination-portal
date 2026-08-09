@@ -315,4 +315,33 @@ class CampaignPersistenceIntegrationTests {
         );
         assertFalse(julyResults.stream().anyMatch(c -> c.getCode().equals("CMP-SPRING-2026")));
     }
+
+    @Test
+    @DisplayName("findByIdForUpdate acquires pessimistic lock and returns expected campaign")
+    void findByIdForUpdateReturnsCampaign() {
+        VaccineType vt = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-LOCK-01", "Lock Test Vaccine", "dose", true));
+        TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-LOCK-01", "Lock Test Target Group", true));
+
+        VaccinationCampaign campaign = new VaccinationCampaign(
+                "CMP-LOCK-01",
+                "Lock Test Campaign",
+                null,
+                vt,
+                tg,
+                LocalDate.of(2026, 10, 1),
+                LocalDate.of(2026, 12, 31),
+                LocalDateTime.of(2026, 9, 1, 8, 0),
+                LocalDateTime.of(2026, 12, 31, 18, 0),
+                CampaignStatus.DRAFT
+        );
+        VaccinationCampaign saved = campaignRepository.saveAndFlush(campaign);
+
+        Optional<VaccinationCampaign> locked = campaignRepository.findByIdForUpdate(saved.getId());
+        assertTrue(locked.isPresent());
+        assertEquals(saved.getId(), locked.get().getId());
+        assertEquals("CMP-LOCK-01", locked.get().getCode());
+
+        Optional<VaccinationCampaign> notFound = campaignRepository.findByIdForUpdate(999999L);
+        assertTrue(notFound.isEmpty());
+    }
 }

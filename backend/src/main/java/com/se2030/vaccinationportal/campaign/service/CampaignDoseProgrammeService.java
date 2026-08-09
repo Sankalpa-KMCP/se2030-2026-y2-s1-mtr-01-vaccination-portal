@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRep
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -21,11 +22,14 @@ public class CampaignDoseProgrammeService {
 
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final VaccinationCampaignRepository campaignRepository;
+    private final Clock clock;
 
     public CampaignDoseProgrammeService(CampaignDoseProgrammeRepository doseProgrammeRepository,
-                                       VaccinationCampaignRepository campaignRepository) {
+                                       VaccinationCampaignRepository campaignRepository,
+                                       Clock clock) {
         this.doseProgrammeRepository = doseProgrammeRepository;
         this.campaignRepository = campaignRepository;
+        this.clock = clock;
     }
 
     /**
@@ -47,7 +51,11 @@ public class CampaignDoseProgrammeService {
                                                         boolean previousEvidenceRequired,
                                                         Integer expectedServiceMinutes,
                                                         LocalDate activeFrom) {
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
+        if (activeFrom == null) {
+            throw new IllegalArgumentException("Active from date is required");
+        }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
         validateNoOverlap(campaignId, null, activeFrom, null);
@@ -87,8 +95,19 @@ public class CampaignDoseProgrammeService {
                                                  boolean previousEvidenceRequired,
                                                  Integer expectedServiceMinutes,
                                                  LocalDate effectiveStartDate) {
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
+        if (effectiveStartDate == null) {
+            throw new IllegalArgumentException("Effective start date is required");
+        }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
+        LocalDate today = LocalDate.now(clock);
+        if (effectiveStartDate.isBefore(today)) {
+            throw new IllegalArgumentException(
+                    "New dose programme version effective date cannot be in the past [MF02-BR-18]: " + effectiveStartDate
+            );
+        }
 
         List<CampaignDoseProgramme> existingHistory = doseProgrammeRepository.findByCampaignIdOrderByVersionNumberDesc(campaignId);
 
@@ -150,7 +169,7 @@ public class CampaignDoseProgrammeService {
     }
 
     /**
-     * Enforces the single effective version rule (MF02-BR-02) by checking for overlapping periods.
+     * Enforces effective period non-overlap (BR-028 / DEC-030) ensuring at most one active version at any date.
      *
      * @param campaignId ID of the VaccinationCampaign
      * @param excludeId Programme ID to exclude from check (if updating)
