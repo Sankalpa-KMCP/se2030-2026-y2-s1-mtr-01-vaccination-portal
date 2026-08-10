@@ -6,16 +6,17 @@
 **Canonical revision:** `2026-08-08-R8`
 **Sprint:** Sprint 1
 **Working window:** Weeks 1–3
-**Last updated:** 2026-08-09
-**Latest implementation integration:** merged into `develop` via PR #16
+**Last updated:** 2026-08-10
+**Latest implementation integration:** merged into `develop` via PR #20 (`OperatingHours` backend foundation)
 **Latest canonical documentation integration:** merged into `develop` via PR #17
-**Latest evidence integration:** merged into `develop` via PR #18
-**Latest verified `develop` HEAD:** `c120ee8530c055a6769b68777fd1342abeca193b`
-**Backend implementation checkpoint:** `201768ecd7efb01f4d008db6174c34771edbb6e7`
+**Latest evidence integration:** merged into `develop` via PR #19
+**Latest verified `develop` HEAD:** `1cad899971c8b18804af31bfb079a24285f7d16d`
+**Backend implementation checkpoint:** `1cad899971c8b18804af31bfb079a24285f7d16d`
+**OperatingHours feature branch HEAD:** `4fe94df8df7c07ade3c22a39165aff3da1e8795a`
 **Canonical documentation sync checkpoint (PR #17):** `bd22cb973bad83c8456897805bc2df95b65593d0`
-**Sprint 1 evidence integration checkpoint (PR #18):** `c120ee8530c055a6769b68777fd1342abeca193b`
-**Sprint 1 evidence source branch:** `docs/mf02-sprint1-evidence-pr17`
-**Sprint 1 evidence source branch HEAD:** `735a046a473be273ec88fda51309d47c079b6c77`
+**Sprint 1 evidence integration checkpoints:** PR #18 (`c120ee8530c055a6769b68777fd1342abeca193b`), PR #19 (`8cdb1125809770671325a4f47fc80fd5c48b4ddc`)
+**OperatingHours integration checkpoint (PR #20):** `1cad899971c8b18804af31bfb079a24285f7d16d`
+**OperatingHours source branch:** `feature/mf02-operating-hours`
 
 > Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation evidence; the canonical Markdown remains the requirements source of truth.
 
@@ -29,13 +30,12 @@ Expected integrated Sprint 1 outcome: a valid campaign can be linked to a publis
 
 **We are still in Sprint 1.**
 
-The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, and a dedicated backend hardening pass are now implemented and verified.
+The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, dedicated backend hardening pass, and the **OperatingHours backend foundation** are now implemented, tested, and merged into `develop`.
 
 The canonical R8 human-readable DOCX synchronization has also been merged into `develop` through PR #17.
 
 Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundations still include:
 
-* `OperatingHours`
 * `CenterClosure`
 * `CampaignCenterAssignment`
 * `SessionRecurrenceRule` foundation
@@ -45,24 +45,24 @@ Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundation
 * frontend/integration/evidence work required by the Definition of Done
 * final MF-01 `QuestionnaireVersion` adapter/FK integration
 
-`OperatingHours` is the next planned MF-02 domain slice, but it has **not been started** at this checkpoint.
+`CenterClosure` is the next planned MF-02 domain slice, but it has **not been started** at this checkpoint.
 
 ## Current Verification Snapshot
 
-### Overall `develop` checkpoint after evidence integration (PR #18)
+### Overall `develop` checkpoint after OperatingHours integration (PR #20)
 
 ```text
 Latest verified origin/develop:
-c120ee8530c055a6769b68777fd1342abeca193b
+1cad899971c8b18804af31bfb079a24285f7d16d
 
 Latest merge:
-PR #18
-c120ee8530c055a6769b68777fd1342abeca193b
+PR #20
+1cad899971c8b18804af31bfb079a24285f7d16d
 
-PR #18:
-docs/mf02-sprint1-evidence-pr17 -> develop
+PR #20:
+feature/mf02-operating-hours -> develop
 
-PR #18 status:
+PR #20 status:
 MERGED
 
 Backend CI:
@@ -72,43 +72,41 @@ Frontend CI:
 SUCCESS
 ```
 
-PR #18 introduced the refreshed Sprint 1 evidence record (`docs/evidence/sprint-1/MF02_Sprint1_Evidence.md`). It did not modify the authoritative canonical Markdown, canonical DOCX, or application code.
+PR #20 introduced the core backend foundation for vaccination center operating hours (`OperatingHours`). It added domain entity modeling, mutation exception-safety, Spring Data JPA persistence and effective-date queries, parent-center pessimistic write locking serialization, deterministic Monday→Sunday calendar ordering, and multidimensional schedule overlap enforcement.
 
 ### Backend implementation / integration checkpoint
 
 ```text
 Backend implementation develop checkpoint:
-201768ecd7efb01f4d008db6174c34771edbb6e7
+1cad899971c8b18804af31bfb079a24285f7d16d
 
 Merge evidence:
-201768e — Merge pull request #16 from Sankalpa-KMCP/feature/mf02-center-management
+1cad899 — Merge pull request #20 from Sankalpa-KMCP/feature/mf02-operating-hours
 
 Feature branch:
-feature/mf02-center-management
+feature/mf02-operating-hours
 
 Latest verified feature-branch pointer:
-8d6f12b962b97e860e7f8655ad7388a4195d0e0e
+4fe94df8df7c07ade3c22a39165aff3da1e8795a
 
 Feature branch local/remote:
 synchronized
 
 Feature branch ahead of develop at the implementation verification checkpoint:
-0 commits
+0 commits (merged)
 
 Working tree at verification:
 clean
 ```
 
-All 22 center/hardening commits recorded below are present locally, remotely, and in `develop`.
-
-The later PR #17 documentation merge does not change this backend implementation checkpoint or add to the 49 MF-02 implementation/evidence commits.
+All 7 OperatingHours commits recorded below are present locally, remotely, and in `develop`.
 
 ### Backend verification
 
 ```text
 ./mvnw test:
 BUILD SUCCESS
-97 tests
+152 tests
 0 failures
 0 errors
 0 skipped
@@ -118,9 +116,9 @@ BUILD SUCCESS
 JAR packaged successfully
 ```
 
-### Canonical DOCX synchronization checkpoint
+### Canonical DOCX synchronization checkpoint (PR #17)
 
-The corrected R8 canonical DOCX was committed and pushed on a dedicated documentation branch and has now been merged into `develop`.
+The corrected R8 canonical DOCX was committed and pushed on a dedicated documentation branch and merged into `develop`.
 
 ```text
 Documentation branch:
@@ -158,15 +156,27 @@ Frontend CI:
 SUCCESS
 ```
 
-Verified after PR #17:
+### Evidence integration checkpoints (PR #18 & PR #19)
 
-* `origin/develop` contains merge commit `bd22cb973bad83c8456897805bc2df95b65593d0`;
-* the canonical DOCX exists at `docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx`;
-* the temporary `Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3_R8_SYNCED.docx` duplicate is absent;
-* the authoritative `docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md` was unchanged by PR #17;
-* PR #17 contained only the intended canonical DOCX synchronization;
-* Backend CI completed successfully;
-* Frontend CI completed successfully.
+```text
+PR #18 merge commit:
+c120ee8530c055a6769b68777fd1342abeca193b
+
+PR #19 merge commit:
+8cdb1125809770671325a4f47fc80fd5c48b4ddc
+
+PR #19 branch:
+docs/mf02-sprint1-final-checkpoint
+
+PR #19 status:
+MERGED
+
+Backend CI:
+SUCCESS
+
+Frontend CI:
+SUCCESS
+```
 
 ### Final hardening audit verdict
 
@@ -186,8 +196,6 @@ The final audit reported:
 * fixes required before continuing: none
 * safe to start the next domain slice: yes
 
-Do not restart or repeat the hardening pass unless new implementation evidence identifies an actual defect.
-
 ## Planned Lab 02 Stories
 
 | Story   | Priority | Intent                                                            | Current status                                                                                                                                                |
@@ -196,7 +204,7 @@ Do not restart or repeat the hardening pass unless new implementation evidence i
 | `US-10` | High     | Link campaign to one published questionnaire version              | In progress — MF-02 assignment/versioning side implemented and hardened; final MF-01 adapter/FK integration pending                                           |
 | `US-11` | High     | Define campaign dose programme                                    | In progress — backend model, persistence, versioning, future-only protection and concurrency hardening implemented; later API/UI/integration evidence pending |
 | `US-12` | High     | Assign vaccination centers to a campaign                          | Not started — `CampaignCenterAssignment` pending                                                                                                              |
-| `US-13` | High     | Configure center operating hours, closures and recurring sessions | In progress — center master foundation implemented; `OperatingHours`, `CenterClosure` and recurrence foundation pending                                       |
+| `US-13` | High     | Configure center operating hours, closures and recurring sessions | In progress — center master foundation and OperatingHours backend foundation complete; `CenterClosure`, recurrence, and session integration pending          |
 | `US-27` | High     | Define campaign service areas and booking periods                 | In progress — administrative location targeting and booking-window foundation implemented; API/UI evidence pending                                            |
 
 ## Completed Work
@@ -221,8 +229,6 @@ Covered behavior:
 * booking close after booking open
 * `PUBLISHED` / `ACTIVE` intake behavior inside the booking window
 * MF-02 ownership of shared `VaccineType`
-
-The status values above are separate lifecycle states. This evidence record does not define them as one mandatory linear transition chain beyond transitions explicitly supported by canonical requirements and implemented workflow evidence.
 
 ### 2. Campaign dose programme
 
@@ -298,16 +304,12 @@ Covered behavior:
 * correct distinction between an open-ended assignment and an assignment effective on a specific date
 * rejection of invalid/unpublished replacement attempts before history mutation
 
-> **Test-semantics note:** an earlier test name described “transaction rollback” even though its failure path occurred during a precondition check before database mutation. The hardening pass corrected the name and wording to accurately prove rejected-assignment safety rather than claiming a post-mutation rollback scenario.
-
 Pending MF-01 integration:
 
 * real MF-01 `QuestionnaireVersion` entity/table
 * production implementation/adapter for `QuestionnaireVersionPublicationPort`
 * final database foreign key from `campaign_questionnaire_assignments.questionnaire_version_id`
 * end-to-end historical `ScreeningSubmission` version-retention test
-
-MF-02 continues to own `CampaignQuestionnaireAssignment`. Final integration does not transfer this ownership to MF-01.
 
 ### 5. Vaccination center foundation
 
@@ -348,45 +350,55 @@ Completed after the initial center foundation:
 * updated and corrected `backend/README.md`
 * completed final backend audit with no blockers or fix-before-continuing findings
 
-### 7. Canonical documentation synchronization
+### 7. Canonical documentation synchronization (PR #17)
 
 Completed after the backend hardening checkpoint:
 
 * reviewed the canonical Markdown and human-readable DOCX for release synchronization;
 * kept the authoritative canonical Markdown unchanged as the requirements source of truth;
-* corrected/synchronized the canonical master DOCX to `3.3-AI` / `2026-08-08-R8`;
-* retained the standard repository filename `docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx`;
-* removed the temporary `_R8_SYNCED` filename through a pure Git rename without changing the intended canonical-document payload;
-* pushed `docs/sync-canonical-master-r8` and verified local/remote HEAD equality at `16d4193cf2b16f6cc8a19f778b48b16d59e633d6`;
-* created PR #17 from `docs/sync-canonical-master-r8` to `develop`;
-* merged PR #17 into `develop`;
-* verified merge commit `bd22cb973bad83c8456897805bc2df95b65593d0`;
-* verified PR #17 changed only `docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx`;
-* verified the authoritative canonical Markdown was unchanged;
-* verified the `_R8_SYNCED` duplicate remains absent;
-* verified Backend CI `SUCCESS`;
-* verified Frontend CI `SUCCESS`.
+* synchronized the canonical master DOCX to `3.3-AI` / `2026-08-08-R8` (`docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx`);
+* merged PR #17 into `develop` with merge commit `bd22cb973bad83c8456897805bc2df95b65593d0`;
+* verified Backend CI `SUCCESS` and Frontend CI `SUCCESS`.
 
-This documentation activity is not counted inside the 49 MF-02 implementation/evidence commits listed below because it is a separate project-wide canonical-document synchronization history.
+### 8. Sprint 1 evidence checkpoints (PR #18 & PR #19)
 
-### 8. Sprint 1 evidence record integration
+Completed after canonical documentation synchronization:
 
-Completed after the canonical documentation synchronization checkpoint:
+* merged PR #18 (`c120ee8`) recording evidence up to PR #17;
+* merged PR #19 (`8cdb112`) recording evidence up to PR #18;
+* verified Backend CI `SUCCESS` and Frontend CI `SUCCESS` across both PRs.
 
-* added and verified the refreshed MF-02 Sprint 1 evidence record on dedicated branch `docs/mf02-sprint1-evidence-pr17`;
-* verified commit `c0e6f80` (`docs(mf02): record sprint 1 documentation merge evidence`) and correction commit `735a046` (`docs(mf02): correct sprint 1 evidence record`);
-* pushed `docs/mf02-sprint1-evidence-pr17` and verified local/remote HEAD equality at `735a046a473be273ec88fda51309d47c079b6c77`;
-* created PR #18 from `docs/mf02-sprint1-evidence-pr17` to `develop`;
-* verified PR #18 changed strictly 1 file: `docs/evidence/sprint-1/MF02_Sprint1_Evidence.md`;
-* verified Backend CI `SUCCESS` and Frontend CI `SUCCESS` on PR #18;
-* merged PR #18 into `develop` using a normal merge commit;
-* verified merge commit `c120ee8530c055a6769b68777fd1342abeca193b`;
-* verified resulting `origin/develop` HEAD at `c120ee8530c055a6769b68777fd1342abeca193b`;
-* confirmed original evidence commits `c0e6f80` and `735a046` are preserved in history;
-* confirmed canonical Markdown and canonical DOCX remained unchanged;
-* remote evidence branch remains present at `origin/docs/mf02-sprint1-evidence-pr17`.
+### 9. OperatingHours domain, persistence, and service foundation (PR #20)
 
-This evidence documentation activity is recorded separately and is not counted inside the 49 MF-02 implementation/evidence commits.
+Implemented, tested, hardened, and merged into `develop`:
+
+* `OperatingHours` domain entity
+* `OperatingHoursRepository` with center, weekday, effective-date, and scalar center-ID queries
+* `VaccinationCenterRepository.findByIdForUpdate(...)` pessimistic write locking
+* `OperatingHoursService` managing creation, updates, end-dating, deterministic sorting, and conflict checking
+* 19 domain unit tests (`OperatingHoursModelTests`)
+* 14 persistence integration tests (`OperatingHoursPersistenceIntegrationTests`)
+* 22 service integration tests (`OperatingHoursServiceIntegrationTests`)
+* total 55 OperatingHours-specific tests (152 total backend tests passing)
+
+Covered behavior:
+
+* 1 center + 1 weekday + 1 positive-duration opening/closing interval + 1 effective date period
+* mandatory center relation, mandatory `DayOfWeek`, mandatory `effectiveFrom`, nullable `effectiveTo`
+* inclusive effective date boundaries `[effectiveFrom, effectiveTo]`
+* positive same-day shift duration `opening.isBefore(closing)` (overnight and zero-duration shifts rejected)
+* half-open time interval interpretation `[opening, closing)`
+* complete mutation exception-safety across all constructors and setters via candidate pre-validation (`OperatingHours.validateParameters`)
+* split shifts and adjacent shifts touching at boundaries allowed (e.g. `[08:00, 12:00)` and `[12:00, 16:00)`)
+* multidimensional overlap conflict enforcement: same center, same weekday, overlapping inclusive dates, overlapping half-open times rejected
+* exact duplicate rejection
+* identical times in disjoint date spans permitted
+* parent `VaccinationCenter` write serialization using `VaccinationCenterRepository.findByIdForUpdate`
+* safe lock ordering for update/end-date operations via scalar `findCenterIdById` to eliminate stale-managed-entity race windows
+* shortening-only end-date/deactivation workflow (extensions must use `updateOperatingHours` to undergo conflict validation)
+* deterministic Monday→Sunday Java calendar sorting using `DayOfWeek.getValue()`
+* configuration permitted for both `ACTIVE` and `INACTIVE` centers
+* zero hard-delete workflow
 
 ## Important Canonical Distinctions Preserved
 
@@ -403,34 +415,34 @@ At campaign publication:
 * exactly one effective dose-programme version is required;
 * exactly one effective assignment referencing a `PUBLISHED` questionnaire version is required.
 
-The current configuration/versioning services enforce the effective-history invariant.
-
-The complete campaign publication transition/prerequisite workflow is still pending.
-
-Do not reinterpret the publication requirement as proof that all draft campaigns must always have one configuration record, and do not treat the canonical campaign status values as one mandatory linear transition sequence without explicit supporting requirements.
-
 ### MF02-BR-17 and MF02-BR-18
 
 * questionnaire-link replacements are future-safe and do not rewrite existing submission history;
 * dose-programme replacements cannot be backdated through the normal replacement workflow;
 * historical records are retained with bounded effective periods.
 
+### OperatingHours vs CenterClosure
+
+* `OperatingHours` defines normal weekly recurring opening/closing shifts across effective calendar spans.
+* `CenterClosure` represents temporary exception dates/intervals where the facility is unavailable, overriding normal operating hours without mutating base schedule records.
+* `CenterStatus` represents long-term master facility status (`ACTIVE` vs `INACTIVE`), not temporary closures.
+
 ## Not Yet Completed
 
-* `OperatingHours`
 * `CenterClosure`
 * `CampaignCenterAssignment`
 * `SessionRecurrenceRule` foundation
+* `VaccinationSession` and `TimeSlot` foundations
+* session validation under `MF02-BR-05`
+* closure/capacity validation under `MF02-BR-06`
 * full campaign publication transition/prerequisite validation workflow
 * Sprint 1 frontend work
 * MF-02 REST controller / DTO / mapper layer where applicable
 * Flyway business migrations for implemented MF-02 tables
 * OpenAPI updates where applicable
 * Spring Security/RBAC integration for MF-02 endpoints
-* peer-review / CI evidence where required and not already captured
+* reference-aware lifecycle enforcement once sessions exist
 * final MF-01 questionnaire-version adapter/FK integration
-
-No implementation details for these pending slices should be treated as completed or fixed unless they are supported by canonical requirements and later implementation evidence.
 
 ## Blockers / Dependencies
 
@@ -440,9 +452,6 @@ Known dependency:
 
 * MF-01 has not yet provided the final authoritative `QuestionnaireVersion` integration required by MF-02.
 * MF-02 can continue using the explicit `QuestionnaireVersionPublicationPort` boundary.
-* Final published-version adapter, database FK and screening-history integration remain pending MF-01.
-
-Jira setup remains an evidence/process dependency only if access is unavailable; it does not block local domain implementation.
 
 ## Important Decisions
 
@@ -455,12 +464,12 @@ Jira setup remains an evidence/process dependency only if access is unavailable;
 * MF-02 location targets expose no normal hard-delete workflow.
 * MF-01 owns `QuestionnaireVersion`; MF-02 owns `CampaignQuestionnaireAssignment`.
 * `QuestionnaireVersionPublicationPort` is the explicit cross-module contract until MF-01 provides the production adapter.
-* Final MF-01 integration includes the production adapter, database FK and historical screening-version validation; it does not create another assignment entity.
-* Effective-dated configuration changes for dose programmes and questionnaire assignments serialize on the parent campaign row.
+* Effective-dated configuration changes for dose programmes, questionnaire assignments, and center operating hours serialize on the parent entity row using `PESSIMISTIC_WRITE`.
+* `OperatingHours` mutators pre-validate all candidate parameters prior to state assignment, guaranteeing exception atomicity.
+* Operating hours conflict detection evaluates multidimensional overlap across center, weekday, inclusive dates, and half-open time intervals.
 * `CenterStatus` represents long-term `ACTIVE` / `INACTIVE`; temporary unavailability belongs to future `CenterClosure` records.
 * `safeConcurrentOccupancy` and `sessionServiceCeiling` are distinct center constraints.
-* Do not infer operating-hours, campaign-center-assignment, recurrence, session or capacity fields beyond the canonical requirements when those slices have not yet been implemented.
-* Use many small logical Git commits rather than large feature commits.
+* Use small, focused logical Git commits rather than large feature commits.
 
 ## Commits Recorded So Far
 
@@ -505,9 +514,7 @@ Jira setup remains an evidence/process dependency only if access is unavailable;
 * `71ec4fe` — `feat(mf02): enforce effective questionnaire assignment versioning`
 * `f34ecb2` — `test(mf02): cover questionnaire assignment persistence and versioning`
 
-This 27-commit checkpoint was later merged into `develop` through PR #12. The merge commit visible at the start of the center branch was:
-
-* `eb4a4d9` — merge of PR #12 into `develop`
+This 27-commit checkpoint was merged into `develop` through PR #12 (merge commit `eb4a4d9`).
 
 ### B. Vaccination-center and hardening checkpoint — 22 commits after PR #12
 
@@ -539,71 +546,76 @@ This 27-commit checkpoint was later merged into `develop` through PR #12. The me
 * `154824c` — `docs(mf02): clarify publication prerequisite boundaries`
 * `2655866` — `docs(backend): update current implementation status`
 
+This 22-commit checkpoint was merged into `develop` through PR #16 (merge commit `201768e`).
+
+### C. OperatingHours backend foundation — 7 commits after PR #19
+
+#### OperatingHours domain foundation
+
+* `e4a56dc` — `feat(mf02): add operating hours domain model`
+* `7240684` — `test(mf02): cover operating hours domain validation`
+* `0bc876a` — `fix(mf02): preserve operating hours state on invalid updates`
+
+#### OperatingHours persistence layer
+
+* `76460a4` — `feat(mf02): add operating hours persistence`
+* `a80d13c` — `test(mf02): cover operating hours persistence`
+
+#### OperatingHours service layer & conflict enforcement
+
+* `1d0ecef` — `feat(mf02): add operating hours management service`
+* `4fe94df` — `test(mf02): cover operating hours service behavior`
+
+This 7-commit checkpoint was merged into `develop` through PR #20 (merge commit `1cad899`).
+
 ### Commit accounting
 
 * earlier campaign/targeting/questionnaire checkpoint: **27 commits**
 * center/hardening checkpoint after PR #12: **22 commits**
-* cumulative implementation/evidence history recorded here: **49 commits across the two checkpoints**
-* PR #12 merge checkpoint: **1 merge commit (`eb4a4d9`)**, recorded for branch/PR traceability but not counted as one of the 49 implementation/evidence commits
-* center/hardening integration checkpoint: **PR #16 merge commit `201768e`**, also recorded for traceability and not counted as one of the 49 implementation/evidence commits
-* canonical documentation synchronization: **2 documentation commits (`8a26fe6`, `16d4193`) plus PR #17 merge commit `bd22cb9`**, recorded separately and not counted as part of the 49 MF-02 implementation/evidence commits
-* Sprint 1 evidence record integration: **2 evidence documentation commits (`c0e6f80`, `735a046`) plus PR #18 merge commit `c120ee8`**, recorded separately and not counted as part of the 49 MF-02 implementation/evidence commits
-
-The 22-commit center/hardening checkpoint includes MF-02-specific commits plus supporting backend-wide clock/README commits required by the MF-02 hardening work.
+* OperatingHours backend foundation checkpoint after PR #19: **7 commits**
+* cumulative implementation/evidence history recorded here: **56 commits across the three checkpoints**
+* PR #12 merge checkpoint: **1 merge commit (`eb4a4d9`)**
+* PR #16 merge checkpoint: **1 merge commit (`201768e`)**
+* canonical documentation synchronization: **2 documentation commits (`8a26fe6`, `16d4193`) plus PR #17 merge commit `bd22cb9`**
+* Sprint 1 evidence record integrations:
+  - PR #18 evidence: **2 evidence commits (`c0e6f80`, `735a046`) plus merge commit `c120ee8`**
+  - PR #19 evidence: **1 evidence commit (`1afa39d`) plus merge commit `8cdb112`**
+* OperatingHours integration checkpoint: **PR #20 merge commit `1cad899`**
 
 ## Pull Requests / Remote State
 
-### MF-02 implementation integration
+### MF-02 implementation integration (PR #12 & PR #16)
+
+* PR #12 merged 27 campaign/targeting/questionnaire commits into `develop` (`eb4a4d9`).
+* PR #16 merged 22 center/hardening commits into `develop` (`201768e`).
+
+### Canonical documentation integration (PR #17)
+
+* PR #17 merged canonical DOCX synchronization into `develop` (`bd22cb9`).
+* Backend CI: `SUCCESS`, Frontend CI: `SUCCESS`.
+
+### Sprint 1 evidence integrations (PR #18 & PR #19)
+
+* PR #18 merged evidence record update into `develop` (`c120ee8`).
+* PR #19 merged evidence record update into `develop` (`8cdb112`).
+* Backend CI: `SUCCESS`, Frontend CI: `SUCCESS`.
+
+### OperatingHours backend foundation integration (PR #20)
 
 Confirmed state:
 
-* the earlier 27-commit MF-02 campaign/targeting/questionnaire checkpoint was merged into `develop` through PR #12;
-* `feature/mf02-center-management` was created from that updated `develop` baseline (`eb4a4d9`);
-* the center/hardening branch was pushed and verified against its remote;
-* all 22 center/hardening commits listed in this record are present locally and remotely;
-* the center/hardening work was merged into `develop` through PR #16;
-* implementation checkpoint after PR #16: `201768ecd7efb01f4d008db6174c34771edbb6e7`;
-* PR #16 merge commit: `201768e` — `Merge pull request #16 from Sankalpa-KMCP/feature/mf02-center-management`;
-* the feature branch had 0 commits ahead of `develop` at the latest implementation verification checkpoint.
-
-### Canonical documentation integration
-
-Confirmed state:
-
-* documentation branch: `docs/sync-canonical-master-r8`;
-* documentation branch local/remote HEAD was verified at `16d4193cf2b16f6cc8a19f778b48b16d59e633d6`;
-* the branch contained only the canonical DOCX synchronization work above the prior verified `develop` baseline;
-* the canonical DOCX uses the standard repository path `docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx`;
-* the `_R8_SYNCED` duplicate is absent;
-* PR #17 was created from `docs/sync-canonical-master-r8` to `develop`;
-* PR #17 was merged successfully;
-* PR #17 merge commit is `bd22cb973bad83c8456897805bc2df95b65593d0`;
-* latest verified `origin/develop` after PR #17 is `bd22cb973bad83c8456897805bc2df95b65593d0`;
-* PR #17 changed exactly one intended file: `docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx`;
-* the authoritative canonical Markdown was unchanged;
-* Backend CI: `SUCCESS`;
-* Frontend CI: `SUCCESS`;
-* no merge conflict was reported.
-
-### Sprint 1 evidence integration
-
-Confirmed state:
-
-* documentation branch: `docs/mf02-sprint1-evidence-pr17`;
-* documentation branch local/remote HEAD was verified at `735a046a473be273ec88fda51309d47c079b6c77`;
-* the branch contained exactly 2 evidence commits (`c0e6f80`, `735a046`) above the prior `develop` baseline (`bd22cb9`);
-* PR #18 was created from `docs/mf02-sprint1-evidence-pr17` to `develop`;
-* PR #18 was merged successfully using a normal merge commit;
-* PR #18 merge commit is `c120ee8530c055a6769b68777fd1342abeca193b`;
-* latest verified `origin/develop` after PR #18 is `c120ee8530c055a6769b68777fd1342abeca193b`;
-* PR #18 changed exactly one intended file: `docs/evidence/sprint-1/MF02_Sprint1_Evidence.md`;
-* the authoritative canonical Markdown and canonical DOCX were unchanged;
-* Backend CI: `SUCCESS`;
-* Frontend CI: `SUCCESS`;
-* no merge conflict was reported;
-* remote branch `origin/docs/mf02-sprint1-evidence-pr17` remains present.
-
-Peer-review details should only be added when concrete evidence is captured from the relevant PR interface.
+* feature branch: `feature/mf02-operating-hours`;
+* feature branch local/remote HEAD was verified at `4fe94df8df7c07ade3c22a39165aff3da1e8795a`;
+* the branch contained exactly 7 OperatingHours commits above the prior `develop` baseline (`8cdb112`);
+* PR #20 was created from `feature/mf02-operating-hours` to `develop`;
+* PR #20 changed exactly 7 intended backend foundation files;
+* Backend CI: `SUCCESS` (`pass`, 44s);
+* Frontend CI: `SUCCESS` (`pass`, 11s);
+* PR #20 was merged successfully into `develop` using a normal merge commit;
+* PR #20 merge commit: `1cad899971c8b18804af31bfb079a24285f7d16d`;
+* latest verified `origin/develop` after PR #20: `1cad899971c8b18804af31bfb079a24285f7d16d`;
+* all 7 feature commits are verified direct ancestors of `origin/develop`;
+* remote branch `origin/feature/mf02-operating-hours` remains preserved.
 
 ## Testing Evidence
 
@@ -611,7 +623,7 @@ Peer-review details should only be added when concrete evidence is captured from
 
 ```text
 ./mvnw test
-Tests run: 97
+Tests run: 152
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -632,35 +644,18 @@ JAR packaged successfully
 * dose-programme null-date hardening: **90** tests passing
 * future-only dose-programme hardening: **93** tests passing
 * future-only questionnaire-assignment hardening: **96** tests passing
-* locked campaign lookup/final hardening state: **97** tests passing
+* locked campaign lookup / hardening state: **97** tests passing
+* OperatingHours domain validation: **114** tests passing
+* OperatingHours mutation-safety fix: **116** tests passing
+* OperatingHours persistence foundation: **129** tests passing
+* OperatingHours service & conflict enforcement: **152** tests passing
 
-The total test count was intentionally allowed to grow as meaningful domain and persistence behavior was added. The final audit found no requirement to reduce the suite simply because the count reached 97.
+### CI Evidence
 
-### Documentation PR CI evidence
-
-PR #17:
-
-```text
-Backend CI:
-SUCCESS
-
-Frontend CI:
-SUCCESS
-```
-
-### Evidence PR CI evidence
-
-PR #18:
-
-```text
-Backend CI:
-SUCCESS
-
-Frontend CI:
-SUCCESS
-```
-
-These CI results verify the documentation and evidence integration PRs. They do not replace the previously recorded 97-test backend hardening verification.
+* PR #17 (Documentation Sync): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
+* PR #18 (Evidence Checkpoint): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
+* PR #19 (Final Evidence Checkpoint): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
+* PR #20 (OperatingHours Foundation): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
 
 ## Current Repository State
 
@@ -668,14 +663,14 @@ These CI results verify the documentation and evidence integration PRs. They do 
 
 ```text
 origin/develop:
-c120ee8530c055a6769b68777fd1342abeca193b
+1cad899971c8b18804af31bfb079a24285f7d16d
 
 Latest integration:
-PR #18
-docs/mf02-sprint1-evidence-pr17 -> develop
+PR #20
+feature/mf02-operating-hours -> develop
 
-PR #18 merge:
-c120ee8530c055a6769b68777fd1342abeca193b
+PR #20 merge:
+1cad899971c8b18804af31bfb079a24285f7d16d
 
 Evidence file:
 docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
@@ -683,10 +678,7 @@ docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
 Canonical DOCX:
 docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx
 
-Temporary _R8_SYNCED duplicate:
-absent
-
-Canonical Markdown change in PR #18:
+Canonical Markdown change in PR #20:
 none
 ```
 
@@ -694,82 +686,23 @@ none
 
 ```text
 Backend implementation checkpoint:
-201768ecd7efb01f4d008db6174c34771edbb6e7
+1cad899971c8b18804af31bfb079a24285f7d16d
 
-feature/mf02-center-management:
-8d6f12b962b97e860e7f8655ad7388a4195d0e0e
+feature/mf02-operating-hours:
+4fe94df8df7c07ade3c22a39165aff3da1e8795a
 
-feature branch local/remote at implementation verification:
-matched
+feature branch local/remote:
+synchronized
 
-feature branch commits ahead of develop at that checkpoint:
-0
-
-center/hardening merge:
-PR #16
-201768e — Merge pull request #16 from Sankalpa-KMCP/feature/mf02-center-management
-```
-
-### Canonical documentation checkpoint
-
-```text
-Documentation source branch:
-docs/sync-canonical-master-r8
-
-Documentation source branch HEAD:
-16d4193cf2b16f6cc8a19f778b48b16d59e633d6
-
-Documentation PR:
-#17
-
-Documentation PR status:
-MERGED
-
-Documentation PR merge commit:
-bd22cb973bad83c8456897805bc2df95b65593d0
-
-Latest verified origin/develop after PR #17:
-bd22cb973bad83c8456897805bc2df95b65593d0
-
-Backend CI:
-SUCCESS
-
-Frontend CI:
-SUCCESS
-```
-
-### Sprint 1 evidence checkpoint
-
-```text
-Evidence source branch:
-docs/mf02-sprint1-evidence-pr17
-
-Evidence source branch HEAD:
-735a046a473be273ec88fda51309d47c079b6c77
-
-Evidence PR:
-#18
-
-Evidence PR status:
-MERGED
-
-Evidence PR merge commit:
-c120ee8530c055a6769b68777fd1342abeca193b
-
-Latest verified origin/develop:
-c120ee8530c055a6769b68777fd1342abeca193b
-
-Backend CI:
-SUCCESS
-
-Frontend CI:
-SUCCESS
+OperatingHours merge:
+PR #20
+1cad899 — Merge pull request #20 from Sankalpa-KMCP/feature/mf02-operating-hours
 ```
 
 Latest backend verification remains:
 
 ```text
-97 tests passing
+152 tests passing
 0 failures
 0 errors
 0 skipped
@@ -782,42 +715,19 @@ JAR packaged successfully
 
 ## Evidence Still to Capture
 
-Already captured for the center/hardening checkpoint:
+Already captured:
 
-* feature-branch push/synchronization confirmation
-* PR #16 merge into `develop`
-* merge commit `201768e`
-* 97-test backend verification
-* successful Maven `verify`
-
-Already captured for the canonical documentation synchronization checkpoint:
-
-* documentation branch push/synchronization confirmation
-* PR #17
-* PR #17 merge into `develop`
-* merge commit `bd22cb973bad83c8456897805bc2df95b65593d0`
-* standard canonical DOCX path verification
-* absence of the `_R8_SYNCED` duplicate
-* confirmation that the canonical Markdown was unchanged
-* Backend CI `SUCCESS`
-* Frontend CI `SUCCESS`
-
-Already captured for the Sprint 1 evidence record integration checkpoint:
-
-* evidence branch push/synchronization confirmation
-* PR #18
-* PR #18 merge into `develop`
-* merge commit `c120ee8530c055a6769b68777fd1342abeca193b`
-* single-file evidence scope verification
-* confirmation that canonical Markdown and canonical DOCX were unchanged
-* Backend CI `SUCCESS`
-* Frontend CI `SUCCESS`
+* campaign, dose programme, targeting, questionnaire assignment checkpoints
+* vaccination center master and hardening checkpoints (PR #16)
+* canonical documentation synchronization (PR #17)
+* Sprint 1 evidence integration checkpoints (PR #18, PR #19)
+* OperatingHours backend foundation (PR #20, merge commit `1cad899`, 152 passing tests)
+* Backend CI & Frontend CI results for PR #17, PR #18, PR #19, and PR #20
 
 Still to capture:
 
 * peer-review evidence where required and not yet captured
-* CI result(s) for later MF-02 implementation/integration changes where required by the Definition of Done
-* `OperatingHours` commit/test evidence once started
+* CI result(s) for later MF-02 implementation/integration changes
 * `CenterClosure` commit/test evidence
 * `CampaignCenterAssignment` commit/test evidence
 * `SessionRecurrenceRule` foundation commit/test evidence
@@ -839,24 +749,20 @@ Still to capture:
 * administrative service-area targeting foundation
 * MF-02 side of campaign-to-published-questionnaire assignment/versioning
 * vaccination-center master/lifecycle foundation
+* OperatingHours domain, persistence, and service foundation with multidimensional conflict enforcement
 * future-only effective configuration protection
-* campaign-row pessimistic locking for critical effective-dated configuration changes
-* backend hardening audit with 97 passing tests and successful Maven verify
+* campaign-row and center-row pessimistic locking for critical effective-dated configuration changes
+* 152 passing backend tests with successful Maven verify packaging
 * R8 canonical DOCX synchronization merged through PR #17
-* successful Backend CI and Frontend CI on PR #17
-* canonical Markdown integrity preserved through the documentation merge
-* refreshed Sprint 1 evidence record integrated and merged through PR #18
-* successful Backend CI and Frontend CI on PR #18
+* successful Backend CI and Frontend CI across PR #17, PR #18, PR #19, and PR #20
+* canonical Markdown integrity preserved
 
 ### Not completed / likely carry-forward candidates if Sprint 1 closes before completion
 
-* `OperatingHours`
 * `CenterClosure`
 * `CampaignCenterAssignment`
 * `SessionRecurrenceRule` foundation
 * publication workflow/API/UI/migration/integration evidence as applicable
-
-Final carry-forward decisions should be recorded only at Sprint 1 close.
 
 ## Sprint Retrospective
 
@@ -864,37 +770,30 @@ Final carry-forward decisions should be recorded only at Sprint 1 close.
 
 * Small logical commits kept implementation history reviewable.
 * Canonical ownership/boundary checks were performed before each MF-02 slice.
-* Tests expanded continuously as real behavior was introduced.
-* Cross-module MF-01/MF-02 ownership was resolved without duplicating entities or tables.
-* A dedicated hardening pass caught temporal, concurrency and evidence-wording issues before the next center-calendar slice.
-* The final hardening pass ended deliberately once no blockers or fix-before-continuing issues remained, avoiding endless cleanup.
-* Canonical DOCX synchronization was isolated on a dedicated documentation branch rather than mixed into MF-02 implementation history.
-* Post-merge verification confirmed PR #17 preserved the authoritative canonical Markdown and changed only the intended DOCX.
-* Sprint 1 evidence integration was merged cleanly through PR #18 with passing CI checks and preserved commit history.
+* Tests expanded continuously as real behavior was introduced (152 total tests).
+* Candidate pre-validation (`OperatingHours.validateParameters`) and scalar parent center lock ordering ensured mutation exception-safety and clean concurrency protection.
+* Dedicated documentation and evidence branches preserved clean separation from domain implementation history.
+* Post-merge ancestor verification ensured all feature commits are preserved directly in `develop`.
+* GitHub Actions CI consistently verified backend and frontend builds across all merged PRs.
 
 ### Improve next sprint / remaining Sprint 1 work
 
 * Capture remote PR/CI evidence closer to each integration checkpoint.
 * Keep implementation evidence synchronized immediately after a branch/PR transition.
 * Add Flyway/API/UI evidence as those layers are implemented instead of postponing all evidence collection to the end.
-* Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions that may lose implementation history or introduce unsupported assumptions.
+* Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
 ## Exact Next Work
 
-No new MF-02 domain slice has been started after the backend hardening checkpoint.
-
-The canonical DOCX synchronization sequence (PR #17) and Sprint 1 evidence integration sequence (PR #18) have both been completed and merged into `develop`.
-
-The documentation and evidence checkpoints are now fully synchronized with `develop`.
+The `OperatingHours` backend foundation has been implemented, validated, and merged into `develop` through PR #20 (checkpoint `1cad899`).
 
 When MF-02 feature development resumes:
 
 1. Inspect the canonical MF-02 requirements, MF-02 handoff, current repository code and relevant existing tests before planning the next slice.
-2. Plan `OperatingHours` as the next center-calendar slice before implementation.
-3. Implement `OperatingHours` only after its design/plan has been reviewed.
-4. Implement `CenterClosure` later as the temporary-exception layer over normal operating hours.
-5. Implement `CampaignCenterAssignment` with canonical effective-dated operational assignment rules.
-6. Add the `SessionRecurrenceRule` foundation.
-7. Complete remaining Sprint 1 publication checks, migrations, API/UI integration and Definition-of-Done evidence.
+2. Plan `CenterClosure` as the temporary-exception layer over normal operating hours.
+3. Implement `CenterClosure` only after its design/plan has been reviewed.
+4. Implement `CampaignCenterAssignment` with canonical effective-dated operational assignment rules.
+5. Add the `SessionRecurrenceRule` foundation.
+6. Complete remaining Sprint 1 publication checks, migrations, API/UI integration and Definition-of-Done evidence.
 
-**Current stopping point:** backend hardening is complete and merged into `develop` through PR #16; the synchronized canonical R8 DOCX is merged into `develop` through PR #17; the refreshed Sprint 1 evidence record is merged into `develop` through PR #18; `OperatingHours` has not been started.
+**Current stopping point:** `OperatingHours` backend foundation is complete and merged into `develop` through PR #20 (merge commit `1cad899`); `CenterClosure` has not been started.
