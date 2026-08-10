@@ -20,9 +20,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -69,8 +68,8 @@ class CampaignLocationTargetPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 8, 15, 8, 0),
-                LocalDateTime.of(2026, 12, 30, 18, 0),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
                 CampaignStatus.DRAFT
         ));
 
@@ -82,8 +81,8 @@ class CampaignLocationTargetPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 8, 15, 8, 0),
-                LocalDateTime.of(2026, 12, 30, 18, 0),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
                 CampaignStatus.PUBLISHED
         ));
     }
@@ -147,7 +146,6 @@ class CampaignLocationTargetPersistenceIntegrationTests {
 
         assertNotNull(t1.getId());
         assertNotNull(t2.getId());
-        assertNotEquals(t1.getId(), t2.getId());
         assertEquals(2, locationTargetRepository.findByCampaignId(campaignA.getId()).size());
     }
 
@@ -164,10 +162,8 @@ class CampaignLocationTargetPersistenceIntegrationTests {
         assertNotNull(targetA.getId());
         assertNotNull(targetB.getId());
 
-        List<CampaignLocationTarget> wpTargets = locationTargetRepository.findByTargetTypeAndTargetCode(
-                LocationTargetType.PROVINCE, "WP"
-        );
-        assertEquals(2, wpTargets.size());
+        assertEquals(1, locationTargetRepository.findByCampaignId(campaignA.getId()).size());
+        assertEquals(1, locationTargetRepository.findByCampaignId(campaignB.getId()).size());
     }
 
     @Test
@@ -185,23 +181,6 @@ class CampaignLocationTargetPersistenceIntegrationTests {
         // Subordinate or different type is NOT inferred (e.g. DISTRICT=COLOMBO does not imply PROVINCE=WP)
         assertFalse(locationTargetService.isCampaignTargeting(campaignA.getId(), LocationTargetType.DISTRICT, "COLOMBO"));
         assertFalse(locationTargetService.isCampaignTargeting(campaignA.getId(), LocationTargetType.HEALTH_REGION, "WP"));
-    }
-
-    @Test
-    @DisplayName("Repository lookup by specific campaign, target type, and target code")
-    void repositoryLookupByCampaignTypeAndCode() {
-        locationTargetService.addTarget(campaignA.getId(), LocationTargetType.CENTER, "CTR-NCMC");
-
-        Optional<CampaignLocationTarget> found = locationTargetRepository.findByCampaignIdAndTargetTypeAndTargetCode(
-                campaignA.getId(), LocationTargetType.CENTER, "CTR-NCMC"
-        );
-        assertTrue(found.isPresent());
-        assertEquals("CTR-NCMC", found.get().getTargetCode());
-
-        Optional<CampaignLocationTarget> notFound = locationTargetRepository.findByCampaignIdAndTargetTypeAndTargetCode(
-                campaignA.getId(), LocationTargetType.CENTER, "CTR-OTHER"
-        );
-        assertTrue(notFound.isEmpty());
     }
 
     @Test

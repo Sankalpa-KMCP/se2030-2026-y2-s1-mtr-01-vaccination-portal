@@ -58,19 +58,15 @@ public class CampaignDoseProgrammeService {
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
-        validateNoOverlap(campaignId, null, activeFrom, null);
-
         CampaignDoseProgramme programme = new CampaignDoseProgramme(
-                campaign,
-                1,
-                doseCategory,
-                permittedDoseNumbers,
-                minimumIntervalDays,
-                previousEvidenceRequired,
-                expectedServiceMinutes,
-                activeFrom,
-                null
+                campaign, 1, doseCategory, permittedDoseNumbers, minimumIntervalDays,
+                previousEvidenceRequired, expectedServiceMinutes, activeFrom, null
         );
+
+        if (doseProgrammeRepository.findTopByCampaignIdOrderByVersionNumberDesc(campaignId).isPresent()) {
+            throw new IllegalStateException("Initial dose programme already exists for campaign ID: " + campaignId);
+        }
+        validateNoOverlap(campaignId, null, activeFrom, null);
 
         return doseProgrammeRepository.save(programme);
     }
@@ -109,26 +105,8 @@ public class CampaignDoseProgrammeService {
             );
         }
 
-        List<CampaignDoseProgramme> existingHistory = doseProgrammeRepository.findByCampaignIdOrderByVersionNumberDesc(campaignId);
-
-        int nextVersion = existingHistory.isEmpty() ? 1 : existingHistory.get(0).getVersionNumber() + 1;
-
-        // Close out previous open-ended version at effectiveStartDate - 1 day to preserve history
-        for (CampaignDoseProgramme existing : existingHistory) {
-            if (existing.getActiveTo() == null) {
-                if (effectiveStartDate.isBefore(existing.getActiveFrom()) || effectiveStartDate.isEqual(existing.getActiveFrom())) {
-                    throw new IllegalArgumentException(
-                            "New version effective date (" + effectiveStartDate +
-                            ") must be strictly after the previous version start date (" + existing.getActiveFrom() + ")"
-                    );
-                }
-                existing.setActiveTo(effectiveStartDate.minusDays(1));
-                existing.validateConstraints();
-                doseProgrammeRepository.save(existing);
-            }
-        }
-
-        validateNoOverlap(campaignId, null, effectiveStartDate, null);
+        Optional<CampaignDoseProgramme> latest = doseProgrammeRepository.findTopByCampaignIdOrderByVersionNumberDesc(campaignId);
+        int nextVersion = latest.map(p -> p.getVersionNumber() + 1).orElse(1);
 
         CampaignDoseProgramme newProgramme = new CampaignDoseProgramme(
                 campaign,
@@ -141,6 +119,21 @@ public class CampaignDoseProgrammeService {
                 effectiveStartDate,
                 null
         );
+
+        Optional<CampaignDoseProgramme> current = doseProgrammeRepository.findByCampaignIdAndActiveToIsNull(campaignId);
+        if (current.isPresent() && !effectiveStartDate.isAfter(current.get().getActiveFrom())) {
+            throw new IllegalArgumentException(
+                    "New version effective date (" + effectiveStartDate +
+                    ") must be strictly after the previous version start date (" + current.get().getActiveFrom() + ")"
+            );
+        }
+
+        Long currentId = current.map(CampaignDoseProgramme::getId).orElse(null);
+        validateNoOverlap(campaignId, currentId, effectiveStartDate, null);
+        current.ifPresent(existing -> {
+            existing.closeAt(effectiveStartDate);
+            doseProgrammeRepository.save(existing);
+        });
 
         return doseProgrammeRepository.save(newProgramme);
     }
@@ -176,7 +169,7 @@ public class CampaignDoseProgrammeService {
      * @param activeFrom Period start date
      * @param activeTo Period end date (nullable)
      */
-    public void validateNoOverlap(Long campaignId, Long excludeId, LocalDate activeFrom, LocalDate activeTo) {
+    private void validateNoOverlap(Long campaignId, Long excludeId, LocalDate activeFrom, LocalDate activeTo) {
         List<CampaignDoseProgramme> overlaps = doseProgrammeRepository.findOverlappingProgrammes(
                 campaignId,
                 excludeId,

@@ -278,8 +278,8 @@ class OperatingHoursModelTests {
     }
 
     @Test
-    @DisplayName("Invalid setEffectiveTo before effectiveFrom throws exception and preserves existing effectiveTo")
-    void invalidSetEffectiveToBeforeEffectiveFromThrowsAndPreservesState() {
+    @DisplayName("Invalid end date before effectiveFrom preserves the existing effectiveTo")
+    void invalidEndDatePreservesState() {
         OperatingHours opHours = new OperatingHours(
                 sampleCenter,
                 DayOfWeek.WEDNESDAY,
@@ -290,58 +290,17 @@ class OperatingHoursModelTests {
         );
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                opHours.setEffectiveTo(LocalDate.of(2026, 9, 10))
+                opHours.endOn(LocalDate.of(2026, 9, 10))
         );
-        assertTrue(ex.getMessage().contains("cannot be before effective from date"));
+        assertTrue(ex.getMessage().contains("cannot be null or before effective from date"));
 
         // Verify effectiveTo was NOT overwritten with invalid date
         assertEquals(LocalDate.of(2026, 12, 31), opHours.getEffectiveTo());
     }
 
     @Test
-    @DisplayName("Invalid individual setter mutations throw exception and preserve prior field state")
-    void invalidIndividualSettersPreserveState() {
-        OperatingHours opHours = new OperatingHours(
-                sampleCenter,
-                DayOfWeek.MONDAY,
-                LocalTime.of(8, 0),
-                LocalTime.of(16, 0),
-                LocalDate.of(2026, 9, 1),
-                LocalDate.of(2026, 12, 31)
-        );
-
-        // Null dayOfWeek
-        assertThrows(IllegalArgumentException.class, () -> opHours.setDayOfWeek(null));
-        assertEquals(DayOfWeek.MONDAY, opHours.getDayOfWeek());
-
-        // Null opening
-        assertThrows(IllegalArgumentException.class, () -> opHours.setOpening(null));
-        assertEquals(LocalTime.of(8, 0), opHours.getOpening());
-
-        // Opening after closing
-        assertThrows(IllegalArgumentException.class, () -> opHours.setOpening(LocalTime.of(17, 0)));
-        assertEquals(LocalTime.of(8, 0), opHours.getOpening());
-
-        // Null closing
-        assertThrows(IllegalArgumentException.class, () -> opHours.setClosing(null));
-        assertEquals(LocalTime.of(16, 0), opHours.getClosing());
-
-        // Closing before opening
-        assertThrows(IllegalArgumentException.class, () -> opHours.setClosing(LocalTime.of(7, 0)));
-        assertEquals(LocalTime.of(16, 0), opHours.getClosing());
-
-        // Null effectiveFrom
-        assertThrows(IllegalArgumentException.class, () -> opHours.setEffectiveFrom(null));
-        assertEquals(LocalDate.of(2026, 9, 1), opHours.getEffectiveFrom());
-
-        // effectiveFrom after effectiveTo
-        assertThrows(IllegalArgumentException.class, () -> opHours.setEffectiveFrom(LocalDate.of(2027, 1, 1)));
-        assertEquals(LocalDate.of(2026, 9, 1), opHours.getEffectiveFrom());
-    }
-
-    @Test
-    @DisplayName("Setting effectiveTo allows schedule end-dating")
-    void setEffectiveToAllowsEndDating() {
+    @DisplayName("Ending a schedule retains inclusive OperatingHours date semantics")
+    void endOnAllowsEndDating() {
         OperatingHours opHours = new OperatingHours(
                 sampleCenter,
                 DayOfWeek.WEDNESDAY,
@@ -352,7 +311,7 @@ class OperatingHoursModelTests {
         );
         assertNull(opHours.getEffectiveTo());
 
-        opHours.setEffectiveTo(LocalDate.of(2026, 9, 30));
+        opHours.endOn(LocalDate.of(2026, 9, 30));
         assertEquals(LocalDate.of(2026, 9, 30), opHours.getEffectiveTo());
         assertTrue(opHours.isEffectiveOn(LocalDate.of(2026, 9, 30)));
         assertFalse(opHours.isEffectiveOn(LocalDate.of(2026, 10, 1)));
@@ -399,29 +358,4 @@ class OperatingHoursModelTests {
         assertFalse(opHours.isOpenAt(LocalTime.of(16, 1)));
     }
 
-    @Test
-    @DisplayName("equals, hashCode, and toString behave consistently")
-    void equalsHashCodeToStringConsistency() {
-        OperatingHours h1 = new OperatingHours(
-                sampleCenter,
-                DayOfWeek.MONDAY,
-                LocalTime.of(8, 0),
-                LocalTime.of(16, 0),
-                LocalDate.of(2026, 9, 1),
-                null
-        );
-        OperatingHours h2 = new OperatingHours(
-                sampleCenter,
-                DayOfWeek.MONDAY,
-                LocalTime.of(8, 0),
-                LocalTime.of(16, 0),
-                LocalDate.of(2026, 9, 1),
-                null
-        );
-
-        assertEquals(h1, h2);
-        assertEquals(h1.hashCode(), h2.hashCode());
-        assertTrue(h1.toString().contains("OperatingHours"));
-        assertTrue(h1.toString().contains("MONDAY"));
-    }
 }

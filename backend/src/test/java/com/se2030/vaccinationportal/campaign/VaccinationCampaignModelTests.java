@@ -8,7 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -30,8 +30,8 @@ class VaccinationCampaignModelTests {
     void validDatesPassValidation() {
         LocalDate startDate = LocalDate.of(2026, 9, 1);
         LocalDate endDate = LocalDate.of(2026, 12, 31);
-        LocalDateTime bookingOpen = LocalDateTime.of(2026, 8, 15, 8, 0);
-        LocalDateTime bookingClose = LocalDateTime.of(2026, 12, 30, 18, 0);
+        Instant bookingOpen = Instant.parse("2026-08-15T08:00:00Z");
+        Instant bookingClose = Instant.parse("2026-12-30T18:00:00Z");
 
         VaccinationCampaign campaign = new VaccinationCampaign(
                 "CMP-2026-01",
@@ -55,8 +55,8 @@ class VaccinationCampaignModelTests {
     @DisplayName("Service end date equal to service start date violates MF02-BR-01")
     void serviceEndDateEqualToStartDateThrowsException() {
         LocalDate sameDate = LocalDate.of(2026, 9, 1);
-        LocalDateTime bookingOpen = LocalDateTime.of(2026, 8, 15, 8, 0);
-        LocalDateTime bookingClose = LocalDateTime.of(2026, 9, 1, 18, 0);
+        Instant bookingOpen = Instant.parse("2026-08-15T08:00:00Z");
+        Instant bookingClose = Instant.parse("2026-09-01T18:00:00Z");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 new VaccinationCampaign(
@@ -82,8 +82,8 @@ class VaccinationCampaignModelTests {
     void serviceEndDateBeforeStartDateThrowsException() {
         LocalDate startDate = LocalDate.of(2026, 10, 1);
         LocalDate endDate = LocalDate.of(2026, 9, 1);
-        LocalDateTime bookingOpen = LocalDateTime.of(2026, 8, 15, 8, 0);
-        LocalDateTime bookingClose = LocalDateTime.of(2026, 9, 15, 18, 0);
+        Instant bookingOpen = Instant.parse("2026-08-15T08:00:00Z");
+        Instant bookingClose = Instant.parse("2026-09-15T18:00:00Z");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 new VaccinationCampaign(
@@ -109,7 +109,7 @@ class VaccinationCampaignModelTests {
     void bookingCloseEqualToBookingOpenThrowsException() {
         LocalDate startDate = LocalDate.of(2026, 9, 1);
         LocalDate endDate = LocalDate.of(2026, 12, 31);
-        LocalDateTime sameTimestamp = LocalDateTime.of(2026, 8, 15, 8, 0);
+        Instant sameTimestamp = Instant.parse("2026-08-15T08:00:00Z");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 new VaccinationCampaign(
@@ -136,8 +136,8 @@ class VaccinationCampaignModelTests {
     void bookingCloseBeforeBookingOpenThrowsException() {
         LocalDate startDate = LocalDate.of(2026, 9, 1);
         LocalDate endDate = LocalDate.of(2026, 12, 31);
-        LocalDateTime bookingOpen = LocalDateTime.of(2026, 8, 20, 8, 0);
-        LocalDateTime bookingClose = LocalDateTime.of(2026, 8, 15, 8, 0);
+        Instant bookingOpen = Instant.parse("2026-08-20T08:00:00Z");
+        Instant bookingClose = Instant.parse("2026-08-15T08:00:00Z");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 new VaccinationCampaign(
@@ -163,8 +163,8 @@ class VaccinationCampaignModelTests {
     void bookingWindowEvaluationRespectsStatusAndDates() {
         LocalDate startDate = LocalDate.of(2026, 9, 1);
         LocalDate endDate = LocalDate.of(2026, 12, 31);
-        LocalDateTime bookingOpen = LocalDateTime.of(2026, 8, 15, 8, 0);
-        LocalDateTime bookingClose = LocalDateTime.of(2026, 12, 30, 18, 0);
+        Instant bookingOpen = Instant.parse("2026-08-15T08:00:00Z");
+        Instant bookingClose = Instant.parse("2026-12-30T18:00:00Z");
 
         VaccinationCampaign campaign = new VaccinationCampaign(
                 "CMP-INTAKE-01",
@@ -180,28 +180,28 @@ class VaccinationCampaignModelTests {
         );
 
         // Before booking opens
-        assertFalse(campaign.isBookingWindowOpenAt(LocalDateTime.of(2026, 8, 15, 7, 59)));
+        assertFalse(campaign.isBookingWindowOpenAt(Instant.parse("2026-08-15T07:59:00Z")));
 
         // Exactly at booking open
         assertTrue(campaign.isBookingWindowOpenAt(bookingOpen));
 
         // Inside booking window
-        assertTrue(campaign.isBookingWindowOpenAt(LocalDateTime.of(2026, 10, 1, 12, 0)));
+        assertTrue(campaign.isBookingWindowOpenAt(Instant.parse("2026-10-01T12:00:00Z")));
 
         // Exactly at booking close
         assertTrue(campaign.isBookingWindowOpenAt(bookingClose));
 
         // After booking close
-        assertFalse(campaign.isBookingWindowOpenAt(LocalDateTime.of(2026, 12, 30, 18, 1)));
+        assertFalse(campaign.isBookingWindowOpenAt(Instant.parse("2026-12-30T18:01:00Z")));
 
         // Inactive / non-intake status blocks bookings even during open dates (MF02-BR-03)
         campaign.setStatus(CampaignStatus.SUSPENDED);
-        assertFalse(campaign.isBookingWindowOpenAt(LocalDateTime.of(2026, 10, 1, 12, 0)));
+        assertFalse(campaign.isBookingWindowOpenAt(Instant.parse("2026-10-01T12:00:00Z")));
 
         campaign.setStatus(CampaignStatus.DRAFT);
-        assertFalse(campaign.isBookingWindowOpenAt(LocalDateTime.of(2026, 10, 1, 12, 0)));
+        assertFalse(campaign.isBookingWindowOpenAt(Instant.parse("2026-10-01T12:00:00Z")));
 
         campaign.setStatus(CampaignStatus.ACTIVE);
-        assertTrue(campaign.isBookingWindowOpenAt(LocalDateTime.of(2026, 10, 1, 12, 0)));
+        assertTrue(campaign.isBookingWindowOpenAt(Instant.parse("2026-10-01T12:00:00Z")));
     }
 }

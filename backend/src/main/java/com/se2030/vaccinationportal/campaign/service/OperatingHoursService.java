@@ -150,7 +150,7 @@ public class OperatingHoursService {
             throw new IllegalArgumentException("End date (" + endDate + ") cannot extend beyond current effective to date (" + target.getEffectiveTo() + "). Use updateSchedule for schedule extensions.");
         }
 
-        target.setEffectiveTo(endDate);
+        target.endOn(endDate);
 
         return operatingHoursRepository.save(target);
     }

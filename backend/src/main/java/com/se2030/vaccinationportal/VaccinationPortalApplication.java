@@ -14,7 +14,7 @@ public class VaccinationPortalApplication {
 
 	@Bean
 	public Clock clock() {
-		return Clock.systemDefaultZone();
+		return Clock.systemUTC();
 	}
 
 }

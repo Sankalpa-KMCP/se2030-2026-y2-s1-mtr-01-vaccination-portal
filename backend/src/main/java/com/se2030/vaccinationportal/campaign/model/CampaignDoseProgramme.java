@@ -19,12 +19,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -90,10 +89,10 @@ public class CampaignDoseProgramme {
     private LocalDate activeTo;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public CampaignDoseProgramme() {
     }
@@ -145,9 +144,9 @@ public class CampaignDoseProgramme {
         if (activeFrom == null) {
             throw new IllegalArgumentException("Active from date is required");
         }
-        if (activeTo != null && activeTo.isBefore(activeFrom)) {
+        if (activeTo != null && !activeTo.isAfter(activeFrom)) {
             throw new IllegalArgumentException(
-                    "Active to date (" + activeTo + ") cannot be before active from date (" + activeFrom + ")"
+                    "Active to date (" + activeTo + ") must be after active from date (" + activeFrom + ")"
             );
         }
         if (minimumIntervalDays < 0) {
@@ -201,7 +200,7 @@ public class CampaignDoseProgramme {
      * Checks if this programme version is effective on the given date.
      *
      * @param date Date to evaluate
-     * @return true if date is within [activeFrom, activeTo] (activeTo is open-ended if null)
+     * @return true if date is within [activeFrom, activeTo) (activeTo is open-ended if null)
      */
     public boolean isEffectiveOn(LocalDate date) {
         if (date == null || activeFrom == null) {
@@ -210,7 +209,7 @@ public class CampaignDoseProgramme {
         if (date.isBefore(activeFrom)) {
             return false;
         }
-        return activeTo == null || !date.isAfter(activeTo);
+        return activeTo == null || date.isBefore(activeTo);
     }
 
     /**
@@ -225,7 +224,7 @@ public class CampaignDoseProgramme {
     @PrePersist
     protected void onCreate() {
         validateConstraints();
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (createdAt == null) {
             createdAt = now;
         }
@@ -240,120 +239,62 @@ public class CampaignDoseProgramme {
     @PreUpdate
     protected void onUpdate() {
         validateConstraints();
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     public Long getId() {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public VaccinationCampaign getCampaign() {
         return campaign;
-    }
-
-    public void setCampaign(VaccinationCampaign campaign) {
-        this.campaign = campaign;
     }
 
     public int getVersionNumber() {
         return versionNumber;
     }
 
-    public void setVersionNumber(int versionNumber) {
-        this.versionNumber = versionNumber;
-    }
-
     public DoseCategory getDoseCategory() {
         return doseCategory;
-    }
-
-    public void setDoseCategory(DoseCategory doseCategory) {
-        this.doseCategory = doseCategory;
     }
 
     public String getPermittedDoseNumbers() {
         return permittedDoseNumbers;
     }
 
-    public void setPermittedDoseNumbers(String permittedDoseNumbers) {
-        this.permittedDoseNumbers = permittedDoseNumbers;
-    }
-
     public int getMinimumIntervalDays() {
         return minimumIntervalDays;
-    }
-
-    public void setMinimumIntervalDays(int minimumIntervalDays) {
-        this.minimumIntervalDays = minimumIntervalDays;
     }
 
     public boolean isPreviousEvidenceRequired() {
         return previousEvidenceRequired;
     }
 
-    public void setPreviousEvidenceRequired(boolean previousEvidenceRequired) {
-        this.previousEvidenceRequired = previousEvidenceRequired;
-    }
-
     public int getExpectedServiceMinutes() {
         return expectedServiceMinutes;
-    }
-
-    public void setExpectedServiceMinutes(int expectedServiceMinutes) {
-        this.expectedServiceMinutes = expectedServiceMinutes;
     }
 
     public LocalDate getActiveFrom() {
         return activeFrom;
     }
 
-    public void setActiveFrom(LocalDate activeFrom) {
-        this.activeFrom = activeFrom;
-    }
-
     public LocalDate getActiveTo() {
         return activeTo;
     }
 
-    public void setActiveTo(LocalDate activeTo) {
+    public void closeAt(LocalDate activeTo) {
+        if (activeTo == null || !activeTo.isAfter(activeFrom)) {
+            throw new IllegalArgumentException("Active to date must be after active from date");
+        }
         this.activeTo = activeTo;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        CampaignDoseProgramme that = (CampaignDoseProgramme) o;
-        if (id != null && that.id != null) {
-            return Objects.equals(id, that.id);
-        }
-        return versionNumber == that.versionNumber &&
-                Objects.equals(campaign != null ? campaign.getId() : null, that.campaign != null ? that.campaign.getId() : null);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, campaign != null ? campaign.getId() : null, versionNumber);
     }
 
     @Override

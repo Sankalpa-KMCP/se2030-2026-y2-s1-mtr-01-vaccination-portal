@@ -20,7 +20,7 @@ import java.util.Optional;
  * <ul>
  *   <li>Questionnaire versions must be in PUBLISHED status via {@link QuestionnaireVersionPublicationPort}.</li>
  *   <li>No overlapping effective periods for the same campaign (BR-028 / DEC-030; prerequisite for MF02-BR-02 publication).</li>
- *   <li>Atomic version transition: closing previous open-ended version at {@code effectiveStartDate - 1 day}.</li>
+ *   <li>Atomic version transition: closing the previous open-ended version at the new assignment's exclusive start boundary.</li>
  *   <li>Immutable historical retention without hard deletion.</li>
  * </ul>
  */
@@ -46,7 +46,8 @@ public class CampaignQuestionnaireAssignmentService {
 
     /**
      * Assigns a published questionnaire version to a campaign effective from the specified start date.
-     * If an open-ended assignment currently exists, it is atomically closed on the day prior to {@code effectiveStartDate}.
+     * If an open-ended assignment exists, it is atomically closed at the exclusive
+     * {@code effectiveStartDate} boundary.
      *
      * @param campaignId Unique identifier of the VaccinationCampaign
      * @param questionnaireVersionId Unique identifier of the QuestionnaireVersion in MF-01
@@ -82,7 +83,6 @@ public class CampaignQuestionnaireAssignmentService {
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
 
-        // Handle existing open-ended assignment closure and overlap prevention
         Optional<CampaignQuestionnaireAssignment> currentOpenEndedOpt = assignmentRepository.findOpenEndedAssignment(campaignId);
 
         if (currentOpenEndedOpt.isPresent()) {
@@ -102,35 +102,6 @@ public class CampaignQuestionnaireAssignmentService {
                 );
             }
 
-            // Check for overlaps excluding the open-ended version we are about to close
-            List<CampaignQuestionnaireAssignment> overlaps = assignmentRepository.findOverlappingAssignments(
-                    campaignId,
-                    effectiveStartDate,
-                    null,
-                    current.getId()
-            );
-            if (!overlaps.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "New questionnaire assignment date range overlaps with an existing assignment for campaign ID: " + campaignId
-                );
-            }
-
-            // Atomically close previous open-ended version at effectiveStartDate - 1 day
-            current.setActiveTo(effectiveStartDate.minusDays(1));
-            assignmentRepository.save(current);
-        } else {
-            // Check for overlaps across all existing bounded versions
-            List<CampaignQuestionnaireAssignment> overlaps = assignmentRepository.findOverlappingAssignments(
-                    campaignId,
-                    effectiveStartDate,
-                    null,
-                    null
-            );
-            if (!overlaps.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "New questionnaire assignment date range overlaps with an existing assignment for campaign ID: " + campaignId
-                );
-            }
         }
 
         CampaignQuestionnaireAssignment newAssignment = new CampaignQuestionnaireAssignment(
@@ -139,6 +110,21 @@ public class CampaignQuestionnaireAssignmentService {
                 effectiveStartDate,
                 null
         );
+
+        Long currentId = currentOpenEndedOpt.map(CampaignQuestionnaireAssignment::getId).orElse(null);
+        List<CampaignQuestionnaireAssignment> overlaps = assignmentRepository.findOverlappingAssignments(
+                campaignId, effectiveStartDate, null, currentId
+        );
+        if (!overlaps.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "New questionnaire assignment date range overlaps with an existing assignment for campaign ID: " + campaignId
+            );
+        }
+
+        currentOpenEndedOpt.ifPresent(current -> {
+            current.closeAt(effectiveStartDate);
+            assignmentRepository.save(current);
+        });
 
         return assignmentRepository.save(newAssignment);
     }

@@ -23,31 +23,9 @@ public interface CampaignDoseProgrammeRepository extends JpaRepository<CampaignD
      */
     List<CampaignDoseProgramme> findByCampaignIdOrderByVersionNumberDesc(Long campaignId);
 
-    /**
-     * List all dose programme versions for a campaign, ordered by activeFrom ascending.
-     *
-     * @param campaignId VaccinationCampaign entity ID
-     * @return List of CampaignDoseProgramme records
-     */
-    List<CampaignDoseProgramme> findByCampaignIdOrderByActiveFromAsc(Long campaignId);
+    Optional<CampaignDoseProgramme> findTopByCampaignIdOrderByVersionNumberDesc(Long campaignId);
 
-    /**
-     * Find a specific dose programme version for a campaign.
-     *
-     * @param campaignId VaccinationCampaign entity ID
-     * @param versionNumber Programme version number
-     * @return Optional containing the matching CampaignDoseProgramme
-     */
-    Optional<CampaignDoseProgramme> findByCampaignIdAndVersionNumber(Long campaignId, int versionNumber);
-
-    /**
-     * Check if a specific version number already exists for a campaign.
-     *
-     * @param campaignId VaccinationCampaign entity ID
-     * @param versionNumber Version number
-     * @return true if version exists
-     */
-    boolean existsByCampaignIdAndVersionNumber(Long campaignId, int versionNumber);
+    Optional<CampaignDoseProgramme> findByCampaignIdAndActiveToIsNull(Long campaignId);
 
     /**
      * Query the effective dose programme version for a campaign on a given evaluation date.
@@ -59,14 +37,14 @@ public interface CampaignDoseProgrammeRepository extends JpaRepository<CampaignD
     @Query("SELECT p FROM CampaignDoseProgramme p " +
             "WHERE p.campaign.id = :campaignId " +
             "AND p.activeFrom <= :evaluationDate " +
-            "AND (p.activeTo IS NULL OR p.activeTo >= :evaluationDate)")
+            "AND (p.activeTo IS NULL OR p.activeTo > :evaluationDate)")
     Optional<CampaignDoseProgramme> findEffectiveProgrammeForDate(
             @Param("campaignId") Long campaignId,
             @Param("evaluationDate") LocalDate evaluationDate
     );
 
     /**
-     * Query any dose programme versions for a campaign whose effective period overlaps with [activeFrom, activeTo].
+     * Query versions whose half-open effective periods overlap [activeFrom, activeTo).
      * An open-ended activeTo is treated as extending indefinitely.
      *
      * @param campaignId VaccinationCampaign entity ID
@@ -78,8 +56,8 @@ public interface CampaignDoseProgrammeRepository extends JpaRepository<CampaignD
     @Query("SELECT p FROM CampaignDoseProgramme p " +
             "WHERE p.campaign.id = :campaignId " +
             "AND (:excludeId IS NULL OR p.id <> :excludeId) " +
-            "AND (:activeTo IS NULL OR p.activeFrom <= :activeTo) " +
-            "AND (p.activeTo IS NULL OR p.activeTo >= :activeFrom)")
+            "AND (:activeTo IS NULL OR p.activeFrom < :activeTo) " +
+            "AND (p.activeTo IS NULL OR p.activeTo > :activeFrom)")
     List<CampaignDoseProgramme> findOverlappingProgrammes(
             @Param("campaignId") Long campaignId,
             @Param("excludeId") Long excludeId,

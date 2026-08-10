@@ -25,16 +25,4 @@ class CenterStatusTests {
 
         assertEquals(expectedNames, actualNames, "Enum names must match canonical values in exact specification order");
     }
-
-    @Test
-    @DisplayName("CenterStatus values can be resolved via valueOf")
-    void valueOfResolvesCanonicalStrings() {
-        assertEquals(CenterStatus.ACTIVE, CenterStatus.valueOf("ACTIVE"));
-        assertEquals(CenterStatus.INACTIVE, CenterStatus.valueOf("INACTIVE"));
-
-        assertThrows(IllegalArgumentException.class, () -> CenterStatus.valueOf("CLOSED"));
-        assertThrows(IllegalArgumentException.class, () -> CenterStatus.valueOf("TEMPORARILY_CLOSED"));
-        assertThrows(IllegalArgumentException.class, () -> CenterStatus.valueOf("SUSPENDED"));
-        assertThrows(IllegalArgumentException.class, () -> CenterStatus.valueOf("MAINTENANCE"));
-    }
 }

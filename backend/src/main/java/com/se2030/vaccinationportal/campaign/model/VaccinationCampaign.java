@@ -17,8 +17,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Objects;
+import java.time.Instant;
 
 /**
  * Core domain entity representing a Vaccination Campaign.
@@ -67,11 +66,11 @@ public class VaccinationCampaign {
 
     @NotNull(message = "Booking open timestamp is required")
     @Column(name = "booking_open_at", nullable = false)
-    private LocalDateTime bookingOpenAt;
+    private Instant bookingOpenAt;
 
     @NotNull(message = "Booking close timestamp is required")
     @Column(name = "booking_close_at", nullable = false)
-    private LocalDateTime bookingCloseAt;
+    private Instant bookingCloseAt;
 
     @NotNull(message = "Campaign status is required")
     @Enumerated(EnumType.STRING)
@@ -79,10 +78,10 @@ public class VaccinationCampaign {
     private CampaignStatus status = CampaignStatus.DRAFT;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public VaccinationCampaign() {
     }
@@ -94,8 +93,8 @@ public class VaccinationCampaign {
                                TargetGroup targetGroup,
                                LocalDate serviceStartDate,
                                LocalDate serviceEndDate,
-                               LocalDateTime bookingOpenAt,
-                               LocalDateTime bookingCloseAt,
+                               Instant bookingOpenAt,
+                               Instant bookingCloseAt,
                                CampaignStatus status) {
         this.code = code;
         this.name = name;
@@ -139,7 +138,7 @@ public class VaccinationCampaign {
      * @param at Current evaluation timestamp
      * @return true if status permits intake and current time is within [bookingOpenAt, bookingCloseAt]
      */
-    public boolean isBookingWindowOpenAt(LocalDateTime at) {
+    public boolean isBookingWindowOpenAt(Instant at) {
         if (at == null || status == null || !status.isIntakePermitted()) {
             return false;
         }
@@ -149,7 +148,7 @@ public class VaccinationCampaign {
     @PrePersist
     protected void onCreate() {
         validateDateConsistency();
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (createdAt == null) {
             createdAt = now;
         }
@@ -164,15 +163,11 @@ public class VaccinationCampaign {
     @PreUpdate
     protected void onUpdate() {
         validateDateConsistency();
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getCode() {
@@ -203,16 +198,8 @@ public class VaccinationCampaign {
         return vaccineType;
     }
 
-    public void setVaccineType(VaccineType vaccineType) {
-        this.vaccineType = vaccineType;
-    }
-
     public TargetGroup getTargetGroup() {
         return targetGroup;
-    }
-
-    public void setTargetGroup(TargetGroup targetGroup) {
-        this.targetGroup = targetGroup;
     }
 
     public LocalDate getServiceStartDate() {
@@ -231,19 +218,19 @@ public class VaccinationCampaign {
         this.serviceEndDate = serviceEndDate;
     }
 
-    public LocalDateTime getBookingOpenAt() {
+    public Instant getBookingOpenAt() {
         return bookingOpenAt;
     }
 
-    public void setBookingOpenAt(LocalDateTime bookingOpenAt) {
+    public void setBookingOpenAt(Instant bookingOpenAt) {
         this.bookingOpenAt = bookingOpenAt;
     }
 
-    public LocalDateTime getBookingCloseAt() {
+    public Instant getBookingCloseAt() {
         return bookingCloseAt;
     }
 
-    public void setBookingCloseAt(LocalDateTime bookingCloseAt) {
+    public void setBookingCloseAt(Instant bookingCloseAt) {
         this.bookingCloseAt = bookingCloseAt;
     }
 
@@ -255,33 +242,12 @@ public class VaccinationCampaign {
         this.status = status;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        VaccinationCampaign that = (VaccinationCampaign) o;
-        return Objects.equals(code, that.code);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(code);
     }
 
     @Override

@@ -34,7 +34,7 @@ public interface CampaignQuestionnaireAssignmentRepository extends JpaRepository
     @Query("SELECT a FROM CampaignQuestionnaireAssignment a " +
            "WHERE a.campaign.id = :campaignId " +
            "AND a.activeFrom <= :date " +
-           "AND (a.activeTo IS NULL OR a.activeTo >= :date)")
+           "AND (a.activeTo IS NULL OR a.activeTo > :date)")
     Optional<CampaignQuestionnaireAssignment> findEffectiveAssignmentAt(
             @Param("campaignId") Long campaignId,
             @Param("date") LocalDate date
@@ -53,7 +53,7 @@ public interface CampaignQuestionnaireAssignmentRepository extends JpaRepository
     Optional<CampaignQuestionnaireAssignment> findOpenEndedAssignment(@Param("campaignId") Long campaignId);
 
     /**
-     * Finds assignments for a campaign whose effective period overlaps with the given [activeFrom, activeTo] range.
+     * Finds assignments whose half-open effective periods overlap [activeFrom, activeTo).
      *
      * @param campaignId ID of the VaccinationCampaign
      * @param activeFrom Start date of the candidate interval
@@ -64,8 +64,8 @@ public interface CampaignQuestionnaireAssignmentRepository extends JpaRepository
     @Query("SELECT a FROM CampaignQuestionnaireAssignment a " +
            "WHERE a.campaign.id = :campaignId " +
            "AND (:excludeId IS NULL OR a.id != :excludeId) " +
-           "AND (:activeTo IS NULL OR a.activeFrom <= :activeTo) " +
-           "AND (a.activeTo IS NULL OR a.activeTo >= :activeFrom)")
+           "AND (:activeTo IS NULL OR a.activeFrom < :activeTo) " +
+           "AND (a.activeTo IS NULL OR a.activeTo > :activeFrom)")
     List<CampaignQuestionnaireAssignment> findOverlappingAssignments(
             @Param("campaignId") Long campaignId,
             @Param("activeFrom") LocalDate activeFrom,
@@ -81,11 +81,4 @@ public interface CampaignQuestionnaireAssignmentRepository extends JpaRepository
      */
     List<CampaignQuestionnaireAssignment> findByQuestionnaireVersionId(Long questionnaireVersionId);
 
-    /**
-     * Counts the total number of questionnaire assignments recorded for a campaign.
-     *
-     * @param campaignId ID of the VaccinationCampaign
-     * @return Count of assignment records
-     */
-    long countByCampaignId(Long campaignId);
 }

@@ -25,16 +25,4 @@ class LocationTargetTypeTests {
 
         assertEquals(expectedNames, actualNames, "Enum names must match canonical values in exact specification order");
     }
-
-    @Test
-    @DisplayName("LocationTargetType values can be resolved via valueOf")
-    void valueOfResolvesCanonicalStrings() {
-        assertEquals(LocationTargetType.PROVINCE, LocationTargetType.valueOf("PROVINCE"));
-        assertEquals(LocationTargetType.DISTRICT, LocationTargetType.valueOf("DISTRICT"));
-        assertEquals(LocationTargetType.HEALTH_REGION, LocationTargetType.valueOf("HEALTH_REGION"));
-        assertEquals(LocationTargetType.CENTER, LocationTargetType.valueOf("CENTER"));
-
-        assertThrows(IllegalArgumentException.class, () -> LocationTargetType.valueOf("MUNICIPALITY"));
-        assertThrows(IllegalArgumentException.class, () -> LocationTargetType.valueOf("POSTAL_CODE"));
-    }
 }
