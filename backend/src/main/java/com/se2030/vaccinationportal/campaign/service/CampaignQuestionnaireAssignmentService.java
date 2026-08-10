@@ -20,7 +20,7 @@ import java.util.Optional;
  * <ul>
  *   <li>Questionnaire versions must be in PUBLISHED status via {@link QuestionnaireVersionPublicationPort}.</li>
  *   <li>No overlapping effective periods for the same campaign (BR-028 / DEC-030; prerequisite for MF02-BR-02 publication).</li>
- *   <li>Atomic version transition: closing previous open-ended version at {@code effectiveStartDate - 1 day}.</li>
+ *   <li>Atomic version transition: closing the previous open-ended version at the new assignment's exclusive start boundary.</li>
  *   <li>Immutable historical retention without hard deletion.</li>
  * </ul>
  */
