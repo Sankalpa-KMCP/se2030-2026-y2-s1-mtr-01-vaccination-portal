@@ -8,17 +8,19 @@
 **Working window:** Weeks 1–3
 **Last updated:** 2026-08-10
 **Latest implementation integration:** merged into `develop` via PR #20 (`OperatingHours` backend foundation)
-**Latest canonical documentation integration:** merged into `develop` via PR #17
-**Latest evidence integration:** merged into `develop` via PR #19
-**Latest verified `develop` HEAD:** `1cad899971c8b18804af31bfb079a24285f7d16d`
-**Backend implementation checkpoint:** `1cad899971c8b18804af31bfb079a24285f7d16d`
+**Latest implementation develop checkpoint:** `1cad899971c8b18804af31bfb079a24285f7d16d`
+**Latest completed evidence integration recorded:** merged into `develop` via PR #21 (`docs(mf02): record operating hours sprint 1 evidence`)
+**PR #21 evidence merge checkpoint:** `433dbe1dd919b93d082aa31d3592519b37a75206`
+**Evidence record prepared from develop checkpoint:** `433dbe1dd919b93d082aa31d3592519b37a75206`
 **OperatingHours feature branch HEAD:** `4fe94df8df7c07ade3c22a39165aff3da1e8795a`
 **Canonical documentation sync checkpoint (PR #17):** `bd22cb973bad83c8456897805bc2df95b65593d0`
-**Sprint 1 evidence integration checkpoints:** PR #18 (`c120ee8530c055a6769b68777fd1342abeca193b`), PR #19 (`8cdb1125809770671325a4f47fc80fd5c48b4ddc`)
-**OperatingHours integration checkpoint (PR #20):** `1cad899971c8b18804af31bfb079a24285f7d16d`
+**Historical evidence integration checkpoints:** PR #18 (`c120ee8530c055a6769b68777fd1342abeca193b`), PR #19 (`8cdb1125809770671325a4f47fc80fd5c48b4ddc`), PR #21 (`433dbe1dd919b93d082aa31d3592519b37a75206`)
+**OperatingHours backend integration checkpoint (PR #20):** `1cad899971c8b18804af31bfb079a24285f7d16d`
 **OperatingHours source branch:** `feature/mf02-operating-hours`
 
-> Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation evidence; the canonical Markdown remains the requirements source of truth.
+> Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
+>
+> **Metadata Stability Policy:** Metadata-only evidence synchronization commits/PRs are recorded as evidence checkpoints and are not recursively treated as new MF-02 implementation checkpoints. Implementation checkpoints remain strictly tied to actual domain/feature implementation integrations.
 
 ## Sprint Goal
 
@@ -49,20 +51,21 @@ Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundation
 
 ## Current Verification Snapshot
 
-### Overall `develop` checkpoint after OperatingHours integration (PR #20)
+### Overall `develop` checkpoint after PR #21 evidence integration
 
 ```text
 Latest verified origin/develop:
-1cad899971c8b18804af31bfb079a24285f7d16d
+433dbe1dd919b93d082aa31d3592519b37a75206
 
-Latest merge:
+Latest develop merge:
+PR #21
+433dbe1dd919b93d082aa31d3592519b37a75206
+
+Latest MF-02 implementation checkpoint:
 PR #20
 1cad899971c8b18804af31bfb079a24285f7d16d
 
-PR #20:
-feature/mf02-operating-hours -> develop
-
-PR #20 status:
+PR #21 status:
 MERGED
 
 Backend CI:
@@ -72,9 +75,9 @@ Frontend CI:
 SUCCESS
 ```
 
-PR #20 introduced the core backend foundation for vaccination center operating hours (`OperatingHours`). It added domain entity modeling, mutation exception-safety, Spring Data JPA persistence and effective-date queries, parent-center pessimistic write locking serialization, deterministic Monday→Sunday calendar ordering, and multidimensional schedule overlap enforcement.
+PR #20 introduced the core backend foundation for vaccination center operating hours (`OperatingHours`). It added domain entity modeling, mutation exception-safety, Spring Data JPA persistence and effective-date queries, parent-center pessimistic write locking serialization, deterministic Monday→Sunday calendar ordering, and multidimensional schedule overlap enforcement. PR #21 integrated the corresponding verified Sprint 1 evidence record.
 
-### Backend implementation / integration checkpoint
+### Backend implementation / integration checkpoint (PR #20)
 
 ```text
 Backend implementation develop checkpoint:
@@ -156,7 +159,7 @@ Frontend CI:
 SUCCESS
 ```
 
-### Evidence integration checkpoints (PR #18 & PR #19)
+### Evidence integration checkpoints (PR #18, PR #19, & PR #21)
 
 ```text
 PR #18 merge commit:
@@ -165,10 +168,13 @@ c120ee8530c055a6769b68777fd1342abeca193b
 PR #19 merge commit:
 8cdb1125809770671325a4f47fc80fd5c48b4ddc
 
-PR #19 branch:
-docs/mf02-sprint1-final-checkpoint
+PR #21 merge commit:
+433dbe1dd919b93d082aa31d3592519b37a75206
 
-PR #19 status:
+PR #21 branch:
+docs/mf02-sprint1-operating-hours-evidence
+
+PR #21 status:
 MERGED
 
 Backend CI:
@@ -360,13 +366,14 @@ Completed after the backend hardening checkpoint:
 * merged PR #17 into `develop` with merge commit `bd22cb973bad83c8456897805bc2df95b65593d0`;
 * verified Backend CI `SUCCESS` and Frontend CI `SUCCESS`.
 
-### 8. Sprint 1 evidence checkpoints (PR #18 & PR #19)
+### 8. Sprint 1 evidence checkpoints (PR #18, PR #19, & PR #21)
 
 Completed after canonical documentation synchronization:
 
 * merged PR #18 (`c120ee8`) recording evidence up to PR #17;
 * merged PR #19 (`8cdb112`) recording evidence up to PR #18;
-* verified Backend CI `SUCCESS` and Frontend CI `SUCCESS` across both PRs.
+* merged PR #21 (`433dbe1`) recording evidence up to PR #20;
+* verified Backend CI `SUCCESS` and Frontend CI `SUCCESS` across all evidence integration PRs.
 
 ### 9. OperatingHours domain, persistence, and service foundation (PR #20)
 
@@ -580,6 +587,7 @@ This 7-commit checkpoint was merged into `develop` through PR #20 (merge commit 
 * Sprint 1 evidence record integrations:
   - PR #18 evidence: **2 evidence commits (`c0e6f80`, `735a046`) plus merge commit `c120ee8`**
   - PR #19 evidence: **1 evidence commit (`1afa39d`) plus merge commit `8cdb112`**
+  - PR #21 evidence: **1 evidence commit (`787b941`) plus merge commit `433dbe1`**
 * OperatingHours integration checkpoint: **PR #20 merge commit `1cad899`**
 
 ## Pull Requests / Remote State
@@ -594,10 +602,11 @@ This 7-commit checkpoint was merged into `develop` through PR #20 (merge commit 
 * PR #17 merged canonical DOCX synchronization into `develop` (`bd22cb9`).
 * Backend CI: `SUCCESS`, Frontend CI: `SUCCESS`.
 
-### Sprint 1 evidence integrations (PR #18 & PR #19)
+### Sprint 1 evidence integrations (PR #18, PR #19, & PR #21)
 
 * PR #18 merged evidence record update into `develop` (`c120ee8`).
 * PR #19 merged evidence record update into `develop` (`8cdb112`).
+* PR #21 merged evidence record update into `develop` (`433dbe1`).
 * Backend CI: `SUCCESS`, Frontend CI: `SUCCESS`.
 
 ### OperatingHours backend foundation integration (PR #20)
@@ -656,6 +665,7 @@ JAR packaged successfully
 * PR #18 (Evidence Checkpoint): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
 * PR #19 (Final Evidence Checkpoint): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
 * PR #20 (OperatingHours Foundation): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
+* PR #21 (Sprint 1 Evidence Checkpoint): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
 
 ## Current Repository State
 
@@ -663,14 +673,17 @@ JAR packaged successfully
 
 ```text
 origin/develop:
-1cad899971c8b18804af31bfb079a24285f7d16d
+433dbe1dd919b93d082aa31d3592519b37a75206
 
-Latest integration:
-PR #20
-feature/mf02-operating-hours -> develop
+Latest develop merge:
+PR #21
+docs/mf02-sprint1-operating-hours-evidence -> develop
 
-PR #20 merge:
-1cad899971c8b18804af31bfb079a24285f7d16d
+PR #21 merge:
+433dbe1dd919b93d082aa31d3592519b37a75206
+
+Latest implementation checkpoint:
+PR #20 (1cad899971c8b18804af31bfb079a24285f7d16d)
 
 Evidence file:
 docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
@@ -678,7 +691,7 @@ docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
 Canonical DOCX:
 docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx
 
-Canonical Markdown change in PR #20:
+Canonical Markdown change in PR #21:
 none
 ```
 
@@ -720,9 +733,9 @@ Already captured:
 * campaign, dose programme, targeting, questionnaire assignment checkpoints
 * vaccination center master and hardening checkpoints (PR #16)
 * canonical documentation synchronization (PR #17)
-* Sprint 1 evidence integration checkpoints (PR #18, PR #19)
+* Sprint 1 evidence integration checkpoints (PR #18, PR #19, PR #21)
 * OperatingHours backend foundation (PR #20, merge commit `1cad899`, 152 passing tests)
-* Backend CI & Frontend CI results for PR #17, PR #18, PR #19, and PR #20
+* Backend CI & Frontend CI results for PR #17, PR #18, PR #19, PR #20, and PR #21
 
 Still to capture:
 
@@ -754,7 +767,7 @@ Still to capture:
 * campaign-row and center-row pessimistic locking for critical effective-dated configuration changes
 * 152 passing backend tests with successful Maven verify packaging
 * R8 canonical DOCX synchronization merged through PR #17
-* successful Backend CI and Frontend CI across PR #17, PR #18, PR #19, and PR #20
+* successful Backend CI and Frontend CI across PR #17, PR #18, PR #19, PR #20, and PR #21
 * canonical Markdown integrity preserved
 
 ### Not completed / likely carry-forward candidates if Sprint 1 closes before completion
@@ -785,7 +798,7 @@ Still to capture:
 
 ## Exact Next Work
 
-The `OperatingHours` backend foundation has been implemented, validated, and merged into `develop` through PR #20 (checkpoint `1cad899`).
+The `OperatingHours` backend foundation has been implemented, validated, and merged into `develop` through PR #20 (checkpoint `1cad899`). The corresponding Sprint 1 evidence record has been integrated through PR #21 (checkpoint `433dbe1`).
 
 When MF-02 feature development resumes:
 
@@ -796,4 +809,4 @@ When MF-02 feature development resumes:
 5. Add the `SessionRecurrenceRule` foundation.
 6. Complete remaining Sprint 1 publication checks, migrations, API/UI integration and Definition-of-Done evidence.
 
-**Current stopping point:** `OperatingHours` backend foundation is complete and merged into `develop` through PR #20 (merge commit `1cad899`); `CenterClosure` has not been started.
+**Current stopping point:** `OperatingHours` backend foundation is complete and merged into `develop` through PR #20 (merge commit `1cad899`); evidence record integrated through PR #21 (`433dbe1`); `CenterClosure` has not been started.
