@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Spring Data JPA repository for the {@link OperatingHours} entity.
@@ -15,6 +16,16 @@ import java.util.List;
  */
 @Repository
 public interface OperatingHoursRepository extends JpaRepository<OperatingHours, Long> {
+
+    /**
+     * Finds the parent center ID associated with an operating hours record.
+     * Used for safe lock ordering prior to loading managed target state.
+     *
+     * @param id ID of the OperatingHours
+     * @return Optional containing the parent center ID if found
+     */
+    @Query("SELECT oh.center.id FROM OperatingHours oh WHERE oh.id = :id")
+    Optional<Long> findCenterIdById(@Param("id") Long id);
 
     /**
      * Finds all operating hours records associated with a vaccination center.
