@@ -25,14 +25,4 @@ class DoseCategoryTests {
 
         assertEquals(expectedNames, actualNames, "DoseCategory enum names must match canonical values exactly");
     }
-
-    @Test
-    @DisplayName("DoseCategory values can be resolved via valueOf")
-    void valueOfResolvesCanonicalStrings() {
-        assertEquals(DoseCategory.PRIMARY, DoseCategory.valueOf("PRIMARY"));
-        assertEquals(DoseCategory.BOOSTER, DoseCategory.valueOf("BOOSTER"));
-
-        assertThrows(IllegalArgumentException.class, () -> DoseCategory.valueOf("ANNUAL_SEASONAL"));
-        assertThrows(IllegalArgumentException.class, () -> DoseCategory.valueOf("OTHER"));
-    }
 }

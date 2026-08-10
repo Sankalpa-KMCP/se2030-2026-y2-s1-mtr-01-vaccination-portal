@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -87,8 +87,8 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2027, 3, 31),
-                LocalDateTime.of(2026, 8, 15, 8, 0),
-                LocalDateTime.of(2027, 3, 30, 18, 0),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2027-03-30T18:00:00Z"),
                 CampaignStatus.SCHEDULED
         );
         testCampaign = campaignRepository.saveAndFlush(campaign);
@@ -123,12 +123,9 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
         assertNull(saved.getActiveTo());
         assertNotNull(saved.getCreatedAt());
 
-        Optional<CampaignDoseProgramme> byVersion = doseProgrammeRepository.findByCampaignIdAndVersionNumber(
-                testCampaign.getId(), 1
-        );
-        assertTrue(byVersion.isPresent());
-        assertEquals(saved.getId(), byVersion.get().getId());
-        assertTrue(doseProgrammeRepository.existsByCampaignIdAndVersionNumber(testCampaign.getId(), 1));
+        Optional<CampaignDoseProgramme> latest = doseProgrammeRepository
+                .findTopByCampaignIdOrderByVersionNumberDesc(testCampaign.getId());
+        assertEquals(saved.getId(), latest.orElseThrow().getId());
     }
 
     @Test
@@ -177,7 +174,7 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
                 LocalDate.of(2026, 9, 1)
         );
 
-        // Version 2 published on Nov 1 (closes version 1 on Oct 31)
+        // Version 2 begins on Nov 1, the exclusive end boundary of version 1.
         CampaignDoseProgramme v2 = doseProgrammeService.createNewVersion(
                 testCampaign.getId(),
                 DoseCategory.BOOSTER,
@@ -195,7 +192,7 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
 
         // Verify version 1 was closed without in-place loss of past configuration
         CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
-        assertEquals(LocalDate.of(2026, 10, 31), refreshedV1.getActiveTo());
+        assertEquals(LocalDate.of(2026, 11, 1), refreshedV1.getActiveTo());
         assertEquals(DoseCategory.PRIMARY, refreshedV1.getDoseCategory());
         assertEquals("1,2", refreshedV1.getPermittedDoseNumbers());
 
@@ -417,6 +414,23 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
     }
 
     @Test
+    @DisplayName("Invalid replacement candidate is rejected before current history is closed")
+    void invalidReplacementCandidatePreservesCurrentHistory() {
+        CampaignDoseProgramme current = doseProgrammeService.createInitialProgramme(
+                testCampaign.getId(), DoseCategory.PRIMARY, "1,2", 21, false, 10,
+                LocalDate.of(2026, 7, 1)
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> doseProgrammeService.createNewVersion(
+                testCampaign.getId(), DoseCategory.BOOSTER, "not-a-dose", 90, true, 15,
+                LocalDate.of(2026, 9, 1)
+        ));
+
+        assertNull(doseProgrammeRepository.findById(current.getId()).orElseThrow().getActiveTo());
+        assertEquals(1, doseProgrammeService.getProgrammeHistory(testCampaign.getId()).size());
+    }
+
+    @Test
     @DisplayName("createNewVersion with past effectiveStartDate is rejected and preserves history (MF02-BR-18)")
     void createNewVersionWithPastEffectiveStartDateIsRejected() {
         // Initial programme active from 2026-07-01 (before fixed today 2026-08-09)
@@ -457,7 +471,7 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
     }
 
     @Test
-    @DisplayName("createNewVersion with effectiveStartDate today succeeds and closes previous version on yesterday (MF02-BR-18)")
+    @DisplayName("createNewVersion today uses the same half-open transition boundary (MF02-BR-18)")
     void createNewVersionEffectiveTodaySucceeds() {
         // Initial programme active from 2026-07-01
         CampaignDoseProgramme v1 = doseProgrammeService.createInitialProgramme(
@@ -486,16 +500,16 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
         assertEquals(FIXED_EVALUATION_DATE, v2.getActiveFrom());
         assertNull(v2.getActiveTo());
 
-        // Previous version closed on yesterday (2026-08-08)
+        // Previous version ends exclusively when the replacement begins.
         CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
-        assertEquals(LocalDate.of(2026, 8, 8), refreshedV1.getActiveTo());
+        assertEquals(FIXED_EVALUATION_DATE, refreshedV1.getActiveTo());
 
         List<CampaignDoseProgramme> history = doseProgrammeService.getProgrammeHistory(testCampaign.getId());
         assertEquals(2, history.size());
     }
 
     @Test
-    @DisplayName("createNewVersion with future effectiveStartDate succeeds and closes previous version on day prior (MF02-BR-18)")
+    @DisplayName("createNewVersion in future uses the same half-open transition boundary (MF02-BR-18)")
     void createNewVersionEffectiveFutureSucceeds() {
         // Initial programme active from 2026-07-01
         CampaignDoseProgramme v1 = doseProgrammeService.createInitialProgramme(
@@ -526,9 +540,9 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
         assertEquals(futureDate, v2.getActiveFrom());
         assertNull(v2.getActiveTo());
 
-        // Previous version closed on day prior (2026-08-19)
+        // Previous version ends exclusively when the replacement begins.
         CampaignDoseProgramme refreshedV1 = doseProgrammeRepository.findById(v1.getId()).orElseThrow();
-        assertEquals(LocalDate.of(2026, 8, 19), refreshedV1.getActiveTo());
+        assertEquals(futureDate, refreshedV1.getActiveTo());
 
         List<CampaignDoseProgramme> history = doseProgrammeService.getProgrammeHistory(testCampaign.getId());
         assertEquals(2, history.size());

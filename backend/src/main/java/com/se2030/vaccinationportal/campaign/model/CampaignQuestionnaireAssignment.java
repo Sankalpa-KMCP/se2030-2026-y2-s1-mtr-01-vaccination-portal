@@ -15,8 +15,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Objects;
+import java.time.Instant;
 
 /**
  * Domain entity representing an effective-dated assignment of a published questionnaire version to a vaccination campaign.
@@ -64,10 +63,10 @@ public class CampaignQuestionnaireAssignment {
     private LocalDate activeTo;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public CampaignQuestionnaireAssignment() {
     }
@@ -99,30 +98,30 @@ public class CampaignQuestionnaireAssignment {
         if (activeFrom == null) {
             throw new IllegalArgumentException("Active from date is required");
         }
-        if (activeTo != null && activeTo.isBefore(activeFrom)) {
-            throw new IllegalArgumentException("Active to date (" + activeTo + ") cannot be before active from date (" + activeFrom + ")");
+        if (activeTo != null && !activeTo.isAfter(activeFrom)) {
+            throw new IllegalArgumentException("Active to date (" + activeTo + ") must be after active from date (" + activeFrom + ")");
         }
     }
 
     /**
-     * Evaluates whether this assignment is effective on the given date (inclusive boundary).
+     * Evaluates whether this assignment is effective on the given date using [activeFrom, activeTo).
      *
      * @param date Date to evaluate
-     * @return true if date is within [activeFrom, activeTo] (or activeTo is null and date >= activeFrom)
+     * @return true if date is within [activeFrom, activeTo) (or activeTo is null and date >= activeFrom)
      */
     public boolean isEffectiveOn(LocalDate date) {
         if (date == null) {
             return false;
         }
         boolean afterOrOnFrom = !date.isBefore(activeFrom);
-        boolean beforeOrOnTo = (activeTo == null || !date.isAfter(activeTo));
-        return afterOrOnFrom && beforeOrOnTo;
+        boolean beforeTo = activeTo == null || date.isBefore(activeTo);
+        return afterOrOnFrom && beforeTo;
     }
 
     @PrePersist
     protected void onCreate() {
         validateConstraints();
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (createdAt == null) {
             createdAt = now;
         }
@@ -134,81 +133,42 @@ public class CampaignQuestionnaireAssignment {
     @PreUpdate
     protected void onUpdate() {
         validateConstraints();
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     public Long getId() {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public VaccinationCampaign getCampaign() {
         return campaign;
-    }
-
-    public void setCampaign(VaccinationCampaign campaign) {
-        this.campaign = campaign;
     }
 
     public Long getQuestionnaireVersionId() {
         return questionnaireVersionId;
     }
 
-    public void setQuestionnaireVersionId(Long questionnaireVersionId) {
-        this.questionnaireVersionId = questionnaireVersionId;
-    }
-
     public LocalDate getActiveFrom() {
         return activeFrom;
-    }
-
-    public void setActiveFrom(LocalDate activeFrom) {
-        this.activeFrom = activeFrom;
     }
 
     public LocalDate getActiveTo() {
         return activeTo;
     }
 
-    public void setActiveTo(LocalDate activeTo) {
+    public void closeAt(LocalDate activeTo) {
+        if (activeTo == null || !activeTo.isAfter(activeFrom)) {
+            throw new IllegalArgumentException("Active to date must be after active from date");
+        }
         this.activeTo = activeTo;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        CampaignQuestionnaireAssignment that = (CampaignQuestionnaireAssignment) o;
-        if (id != null && that.id != null) {
-            return Objects.equals(id, that.id);
-        }
-        return Objects.equals(campaign != null ? campaign.getId() : null, that.campaign != null ? that.campaign.getId() : null) &&
-                Objects.equals(questionnaireVersionId, that.questionnaireVersionId) &&
-                Objects.equals(activeFrom, that.activeFrom);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, campaign != null ? campaign.getId() : null, questionnaireVersionId, activeFrom);
     }
 
     @Override

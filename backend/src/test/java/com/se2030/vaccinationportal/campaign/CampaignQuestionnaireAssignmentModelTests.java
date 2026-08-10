@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -32,8 +32,8 @@ class CampaignQuestionnaireAssignmentModelTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 8, 15, 8, 0),
-                LocalDateTime.of(2026, 12, 30, 18, 0),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
                 CampaignStatus.DRAFT
         );
     }
@@ -96,7 +96,7 @@ class CampaignQuestionnaireAssignmentModelTests {
     }
 
     @Test
-    @DisplayName("activeTo date before activeFrom date is rejected")
+    @DisplayName("Half-open active period requires activeTo after activeFrom")
     void activeToBeforeActiveFromThrowsException() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 new CampaignQuestionnaireAssignment(
@@ -106,11 +106,11 @@ class CampaignQuestionnaireAssignmentModelTests {
                         LocalDate.of(2026, 9, 9)
                 )
         );
-        assertTrue(ex.getMessage().contains("cannot be before active from date"));
+        assertTrue(ex.getMessage().contains("must be after active from date"));
     }
 
     @Test
-    @DisplayName("isEffectiveOn evaluates inclusive boundaries and bounded ranges accurately")
+    @DisplayName("isEffectiveOn evaluates half-open boundaries accurately")
     void isEffectiveOnEvaluatesBoundedRanges() {
         CampaignQuestionnaireAssignment assignment = new CampaignQuestionnaireAssignment(
                 sampleCampaign,
@@ -128,8 +128,8 @@ class CampaignQuestionnaireAssignmentModelTests {
         // Mid-period -> true
         assertTrue(assignment.isEffectiveOn(LocalDate.of(2026, 9, 15)));
 
-        // Inclusive end boundary -> true
-        assertTrue(assignment.isEffectiveOn(LocalDate.of(2026, 9, 30)));
+        // Exclusive end boundary -> false
+        assertFalse(assignment.isEffectiveOn(LocalDate.of(2026, 9, 30)));
 
         // After activeTo -> false
         assertFalse(assignment.isEffectiveOn(LocalDate.of(2026, 10, 1)));

@@ -15,9 +15,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Locale;
-import java.util.Objects;
 
 /**
  * Domain entity representing a physical vaccination center.
@@ -92,10 +91,10 @@ public class VaccinationCenter {
     private Integer sessionServiceCeiling;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public VaccinationCenter() {
     }
@@ -107,14 +106,14 @@ public class VaccinationCenter {
                              CenterStatus centerStatus,
                              Integer safeConcurrentOccupancy,
                              Integer sessionServiceCeiling) {
+        validateParameters(code, name, address, contact, centerStatus, safeConcurrentOccupancy, sessionServiceCeiling);
         this.code = normalizeCode(code);
-        this.name = name != null ? name.trim() : null;
-        this.address = address != null ? address.trim() : null;
-        this.contact = contact != null ? contact.trim() : null;
+        this.name = name.trim();
+        this.address = address.trim();
+        this.contact = contact.trim();
         this.centerStatus = centerStatus;
         this.safeConcurrentOccupancy = safeConcurrentOccupancy;
         this.sessionServiceCeiling = sessionServiceCeiling;
-        validateConstraints();
     }
 
     /**
@@ -139,9 +138,17 @@ public class VaccinationCenter {
      * Validates domain invariants for VaccinationCenter.
      */
     public void validateConstraints() {
-        if (code == null || code.trim().isEmpty()) {
-            throw new IllegalArgumentException("Center code is required");
-        }
+        validateParameters(code, name, address, contact, centerStatus, safeConcurrentOccupancy, sessionServiceCeiling);
+    }
+
+    private static void validateParameters(String code,
+                                           String name,
+                                           String address,
+                                           String contact,
+                                           CenterStatus centerStatus,
+                                           Integer safeConcurrentOccupancy,
+                                           Integer sessionServiceCeiling) {
+        normalizeCode(code);
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Center name is required");
         }
@@ -162,11 +169,32 @@ public class VaccinationCenter {
         }
     }
 
+    public void updateDetails(String name,
+                              String address,
+                              String contact,
+                              Integer safeConcurrentOccupancy,
+                              Integer sessionServiceCeiling) {
+        validateParameters(code, name, address, contact, centerStatus, safeConcurrentOccupancy, sessionServiceCeiling);
+        this.name = name.trim();
+        this.address = address.trim();
+        this.contact = contact.trim();
+        this.safeConcurrentOccupancy = safeConcurrentOccupancy;
+        this.sessionServiceCeiling = sessionServiceCeiling;
+    }
+
+    public void activate() {
+        centerStatus = CenterStatus.ACTIVE;
+    }
+
+    public void deactivate() {
+        centerStatus = CenterStatus.INACTIVE;
+    }
+
     @PrePersist
     protected void onCreate() {
         validateConstraints();
         this.code = normalizeCode(this.code);
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (createdAt == null) {
             createdAt = now;
         }
@@ -179,103 +207,47 @@ public class VaccinationCenter {
     protected void onUpdate() {
         validateConstraints();
         this.code = normalizeCode(this.code);
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     public Long getId() {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getCode() {
         return code;
-    }
-
-    public void setCode(String code) {
-        this.code = normalizeCode(code);
     }
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name != null ? name.trim() : null;
-    }
-
     public String getAddress() {
         return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address != null ? address.trim() : null;
     }
 
     public String getContact() {
         return contact;
     }
 
-    public void setContact(String contact) {
-        this.contact = contact != null ? contact.trim() : null;
-    }
-
     public CenterStatus getCenterStatus() {
         return centerStatus;
-    }
-
-    public void setCenterStatus(CenterStatus centerStatus) {
-        this.centerStatus = centerStatus;
     }
 
     public Integer getSafeConcurrentOccupancy() {
         return safeConcurrentOccupancy;
     }
 
-    public void setSafeConcurrentOccupancy(Integer safeConcurrentOccupancy) {
-        this.safeConcurrentOccupancy = safeConcurrentOccupancy;
-    }
-
     public Integer getSessionServiceCeiling() {
         return sessionServiceCeiling;
     }
 
-    public void setSessionServiceCeiling(Integer sessionServiceCeiling) {
-        this.sessionServiceCeiling = sessionServiceCeiling;
-    }
-
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        VaccinationCenter that = (VaccinationCenter) o;
-        if (id != null && that.id != null) {
-            return Objects.equals(id, that.id);
-        }
-        return Objects.equals(code, that.code);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id != null ? id : code);
     }
 
     @Override

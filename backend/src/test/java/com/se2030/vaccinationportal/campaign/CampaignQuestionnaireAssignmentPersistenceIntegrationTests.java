@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
@@ -130,8 +130,8 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 8, 15, 8, 0),
-                LocalDateTime.of(2026, 12, 30, 18, 0),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
                 CampaignStatus.DRAFT
         ));
 
@@ -143,8 +143,8 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 8, 15, 8, 0),
-                LocalDateTime.of(2026, 12, 30, 18, 0),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
                 CampaignStatus.PUBLISHED
         ));
     }
@@ -166,7 +166,7 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
         assertNotNull(saved.getCreatedAt());
         assertNotNull(saved.getUpdatedAt());
 
-        assertEquals(1, assignmentRepository.countByCampaignId(campaignA.getId()));
+        assertEquals(1, assignmentService.getAssignmentHistory(campaignA.getId()).size());
     }
 
     @Test
@@ -218,7 +218,7 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
     }
 
     @Test
-    @DisplayName("New assignment version atomically closes previous record at effectiveStartDate minus 1 day")
+    @DisplayName("New assignment atomically closes the prior half-open period at its start boundary")
     void newAssignmentClosesPreviousRecordAtomically() {
         // Initial assignment: activeFrom = 2026-09-01, activeTo = null
         CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
@@ -239,10 +239,10 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
         assertEquals(LocalDate.of(2026, 9, 20), v2.getActiveFrom());
         assertNull(v2.getActiveTo());
 
-        // Verify previous record v1 is now closed at 2026-09-19
+        // The prior period excludes the replacement start date.
         CampaignQuestionnaireAssignment v1Reloaded = assignmentRepository.findById(v1.getId()).orElseThrow();
         assertEquals(LocalDate.of(2026, 9, 1), v1Reloaded.getActiveFrom());
-        assertEquals(LocalDate.of(2026, 9, 19), v1Reloaded.getActiveTo());
+        assertEquals(LocalDate.of(2026, 9, 20), v1Reloaded.getActiveTo());
 
         // Verify history contains both versions in order
         List<CampaignQuestionnaireAssignment> history = assignmentService.getAssignmentHistory(campaignA.getId());
@@ -320,7 +320,7 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
                 )
         );
         assertTrue(ex.getMessage().contains("is not in PUBLISHED status in MF-01"));
-        assertEquals(0, assignmentRepository.countByCampaignId(campaignA.getId()));
+        assertEquals(0, assignmentService.getAssignmentHistory(campaignA.getId()).size());
     }
 
     @Test
@@ -420,11 +420,11 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
         assertNull(refreshedV1.getActiveTo(), "Existing assignment must remain open-ended when past replacement is rejected");
 
         // Verify only 1 assignment is persisted
-        assertEquals(1, assignmentRepository.countByCampaignId(campaignA.getId()));
+        assertEquals(1, assignmentService.getAssignmentHistory(campaignA.getId()).size());
     }
 
     @Test
-    @DisplayName("Replacement assignment with effectiveStartDate today succeeds and closes previous on yesterday (MF02-BR-17)")
+    @DisplayName("Replacement assignment today uses the same half-open transition boundary (MF02-BR-17)")
     void replacementAssignmentEffectiveTodaySucceeds() {
         // Initial assignment active from 2026-07-01
         CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
@@ -445,15 +445,15 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
         assertEquals(FIXED_EVALUATION_DATE, v2.getActiveFrom());
         assertNull(v2.getActiveTo());
 
-        // Previous assignment closed on yesterday (2026-08-08)
+        // Previous assignment ends exclusively when the replacement begins.
         CampaignQuestionnaireAssignment refreshedV1 = assignmentRepository.findById(v1.getId()).orElseThrow();
-        assertEquals(LocalDate.of(2026, 8, 8), refreshedV1.getActiveTo());
+        assertEquals(FIXED_EVALUATION_DATE, refreshedV1.getActiveTo());
 
-        assertEquals(2, assignmentRepository.countByCampaignId(campaignA.getId()));
+        assertEquals(2, assignmentService.getAssignmentHistory(campaignA.getId()).size());
     }
 
     @Test
-    @DisplayName("Replacement assignment with future effectiveStartDate succeeds and closes previous on day prior (MF02-BR-17)")
+    @DisplayName("Replacement assignment in future uses the same half-open transition boundary (MF02-BR-17)")
     void replacementAssignmentEffectiveFutureSucceeds() {
         // Initial assignment active from 2026-07-01
         CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
@@ -476,10 +476,10 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
         assertEquals(futureDate, v2.getActiveFrom());
         assertNull(v2.getActiveTo());
 
-        // Previous assignment closed on day prior (2026-08-19)
+        // Previous assignment ends exclusively when the replacement begins.
         CampaignQuestionnaireAssignment refreshedV1 = assignmentRepository.findById(v1.getId()).orElseThrow();
-        assertEquals(LocalDate.of(2026, 8, 19), refreshedV1.getActiveTo());
+        assertEquals(futureDate, refreshedV1.getActiveTo());
 
-        assertEquals(2, assignmentRepository.countByCampaignId(campaignA.getId()));
+        assertEquals(2, assignmentService.getAssignmentHistory(campaignA.getId()).size());
     }
 }

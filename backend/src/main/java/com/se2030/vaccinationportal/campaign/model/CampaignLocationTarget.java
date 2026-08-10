@@ -17,9 +17,8 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Locale;
-import java.util.Objects;
 
 /**
  * Domain entity representing an administrative service-area location target for a vaccination campaign.
@@ -59,10 +58,10 @@ public class CampaignLocationTarget {
     private String targetCode;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public CampaignLocationTarget() {
     }
@@ -111,7 +110,7 @@ public class CampaignLocationTarget {
     protected void onCreate() {
         validateConstraints();
         this.targetCode = normalizeTargetCode(this.targetCode);
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (createdAt == null) {
             createdAt = now;
         }
@@ -124,73 +123,31 @@ public class CampaignLocationTarget {
     protected void onUpdate() {
         validateConstraints();
         this.targetCode = normalizeTargetCode(this.targetCode);
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     public Long getId() {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public VaccinationCampaign getCampaign() {
         return campaign;
-    }
-
-    public void setCampaign(VaccinationCampaign campaign) {
-        this.campaign = campaign;
     }
 
     public LocationTargetType getTargetType() {
         return targetType;
     }
 
-    public void setTargetType(LocationTargetType targetType) {
-        this.targetType = targetType;
-    }
-
     public String getTargetCode() {
         return targetCode;
     }
 
-    public void setTargetCode(String targetCode) {
-        this.targetCode = normalizeTargetCode(targetCode);
-    }
-
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        CampaignLocationTarget that = (CampaignLocationTarget) o;
-        if (id != null && that.id != null) {
-            return Objects.equals(id, that.id);
-        }
-        return Objects.equals(campaign != null ? campaign.getId() : null, that.campaign != null ? that.campaign.getId() : null) &&
-                targetType == that.targetType &&
-                Objects.equals(targetCode, that.targetCode);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, campaign != null ? campaign.getId() : null, targetType, targetCode);
     }
 
     @Override

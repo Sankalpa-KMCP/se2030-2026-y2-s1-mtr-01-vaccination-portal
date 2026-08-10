@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,8 +34,8 @@ class CampaignDoseProgrammeModelTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 8, 15, 8, 0),
-                LocalDateTime.of(2026, 12, 30, 18, 0),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
                 CampaignStatus.DRAFT
         );
     }
@@ -139,7 +139,7 @@ class CampaignDoseProgrammeModelTests {
     }
 
     @Test
-    @DisplayName("Active to date cannot be before active from date")
+    @DisplayName("Half-open active period requires activeTo after activeFrom")
     void activeToBeforeActiveFromThrowsException() {
         LocalDate from = LocalDate.of(2026, 10, 1);
         LocalDate to = LocalDate.of(2026, 9, 30);
@@ -157,7 +157,7 @@ class CampaignDoseProgrammeModelTests {
                         to
                 )
         );
-        assertTrue(ex.getMessage().contains("cannot be before active from date"));
+        assertTrue(ex.getMessage().contains("must be after active from date"));
     }
 
     @Test
@@ -186,7 +186,7 @@ class CampaignDoseProgrammeModelTests {
     }
 
     @Test
-    @DisplayName("isEffectiveOn evaluates active date boundaries correctly")
+    @DisplayName("isEffectiveOn evaluates half-open active date boundaries")
     void isEffectiveOnEvaluatesBoundariesCorrectly() {
         LocalDate from = LocalDate.of(2026, 9, 1);
         LocalDate to = LocalDate.of(2026, 10, 31);
@@ -206,7 +206,7 @@ class CampaignDoseProgrammeModelTests {
         assertFalse(bounded.isEffectiveOn(LocalDate.of(2026, 8, 31)));
         assertTrue(bounded.isEffectiveOn(LocalDate.of(2026, 9, 1)));
         assertTrue(bounded.isEffectiveOn(LocalDate.of(2026, 10, 15)));
-        assertTrue(bounded.isEffectiveOn(LocalDate.of(2026, 10, 31)));
+        assertFalse(bounded.isEffectiveOn(LocalDate.of(2026, 10, 31)));
         assertFalse(bounded.isEffectiveOn(LocalDate.of(2026, 11, 1)));
 
         // Open-ended version

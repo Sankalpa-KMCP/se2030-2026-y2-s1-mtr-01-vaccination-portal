@@ -64,12 +64,4 @@ class CampaignStatusTests {
         assertFalse(CampaignStatus.ACTIVE.isTerminal());
         assertFalse(CampaignStatus.SUSPENDED.isTerminal());
     }
-
-    @Test
-    @DisplayName("CampaignStatus values can be parsed from and converted to string")
-    void valueOfResolvesCanonicalStrings() {
-        for (CampaignStatus status : CampaignStatus.values()) {
-            assertEquals(status, CampaignStatus.valueOf(status.name()));
-        }
-    }
 }

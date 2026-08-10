@@ -87,12 +87,7 @@ public class VaccinationCenterService {
         VaccinationCenter center = centerRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + id));
 
-        center.setName(name);
-        center.setAddress(address);
-        center.setContact(contact);
-        center.setSafeConcurrentOccupancy(safeConcurrentOccupancy);
-        center.setSessionServiceCeiling(sessionServiceCeiling);
-        center.validateConstraints();
+        center.updateDetails(name, address, contact, safeConcurrentOccupancy, sessionServiceCeiling);
 
         return centerRepository.save(center);
     }
@@ -107,7 +102,7 @@ public class VaccinationCenterService {
         VaccinationCenter center = centerRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + id));
 
-        center.setCenterStatus(CenterStatus.ACTIVE);
+        center.activate();
         return centerRepository.save(center);
     }
 
@@ -122,7 +117,7 @@ public class VaccinationCenterService {
         VaccinationCenter center = centerRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + id));
 
-        center.setCenterStatus(CenterStatus.INACTIVE);
+        center.deactivate();
         return centerRepository.save(center);
     }
 

@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -84,7 +84,7 @@ public interface VaccinationCampaignRepository extends JpaRepository<Vaccination
             "AND :timestamp >= c.bookingOpenAt AND :timestamp <= c.bookingCloseAt")
     List<VaccinationCampaign> findByStatusInAndBookingWindowOpenAt(
             @Param("statuses") Collection<CampaignStatus> statuses,
-            @Param("timestamp") LocalDateTime timestamp
+            @Param("timestamp") Instant timestamp
     );
 
     /**
@@ -94,7 +94,7 @@ public interface VaccinationCampaignRepository extends JpaRepository<Vaccination
      * @param timestamp Current evaluation timestamp
      * @return List of campaigns currently open for booking intake
      */
-    default List<VaccinationCampaign> findOpenForBookingAt(LocalDateTime timestamp) {
+    default List<VaccinationCampaign> findOpenForBookingAt(Instant timestamp) {
         return findByStatusInAndBookingWindowOpenAt(
                 List.of(CampaignStatus.PUBLISHED, CampaignStatus.ACTIVE),
                 timestamp

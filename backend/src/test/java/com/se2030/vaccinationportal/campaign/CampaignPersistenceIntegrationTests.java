@@ -15,7 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
@@ -111,8 +111,8 @@ class CampaignPersistenceIntegrationTests {
 
         LocalDate startDate = LocalDate.of(2026, 10, 1);
         LocalDate endDate = LocalDate.of(2027, 3, 31);
-        LocalDateTime bookingOpen = LocalDateTime.of(2026, 9, 15, 8, 0);
-        LocalDateTime bookingClose = LocalDateTime.of(2027, 3, 30, 18, 0);
+        Instant bookingOpen = Instant.parse("2026-09-15T08:00:00Z");
+        Instant bookingClose = Instant.parse("2027-03-30T18:00:00Z");
 
         VaccinationCampaign campaign = new VaccinationCampaign(
                 "CMP-FLU-2026",
@@ -168,8 +168,8 @@ class CampaignPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 8, 1, 8, 0),
-                LocalDateTime.of(2026, 12, 30, 18, 0),
+                Instant.parse("2026-08-01T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
                 CampaignStatus.DRAFT
         );
         campaignRepository.saveAndFlush(c1);
@@ -182,8 +182,8 @@ class CampaignPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 9, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 8, 1, 8, 0),
-                LocalDateTime.of(2026, 12, 30, 18, 0),
+                Instant.parse("2026-08-01T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
                 CampaignStatus.DRAFT
         );
 
@@ -198,7 +198,7 @@ class CampaignPersistenceIntegrationTests {
         VaccineType vt = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-COVID-02", "COVID-19 Booster", "dose", true));
         TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-VULNERABLE", "Immunocompromised Individuals", true));
 
-        LocalDateTime now = LocalDateTime.of(2026, 10, 15, 10, 0);
+        Instant now = Instant.parse("2026-10-15T10:00:00Z");
 
         // Campaign 1: Published & inside window
         VaccinationCampaign publishedOpen = new VaccinationCampaign(
@@ -209,8 +209,8 @@ class CampaignPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 10, 1, 8, 0),
-                LocalDateTime.of(2026, 12, 31, 18, 0),
+                Instant.parse("2026-10-01T08:00:00Z"),
+                Instant.parse("2026-12-31T18:00:00Z"),
                 CampaignStatus.PUBLISHED
         );
         campaignRepository.saveAndFlush(publishedOpen);
@@ -224,8 +224,8 @@ class CampaignPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 10, 1, 8, 0),
-                LocalDateTime.of(2026, 12, 31, 18, 0),
+                Instant.parse("2026-10-01T08:00:00Z"),
+                Instant.parse("2026-12-31T18:00:00Z"),
                 CampaignStatus.ACTIVE
         );
         campaignRepository.saveAndFlush(activeOpen);
@@ -239,8 +239,8 @@ class CampaignPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 10, 1, 8, 0),
-                LocalDateTime.of(2026, 12, 31, 18, 0),
+                Instant.parse("2026-10-01T08:00:00Z"),
+                Instant.parse("2026-12-31T18:00:00Z"),
                 CampaignStatus.SUSPENDED
         );
         campaignRepository.saveAndFlush(suspended);
@@ -254,8 +254,8 @@ class CampaignPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 9, 1, 8, 0),
-                LocalDateTime.of(2026, 10, 1, 18, 0), // Closed before 'now'
+                Instant.parse("2026-09-01T08:00:00Z"),
+                Instant.parse("2026-10-01T18:00:00Z"), // Closed before 'now'
                 CampaignStatus.PUBLISHED
         );
         campaignRepository.saveAndFlush(closedWindow);
@@ -295,8 +295,8 @@ class CampaignPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 4, 1),
                 LocalDate.of(2026, 6, 30),
-                LocalDateTime.of(2026, 3, 1, 8, 0),
-                LocalDateTime.of(2026, 6, 25, 18, 0),
+                Instant.parse("2026-03-01T08:00:00Z"),
+                Instant.parse("2026-06-25T18:00:00Z"),
                 CampaignStatus.SCHEDULED
         );
         campaignRepository.saveAndFlush(campaign);
@@ -330,8 +330,8 @@ class CampaignPersistenceIntegrationTests {
                 tg,
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 12, 31),
-                LocalDateTime.of(2026, 9, 1, 8, 0),
-                LocalDateTime.of(2026, 12, 31, 18, 0),
+                Instant.parse("2026-09-01T08:00:00Z"),
+                Instant.parse("2026-12-31T18:00:00Z"),
                 CampaignStatus.DRAFT
         );
         VaccinationCampaign saved = campaignRepository.saveAndFlush(campaign);

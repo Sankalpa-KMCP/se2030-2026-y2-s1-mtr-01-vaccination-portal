@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Service managing administrative service-area location targeting for vaccination campaigns.
@@ -39,24 +41,7 @@ public class CampaignLocationTargetService {
      * @return Saved CampaignLocationTarget entity
      */
     public CampaignLocationTarget addTarget(Long campaignId, LocationTargetType targetType, String targetCode) {
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
-
-        if (targetType == null) {
-            throw new IllegalArgumentException("Target type is required");
-        }
-
-        String normalizedCode = CampaignLocationTarget.normalizeTargetCode(targetCode);
-
-        if (locationTargetRepository.existsByCampaignIdAndTargetTypeAndTargetCode(campaignId, targetType, normalizedCode)) {
-            throw new IllegalArgumentException(
-                    "Location target already exists for campaign ID " + campaignId +
-                    ": " + targetType + " - " + normalizedCode
-            );
-        }
-
-        CampaignLocationTarget target = new CampaignLocationTarget(campaign, targetType, normalizedCode);
-        return locationTargetRepository.save(target);
+        return addTargets(campaignId, List.of(new TargetEntry(targetType, targetCode))).get(0);
     }
 
     /**
@@ -71,11 +56,26 @@ public class CampaignLocationTargetService {
             return Collections.emptyList();
         }
 
-        List<CampaignLocationTarget> savedTargets = new ArrayList<>();
-        for (TargetEntry entry : targetEntries) {
-            savedTargets.add(addTarget(campaignId, entry.targetType(), entry.targetCode()));
+        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
+        Set<String> existingKeys = new HashSet<>();
+        for (CampaignLocationTarget existing : locationTargetRepository.findByCampaignId(campaignId)) {
+            existingKeys.add(key(existing.getTargetType(), existing.getTargetCode()));
         }
-        return savedTargets;
+
+        List<CampaignLocationTarget> targets = new ArrayList<>(targetEntries.size());
+        for (TargetEntry entry : targetEntries) {
+            String normalizedCode = CampaignLocationTarget.normalizeTargetCode(entry.targetCode());
+            if (!existingKeys.add(key(entry.targetType(), normalizedCode))) {
+                throw new IllegalArgumentException(
+                        "Location target already exists for campaign ID " + campaignId +
+                        ": " + entry.targetType() + " - " + normalizedCode
+                );
+            }
+            targets.add(new CampaignLocationTarget(campaign, entry.targetType(), normalizedCode));
+        }
+        return locationTargetRepository.saveAll(targets);
     }
 
     /**
@@ -134,5 +134,9 @@ public class CampaignLocationTargetService {
                 throw new IllegalArgumentException("Target code is required");
             }
         }
+    }
+
+    private static String key(LocationTargetType targetType, String targetCode) {
+        return targetType.name() + '\0' + targetCode;
     }
 }

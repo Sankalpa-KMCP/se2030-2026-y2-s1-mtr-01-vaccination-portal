@@ -16,10 +16,9 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Objects;
 
 /**
  * Domain entity representing regular weekly operating hours for a vaccination center.
@@ -75,10 +74,10 @@ public class OperatingHours {
     private LocalDate effectiveTo;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public OperatingHours() {
     }
@@ -214,7 +213,7 @@ public class OperatingHours {
     @PrePersist
     protected void onCreate() {
         validateConstraints();
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (createdAt == null) {
             createdAt = now;
         }
@@ -226,15 +225,11 @@ public class OperatingHours {
     @PreUpdate
     protected void onUpdate() {
         validateConstraints();
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public VaccinationCenter getCenter() {
@@ -245,108 +240,35 @@ public class OperatingHours {
         return dayOfWeek;
     }
 
-    public void setDayOfWeek(DayOfWeek dayOfWeek) {
-        if (dayOfWeek == null) {
-            throw new IllegalArgumentException("Day of week is required");
-        }
-        this.dayOfWeek = dayOfWeek;
-    }
-
     public LocalTime getOpening() {
         return opening;
-    }
-
-    public void setOpening(LocalTime opening) {
-        if (opening == null) {
-            throw new IllegalArgumentException("Opening time is required");
-        }
-        if (this.closing != null && !opening.isBefore(this.closing)) {
-            if (opening.equals(this.closing)) {
-                throw new IllegalArgumentException("Opening time (" + opening + ") cannot equal closing time (" + this.closing + ")");
-            } else {
-                throw new IllegalArgumentException("Opening time (" + opening + ") must be strictly before closing time (" + this.closing + ")");
-            }
-        }
-        this.opening = opening;
     }
 
     public LocalTime getClosing() {
         return closing;
     }
 
-    public void setClosing(LocalTime closing) {
-        if (closing == null) {
-            throw new IllegalArgumentException("Closing time is required");
-        }
-        if (this.opening != null && !this.opening.isBefore(closing)) {
-            if (this.opening.equals(closing)) {
-                throw new IllegalArgumentException("Opening time (" + this.opening + ") cannot equal closing time (" + closing + ")");
-            } else {
-                throw new IllegalArgumentException("Opening time (" + this.opening + ") must be strictly before closing time (" + closing + ")");
-            }
-        }
-        this.closing = closing;
-    }
-
     public LocalDate getEffectiveFrom() {
         return effectiveFrom;
-    }
-
-    public void setEffectiveFrom(LocalDate effectiveFrom) {
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from date is required");
-        }
-        if (this.effectiveTo != null && this.effectiveTo.isBefore(effectiveFrom)) {
-            throw new IllegalArgumentException("Effective to date (" + this.effectiveTo + ") cannot be before effective from date (" + effectiveFrom + ")");
-        }
-        this.effectiveFrom = effectiveFrom;
     }
 
     public LocalDate getEffectiveTo() {
         return effectiveTo;
     }
 
-    public void setEffectiveTo(LocalDate effectiveTo) {
-        if (effectiveTo != null && effectiveTo.isBefore(this.effectiveFrom)) {
-            throw new IllegalArgumentException("Effective to date (" + effectiveTo + ") cannot be before effective from date (" + this.effectiveFrom + ")");
+    public void endOn(LocalDate effectiveTo) {
+        if (effectiveTo == null || effectiveTo.isBefore(effectiveFrom)) {
+            throw new IllegalArgumentException("Effective to date cannot be null or before effective from date");
         }
         this.effectiveTo = effectiveTo;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        OperatingHours that = (OperatingHours) o;
-        if (id != null && that.id != null) {
-            return Objects.equals(id, that.id);
-        }
-        return Objects.equals(center != null ? center.getId() : null, that.center != null ? that.center.getId() : null) &&
-                dayOfWeek == that.dayOfWeek &&
-                Objects.equals(opening, that.opening) &&
-                Objects.equals(closing, that.closing) &&
-                Objects.equals(effectiveFrom, that.effectiveFrom);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, center != null ? center.getId() : null, dayOfWeek, opening, closing, effectiveFrom);
     }
 
     @Override
