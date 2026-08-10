@@ -247,7 +247,7 @@ class OperatingHoursModelTests {
     }
 
     @Test
-    @DisplayName("Invalid schedule update re-runs constraints and throws exception")
+    @DisplayName("Invalid schedule update re-runs constraints, throws exception, and preserves existing state")
     void invalidScheduleUpdateThrowsException() {
         OperatingHours opHours = new OperatingHours(
                 sampleCenter,
@@ -260,14 +260,83 @@ class OperatingHoursModelTests {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 opHours.updateSchedule(
-                        DayOfWeek.MONDAY,
+                        DayOfWeek.TUESDAY,
                         LocalTime.of(14, 0),
                         LocalTime.of(10, 0),
-                        LocalDate.of(2026, 9, 1),
-                        null
+                        LocalDate.of(2026, 10, 1),
+                        LocalDate.of(2026, 12, 31)
                 )
         );
         assertTrue(ex.getMessage().contains("must be strictly before closing time"));
+
+        // Verify that entity state was NOT modified
+        assertEquals(DayOfWeek.MONDAY, opHours.getDayOfWeek());
+        assertEquals(LocalTime.of(8, 0), opHours.getOpening());
+        assertEquals(LocalTime.of(12, 0), opHours.getClosing());
+        assertEquals(LocalDate.of(2026, 9, 1), opHours.getEffectiveFrom());
+        assertNull(opHours.getEffectiveTo());
+    }
+
+    @Test
+    @DisplayName("Invalid setEffectiveTo before effectiveFrom throws exception and preserves existing effectiveTo")
+    void invalidSetEffectiveToBeforeEffectiveFromThrowsAndPreservesState() {
+        OperatingHours opHours = new OperatingHours(
+                sampleCenter,
+                DayOfWeek.WEDNESDAY,
+                LocalTime.of(8, 0),
+                LocalTime.of(16, 0),
+                LocalDate.of(2026, 9, 15),
+                LocalDate.of(2026, 12, 31)
+        );
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                opHours.setEffectiveTo(LocalDate.of(2026, 9, 10))
+        );
+        assertTrue(ex.getMessage().contains("cannot be before effective from date"));
+
+        // Verify effectiveTo was NOT overwritten with invalid date
+        assertEquals(LocalDate.of(2026, 12, 31), opHours.getEffectiveTo());
+    }
+
+    @Test
+    @DisplayName("Invalid individual setter mutations throw exception and preserve prior field state")
+    void invalidIndividualSettersPreserveState() {
+        OperatingHours opHours = new OperatingHours(
+                sampleCenter,
+                DayOfWeek.MONDAY,
+                LocalTime.of(8, 0),
+                LocalTime.of(16, 0),
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 12, 31)
+        );
+
+        // Null dayOfWeek
+        assertThrows(IllegalArgumentException.class, () -> opHours.setDayOfWeek(null));
+        assertEquals(DayOfWeek.MONDAY, opHours.getDayOfWeek());
+
+        // Null opening
+        assertThrows(IllegalArgumentException.class, () -> opHours.setOpening(null));
+        assertEquals(LocalTime.of(8, 0), opHours.getOpening());
+
+        // Opening after closing
+        assertThrows(IllegalArgumentException.class, () -> opHours.setOpening(LocalTime.of(17, 0)));
+        assertEquals(LocalTime.of(8, 0), opHours.getOpening());
+
+        // Null closing
+        assertThrows(IllegalArgumentException.class, () -> opHours.setClosing(null));
+        assertEquals(LocalTime.of(16, 0), opHours.getClosing());
+
+        // Closing before opening
+        assertThrows(IllegalArgumentException.class, () -> opHours.setClosing(LocalTime.of(7, 0)));
+        assertEquals(LocalTime.of(16, 0), opHours.getClosing());
+
+        // Null effectiveFrom
+        assertThrows(IllegalArgumentException.class, () -> opHours.setEffectiveFrom(null));
+        assertEquals(LocalDate.of(2026, 9, 1), opHours.getEffectiveFrom());
+
+        // effectiveFrom after effectiveTo
+        assertThrows(IllegalArgumentException.class, () -> opHours.setEffectiveFrom(LocalDate.of(2027, 1, 1)));
+        assertEquals(LocalDate.of(2026, 9, 1), opHours.getEffectiveFrom());
     }
 
     @Test

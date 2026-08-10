@@ -89,13 +89,13 @@ public class OperatingHours {
                           LocalTime closing,
                           LocalDate effectiveFrom,
                           LocalDate effectiveTo) {
+        validateParameters(center, dayOfWeek, opening, closing, effectiveFrom, effectiveTo);
         this.center = center;
         this.dayOfWeek = dayOfWeek;
         this.opening = opening;
         this.closing = closing;
         this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
-        validateConstraints();
     }
 
     public OperatingHours(VaccinationCenter center,
@@ -107,11 +107,22 @@ public class OperatingHours {
     }
 
     /**
-     * Validates domain constraints and business invariants for OperatingHours.
+     * Validates candidate parameters for operating hours schedule.
      *
+     * @param center        Vaccination center
+     * @param dayOfWeek     Day of week
+     * @param opening       Opening time
+     * @param closing       Closing time
+     * @param effectiveFrom Effective from date
+     * @param effectiveTo   Effective to date (nullable)
      * @throws IllegalArgumentException if any constraint is violated
      */
-    public void validateConstraints() {
+    public static void validateParameters(VaccinationCenter center,
+                                          DayOfWeek dayOfWeek,
+                                          LocalTime opening,
+                                          LocalTime closing,
+                                          LocalDate effectiveFrom,
+                                          LocalDate effectiveTo) {
         if (center == null) {
             throw new IllegalArgumentException("Center is required");
         }
@@ -140,7 +151,17 @@ public class OperatingHours {
     }
 
     /**
-     * Updates schedule parameters and revalidates domain invariants.
+     * Validates domain constraints and business invariants for OperatingHours.
+     *
+     * @throws IllegalArgumentException if any constraint is violated
+     */
+    public void validateConstraints() {
+        validateParameters(this.center, this.dayOfWeek, this.opening, this.closing, this.effectiveFrom, this.effectiveTo);
+    }
+
+    /**
+     * Updates schedule parameters with candidate pre-validation.
+     * Preserves existing entity state if validation fails.
      * Preserves immutable parent center reference.
      *
      * @param dayOfWeek     Updated day of week
@@ -154,12 +175,12 @@ public class OperatingHours {
                                LocalTime closing,
                                LocalDate effectiveFrom,
                                LocalDate effectiveTo) {
+        validateParameters(this.center, dayOfWeek, opening, closing, effectiveFrom, effectiveTo);
         this.dayOfWeek = dayOfWeek;
         this.opening = opening;
         this.closing = closing;
         this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
-        validateConstraints();
     }
 
     /**
@@ -225,6 +246,9 @@ public class OperatingHours {
     }
 
     public void setDayOfWeek(DayOfWeek dayOfWeek) {
+        if (dayOfWeek == null) {
+            throw new IllegalArgumentException("Day of week is required");
+        }
         this.dayOfWeek = dayOfWeek;
     }
 
@@ -233,6 +257,16 @@ public class OperatingHours {
     }
 
     public void setOpening(LocalTime opening) {
+        if (opening == null) {
+            throw new IllegalArgumentException("Opening time is required");
+        }
+        if (this.closing != null && !opening.isBefore(this.closing)) {
+            if (opening.equals(this.closing)) {
+                throw new IllegalArgumentException("Opening time (" + opening + ") cannot equal closing time (" + this.closing + ")");
+            } else {
+                throw new IllegalArgumentException("Opening time (" + opening + ") must be strictly before closing time (" + this.closing + ")");
+            }
+        }
         this.opening = opening;
     }
 
@@ -241,6 +275,16 @@ public class OperatingHours {
     }
 
     public void setClosing(LocalTime closing) {
+        if (closing == null) {
+            throw new IllegalArgumentException("Closing time is required");
+        }
+        if (this.opening != null && !this.opening.isBefore(closing)) {
+            if (this.opening.equals(closing)) {
+                throw new IllegalArgumentException("Opening time (" + this.opening + ") cannot equal closing time (" + closing + ")");
+            } else {
+                throw new IllegalArgumentException("Opening time (" + this.opening + ") must be strictly before closing time (" + closing + ")");
+            }
+        }
         this.closing = closing;
     }
 
@@ -249,6 +293,12 @@ public class OperatingHours {
     }
 
     public void setEffectiveFrom(LocalDate effectiveFrom) {
+        if (effectiveFrom == null) {
+            throw new IllegalArgumentException("Effective from date is required");
+        }
+        if (this.effectiveTo != null && this.effectiveTo.isBefore(effectiveFrom)) {
+            throw new IllegalArgumentException("Effective to date (" + this.effectiveTo + ") cannot be before effective from date (" + effectiveFrom + ")");
+        }
         this.effectiveFrom = effectiveFrom;
     }
 
@@ -257,6 +307,9 @@ public class OperatingHours {
     }
 
     public void setEffectiveTo(LocalDate effectiveTo) {
+        if (effectiveTo != null && effectiveTo.isBefore(this.effectiveFrom)) {
+            throw new IllegalArgumentException("Effective to date (" + effectiveTo + ") cannot be before effective from date (" + this.effectiveFrom + ")");
+        }
         this.effectiveTo = effectiveTo;
     }
 
