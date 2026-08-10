@@ -337,4 +337,24 @@ class OperatingHoursPersistenceIntegrationTests {
         assertEquals("CTR-PERSIST-A", locked.get().getCode());
         assertEquals(CenterStatus.ACTIVE, locked.get().getCenterStatus());
     }
+
+    @Test
+    @DisplayName("findCenterIdById returns parent center ID for an operating hours record")
+    void findCenterIdByIdReturnsParentCenterId() {
+        OperatingHours opHours = operatingHoursRepository.saveAndFlush(new OperatingHours(
+                centerA,
+                DayOfWeek.MONDAY,
+                LocalTime.of(8, 0),
+                LocalTime.of(16, 0),
+                LocalDate.of(2026, 9, 1),
+                null
+        ));
+
+        Optional<Long> centerIdOpt = operatingHoursRepository.findCenterIdById(opHours.getId());
+        assertTrue(centerIdOpt.isPresent());
+        assertEquals(centerA.getId(), centerIdOpt.get());
+
+        Optional<Long> missingCenterIdOpt = operatingHoursRepository.findCenterIdById(999999L);
+        assertTrue(missingCenterIdOpt.isEmpty());
+    }
 }
