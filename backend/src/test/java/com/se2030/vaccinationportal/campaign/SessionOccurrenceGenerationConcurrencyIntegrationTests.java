@@ -20,6 +20,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterReposit
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignLocationTargetRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.RecurrenceGenerationResult;
@@ -62,6 +63,7 @@ class SessionOccurrenceGenerationConcurrencyIntegrationTests {
     @Autowired private SessionOccurrenceGenerationService generationService;
     @Autowired private SessionRecurrenceRuleService ruleService;
     @Autowired private VaccinationCenterService centerService;
+    @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
     @Autowired private SessionRecurrenceRuleRepository ruleRepository;
     @Autowired private VaccinationSessionRepository sessionRepository;
     @Autowired private VaccinationCampaignRepository campaignRepository;
@@ -82,6 +84,7 @@ class SessionOccurrenceGenerationConcurrencyIntegrationTests {
 
     @BeforeEach
     void clearPersistedState() {
+        sessionChangeEventRepository.deleteAllInBatch();
         sessionRepository.deleteAllInBatch();
         ruleRepository.deleteAllInBatch();
         closureRepository.deleteAllInBatch();

@@ -214,8 +214,8 @@ public class SessionOccurrenceGenerationService {
                 if (existing.getCampaign() == null || !existing.getCampaign().getId().equals(campaign.getId())) {
                     throw new IllegalStateException("Existing session campaign mismatch for key: " + occurrenceKey);
                 }
-                if (existing.getCenter() == null || !existing.getCenter().getId().equals(center.getId())) {
-                    throw new IllegalStateException("Existing session center mismatch for key: " + occurrenceKey);
+                if (existing.getCenter() == null) {
+                    throw new IllegalStateException("Existing session center missing for key: " + occurrenceKey);
                 }
             } else {
                 LocalDateTime localStart = LocalDateTime.of(date, rule.getStartTime());

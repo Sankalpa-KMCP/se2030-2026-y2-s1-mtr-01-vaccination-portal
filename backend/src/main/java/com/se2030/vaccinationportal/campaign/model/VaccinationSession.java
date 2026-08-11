@@ -315,4 +315,63 @@ public class VaccinationSession {
     public boolean isGenerated() {
         return recurrenceRule != null;
     }
+
+    /**
+     * Reschedules the session to a new schedule interval and/or new hosting center.
+     * Preserves recurrence rule provenance, occurrence key, and origin occurrence date for generated occurrences.
+     *
+     * @param newCenter         Authoritative hosting center
+     * @param newStartAt        New session start instant
+     * @param newEndAt          New session end instant
+     * @param newBookingCloseAt New booking close instant
+     */
+    public void reschedule(
+            VaccinationCenter newCenter,
+            Instant newStartAt,
+            Instant newEndAt,
+            Instant newBookingCloseAt
+    ) {
+        if (this.lifecycleStatus == SessionLifecycleStatus.CANCELLED) {
+            throw new IllegalArgumentException("Cannot reschedule cancelled session");
+        }
+        if (this.lifecycleStatus != SessionLifecycleStatus.DRAFT && this.lifecycleStatus != SessionLifecycleStatus.SCHEDULED) {
+            throw new IllegalArgumentException("Cannot reschedule session in " + this.lifecycleStatus + " lifecycle status");
+        }
+        if (newCenter == null) {
+            throw new IllegalArgumentException("Center is required");
+        }
+        validateSchedule(newStartAt, newEndAt, newBookingCloseAt, newCenter.getTimezone());
+
+        this.center = newCenter;
+        this.scheduleTimezone = normalizeTimezone(newCenter.getTimezone());
+        this.startAt = newStartAt;
+        this.endAt = newEndAt;
+        this.bookingCloseAt = newBookingCloseAt;
+    }
+
+    /**
+     * Cancels the session, setting lifecycle status to CANCELLED.
+     * Preserves the session entity and recurrence provenance.
+     */
+    public void cancel() {
+        if (this.lifecycleStatus == SessionLifecycleStatus.CANCELLED) {
+            throw new IllegalArgumentException("Session is already cancelled");
+        }
+        if (this.lifecycleStatus != SessionLifecycleStatus.DRAFT && this.lifecycleStatus != SessionLifecycleStatus.SCHEDULED) {
+            throw new IllegalArgumentException("Cannot cancel session in " + this.lifecycleStatus + " lifecycle status");
+        }
+        this.lifecycleStatus = SessionLifecycleStatus.CANCELLED;
+    }
+
+    /**
+     * Updates lifecycle status for state transitions.
+     *
+     * @param lifecycleStatus New lifecycle status
+     */
+    public void transitionLifecycleStatus(SessionLifecycleStatus lifecycleStatus) {
+        if (lifecycleStatus == null) {
+            throw new IllegalArgumentException("Lifecycle status is required");
+        }
+        this.lifecycleStatus = lifecycleStatus;
+    }
 }

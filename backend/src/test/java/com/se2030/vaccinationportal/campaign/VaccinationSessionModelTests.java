@@ -196,6 +196,96 @@ class VaccinationSessionModelTests {
     }
 
     @Test
+    void rescheduleUpdatesScheduleAndCenterWhenInDraftOrScheduled() {
+        VaccinationSession draftSession = new VaccinationSession(campaign, center, START, END, BOOKING_CLOSE, "Asia/Colombo");
+        VaccinationCenter newCenter = new VaccinationCenter(
+                "CTR-SESS-M2", "New Center", "2 Session Road", "+94 11 000 0001",
+                CenterStatus.ACTIVE, 100, 50, "Europe/London");
+        Instant newStart = START.plusSeconds(3600);
+        Instant newEnd = END.plusSeconds(3600);
+        Instant newBookingClose = BOOKING_CLOSE.plusSeconds(1800);
+
+        draftSession.reschedule(newCenter, newStart, newEnd, newBookingClose);
+
+        assertEquals(newCenter, draftSession.getCenter());
+        assertEquals("Europe/London", draftSession.getScheduleTimezone());
+        assertEquals(newStart, draftSession.getStartAt());
+        assertEquals(newEnd, draftSession.getEndAt());
+        assertEquals(newBookingClose, draftSession.getBookingCloseAt());
+
+        // Test with SCHEDULED
+        draftSession.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
+        draftSession.reschedule(center, START, END, BOOKING_CLOSE);
+        assertEquals(center, draftSession.getCenter());
+        assertEquals("Asia/Colombo", draftSession.getScheduleTimezone());
+    }
+
+    @Test
+    void rescheduleRejectsInvalidLifecycleStatusAndInvalidParameters() {
+        VaccinationSession session = new VaccinationSession(campaign, center, START, END, BOOKING_CLOSE, "Asia/Colombo");
+
+        // Null center
+        assertThrows(IllegalArgumentException.class, () -> session.reschedule(null, START, END, BOOKING_CLOSE));
+
+        // Invalid schedule interval
+        assertThrows(IllegalArgumentException.class, () -> session.reschedule(center, END, START, BOOKING_CLOSE));
+
+        // Booking close after start
+        assertThrows(IllegalArgumentException.class, () -> session.reschedule(center, START, END, START.plusSeconds(1)));
+
+        // IN_PROGRESS rejection
+        session.transitionLifecycleStatus(SessionLifecycleStatus.IN_PROGRESS);
+        assertThrows(IllegalArgumentException.class, () -> session.reschedule(center, START, END, BOOKING_CLOSE));
+
+        // COMPLETED rejection
+        session.transitionLifecycleStatus(SessionLifecycleStatus.COMPLETED);
+        assertThrows(IllegalArgumentException.class, () -> session.reschedule(center, START, END, BOOKING_CLOSE));
+
+        // CANCELLED rejection
+        session.transitionLifecycleStatus(SessionLifecycleStatus.CANCELLED);
+        assertThrows(IllegalArgumentException.class, () -> session.reschedule(center, START, END, BOOKING_CLOSE));
+    }
+
+    @Test
+    void cancelTransitionsDraftAndScheduledToCancelled() {
+        VaccinationSession draftSession = new VaccinationSession(campaign, center, START, END, BOOKING_CLOSE, "Asia/Colombo");
+        draftSession.cancel();
+        assertEquals(SessionLifecycleStatus.CANCELLED, draftSession.getLifecycleStatus());
+
+        VaccinationSession scheduledSession = new VaccinationSession(campaign, center, START, END, BOOKING_CLOSE, "Asia/Colombo");
+        scheduledSession.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
+        scheduledSession.cancel();
+        assertEquals(SessionLifecycleStatus.CANCELLED, scheduledSession.getLifecycleStatus());
+    }
+
+    @Test
+    void cancelRejectsInvalidLifecycleStatusAndAlreadyCancelled() {
+        VaccinationSession session = new VaccinationSession(campaign, center, START, END, BOOKING_CLOSE, "Asia/Colombo");
+
+        // Cancelled once
+        session.cancel();
+        assertThrows(IllegalArgumentException.class, session::cancel);
+
+        // IN_PROGRESS rejection
+        VaccinationSession inProgressSession = new VaccinationSession(campaign, center, START, END, BOOKING_CLOSE, "Asia/Colombo");
+        inProgressSession.transitionLifecycleStatus(SessionLifecycleStatus.IN_PROGRESS);
+        assertThrows(IllegalArgumentException.class, inProgressSession::cancel);
+
+        // COMPLETED rejection
+        VaccinationSession completedSession = new VaccinationSession(campaign, center, START, END, BOOKING_CLOSE, "Asia/Colombo");
+        completedSession.transitionLifecycleStatus(SessionLifecycleStatus.COMPLETED);
+        assertThrows(IllegalArgumentException.class, completedSession::cancel);
+    }
+
+    @Test
+    void transitionLifecycleStatusValidatesNonNull() {
+        VaccinationSession session = new VaccinationSession(campaign, center, START, END, BOOKING_CLOSE, "Asia/Colombo");
+        assertThrows(IllegalArgumentException.class, () -> session.transitionLifecycleStatus(null));
+        session.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
+        assertEquals(SessionLifecycleStatus.SCHEDULED, session.getLifecycleStatus());
+    }
+
+    @Test
     void entityExposesNoBroadPublicSetters() {
         List<String> setterNames = Arrays.stream(VaccinationSession.class.getMethods())
                 .filter(method -> Modifier.isPublic(method.getModifiers()))
