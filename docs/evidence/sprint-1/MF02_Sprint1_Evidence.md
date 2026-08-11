@@ -6,17 +6,19 @@
 **Canonical revision:** `2026-08-08-R8`
 **Sprint:** Sprint 1
 **Working window:** Weeks 1–3
-**Last updated:** 2026-08-10
-**Latest implementation integration:** merged into `develop` via PR #20 (`OperatingHours` backend foundation)
-**Latest implementation develop checkpoint:** `1cad899971c8b18804af31bfb079a24285f7d16d`
-**Latest completed evidence integration recorded:** merged into `develop` via PR #21 (`docs(mf02): record operating hours sprint 1 evidence`)
-**PR #21 evidence merge checkpoint:** `433dbe1dd919b93d082aa31d3592519b37a75206`
-**Evidence record prepared from develop checkpoint:** `433dbe1dd919b93d082aa31d3592519b37a75206`
+**Last updated:** 2026-08-11
+**Latest implementation integration:** merged into `develop` via PR #24 (`CenterClosure` backend foundation)
+**Latest implementation develop checkpoint:** `e70940b7021778ae35dd2976ac5df6b649a28584`
+**Latest completed evidence integration recorded:** PR #22 (`docs(mf02): stabilize evidence metadata`) at `fe101bb2adfc1215146793a97cd80fdc3176622c`
+**Evidence record prepared from develop checkpoint:** `e70940b7021778ae35dd2976ac5df6b649a28584`
 **OperatingHours feature branch HEAD:** `4fe94df8df7c07ade3c22a39165aff3da1e8795a`
 **Canonical documentation sync checkpoint (PR #17):** `bd22cb973bad83c8456897805bc2df95b65593d0`
 **Historical evidence integration checkpoints:** PR #18 (`c120ee8530c055a6769b68777fd1342abeca193b`), PR #19 (`8cdb1125809770671325a4f47fc80fd5c48b4ddc`), PR #21 (`433dbe1dd919b93d082aa31d3592519b37a75206`)
 **OperatingHours backend integration checkpoint (PR #20):** `1cad899971c8b18804af31bfb079a24285f7d16d`
 **OperatingHours source branch:** `feature/mf02-operating-hours`
+**Pre-closure hardening integration checkpoint (PR #23):** `5a5b3e7d285b50b7645a1c32b57f79b753b2baff`
+**CenterClosure integration checkpoint (PR #24):** `e70940b7021778ae35dd2976ac5df6b649a28584`
+**CenterClosure source branch final pointer:** `d6c04718639d2356f9f4800730d9d79bed5494bf`
 
 > Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
 >
@@ -32,14 +34,13 @@ Expected integrated Sprint 1 outcome: a valid campaign can be linked to a publis
 
 **We are still in Sprint 1.**
 
-The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, dedicated backend hardening pass, and the **OperatingHours backend foundation** are now implemented, tested, and merged into `develop`.
+The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, **OperatingHours**, and the **CenterClosure backend foundation** are implemented, tested, CI-verified, and merged into `develop`.
 
 The canonical R8 human-readable DOCX synchronization has also been merged into `develop` through PR #17.
 
 Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundations still include:
 
-* `CenterClosure`
-* `CampaignCenterAssignment`
+* `CampaignCenterAssignment` implementation (architecture gate complete)
 * `SessionRecurrenceRule` foundation
 * remaining campaign publication prerequisite/transition integration
 * API/controller work where required
@@ -47,25 +48,25 @@ Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundation
 * frontend/integration/evidence work required by the Definition of Done
 * final MF-01 `QuestionnaireVersion` adapter/FK integration
 
-`CenterClosure` is the next planned MF-02 domain slice, but it has **not been started** at this checkpoint.
+`CampaignCenterAssignment` is the next approved MF-02 domain slice. Its architecture gate is complete with verdict **CAMPAIGNCENTERASSIGNMENT PLAN READY — SAFE TO IMPLEMENT**, but implementation has **not started**.
 
 ## Current Verification Snapshot
 
-### Overall `develop` checkpoint after PR #21 evidence integration
+### Overall `develop` checkpoint after PR #24 CenterClosure integration
 
 ```text
 Latest verified origin/develop:
-433dbe1dd919b93d082aa31d3592519b37a75206
+e70940b7021778ae35dd2976ac5df6b649a28584
 
 Latest develop merge:
-PR #21
-433dbe1dd919b93d082aa31d3592519b37a75206
+PR #24
+e70940b7021778ae35dd2976ac5df6b649a28584
 
 Latest MF-02 implementation checkpoint:
-PR #20
-1cad899971c8b18804af31bfb079a24285f7d16d
+PR #24
+e70940b7021778ae35dd2976ac5df6b649a28584
 
-PR #21 status:
+PR #24 status:
 MERGED
 
 Backend CI:
@@ -75,9 +76,9 @@ Frontend CI:
 SUCCESS
 ```
 
-PR #20 introduced the core backend foundation for vaccination center operating hours (`OperatingHours`). It added domain entity modeling, mutation exception-safety, Spring Data JPA persistence and effective-date queries, parent-center pessimistic write locking serialization, deterministic Monday→Sunday calendar ordering, and multidimensional schedule overlap enforcement. PR #21 integrated the corresponding verified Sprint 1 evidence record.
+PR #23 hardened the shared MF-02 temporal, mutation, and locking foundation. PR #24 then integrated `CenterClosure` with retained lifecycle history, exact half-open overlap behavior, parent-center serialization, and focused separate-transaction coverage. The prior PR #20 OperatingHours checkpoint remains historical evidence below.
 
-### Backend implementation / integration checkpoint (PR #20)
+### Historical OperatingHours implementation / integration checkpoint (PR #20)
 
 ```text
 Backend implementation develop checkpoint:
@@ -109,7 +110,7 @@ All 7 OperatingHours commits recorded below are present locally, remotely, and i
 ```text
 ./mvnw test:
 BUILD SUCCESS
-152 tests
+194 tests
 0 failures
 0 errors
 0 skipped
@@ -206,12 +207,12 @@ The final audit reported:
 
 | Story   | Priority | Intent                                                            | Current status                                                                                                                                                |
 | ------- | -------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `US-09` | High     | Create/manage campaign lifecycle and target group                 | In progress — backend domain/persistence foundation and hardening complete; publication workflow/API/UI evidence still pending                                |
-| `US-10` | High     | Link campaign to one published questionnaire version              | In progress — MF-02 assignment/versioning side implemented and hardened; final MF-01 adapter/FK integration pending                                           |
-| `US-11` | High     | Define campaign dose programme                                    | In progress — backend model, persistence, versioning, future-only protection and concurrency hardening implemented; later API/UI/integration evidence pending |
-| `US-12` | High     | Assign vaccination centers to a campaign                          | Not started — `CampaignCenterAssignment` pending                                                                                                              |
-| `US-13` | High     | Configure center operating hours, closures and recurring sessions | In progress — center master foundation and OperatingHours backend foundation complete; `CenterClosure`, recurrence, and session integration pending          |
-| `US-27` | High     | Define campaign service areas and booking periods                 | In progress — administrative location targeting and booking-window foundation implemented; API/UI evidence pending                                            |
+| `US-09` | High     | Create/manage campaign lifecycle and target group                 | In progress — backend foundation implemented; later publication workflow, API/UI, and Definition-of-Done evidence pending                                      |
+| `US-10` | High     | Link campaign to one published questionnaire version              | In progress — MF-02 foundation implemented and hardened; final MF-01 adapter/FK integration pending                                                            |
+| `US-11` | High     | Define campaign dose programme                                    | In progress — versioning and hardening implemented; later API/UI and integration evidence pending                                                              |
+| `US-12` | High     | Assign vaccination centers to a campaign                          | In progress — architecture plan complete; implementation **NOT STARTED**                                                                                        |
+| `US-13` | High     | Configure center operating hours, closures and recurring sessions | In progress — OperatingHours and CenterClosure backend foundations complete; recurrence **NOT STARTED**; later session/API/UI/migration work pending           |
+| `US-27` | High     | Define campaign service areas and booking periods                 | In progress — backend foundation implemented; later API/UI evidence pending                                                                                    |
 
 ## Completed Work
 
@@ -336,7 +337,7 @@ Covered behavior:
 * optional positive `sessionServiceCeiling`
 * center activation/deactivation without hard deletion
 * stable center-code policy through updates
-* separation of long-term center status from future temporary `CenterClosure`
+* separation of long-term center status from temporary `CenterClosure` records
 * no campaign assignment, operating-hours, session, inventory or eligibility logic embedded in the center master
 
 ### 6. Backend hardening and correctness pass
@@ -407,6 +408,79 @@ Covered behavior:
 * configuration permitted for both `ACTIVE` and `INACTIVE` centers
 * zero hard-delete workflow
 
+### 10. Pre-closure backend hardening (PR #23)
+
+Implemented, reviewed, tested, and merged into `develop` at `5a5b3e7d285b50b7645a1c32b57f79b753b2baff`:
+
+* `0cc1ad9` — `refactor(mf02): harden campaign domain foundations`
+* `3683a0d` — `test(mf02): prove serialized mutation invariants`
+* `d3efd0e` — `docs(mf02): correct questionnaire history boundary docs`
+
+This integration established the current MF-02 technical baseline:
+
+* absolute/audit and campaign booking-window timestamps use UTC-safe `Instant` values and the application UTC `Clock`;
+* `CampaignDoseProgramme` and `CampaignQuestionnaireAssignment` use half-open effective history;
+* `OperatingHours` deliberately retains inclusive calendar-date boundaries;
+* entity mutation surfaces and unsafe custom entity equality/hash behavior were reduced;
+* dose/questionnaire services and repositories and location-target batch handling were simplified around cohesive domain operations;
+* genuine separate-transaction locking tests demonstrate serialized sibling-history decisions structurally under H2/MySQL mode.
+
+Validation at this checkpoint was 149 backend tests with zero failures, errors, or skips, Maven `test` and `verify` success, and Backend CI and Frontend CI success. Production MySQL concurrency behavior remains a later environment-specific validation item; the H2 evidence is not represented as MySQL proof.
+
+The narrow documentation correction `d3efd0e` is classified separately from the implementation/hardening commits. The PR #23 merge commit is an integration checkpoint, not an implementation commit. Hosted independent GitHub approval evidence was not recorded in the controller evidence available for this synchronization; this is a neutral process-provenance note and does not change the merged technical state.
+
+### 11. CenterClosure backend foundation (PR #24)
+
+`CenterClosure` is **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED** as a backend foundation. PR #24 merged into `develop` at `e70940b7021778ae35dd2976ac5df6b649a28584`; the preserved feature branch pointer is `d6c04718639d2356f9f4800730d9d79bed5494bf`.
+
+Implementation and test commits:
+
+* `8d70359` — `feat(mf02): add center closure domain and persistence`
+* `f1bd663` — `feat(mf02): add center closure management service`
+* `cf47f725` — `test(mf02): cover center closure concurrency invariants`
+* `d6c0471` — `test(mf02): isolate center closure concurrency fixtures` (test-only CI isolation correction)
+
+Covered behavior:
+
+* mandatory lazy ownership by `VaccinationCenter`, without remove cascades;
+* absolute UTC-safe `Instant startAt` / `endAt` with half-open `[startAt, endAt)` semantics;
+* positive intervals only; partial-day, overnight, and multi-day intervals are supported;
+* mandatory trimmed, nonblank reason of at most 255 characters;
+* lifecycle status exactly `ACTIVE` / `CANCELLED`;
+* ACTIVE closures for one center cannot overlap; exact adjacency is allowed;
+* CANCELLED records do not block a later ACTIVE interval;
+* creation may record future, ongoing, or historical intervals;
+* normal update and cancellation are permitted only before the existing closure starts;
+* cancellation is terminal, retains the row, and preserves the interval and original reason;
+* configuration is independent of `CenterStatus` and `OperatingHours`;
+* no service hard-delete workflow;
+* same-center create/update/cancel decisions serialize through the parent center pessimistic write lock;
+* a read-side active-overlap helper is available for later atomic `VaccinationSession` integration, which must share the same center lock.
+
+Verification comprised 45 CenterClosure-specific tests: 15 model, 6 persistence integration, 21 service integration, and 3 concurrency integration tests. The full backend contained 194 tests with zero failures, errors, or skips. Maven `test` and `verify`, Backend CI, and Frontend CI all succeeded. The concurrency suite uses separate service-proxy transactions and provides structural H2/MySQL-mode evidence for overlapping creates, create-versus-update, and different-center independence; production MySQL proof remains deferred.
+
+The independent implementation review verdict was **ACCEPT WITH NON-BLOCKING NOTES**. Canonical, domain, persistence, lifecycle, interval/overlap, concurrency, maintainability, test-quality, and data-integrity gates passed. Deferred notes concerned future Flyway index tuning, possible overlap-query optimization only if profiling warrants it, optional additional persisted audit-transition assertions, and production MySQL concurrency validation; none changed the approved implementation contract.
+
+Hosted independent GitHub approval evidence was not recorded in the controller evidence available for PR #24. The owner-authorized integration and successful technical gates are recorded without fabricating an approval event.
+
+### 12. CampaignCenterAssignment architecture gate
+
+The architecture gate is complete with verdict **CAMPAIGNCENTERASSIGNMENT PLAN READY — SAFE TO IMPLEMENT**. No `CampaignCenterAssignment` production or test code has been started.
+
+The approved implementation contract, recorded here as planned rather than implemented, is:
+
+* operational campaign-to-center authorization, distinct from citizen-facing `CampaignLocationTarget`;
+* `LocalDate activeFrom` and nullable exclusive `activeTo`, using half-open `[activeFrom, activeTo)` semantics;
+* minimal planned status model `ACTIVE` / `CANCELLED`; ordinary expiry at `activeTo` does not create an `ENDED` status;
+* no overlapping non-cancelled periods for the same campaign-center pair; adjacency is allowed;
+* ownership is immutable; future period updates, prospective ending, and future cancellation use explicit workflows;
+* historical rows are retained and no normal hard-delete service is planned;
+* campaign and center lifecycle statuses do not gate foundation configuration;
+* assignment periods may extend beyond campaign service dates; later session validation combines both boundaries;
+* an open-ended assignment must be explicitly end-dated before a later replacement becomes non-overlapping;
+* cross-row conflict decisions serialize on the campaign parent row;
+* a later session helper must establish assignment effectiveness for the session's complete calendar-date span.
+
 ## Important Canonical Distinctions Preserved
 
 ### MF02-BR-02
@@ -436,7 +510,6 @@ At campaign publication:
 
 ## Not Yet Completed
 
-* `CenterClosure`
 * `CampaignCenterAssignment`
 * `SessionRecurrenceRule` foundation
 * `VaccinationSession` and `TimeSlot` foundations
@@ -474,7 +547,9 @@ Known dependency:
 * Effective-dated configuration changes for dose programmes, questionnaire assignments, and center operating hours serialize on the parent entity row using `PESSIMISTIC_WRITE`.
 * `OperatingHours` mutators pre-validate all candidate parameters prior to state assignment, guaranteeing exception atomicity.
 * Operating hours conflict detection evaluates multidimensional overlap across center, weekday, inclusive dates, and half-open time intervals.
-* `CenterStatus` represents long-term `ACTIVE` / `INACTIVE`; temporary unavailability belongs to future `CenterClosure` records.
+* `CenterStatus` represents long-term `ACTIVE` / `INACTIVE`; temporary unavailability belongs to retained `CenterClosure` records.
+* `CenterClosure` uses absolute half-open intervals, explicit cancellation, and parent-center locking without coupling to `OperatingHours`.
+* Planned `CampaignCenterAssignment` uses half-open `LocalDate` periods and campaign-row serialization; this plan is not implementation evidence.
 * `safeConcurrentOccupancy` and `sessionServiceCeiling` are distinct center constraints.
 * Use small, focused logical Git commits rather than large feature commits.
 
@@ -575,12 +650,31 @@ This 22-commit checkpoint was merged into `develop` through PR #16 (merge commit
 
 This 7-commit checkpoint was merged into `develop` through PR #20 (merge commit `1cad899`).
 
+### D. Pre-closure hardening — 3 commits after PR #22
+
+* `0cc1ad9` — `refactor(mf02): harden campaign domain foundations`
+* `3683a0d` — `test(mf02): prove serialized mutation invariants`
+* `d3efd0e` — `docs(mf02): correct questionnaire history boundary docs`
+
+These commits were merged through PR #23 at `5a5b3e7d285b50b7645a1c32b57f79b753b2baff`.
+
+### E. CenterClosure backend foundation — 4 commits after PR #23
+
+* `8d70359` — `feat(mf02): add center closure domain and persistence`
+* `f1bd663` — `feat(mf02): add center closure management service`
+* `cf47f725` — `test(mf02): cover center closure concurrency invariants`
+* `d6c0471` — `test(mf02): isolate center closure concurrency fixtures`
+
+These commits were merged through PR #24 at `e70940b7021778ae35dd2976ac5df6b649a28584`.
+
 ### Commit accounting
 
 * earlier campaign/targeting/questionnaire checkpoint: **27 commits**
 * center/hardening checkpoint after PR #12: **22 commits**
 * OperatingHours backend foundation checkpoint after PR #19: **7 commits**
-* cumulative implementation/evidence history recorded here: **56 commits across the three checkpoints**
+* pre-closure hardening after PR #22: **3 commits**
+* CenterClosure backend foundation after PR #23: **4 commits**
+* cumulative feature/hardening history listed across these five checkpoints: **63 commits**
 * PR #12 merge checkpoint: **1 merge commit (`eb4a4d9`)**
 * PR #16 merge checkpoint: **1 merge commit (`201768e`)**
 * canonical documentation synchronization: **2 documentation commits (`8a26fe6`, `16d4193`) plus PR #17 merge commit `bd22cb9`**
@@ -589,6 +683,9 @@ This 7-commit checkpoint was merged into `develop` through PR #20 (merge commit 
   - PR #19 evidence: **1 evidence commit (`1afa39d`) plus merge commit `8cdb112`**
   - PR #21 evidence: **1 evidence commit (`787b941`) plus merge commit `433dbe1`**
 * OperatingHours integration checkpoint: **PR #20 merge commit `1cad899`**
+* metadata stability checkpoint: **PR #22 merge commit `fe101bb`**; it remains evidence metadata rather than a new implementation checkpoint
+* pre-closure hardening checkpoint: **PR #23 merge commit `5a5b3e7`**
+* CenterClosure integration checkpoint: **PR #24 merge commit `e70940b`**
 
 ## Pull Requests / Remote State
 
@@ -626,13 +723,43 @@ Confirmed state:
 * all 7 feature commits are verified direct ancestors of `origin/develop`;
 * remote branch `origin/feature/mf02-operating-hours` remains preserved.
 
+### Metadata stabilization (PR #22)
+
+PR #22 established the overall evidence checkpoint `fe101bb2adfc1215146793a97cd80fdc3176622c`. Under the metadata stability policy, it is not recursively treated as a new domain implementation checkpoint.
+
+### Pre-closure hardening integration (PR #23)
+
+Confirmed state:
+
+* merge commit and resulting `develop` checkpoint: `5a5b3e7d285b50b7645a1c32b57f79b753b2baff`;
+* three branch commits were preserved: `0cc1ad9`, `3683a0d`, and `d3efd0e`;
+* 149 backend tests passed with zero failures, errors, or skips;
+* Maven `test` and `verify`: `SUCCESS`;
+* Backend CI: `SUCCESS`;
+* Frontend CI: `SUCCESS`.
+
+### CenterClosure backend foundation integration (PR #24)
+
+Confirmed state:
+
+* source branch: `feature/mf02-center-closure`;
+* final source pointer: `d6c04718639d2356f9f4800730d9d79bed5494bf`;
+* PR #24 contained the four intended commits `8d70359`, `f1bd663`, `cf47f725`, and `d6c0471`;
+* PR #24 changed only the four CenterClosure production types and four focused test classes;
+* PR #24 merged using the normal merge-commit workflow;
+* merge commit and resulting `develop` checkpoint: `e70940b7021778ae35dd2976ac5df6b649a28584`;
+* all four feature commits are ancestors of `origin/develop`;
+* Backend CI: `SUCCESS`;
+* Frontend CI: `SUCCESS`;
+* the remote feature branch was preserved at the final source pointer.
+
 ## Testing Evidence
 
 ### Latest final backend verification
 
 ```text
 ./mvnw test
-Tests run: 152
+Tests run: 194
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -658,6 +785,8 @@ JAR packaged successfully
 * OperatingHours mutation-safety fix: **116** tests passing
 * OperatingHours persistence foundation: **129** tests passing
 * OperatingHours service & conflict enforcement: **152** tests passing
+* pre-closure hardening and genuine serialized-mutation coverage: **149** tests passing after removal/consolidation of low-value tests
+* CenterClosure domain, persistence, service, lifecycle, and concurrency foundation: **194** tests passing (**45** CenterClosure-specific: 15 model, 6 persistence, 21 service, 3 concurrency)
 
 ### CI Evidence
 
@@ -666,6 +795,9 @@ JAR packaged successfully
 * PR #19 (Final Evidence Checkpoint): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
 * PR #20 (OperatingHours Foundation): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
 * PR #21 (Sprint 1 Evidence Checkpoint): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
+* PR #22 (Evidence Metadata Stability): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
+* PR #23 (Pre-closure Hardening): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
+* PR #24 (CenterClosure Foundation): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
 
 ## Current Repository State
 
@@ -673,17 +805,17 @@ JAR packaged successfully
 
 ```text
 origin/develop:
-433dbe1dd919b93d082aa31d3592519b37a75206
+e70940b7021778ae35dd2976ac5df6b649a28584
 
 Latest develop merge:
-PR #21
-docs/mf02-sprint1-operating-hours-evidence -> develop
+PR #24
+feature/mf02-center-closure -> develop
 
-PR #21 merge:
-433dbe1dd919b93d082aa31d3592519b37a75206
+PR #24 merge:
+e70940b7021778ae35dd2976ac5df6b649a28584
 
 Latest implementation checkpoint:
-PR #20 (1cad899971c8b18804af31bfb079a24285f7d16d)
+PR #24 (e70940b7021778ae35dd2976ac5df6b649a28584)
 
 Evidence file:
 docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
@@ -691,7 +823,7 @@ docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
 Canonical DOCX:
 docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx
 
-Canonical Markdown change in PR #21:
+Canonical Markdown change in PR #24:
 none
 ```
 
@@ -699,23 +831,23 @@ none
 
 ```text
 Backend implementation checkpoint:
-1cad899971c8b18804af31bfb079a24285f7d16d
+e70940b7021778ae35dd2976ac5df6b649a28584
 
-feature/mf02-operating-hours:
-4fe94df8df7c07ade3c22a39165aff3da1e8795a
+feature/mf02-center-closure:
+d6c04718639d2356f9f4800730d9d79bed5494bf
 
 feature branch local/remote:
 synchronized
 
-OperatingHours merge:
-PR #20
-1cad899 — Merge pull request #20 from Sankalpa-KMCP/feature/mf02-operating-hours
+CenterClosure merge:
+PR #24
+e70940b7021778ae35dd2976ac5df6b649a28584
 ```
 
 Latest backend verification remains:
 
 ```text
-152 tests passing
+194 tests passing
 0 failures
 0 errors
 0 skipped
@@ -735,13 +867,13 @@ Already captured:
 * canonical documentation synchronization (PR #17)
 * Sprint 1 evidence integration checkpoints (PR #18, PR #19, PR #21)
 * OperatingHours backend foundation (PR #20, merge commit `1cad899`, 152 passing tests)
-* Backend CI & Frontend CI results for PR #17, PR #18, PR #19, PR #20, and PR #21
+* pre-closure hardening (PR #23, merge commit `5a5b3e7`, 149 passing tests)
+* CenterClosure backend foundation (PR #24, merge commit `e70940b`, 45 component tests and 194 total passing tests)
+* Backend CI & Frontend CI results through PR #24
 
 Still to capture:
 
-* peer-review evidence where required and not yet captured
 * CI result(s) for later MF-02 implementation/integration changes
-* `CenterClosure` commit/test evidence
 * `CampaignCenterAssignment` commit/test evidence
 * `SessionRecurrenceRule` foundation commit/test evidence
 * Flyway migration evidence
@@ -763,16 +895,16 @@ Still to capture:
 * MF-02 side of campaign-to-published-questionnaire assignment/versioning
 * vaccination-center master/lifecycle foundation
 * OperatingHours domain, persistence, and service foundation with multidimensional conflict enforcement
+* CenterClosure domain, persistence, lifecycle, overlap, and separate-transaction concurrency foundation
 * future-only effective configuration protection
 * campaign-row and center-row pessimistic locking for critical effective-dated configuration changes
-* 152 passing backend tests with successful Maven verify packaging
+* 194 passing backend tests with successful Maven verify packaging
 * R8 canonical DOCX synchronization merged through PR #17
-* successful Backend CI and Frontend CI across PR #17, PR #18, PR #19, PR #20, and PR #21
+* successful Backend CI and Frontend CI through PR #24
 * canonical Markdown integrity preserved
 
 ### Not completed / likely carry-forward candidates if Sprint 1 closes before completion
 
-* `CenterClosure`
 * `CampaignCenterAssignment`
 * `SessionRecurrenceRule` foundation
 * publication workflow/API/UI/migration/integration evidence as applicable
@@ -783,7 +915,7 @@ Still to capture:
 
 * Small logical commits kept implementation history reviewable.
 * Canonical ownership/boundary checks were performed before each MF-02 slice.
-* Tests expanded continuously as real behavior was introduced (152 total tests).
+* Tests expanded continuously as real behavior was introduced (194 total tests).
 * Candidate pre-validation (`OperatingHours.validateParameters`) and scalar parent center lock ordering ensured mutation exception-safety and clean concurrency protection.
 * Dedicated documentation and evidence branches preserved clean separation from domain implementation history.
 * Post-merge ancestor verification ensured all feature commits are preserved directly in `develop`.
@@ -798,15 +930,15 @@ Still to capture:
 
 ## Exact Next Work
 
-The `OperatingHours` backend foundation has been implemented, validated, and merged into `develop` through PR #20 (checkpoint `1cad899`). The corresponding Sprint 1 evidence record has been integrated through PR #21 (checkpoint `433dbe1`).
+The `CenterClosure` backend foundation is implemented, reviewed, tested, CI-verified, and merged through PR #24 at checkpoint `e70940b7021778ae35dd2976ac5df6b649a28584`. Sprint 1 and US-13 remain in progress because recurrence, later session integration, and Definition-of-Done layers remain pending.
 
 When MF-02 feature development resumes:
 
 1. Inspect the canonical MF-02 requirements, MF-02 handoff, current repository code and relevant existing tests before planning the next slice.
-2. Plan `CenterClosure` as the temporary-exception layer over normal operating hours.
-3. Implement `CenterClosure` only after its design/plan has been reviewed.
-4. Implement `CampaignCenterAssignment` with canonical effective-dated operational assignment rules.
-5. Add the `SessionRecurrenceRule` foundation.
-6. Complete remaining Sprint 1 publication checks, migrations, API/UI integration and Definition-of-Done evidence.
+2. Implement the approved `CampaignCenterAssignment` backend foundation; its architecture gate is complete but no code exists yet.
+3. Review, test, and integrate `CampaignCenterAssignment` through a controlled feature PR.
+4. Plan and implement the `SessionRecurrenceRule` foundation.
+5. Later add `VaccinationSession` enforcement combining campaign dates, assignment effectiveness, `OperatingHours`, `CenterClosure`, and other session constraints.
+6. Complete remaining publication checks, Flyway migrations, API/UI/security integration, MF-01 adapter/FK work, production MySQL concurrency validation, and Definition-of-Done evidence in separately approved slices.
 
-**Current stopping point:** `OperatingHours` backend foundation is complete and merged into `develop` through PR #20 (merge commit `1cad899`); evidence record integrated through PR #21 (`433dbe1`); `CenterClosure` has not been started.
+**Current stopping point:** `origin/develop` is `e70940b7021778ae35dd2976ac5df6b649a28584`; `CenterClosure` is complete as a backend foundation; `CampaignCenterAssignment` is architecture-ready and **NOT STARTED**; no recurrence or session implementation has begun.
