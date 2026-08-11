@@ -2,16 +2,19 @@ package com.se2030.vaccinationportal.campaign;
 
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRuleStatus;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
 import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.SessionRecurrenceRuleService;
 import java.time.Clock;
@@ -64,6 +67,7 @@ class SessionRecurrenceRuleServiceIntegrationTests {
     @Autowired private VaccinationCenterRepository centerRepository;
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
+    @Autowired private VaccinationSessionRepository sessionRepository;
 
     @Test
     void createsHistoricalCurrentAndFutureRulesWithIndependentKeys() {
@@ -334,6 +338,101 @@ class SessionRecurrenceRuleServiceIntegrationTests {
         assertThrows(IllegalArgumentException.class, () -> service.getRulesForCenter(null));
         assertThrows(IllegalArgumentException.class,
                 () -> service.getActiveRulesForCampaignCenterOn(1L, 2L, null));
+    }
+
+    @Test
+    void updateFutureRule_failsWhenGeneratedSessionsExist() {
+        VaccinationCampaign campaign = campaign("MUT-UPD", CampaignStatus.DRAFT);
+        VaccinationCenter center = center("MUT-UPD", CenterStatus.ACTIVE);
+
+        SessionRecurrenceRule rule = create(
+                campaign, center, Set.of(DayOfWeek.TUESDAY),
+                LocalDate.of(2026, 9, 22), LocalDate.of(2026, 10, 6),
+                MORNING, NOON, "UTC");
+
+        // Simulate a generated session existing for the rule
+        sessionRepository.saveAndFlush(new VaccinationSession(
+                campaign, center, rule, rule.getGenerationKey() + ":2026-09-22",
+                LocalDate.of(2026, 9, 22),
+                Instant.parse("2026-09-22T09:00:00Z"), Instant.parse("2026-09-22T12:00:00Z"),
+                Instant.parse("2026-09-22T09:00:00Z"), "UTC"));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.updateFutureRule(rule.getId(), Set.of(DayOfWeek.WEDNESDAY),
+                        LocalDate.of(2026, 9, 23), LocalDate.of(2026, 10, 7),
+                        MORNING, NOON, "UTC"));
+        assertTrue(ex.getMessage().contains("Cannot update recurrence definition for a rule with existing generated sessions"));
+    }
+
+    @Test
+    void shortenRuleEnd_failsWhenGeneratedSessionExistsAfterNewEndDate() {
+        VaccinationCampaign campaign = campaign("MUT-SHR-FAIL", CampaignStatus.DRAFT);
+        VaccinationCenter center = center("MUT-SHR-FAIL", CenterStatus.ACTIVE);
+
+        SessionRecurrenceRule rule = create(
+                campaign, center, Set.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5),
+                MORNING, NOON, "UTC");
+
+        // Generated session on 2026-10-05
+        sessionRepository.saveAndFlush(new VaccinationSession(
+                campaign, center, rule, rule.getGenerationKey() + ":2026-10-05",
+                LocalDate.of(2026, 10, 05),
+                Instant.parse("2026-10-05T09:00:00Z"), Instant.parse("2026-10-05T12:00:00Z"),
+                Instant.parse("2026-10-05T09:00:00Z"), "UTC"));
+
+        // Attempt shortening to 2026-09-28 (before the Oct 5 session)
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.shortenRuleEnd(rule.getId(), LocalDate.of(2026, 9, 28)));
+        assertTrue(ex.getMessage().contains("Cannot shorten recurrence rule end date before existing generated session occurrences"));
+    }
+
+    @Test
+    void shortenRuleEnd_succeedsWhenAllGeneratedSessionsAreWithinNewEndDate() {
+        VaccinationCampaign campaign = campaign("MUT-SHR-OK", CampaignStatus.DRAFT);
+        VaccinationCenter center = center("MUT-SHR-OK", CenterStatus.ACTIVE);
+
+        SessionRecurrenceRule rule = create(
+                campaign, center, Set.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5),
+                MORNING, NOON, "UTC");
+
+        // Generated session on 2026-09-21
+        sessionRepository.saveAndFlush(new VaccinationSession(
+                campaign, center, rule, rule.getGenerationKey() + ":2026-09-21",
+                LocalDate.of(2026, 9, 21),
+                Instant.parse("2026-09-21T09:00:00Z"), Instant.parse("2026-09-21T12:00:00Z"),
+                Instant.parse("2026-09-21T09:00:00Z"), "UTC"));
+
+        // Shortening to 2026-09-28 retains the 2026-09-21 session
+        SessionRecurrenceRule updated = service.shortenRuleEnd(rule.getId(), LocalDate.of(2026, 9, 28));
+        assertEquals(LocalDate.of(2026, 9, 28), updated.getEndDate());
+    }
+
+    @Test
+    void cancelRule_succeedsWhenGeneratedSessionsExist_andLeavesSessionsUntouched() {
+        VaccinationCampaign campaign = campaign("MUT-CNC", CampaignStatus.DRAFT);
+        VaccinationCenter center = center("MUT-CNC", CenterStatus.ACTIVE);
+
+        SessionRecurrenceRule rule = create(
+                campaign, center, Set.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5),
+                MORNING, NOON, "UTC");
+
+        // Generated session on 2026-09-21
+        VaccinationSession session = sessionRepository.saveAndFlush(new VaccinationSession(
+                campaign, center, rule, rule.getGenerationKey() + ":2026-09-21",
+                LocalDate.of(2026, 9, 21),
+                Instant.parse("2026-09-21T09:00:00Z"), Instant.parse("2026-09-21T12:00:00Z"),
+                Instant.parse("2026-09-21T09:00:00Z"), "UTC"));
+
+        SessionRecurrenceRule cancelled = service.cancelRule(rule.getId());
+        assertEquals(SessionRecurrenceRuleStatus.CANCELLED, cancelled.getStatus());
+
+        // Verify session remains in DB unchanged
+        VaccinationSession remainingSession = sessionRepository.findById(session.getId()).orElseThrow();
+        assertEquals(SessionLifecycleStatus.DRAFT, remainingSession.getLifecycleStatus());
+        assertEquals(rule.getId(), remainingSession.getRecurrenceRule().getId());
     }
 
     private void updateToTuesday(SessionRecurrenceRule rule) {
