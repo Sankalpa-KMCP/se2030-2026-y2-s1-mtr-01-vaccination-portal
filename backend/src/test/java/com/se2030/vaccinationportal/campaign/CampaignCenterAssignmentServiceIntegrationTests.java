@@ -337,7 +337,7 @@ class CampaignCenterAssignmentServiceIntegrationTests {
     private VaccinationCenter center(String suffix, CenterStatus status) {
         return centerRepository.saveAndFlush(new VaccinationCenter(
                 "CTR-" + suffix, "Center " + suffix, "1 Test Road", "+94 11 000 0000",
-                status, 100, 50));
+                status, 100, 50, "UTC"));
     }
 
     private static LocalDate day(long offset) {

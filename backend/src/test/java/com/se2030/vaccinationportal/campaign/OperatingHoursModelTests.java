@@ -28,7 +28,8 @@ class OperatingHoursModelTests {
                 "+94 11 234 5678",
                 CenterStatus.ACTIVE,
                 200,
-                50
+                50,
+                "UTC"
         );
     }
 

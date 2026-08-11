@@ -277,7 +277,7 @@ class CampaignCenterAssignmentConcurrencyIntegrationTests {
     private VaccinationCenter center(String suffix) {
         return centerRepository.saveAndFlush(new VaccinationCenter(
                 "CTR-CCA-" + suffix, "Center " + suffix, "1 Test Road", "+94 11 000 0000",
-                CenterStatus.ACTIVE, 100, 50));
+                CenterStatus.ACTIVE, 100, 50, "UTC"));
     }
 
     private static LocalDate day(long offset) {

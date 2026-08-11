@@ -46,7 +46,8 @@ class OperatingHoursPersistenceIntegrationTests {
                 "+94 11 111 2222",
                 CenterStatus.ACTIVE,
                 200,
-                50
+                50,
+                "UTC"
         ));
 
         centerB = centerRepository.saveAndFlush(new VaccinationCenter(
@@ -56,7 +57,8 @@ class OperatingHoursPersistenceIntegrationTests {
                 "+94 81 333 4444",
                 CenterStatus.ACTIVE,
                 150,
-                40
+                40,
+                "UTC"
         ));
     }
 

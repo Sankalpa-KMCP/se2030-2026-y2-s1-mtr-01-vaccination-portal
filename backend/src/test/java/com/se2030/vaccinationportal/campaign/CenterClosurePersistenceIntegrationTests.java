@@ -160,7 +160,7 @@ class CenterClosurePersistenceIntegrationTests {
     private VaccinationCenter saveCenter(String code) {
         return centerRepository.saveAndFlush(new VaccinationCenter(
                 code, "Closure Persistence Center", "1 Health Road", "+94 11 000 0000",
-                CenterStatus.ACTIVE, 100, 50
+                CenterStatus.ACTIVE, 100, 50, "UTC"
         ));
     }
 }

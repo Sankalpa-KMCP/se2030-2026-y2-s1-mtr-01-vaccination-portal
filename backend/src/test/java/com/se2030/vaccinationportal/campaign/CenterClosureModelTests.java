@@ -32,7 +32,7 @@ class CenterClosureModelTests {
     void setUp() {
         center = new VaccinationCenter(
                 "CTR-CLOSURE-MODEL", "Closure Model Center", "1 Health Road", "+94 11 000 0000",
-                CenterStatus.ACTIVE, 100, 50
+                CenterStatus.ACTIVE, 100, 50, "UTC"
         );
     }
 

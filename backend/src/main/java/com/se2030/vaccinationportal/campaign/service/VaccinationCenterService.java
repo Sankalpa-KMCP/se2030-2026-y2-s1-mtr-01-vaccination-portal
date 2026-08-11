@@ -3,6 +3,8 @@ package com.se2030.vaccinationportal.campaign.service;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.Optional;
 public class VaccinationCenterService {
 
     private final VaccinationCenterRepository centerRepository;
+    @PersistenceContext private EntityManager entityManager;
 
     public VaccinationCenterService(VaccinationCenterRepository centerRepository) {
         this.centerRepository = centerRepository;
@@ -39,6 +42,7 @@ public class VaccinationCenterService {
      * @param contact Contact information
      * @param safeConcurrentOccupancy Maximum safe simultaneous building occupancy limit
      * @param sessionServiceCeiling Optional upper bound on single-session approved capacity
+     * @param timezone Explicit Java ZoneId used as the center's local scheduling timezone
      * @return Persisted VaccinationCenter entity
      */
     public VaccinationCenter createCenter(String code,
@@ -46,8 +50,10 @@ public class VaccinationCenterService {
                                           String address,
                                           String contact,
                                           int safeConcurrentOccupancy,
-                                          Integer sessionServiceCeiling) {
+                                          Integer sessionServiceCeiling,
+                                          String timezone) {
         String normalizedCode = VaccinationCenter.normalizeCode(code);
+        String normalizedTimezone = VaccinationCenter.normalizeTimezone(timezone);
 
         if (centerRepository.existsByCode(normalizedCode)) {
             throw new IllegalArgumentException("Vaccination center already exists with code: " + normalizedCode);
@@ -60,7 +66,8 @@ public class VaccinationCenterService {
                 contact,
                 CenterStatus.ACTIVE,
                 safeConcurrentOccupancy,
-                sessionServiceCeiling
+                sessionServiceCeiling,
+                normalizedTimezone
         );
 
         return centerRepository.save(center);
@@ -84,8 +91,7 @@ public class VaccinationCenterService {
                                           String contact,
                                           int safeConcurrentOccupancy,
                                           Integer sessionServiceCeiling) {
-        VaccinationCenter center = centerRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + id));
+        VaccinationCenter center = findAuthoritativeCenter(id);
 
         center.updateDetails(name, address, contact, safeConcurrentOccupancy, sessionServiceCeiling);
 
@@ -99,8 +105,7 @@ public class VaccinationCenterService {
      * @return Updated VaccinationCenter entity with ACTIVE status
      */
     public VaccinationCenter activateCenter(Long id) {
-        VaccinationCenter center = centerRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + id));
+        VaccinationCenter center = findAuthoritativeCenter(id);
 
         center.activate();
         return centerRepository.save(center);
@@ -114,8 +119,7 @@ public class VaccinationCenterService {
      * @return Updated VaccinationCenter entity with INACTIVE status
      */
     public VaccinationCenter deactivateCenter(Long id) {
-        VaccinationCenter center = centerRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + id));
+        VaccinationCenter center = findAuthoritativeCenter(id);
 
         center.deactivate();
         return centerRepository.save(center);
@@ -167,5 +171,13 @@ public class VaccinationCenterService {
     @Transactional(readOnly = true)
     public List<VaccinationCenter> getActiveCenters() {
         return centerRepository.findByCenterStatus(CenterStatus.ACTIVE);
+    }
+
+    private VaccinationCenter findAuthoritativeCenter(Long id) {
+        VaccinationCenter center = centerRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Vaccination center not found with ID: " + id));
+        entityManager.refresh(center);
+        return center;
     }
 }

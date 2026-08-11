@@ -242,6 +242,6 @@ class SessionRecurrenceRulePersistenceIntegrationTests {
     private VaccinationCenter saveCenter(String code, CenterStatus status) {
         return centerRepository.saveAndFlush(new VaccinationCenter(
                 code, "Recurrence Center " + code, "1 Health Road", "+94 11 000 0000",
-                status, 100, 50));
+                status, 100, 50, "UTC"));
     }
 }

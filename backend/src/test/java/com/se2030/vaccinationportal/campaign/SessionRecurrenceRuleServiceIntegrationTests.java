@@ -375,6 +375,6 @@ class SessionRecurrenceRuleServiceIntegrationTests {
     private VaccinationCenter center(String suffix, CenterStatus status) {
         return centerRepository.saveAndFlush(new VaccinationCenter(
                 "CTR-RULE-S-" + suffix, "Recurrence Center " + suffix,
-                "1 Health Road", "+94 11 000 0000", status, 100, 50));
+                "1 Health Road", "+94 11 000 0000", status, 100, 50, "UTC"));
     }
 }
