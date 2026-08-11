@@ -194,7 +194,7 @@ class Mf02ConcurrencyIntegrationTests {
     private VaccinationCenter createCenter() {
         return centerRepository.saveAndFlush(new VaccinationCenter(
                 "CTR-CONCURRENT", "Concurrency center", "1 Test Road", "+94 11 000 0000",
-                CenterStatus.ACTIVE, 100, 50
+                CenterStatus.ACTIVE, 100, 50, "UTC"
         ));
     }
 

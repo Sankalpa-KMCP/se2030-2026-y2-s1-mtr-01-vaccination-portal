@@ -51,7 +51,8 @@ class OperatingHoursServiceIntegrationTests {
                 "+94 11 222 3333",
                 CenterStatus.ACTIVE,
                 200,
-                50
+                50,
+                "UTC"
         ));
 
         inactiveCenter = centerRepository.saveAndFlush(new VaccinationCenter(
@@ -61,7 +62,8 @@ class OperatingHoursServiceIntegrationTests {
                 "+94 11 444 5555",
                 CenterStatus.INACTIVE,
                 100,
-                30
+                30,
+                "UTC"
         ));
     }
 

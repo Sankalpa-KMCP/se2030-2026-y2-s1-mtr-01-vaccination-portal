@@ -180,7 +180,8 @@ class CenterClosureConcurrencyIntegrationTests {
                 "+94 11 000 0000",
                 CenterStatus.ACTIVE,
                 100,
-                50
+                50,
+                "UTC"
         ));
     }
 

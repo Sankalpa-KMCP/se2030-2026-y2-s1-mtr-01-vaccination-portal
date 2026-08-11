@@ -16,6 +16,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Locale;
 
 /**
@@ -29,6 +30,7 @@ import java.util.Locale;
  *   <li>{@code name}: Official center display name.</li>
  *   <li>{@code address}: Physical facility address.</li>
  *   <li>{@code contact}: Official contact information.</li>
+ *   <li>{@code timezone}: Authoritative local scheduling timezone stored as a normalized Java ZoneId.</li>
  *   <li>{@code centerStatus}: Long-term operational status ({@link CenterStatus#ACTIVE} or {@link CenterStatus#INACTIVE}).</li>
  *   <li>{@code safeConcurrentOccupancy}: Simultaneous physical occupancy safety limit.</li>
  *   <li>{@code sessionServiceCeiling}: Optional upper bound on approved capacity for individual sessions (nullable).</li>
@@ -76,6 +78,10 @@ public class VaccinationCenter {
     @Column(name = "contact", nullable = false, length = 128)
     private String contact;
 
+    @NotNull(message = "Center scheduling timezone is required")
+    @Column(name = "timezone", nullable = false, length = 64)
+    private String timezone;
+
     @NotNull(message = "Center status is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "center_status", nullable = false, length = 16)
@@ -105,12 +111,16 @@ public class VaccinationCenter {
                              String contact,
                              CenterStatus centerStatus,
                              Integer safeConcurrentOccupancy,
-                             Integer sessionServiceCeiling) {
-        validateParameters(code, name, address, contact, centerStatus, safeConcurrentOccupancy, sessionServiceCeiling);
+                             Integer sessionServiceCeiling,
+                             String timezone) {
+        validateParameters(
+                code, name, address, contact, centerStatus,
+                safeConcurrentOccupancy, sessionServiceCeiling, timezone);
         this.code = normalizeCode(code);
         this.name = name.trim();
         this.address = address.trim();
         this.contact = contact.trim();
+        this.timezone = normalizeTimezone(timezone);
         this.centerStatus = centerStatus;
         this.safeConcurrentOccupancy = safeConcurrentOccupancy;
         this.sessionServiceCeiling = sessionServiceCeiling;
@@ -135,10 +145,29 @@ public class VaccinationCenter {
     }
 
     /**
+     * Normalizes an explicitly supplied Java scheduling timezone identifier.
+     * No environment or country default is consulted.
+     */
+    public static String normalizeTimezone(String rawTimezone) {
+        if (rawTimezone == null || rawTimezone.trim().isEmpty()) {
+            throw new IllegalArgumentException("Center scheduling timezone is required");
+        }
+        String candidate = rawTimezone.trim();
+        try {
+            return ZoneId.of(candidate).getId();
+        } catch (RuntimeException error) {
+            throw new IllegalArgumentException(
+                    "Center scheduling timezone is invalid: " + candidate, error);
+        }
+    }
+
+    /**
      * Validates domain invariants for VaccinationCenter.
      */
     public void validateConstraints() {
-        validateParameters(code, name, address, contact, centerStatus, safeConcurrentOccupancy, sessionServiceCeiling);
+        validateParameters(
+                code, name, address, contact, centerStatus,
+                safeConcurrentOccupancy, sessionServiceCeiling, timezone);
     }
 
     private static void validateParameters(String code,
@@ -147,7 +176,8 @@ public class VaccinationCenter {
                                            String contact,
                                            CenterStatus centerStatus,
                                            Integer safeConcurrentOccupancy,
-                                           Integer sessionServiceCeiling) {
+                                           Integer sessionServiceCeiling,
+                                           String timezone) {
         normalizeCode(code);
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Center name is required");
@@ -158,6 +188,7 @@ public class VaccinationCenter {
         if (contact == null || contact.trim().isEmpty()) {
             throw new IllegalArgumentException("Contact is required");
         }
+        normalizeTimezone(timezone);
         if (centerStatus == null) {
             throw new IllegalArgumentException("Center status is required");
         }
@@ -174,7 +205,9 @@ public class VaccinationCenter {
                               String contact,
                               Integer safeConcurrentOccupancy,
                               Integer sessionServiceCeiling) {
-        validateParameters(code, name, address, contact, centerStatus, safeConcurrentOccupancy, sessionServiceCeiling);
+        validateParameters(
+                code, name, address, contact, centerStatus,
+                safeConcurrentOccupancy, sessionServiceCeiling, timezone);
         this.name = name.trim();
         this.address = address.trim();
         this.contact = contact.trim();
@@ -194,6 +227,7 @@ public class VaccinationCenter {
     protected void onCreate() {
         validateConstraints();
         this.code = normalizeCode(this.code);
+        this.timezone = normalizeTimezone(this.timezone);
         Instant now = Instant.now();
         if (createdAt == null) {
             createdAt = now;
@@ -207,6 +241,7 @@ public class VaccinationCenter {
     protected void onUpdate() {
         validateConstraints();
         this.code = normalizeCode(this.code);
+        this.timezone = normalizeTimezone(this.timezone);
         updatedAt = Instant.now();
     }
 
@@ -228,6 +263,10 @@ public class VaccinationCenter {
 
     public String getContact() {
         return contact;
+    }
+
+    public String getTimezone() {
+        return timezone;
     }
 
     public CenterStatus getCenterStatus() {
@@ -256,6 +295,7 @@ public class VaccinationCenter {
                 "id=" + id +
                 ", code='" + code + '\'' +
                 ", name='" + name + '\'' +
+                ", timezone='" + timezone + '\'' +
                 ", centerStatus=" + centerStatus +
                 ", safeConcurrentOccupancy=" + safeConcurrentOccupancy +
                 ", sessionServiceCeiling=" + sessionServiceCeiling +

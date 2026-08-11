@@ -47,7 +47,7 @@ class SessionRecurrenceRuleModelTests {
                 CampaignStatus.DRAFT);
         center = new VaccinationCenter(
                 "CTR-RULE-M", "Recurrence Center", "1 Test Road", "+94 11 000 0000",
-                CenterStatus.ACTIVE, 100, 50);
+                CenterStatus.ACTIVE, 100, 50, "UTC");
     }
 
     @Test

@@ -46,7 +46,8 @@ class VaccinationCenterPersistenceIntegrationTests {
                 "+94 11 2345678",
                 CenterStatus.ACTIVE,
                 150,
-                50
+                50,
+                "Asia/Colombo"
         );
 
         VaccinationCenter saved = centerRepository.saveAndFlush(center);
@@ -59,6 +60,7 @@ class VaccinationCenterPersistenceIntegrationTests {
         assertEquals(CenterStatus.ACTIVE, saved.getCenterStatus());
         assertEquals(150, saved.getSafeConcurrentOccupancy());
         assertEquals(50, saved.getSessionServiceCeiling());
+        assertEquals("Asia/Colombo", saved.getTimezone());
         assertNotNull(saved.getCreatedAt());
         assertNotNull(saved.getUpdatedAt());
 
@@ -78,7 +80,8 @@ class VaccinationCenterPersistenceIntegrationTests {
                 "Contact One",
                 CenterStatus.ACTIVE,
                 100,
-                null
+                null,
+                "UTC"
         );
         centerRepository.saveAndFlush(c1);
 
@@ -89,7 +92,8 @@ class VaccinationCenterPersistenceIntegrationTests {
                 "Contact Two",
                 CenterStatus.ACTIVE,
                 120,
-                null
+                null,
+                "UTC"
         );
 
         assertThrows(DataIntegrityViolationException.class, () -> {
@@ -101,13 +105,13 @@ class VaccinationCenterPersistenceIntegrationTests {
     @DisplayName("Query centers by CenterStatus filters active and inactive centers")
     void queryCentersByCenterStatus() {
         centerRepository.saveAndFlush(new VaccinationCenter(
-                "CTR-ACT-01", "Active Center 1", "Addr 1", "Cont 1", CenterStatus.ACTIVE, 100, null
+                "CTR-ACT-01", "Active Center 1", "Addr 1", "Cont 1", CenterStatus.ACTIVE, 100, null, "UTC"
         ));
         centerRepository.saveAndFlush(new VaccinationCenter(
-                "CTR-ACT-02", "Active Center 2", "Addr 2", "Cont 2", CenterStatus.ACTIVE, 150, 40
+                "CTR-ACT-02", "Active Center 2", "Addr 2", "Cont 2", CenterStatus.ACTIVE, 150, 40, "UTC"
         ));
         centerRepository.saveAndFlush(new VaccinationCenter(
-                "CTR-INACT-01", "Inactive Center", "Addr 3", "Cont 3", CenterStatus.INACTIVE, 80, null
+                "CTR-INACT-01", "Inactive Center", "Addr 3", "Cont 3", CenterStatus.INACTIVE, 80, null, "UTC"
         ));
 
         List<VaccinationCenter> activeCenters = centerRepository.findByCenterStatus(CenterStatus.ACTIVE);
@@ -127,12 +131,14 @@ class VaccinationCenterPersistenceIntegrationTests {
                 "William Gopallawa Mawatha, Kandy",
                 "+94 81 2222222",
                 200,
-                60
+                60,
+                "  Asia/Colombo  "
         );
 
         assertNotNull(center.getId());
         assertEquals("CTR-KANDY-GEN", center.getCode());
         assertEquals(CenterStatus.ACTIVE, center.getCenterStatus());
+        assertEquals("Asia/Colombo", center.getTimezone());
 
         Optional<VaccinationCenter> lookup = centerService.getCenterByCode("ctr-kandy-gen");
         assertTrue(lookup.isPresent());
@@ -148,7 +154,8 @@ class VaccinationCenterPersistenceIntegrationTests {
                 "Karapitiya, Galle",
                 "+94 91 2234567",
                 120,
-                null
+                null,
+                "UTC"
         );
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
@@ -158,7 +165,8 @@ class VaccinationCenterPersistenceIntegrationTests {
                         "Different Address",
                         "Different Contact",
                         100,
-                        null
+                        null,
+                        "UTC"
                 )
         );
         assertTrue(ex.getMessage().contains("Vaccination center already exists with code"));
@@ -173,7 +181,8 @@ class VaccinationCenterPersistenceIntegrationTests {
                 "Hospital Rd, Jaffna",
                 "+94 21 2222222",
                 100,
-                30
+                30,
+                "Asia/Colombo"
         );
 
         VaccinationCenter updated = centerService.updateCenter(
@@ -191,6 +200,7 @@ class VaccinationCenterPersistenceIntegrationTests {
         assertEquals("+94 21 3333333", updated.getContact());
         assertEquals(140, updated.getSafeConcurrentOccupancy());
         assertEquals(45, updated.getSessionServiceCeiling());
+        assertEquals("Asia/Colombo", updated.getTimezone());
     }
 
     @Test
@@ -202,7 +212,8 @@ class VaccinationCenterPersistenceIntegrationTests {
                 "Anagarika Dharmapala Mawatha, Matara",
                 "+94 41 2222222",
                 80,
-                null
+                null,
+                "UTC"
         );
         assertEquals(CenterStatus.ACTIVE, center.getCenterStatus());
 
@@ -224,7 +235,8 @@ class VaccinationCenterPersistenceIntegrationTests {
                 "Colombo Rd, Negombo",
                 "+94 31 2222222",
                 90,
-                null
+                null,
+                "UTC"
         );
 
         centerService.deactivateCenter(center.getId());
@@ -233,5 +245,23 @@ class VaccinationCenterPersistenceIntegrationTests {
         assertEquals(1, all.size());
         assertEquals("CTR-NEGOMBO-01", all.get(0).getCode());
         assertEquals(CenterStatus.INACTIVE, all.get(0).getCenterStatus());
+    }
+
+    @Test
+    @DisplayName("Service rejects an invalid explicitly supplied scheduling timezone")
+    void serviceRejectsInvalidSchedulingTimezone() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () ->
+                centerService.createCenter(
+                        "CTR-INVALID-TZ",
+                        "Invalid timezone center",
+                        "1 Test Road",
+                        "+94 11 000 0000",
+                        100,
+                        null,
+                        "Invalid/Timezone")
+        );
+
+        assertTrue(error.getMessage().contains("Center scheduling timezone is invalid"));
+        assertFalse(centerRepository.existsByCode("CTR-INVALID-TZ"));
     }
 }

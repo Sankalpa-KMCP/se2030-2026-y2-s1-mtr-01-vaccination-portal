@@ -35,7 +35,7 @@ class CampaignCenterAssignmentModelTests {
         campaign = campaign();
         center = new VaccinationCenter(
                 "CTR-ASSIGN-MODEL", "Assignment Center", "1 Health Road", "+94 11 000 0000",
-                CenterStatus.ACTIVE, 100, 50);
+                CenterStatus.ACTIVE, 100, 50, "UTC");
     }
 
     @Test

@@ -284,7 +284,8 @@ class CenterClosureServiceIntegrationTests {
                 "+94 11 000 0000",
                 status,
                 100,
-                50
+                50,
+                "UTC"
         ));
     }
 

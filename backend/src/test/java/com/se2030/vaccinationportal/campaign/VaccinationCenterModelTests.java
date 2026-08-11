@@ -22,7 +22,8 @@ class VaccinationCenterModelTests {
                 "+94 11 2345678",
                 CenterStatus.ACTIVE,
                 150,
-                50
+                50,
+                "  Asia/Colombo  "
         );
 
         assertEquals("CTR-NCMC", center.getCode());
@@ -32,6 +33,7 @@ class VaccinationCenterModelTests {
         assertEquals(CenterStatus.ACTIVE, center.getCenterStatus());
         assertEquals(150, center.getSafeConcurrentOccupancy());
         assertEquals(50, center.getSessionServiceCeiling());
+        assertEquals("Asia/Colombo", center.getTimezone());
     }
 
     @Test
@@ -44,7 +46,8 @@ class VaccinationCenterModelTests {
                 "info@northgh.lk",
                 CenterStatus.ACTIVE,
                 200,
-                null
+                null,
+                "UTC"
         );
 
         assertNull(center.getSessionServiceCeiling());
@@ -55,12 +58,12 @@ class VaccinationCenterModelTests {
     @DisplayName("Blank or null code is rejected")
     void blankOrNullCodeRejected() {
         IllegalArgumentException exNull = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter(null, "Name", "Address", "Contact", CenterStatus.ACTIVE, 100, null)
+                new VaccinationCenter(null, "Name", "Address", "Contact", CenterStatus.ACTIVE, 100, null, "UTC")
         );
         assertTrue(exNull.getMessage().contains("Center code must not be null or blank"));
 
         IllegalArgumentException exBlank = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("   ", "Name", "Address", "Contact", CenterStatus.ACTIVE, 100, null)
+                new VaccinationCenter("   ", "Name", "Address", "Contact", CenterStatus.ACTIVE, 100, null, "UTC")
         );
         assertTrue(exBlank.getMessage().contains("Center code must not be null or blank"));
     }
@@ -69,7 +72,7 @@ class VaccinationCenterModelTests {
     @DisplayName("Blank or null name is rejected")
     void blankOrNullNameRejected() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("CTR-01", "   ", "Address", "Contact", CenterStatus.ACTIVE, 100, null)
+                new VaccinationCenter("CTR-01", "   ", "Address", "Contact", CenterStatus.ACTIVE, 100, null, "UTC")
         );
         assertTrue(ex.getMessage().contains("Center name is required"));
     }
@@ -78,7 +81,7 @@ class VaccinationCenterModelTests {
     @DisplayName("Blank or null address is rejected")
     void blankOrNullAddressRejected() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("CTR-01", "Name", "   ", "Contact", CenterStatus.ACTIVE, 100, null)
+                new VaccinationCenter("CTR-01", "Name", "   ", "Contact", CenterStatus.ACTIVE, 100, null, "UTC")
         );
         assertTrue(ex.getMessage().contains("Address is required"));
     }
@@ -87,7 +90,7 @@ class VaccinationCenterModelTests {
     @DisplayName("Blank or null contact is rejected")
     void blankOrNullContactRejected() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("CTR-01", "Name", "Address", "   ", CenterStatus.ACTIVE, 100, null)
+                new VaccinationCenter("CTR-01", "Name", "Address", "   ", CenterStatus.ACTIVE, 100, null, "UTC")
         );
         assertTrue(ex.getMessage().contains("Contact is required"));
     }
@@ -96,7 +99,7 @@ class VaccinationCenterModelTests {
     @DisplayName("Null centerStatus is rejected")
     void nullCenterStatusRejected() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", null, 100, null)
+                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", null, 100, null, "UTC")
         );
         assertTrue(ex.getMessage().contains("Center status is required"));
     }
@@ -105,12 +108,12 @@ class VaccinationCenterModelTests {
     @DisplayName("Non-positive safeConcurrentOccupancy is rejected")
     void nonPositiveSafeConcurrentOccupancyRejected() {
         IllegalArgumentException exZero = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", CenterStatus.ACTIVE, 0, null)
+                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", CenterStatus.ACTIVE, 0, null, "UTC")
         );
         assertTrue(exZero.getMessage().contains("Safe concurrent occupancy must be a positive integer"));
 
         IllegalArgumentException exNeg = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", CenterStatus.ACTIVE, -10, null)
+                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", CenterStatus.ACTIVE, -10, null, "UTC")
         );
         assertTrue(exNeg.getMessage().contains("Safe concurrent occupancy must be a positive integer"));
     }
@@ -119,13 +122,38 @@ class VaccinationCenterModelTests {
     @DisplayName("Non-positive sessionServiceCeiling is rejected when specified")
     void nonPositiveSessionServiceCeilingRejected() {
         IllegalArgumentException exZero = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", CenterStatus.ACTIVE, 100, 0)
+                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", CenterStatus.ACTIVE, 100, 0, "UTC")
         );
         assertTrue(exZero.getMessage().contains("Session service ceiling must be a positive integer when specified"));
 
         IllegalArgumentException exNeg = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", CenterStatus.ACTIVE, 100, -5)
+                new VaccinationCenter("CTR-01", "Name", "Address", "Contact", CenterStatus.ACTIVE, 100, -5, "UTC")
         );
         assertTrue(exNeg.getMessage().contains("Session service ceiling must be a positive integer when specified"));
+    }
+
+    @Test
+    @DisplayName("Scheduling timezone must be explicitly supplied and valid")
+    void schedulingTimezoneMustBeExplicitAndValid() {
+        IllegalArgumentException nullError = assertThrows(IllegalArgumentException.class, () ->
+                new VaccinationCenter(
+                        "CTR-TZ-NULL", "Name", "Address", "Contact",
+                        CenterStatus.ACTIVE, 100, null, null)
+        );
+        assertTrue(nullError.getMessage().contains("Center scheduling timezone is required"));
+
+        IllegalArgumentException blankError = assertThrows(IllegalArgumentException.class, () ->
+                new VaccinationCenter(
+                        "CTR-TZ-BLANK", "Name", "Address", "Contact",
+                        CenterStatus.ACTIVE, 100, null, "   ")
+        );
+        assertTrue(blankError.getMessage().contains("Center scheduling timezone is required"));
+
+        IllegalArgumentException invalidError = assertThrows(IllegalArgumentException.class, () ->
+                new VaccinationCenter(
+                        "CTR-TZ-INVALID", "Name", "Address", "Contact",
+                        CenterStatus.ACTIVE, 100, null, "Not/A_Zone")
+        );
+        assertTrue(invalidError.getMessage().contains("Center scheduling timezone is invalid"));
     }
 }
