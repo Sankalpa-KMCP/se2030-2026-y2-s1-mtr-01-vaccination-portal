@@ -14,6 +14,8 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepos
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.CampaignCenterAssignmentService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -37,10 +40,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.UnexpectedRollbackException;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -69,6 +76,8 @@ class CampaignCenterAssignmentConcurrencyIntegrationTests {
     @Autowired private VaccinationCenterRepository centerRepository;
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
+    @Autowired private PlatformTransactionManager transactionManager;
+    @PersistenceContext private EntityManager entityManager;
 
     @BeforeEach
     void clearPersistedState() {
@@ -135,6 +144,45 @@ class CampaignCenterAssignmentConcurrencyIntegrationTests {
         assertEquals(1, service.getAssignmentsForCampaign(second.getId()).size());
     }
 
+    @Test
+    @Timeout(30)
+    void preloadedAssignmentIsRefreshedAfterCampaignLockBeforeMutation() {
+        VaccinationCampaign campaign = campaign("AUTHORITATIVE-REFRESH");
+        VaccinationCenter center = center("AUTHORITATIVE-REFRESH");
+        CampaignCenterAssignment assignment = service.createAssignment(
+                campaign.getId(), center.getId(), day(2), day(6));
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        try {
+            assertThrows(UnexpectedRollbackException.class,
+                    () -> new TransactionTemplate(transactionManager).executeWithoutResult(transactionStatus -> {
+                        CampaignCenterAssignment preloaded = assignmentRepository.findById(assignment.getId())
+                                .orElseThrow();
+                        assertTrue(entityManager.contains(preloaded));
+                        assertEquals(CampaignCenterAssignmentStatus.ACTIVE, preloaded.getStatus());
+
+                        Future<?> committedCancellation = executor.submit(
+                                () -> service.cancelFutureAssignment(assignment.getId()));
+                        awaitWorker(committedCancellation);
+
+                        assertEquals(CampaignCenterAssignmentStatus.ACTIVE, preloaded.getStatus(),
+                                "Transaction A must still hold the stale pre-lock state");
+                        assertThrows(IllegalArgumentException.class,
+                                () -> service.updateFutureAssignment(assignment.getId(), day(3), day(7)));
+                        assertEquals(CampaignCenterAssignmentStatus.CANCELLED, preloaded.getStatus(),
+                                "Post-lock refresh must replace stale managed state");
+                    }));
+        } finally {
+            executor.shutdownNow();
+            awaitExecutorTermination(executor);
+        }
+
+        CampaignCenterAssignment committed = service.getAssignmentById(assignment.getId()).orElseThrow();
+        assertEquals(CampaignCenterAssignmentStatus.CANCELLED, committed.getStatus());
+        assertEquals(day(2), committed.getActiveFrom());
+        assertEquals(day(6), committed.getActiveTo());
+    }
+
     private List<Outcome> runConcurrently(Callable<?> first, Callable<?> second) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);
@@ -150,6 +198,26 @@ class CampaignCenterAssignmentConcurrencyIntegrationTests {
         } finally {
             executor.shutdownNow();
             assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Executor did not terminate");
+        }
+    }
+
+    private void awaitWorker(Future<?> future) {
+        try {
+            future.get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while waiting for worker", error);
+        } catch (ExecutionException | TimeoutException error) {
+            throw new AssertionError("Worker did not complete successfully", error);
+        }
+    }
+
+    private void awaitExecutorTermination(ExecutorService executor) {
+        try {
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Executor did not terminate");
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while stopping executor", error);
         }
     }
 

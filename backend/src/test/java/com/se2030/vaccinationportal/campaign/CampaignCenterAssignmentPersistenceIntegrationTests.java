@@ -13,6 +13,9 @@ import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceUnitUtil;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -45,6 +48,7 @@ class CampaignCenterAssignmentPersistenceIntegrationTests {
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @PersistenceContext private EntityManager entityManager;
 
     private VaccinationCampaign campaignA;
     private VaccinationCampaign campaignB;
@@ -75,6 +79,25 @@ class CampaignCenterAssignmentPersistenceIntegrationTests {
         assertNotNull(reloaded.getCreatedAt());
         assertNotNull(reloaded.getUpdatedAt());
         assertEquals(campaignA.getId(), assignmentRepository.findCampaignIdById(saved.getId()).orElseThrow());
+    }
+
+    @Test
+    void parentRelationshipsRemainLazyAfterPersistenceContextClear() {
+        CampaignCenterAssignment saved = assignmentRepository.saveAndFlush(
+                new CampaignCenterAssignment(campaignA, centerA, START, END));
+        Long assignmentId = saved.getId();
+        entityManager.clear();
+
+        CampaignCenterAssignment reloaded = assignmentRepository.findById(assignmentId).orElseThrow();
+        PersistenceUnitUtil persistenceUnitUtil = entityManager.getEntityManagerFactory()
+                .getPersistenceUnitUtil();
+
+        assertFalse(persistenceUnitUtil.isLoaded(reloaded, "campaign"));
+        assertFalse(persistenceUnitUtil.isLoaded(reloaded, "center"));
+        assertEquals("CMP-ASSIGN-PA", reloaded.getCampaign().getCode());
+        assertEquals("CTR-ASSIGN-PA", reloaded.getCenter().getCode());
+        assertTrue(persistenceUnitUtil.isLoaded(reloaded, "campaign"));
+        assertTrue(persistenceUnitUtil.isLoaded(reloaded, "center"));
     }
 
     @Test

@@ -7,6 +7,8 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
@@ -23,6 +25,7 @@ public class CampaignCenterAssignmentService {
     private final VaccinationCampaignRepository campaignRepository;
     private final VaccinationCenterRepository centerRepository;
     private final Clock clock;
+    @PersistenceContext private EntityManager entityManager;
 
     public CampaignCenterAssignmentService(
             CampaignCenterAssignmentRepository assignmentRepository,
@@ -119,7 +122,7 @@ public class CampaignCenterAssignmentService {
 
         Long campaignId = findCampaignId(id);
         lockCampaign(campaignId);
-        CampaignCenterAssignment target = findAssignment(id);
+        CampaignCenterAssignment target = findAuthoritativeAssignment(id);
         verifyOwnership(target, campaignId);
         requireActive(target);
 
@@ -145,7 +148,7 @@ public class CampaignCenterAssignmentService {
 
         Long campaignId = findCampaignId(id);
         lockCampaign(campaignId);
-        CampaignCenterAssignment target = findAssignment(id);
+        CampaignCenterAssignment target = findAuthoritativeAssignment(id);
         verifyOwnership(target, campaignId);
         requireActive(target);
 
@@ -166,7 +169,7 @@ public class CampaignCenterAssignmentService {
 
         Long campaignId = findCampaignId(id);
         lockCampaign(campaignId);
-        CampaignCenterAssignment target = findAssignment(id);
+        CampaignCenterAssignment target = findAuthoritativeAssignment(id);
         verifyOwnership(target, campaignId);
         requireActive(target);
 
@@ -191,10 +194,12 @@ public class CampaignCenterAssignmentService {
                         "Campaign not found with ID: " + campaignId));
     }
 
-    private CampaignCenterAssignment findAssignment(Long assignmentId) {
-        return assignmentRepository.findById(assignmentId)
+    private CampaignCenterAssignment findAuthoritativeAssignment(Long assignmentId) {
+        CampaignCenterAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Campaign-center assignment not found with ID: " + assignmentId));
+        entityManager.refresh(assignment);
+        return assignment;
     }
 
     private void rejectActiveOverlap(
