@@ -1,10 +1,14 @@
 package com.se2030.vaccinationportal.campaign.repository;
 
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /** Persistence operations for concrete vaccination sessions. */
@@ -22,4 +26,8 @@ public interface VaccinationSessionRepository extends JpaRepository<VaccinationS
     boolean existsByRecurrenceRuleId(Long recurrenceRuleId);
 
     boolean existsByRecurrenceRuleIdAndOriginOccurrenceDateAfter(Long recurrenceRuleId, LocalDate date);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM VaccinationSession s WHERE s.id = :id")
+    Optional<VaccinationSession> findByIdForUpdate(@Param("id") Long id);
 }
