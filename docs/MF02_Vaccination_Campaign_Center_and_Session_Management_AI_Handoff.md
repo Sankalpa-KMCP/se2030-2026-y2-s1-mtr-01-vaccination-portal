@@ -10,13 +10,15 @@
 
 **Sprint:** Sprint 1 — **IN PROGRESS**
 
-**Current repository checkpoint:** `origin/develop = f9c2bbaa8f9f0c13a338ea910961820b34e88d9e`
+**Current implementation checkpoint:** `origin/develop = 0dd05a5dce856bbaff6924c54fcf3c395920b076`
 
-**Latest completed backend foundation:** `CampaignCenterAssignment`
+**Latest completed backend foundation:** `SessionRecurrenceRule`
 
-**Next controlled domain slice:** `SessionRecurrenceRule` discovery and planning — **NOT STARTED**
+**Next major phase:** `VaccinationSession architecture and MF-02 cross-component integration planning` — **NOT STARTED**
 
 > This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
+>
+> The recurrence implementation checkpoint is `0dd05a5dce856bbaff6924c54fcf3c395920b076`. The documentation PR merge containing this handoff is a later metadata checkpoint visible in live Git history; it does not replace or rename the recurrence implementation checkpoint.
 
 ## 1. Executive Snapshot
 
@@ -29,15 +31,20 @@ The following MF-02 backend foundations are already implemented and integrated:
 * VaccinationCenter;
 * OperatingHours;
 * CenterClosure;
-* CampaignCenterAssignment.
+* CampaignCenterAssignment;
+* SessionRecurrenceRule.
 
 `CenterClosure` remains **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED**.
 
-`CampaignCenterAssignment` is **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED** at backend-foundation scope through PR #26. It must not be reconstructed or replaced when work resumes.
+`CampaignCenterAssignment` remains **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED** at backend-foundation scope through PR #26.
 
-Current backend validation is 242 tests with zero failures, errors, or skips. Maven `test` and `verify` succeeded, the JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #26 merge.
+`SessionRecurrenceRule` is **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED** at backend-foundation scope through PR #28. It must not be reconstructed or expanded into concrete-session generation without a separately reviewed integration plan.
 
-Sprint 1 is not complete. `SessionRecurrenceRule`, VaccinationSession integration, migrations, API/security/UI layers, publication integration, and final Definition-of-Done evidence remain pending.
+Current backend validation is 272 tests with zero failures, errors, or skips. Maven `test` and `verify` succeeded, the JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #28 merge.
+
+**MF-02 SUPPORTING BACKEND FOUNDATIONS COMPLETE FOR THE CURRENT PRE-VACCINATIONSESSION PHASE.** This milestone covers the current backend-foundation scope for Campaign, DoseProgramme, LocationTarget, QuestionnaireAssignment, VaccinationCenter, OperatingHours, CenterClosure, CampaignCenterAssignment, and SessionRecurrenceRule. It does not mean MF-02, US-13, or Sprint 1 is complete.
+
+Sprint 1 remains in progress. VaccinationSession architecture, recurrence occurrence generation, integrated session validation, migrations, API/security/UI layers, publication integration, and final Definition-of-Done evidence remain pending.
 
 ## 2. Authority and Startup Procedure
 
@@ -51,13 +58,13 @@ Use this source order:
 At the start of the next session:
 
 1. fetch `origin` and verify `origin/develop`;
-2. inspect any advancement after `f9c2bbaa8f9f0c13a338ea910961820b34e88d9e`;
+2. inspect any advancement after the latest documentation integration checkpoint built from recurrence merge `0dd05a5dce856bbaff6924c54fcf3c395920b076`;
 3. confirm Sprint 1 and US-13 remain in progress;
-4. do broad discovery for `SessionRecurrenceRule` across canonical requirements, current domain conventions, repositories, services, tests, and session-related dependencies;
-5. produce and review a dedicated architecture plan before implementation;
-6. do not begin VaccinationSession or combine recurrence with another component in the same slice.
+4. perform broad discovery for `VaccinationSession` and its cross-component dependencies;
+5. produce and review a dedicated architecture and lock-ordering plan before implementation;
+6. keep occurrence generation/idempotency and concrete-session validity explicit; do not silently fold later resources/capacity/API work into the first session slice.
 
-Recurrence has not received the same detailed planning gate that preceded CampaignCenterAssignment. Do not claim its architecture is already complete.
+Do not claim VaccinationSession architecture is already complete. The completed recurrence foundation supplies stable definition data but does not itself generate sessions.
 
 ## 3. Repository and Integration History
 
@@ -75,11 +82,13 @@ Recurrence has not received the same detailed planning gate that preceded Campai
 | PR #24 `e70940b` | CenterClosure backend foundation |
 | PR #25 `7b9398b` | Evidence/handoff synchronization after CenterClosure |
 | PR #26 `f9c2bba` | CampaignCenterAssignment backend foundation |
+| PR #27 `04b53da` | Evidence/handoff synchronization after CampaignCenterAssignment |
+| PR #28 `0dd05a5` | SessionRecurrenceRule backend foundation |
 
 The current overall checkpoint is:
 
 ```text
-origin/develop = f9c2bbaa8f9f0c13a338ea910961820b34e88d9e
+origin/develop implementation checkpoint = 0dd05a5dce856bbaff6924c54fcf3c395920b076
 ```
 
 Older SHAs and test counts in the evidence chronology are historical milestones, not the current repository state.
@@ -95,7 +104,7 @@ Important ownership distinctions:
 * `OperatingHours` defines normal recurring weekly center availability.
 * `CenterClosure` records temporary exception intervals without rewriting OperatingHours.
 * `CenterStatus` is long-term facility lifecycle state, not temporary unavailability.
-* `SessionRecurrenceRule` will describe recurrence of proposed sessions; it is not an extension of OperatingHours.
+* `SessionRecurrenceRule` describes bounded weekly recurrence definitions; it is not OperatingHours or a concrete VaccinationSession.
 * MF-01 owns questionnaire version publication; MF-02 owns campaign linkage and still requires the final adapter/FK integration.
 
 Do not conflate administrative targeting, operational authorization, normal hours, closures, recurrence, or actual session validity.
@@ -118,6 +127,7 @@ Locking conventions:
 * scalar parent-ID lookup may route an existing-child mutation before the parent lock;
 * authoritative child state and business checks must be obtained only after the appropriate parent lock when stale first-level-cache state is possible;
 * future atomic session writes must follow compatible campaign/center lock discipline rather than relying only on read helpers.
+* recurrence-rule sibling creation is intentionally unconstrained; existing-rule mutation locks and refreshes that rule row directly.
 
 H2/MySQL-mode concurrency tests provide structural evidence. Production MySQL behavior remains a later integration assurance item.
 
@@ -248,7 +258,7 @@ CampaignCenterAssignment-specific tests: **48**
 * service integration: 27;
 * concurrency integration: 4.
 
-Current backend total: **242 tests**, zero failures, zero errors, zero skipped. Maven `test` and `verify` both completed with `BUILD SUCCESS`, and the JAR packaged successfully.
+Backend total at the CampaignCenterAssignment checkpoint: **242 tests**, zero failures, zero errors, zero skipped. This is a historical component checkpoint; the current total is 272.
 
 Concurrency coverage includes:
 
@@ -257,7 +267,65 @@ Concurrency coverage includes:
 3. independent writes for different campaigns;
 4. stale managed child followed by authoritative post-lock refresh.
 
-## 9. Story and Sprint Status
+## 9. SessionRecurrenceRule — Completed Contract
+
+### 9.1 Purpose and model
+
+SessionRecurrenceRule is a bounded weekly definition from which individually stored VaccinationSession occurrences may later be generated. It is not a concrete session, normal center availability, a closure, operational campaign-center authorization, a slot, or a capacity/resource plan.
+
+Implemented types and state:
+
+* `SessionRecurrenceRule`;
+* `SessionRecurrenceRuleStatus` with exactly `ACTIVE` and `CANCELLED`;
+* mandatory immutable lazy campaign and center relationships;
+* mutation-safe `Set<DayOfWeek>` persisted through an EAGER seven-value `@ElementCollection`;
+* mandatory inclusive `LocalDate startDate` / `endDate`;
+* same-local-day half-open `LocalTime` interval `[startTime, endTime)`;
+* normalized Java `ZoneId` string;
+* immutable backend-generated UUID `generationKey`;
+* `Instant createdAt` and `updatedAt` audit fields.
+
+The inclusive date range must be bounded, non-reversed, and contain at least one selected weekday. Overnight rules are rejected. Structurally identical, adjacent, and schedule-overlapping recurrence definitions are intentionally permitted because concrete-session conflicts belong to later generation/session validation.
+
+### 9.2 Lifecycle and authoritative mutation
+
+New rules are ACTIVE. Expiry does not change status automatically; expired ACTIVE and CANCELLED rules remain retained history, and no normal hard-delete service exists.
+
+Implemented lifecycle operations:
+
+* historical, current, and future rule creation;
+* full definition update only before the authoritative existing rule starts, using its stored timezone and the candidate timezone for local-date boundaries;
+* prospective end-date shortening without rewriting elapsed dates, with shortening to rule-local today permitted;
+* terminal cancellation while a rule can still affect current/future generation, including its inclusive final day;
+* immutable campaign, center, and generation key throughout lifecycle changes.
+
+Creation requires only that campaign and center exist. CampaignStatus, CenterStatus, campaign service dates, CampaignCenterAssignment, OperatingHours, and CenterClosure do not gate recurrence-definition configuration. They remain concrete-session generation/validation concerns.
+
+Existing-rule writes use a direct `PESSIMISTIC_WRITE` rule-row lock followed by `EntityManager.refresh()` before lifecycle decisions or mutation. Independent review verified that this refresh updates both scalar state and an already-initialized weekday element collection after a competing committed update. The committed separate-transaction regression proves stale ACTIVE state cannot overwrite a committed cancellation.
+
+### 9.3 Commits, PR, and validation
+
+Implementation commits:
+
+* `9e56f41b1fd217e73639b7d041d19898a0ecf702` — `feat(mf02): add session recurrence rule domain and persistence`
+* `a980a6266f73dc2df1cb8ce52b555f6788284e1f` — `feat(mf02): add session recurrence rule lifecycle service`
+* `d7409db1d621ba2995162859b3923ba061992861` — `test(mf02): cover recurrence rule authoritative mutation`
+
+Integration facts:
+
+* PR #28 — `feat(mf02): add session recurrence rule backend foundation`;
+* source branch: `feature/mf02-session-recurrence-rule`;
+* preserved remote pointer: `d7409db1d621ba2995162859b3923ba061992861`;
+* merge commit: `0dd05a5dce856bbaff6924c54fcf3c395920b076`;
+* merge parents: `04b53da01a80be85873b3619f9aac2b6f54003b6` and `d7409db1d621ba2995162859b3923ba061992861`;
+* exactly four production and four focused test files changed;
+* Backend CI and Frontend CI succeeded before and after merge;
+* no CI correction commit was necessary;
+* no hosted review decision was recorded; the independent engineering review passed without fabricating a GitHub approval event.
+
+SessionRecurrenceRule-specific tests: **30** — 8 model, 7 persistence integration, 14 service integration, and 1 concurrency integration. The current backend total is **272 tests**, with zero failures, errors, or skips; Maven `test` and `verify` succeeded and the executable JAR packaged.
+
+## 10. Story and Sprint Status
 
 Sprint 1 remains **IN PROGRESS**.
 
@@ -267,27 +335,28 @@ Sprint 1 remains **IN PROGRESS**.
 | US-10 | In progress: MF-02 foundation hardened; final MF-01 QuestionnaireVersion adapter/FK remains |
 | US-11 | Backend foundation complete; later API/UI/integration layers remain |
 | US-12 | Backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, VaccinationSession integration, and final DoD evidence remain |
-| US-13 | **IN PROGRESS**: VaccinationCenter, OperatingHours, and CenterClosure foundations complete; SessionRecurrenceRule not started; later VaccinationSession/API/UI/migration work remains |
+| US-13 | **IN PROGRESS**: VaccinationCenter, OperatingHours, CenterClosure, and SessionRecurrenceRule backend foundations complete; concrete VaccinationSession, occurrence generation, API/UI/migration, and final DoD work remain |
 | US-27 | Backend foundation implemented; later API/UI integration remains |
 
 Do not mark Sprint 1, US-12, or US-13 fully Definition-of-Done complete solely from these backend foundations.
 
-## 10. SessionRecurrenceRule Boundary
+## 11. SessionRecurrenceRule Boundary
 
-`SessionRecurrenceRule` is the next new domain planning slice and is **NOT STARTED**.
+`SessionRecurrenceRule` is complete at its current backend-foundation scope. Do not rebuild it or mistake it for generated occurrences.
 
-Known boundary only:
+Preserved boundary:
 
 * it belongs to US-13;
 * it describes recurrence of proposed sessions rather than normal center availability;
 * it must not duplicate OperatingHours or CenterClosure;
-* its persistence, lifecycle, temporal semantics, generation behavior, locking, and relationship to VaccinationSession require fresh discovery and an explicit architecture review.
+* it exposes stable definition and generation-identity data for later VaccinationSession work;
+* occurrence expansion, occurrence keys, one-occurrence editing, and future-series impact orchestration remain unimplemented.
 
-Do not infer a recurrence model from names alone. Do not implement it before the planning gate.
+Do not add session generation directly to the recurrence entity/service without the VaccinationSession integration planning gate.
 
-## 11. VaccinationSession Boundary
+## 12. VaccinationSession Boundary
 
-VaccinationSession implementation remains pending. Later session validity must combine, where applicable:
+VaccinationSession implementation and occurrence generation remain **NOT STARTED**. The next major phase is architecture and cross-component integration planning. Later session validity must combine, where applicable:
 
 * campaign lifecycle and service dates;
 * effective CampaignCenterAssignment coverage for the full session calendar span;
@@ -298,11 +367,11 @@ VaccinationSession implementation remains pending. Later session validity must c
 
 MF02-BR-05 assignment/hours enforcement and MF02-BR-06 closure enforcement are later integrated session concerns. Read helpers alone are insufficient for atomic session writes; compatible parent-lock ordering must be designed deliberately.
 
-## 12. Remaining Sprint 1 Work
+## 13. Remaining Sprint 1 Work
 
-* broad discovery, architecture review, and foundation implementation for SessionRecurrenceRule;
 * remaining campaign publication prerequisite/transition integration;
-* VaccinationSession and session-validation integration;
+* VaccinationSession foundation and cross-component integration planning/implementation;
+* recurrence occurrence generation and idempotent occurrence identity;
 * later MF02-BR-05 assignment/hours enforcement;
 * later MF02-BR-06 closure enforcement;
 * Flyway business migrations;
@@ -314,7 +383,7 @@ MF02-BR-05 assignment/hours enforcement and MF02-BR-06 closure enforcement are l
 * production MySQL concurrency assurance;
 * final Sprint integration and Definition-of-Done evidence.
 
-## 13. Anti-Regression Guardrails
+## 14. Anti-Regression Guardrails
 
 Do not:
 
@@ -326,22 +395,24 @@ Do not:
 * make assignment configuration depend on campaign status, center status, or campaign service-date containment;
 * represent H2 concurrency tests as proof of production MySQL behavior;
 * claim hosted approval evidence that GitHub does not contain;
-* mark SessionRecurrenceRule as planned or implemented before its dedicated gate;
-* begin VaccinationSession in the recurrence foundation slice;
+* rebuild or broaden the completed SessionRecurrenceRule foundation without a new scoped review;
+* claim that SessionRecurrenceRule creates operationally valid sessions by itself;
+* begin VaccinationSession before its cross-component architecture and lock-ordering gate;
 * mark Sprint 1 complete prematurely.
 
-## 14. Final Handoff State
+## 15. Final Handoff State
 
 ```text
 Canonical: 3.3-AI / 2026-08-08-R8
 Sprint: Sprint 1 — IN PROGRESS
-origin/develop: f9c2bbaa8f9f0c13a338ea910961820b34e88d9e
+Recurrence implementation merge: PR #28 / 0dd05a5dce856bbaff6924c54fcf3c395920b076
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Backend baseline: 242 tests; Maven test/verify SUCCESS; JAR packaged
-Next slice: SessionRecurrenceRule broad discovery and architecture planning
-SessionRecurrenceRule: NOT STARTED
+SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
+Backend baseline: 272 tests; Maven test/verify SUCCESS; JAR packaged
+Supporting backend foundations: COMPLETE FOR CURRENT PRE-VACCINATIONSESSION PHASE
+Next phase: VaccinationSession architecture and MF-02 cross-component integration planning
 VaccinationSession: NOT STARTED
 ```
 
-The next AI should refresh repository state, perform broad recurrence discovery, and prepare a dedicated SessionRecurrenceRule architecture plan. It must not begin recurrence implementation or VaccinationSession in the same uncontrolled step.
+The next AI should refresh repository state and begin a new controlled planning conversation for VaccinationSession architecture, occurrence generation/idempotency, cross-component validation, and compatible locking. It must not assume that architecture is already complete or begin implementation in an uncontrolled combined slice.
