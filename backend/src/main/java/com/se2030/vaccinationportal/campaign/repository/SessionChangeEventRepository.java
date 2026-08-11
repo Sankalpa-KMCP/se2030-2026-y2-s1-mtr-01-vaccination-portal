@@ -1,8 +1,11 @@
 package com.se2030.vaccinationportal.campaign.repository;
 
 import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -18,4 +21,13 @@ public interface SessionChangeEventRepository extends JpaRepository<SessionChang
      * @return Deterministically ordered list of change events
      */
     List<SessionChangeEvent> findBySessionIdOrderByCreatedAtAscIdAsc(Long sessionId);
+
+    /**
+     * Retrieves all change audit events for a collection of sessions, ordered deterministically by creation time and ID.
+     *
+     * @param sessionIds Collection of session IDs to query
+     * @return Deterministically ordered list of change events
+     */
+    @Query("SELECT e FROM SessionChangeEvent e WHERE e.session.id IN :sessionIds ORDER BY e.createdAt ASC, e.id ASC")
+    List<SessionChangeEvent> findBySessionIdIn(@Param("sessionIds") Collection<Long> sessionIds);
 }
