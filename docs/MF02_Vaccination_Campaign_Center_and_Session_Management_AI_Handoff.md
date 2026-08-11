@@ -3,156 +3,65 @@
 ## AI Engineering Handoff
 
 **Project:** Web-Based Vaccination Portal (`WBVP-SE2030`)
-**Major function:** MF-02 — Vaccination Campaign, Center and Session Management
-**Canonical version:** `3.3-AI`
-**Canonical revision:** `2026-08-08-R8`
-**Handoff synchronized:** 2026-08-11
+
+**Function:** MF-02 — Vaccination Campaign, Center and Session Management
+
+**Canonical authority:** `3.3-AI / 2026-08-08-R8`
+
 **Sprint:** Sprint 1 — **IN PROGRESS**
-**Current integrated checkpoint:** `e70940b7021778ae35dd2976ac5df6b649a28584`
-**Current implementation frontier:** `CampaignCenterAssignment` backend foundation
-**Architecture verdict:** **CAMPAIGNCENTERASSIGNMENT PLAN READY — SAFE TO IMPLEMENT**
 
-> This is an implementation handoff, not a replacement for canonical requirements. If this handoff, generated code, or an older plan conflicts with the canonical source, the canonical source wins.
+**Current repository checkpoint:** `origin/develop = f9c2bbaa8f9f0c13a338ea910961820b34e88d9e`
 
----
+**Latest completed backend foundation:** `CampaignCenterAssignment`
+
+**Next controlled domain slice:** `SessionRecurrenceRule` discovery and planning — **NOT STARTED**
+
+> This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
 
 ## 1. Executive Snapshot
 
-The MF-02 backend now includes integrated foundations for:
+The following MF-02 backend foundations are already implemented and integrated:
 
-* campaign lifecycle and publication-oriented configuration;
-* vaccine type and target group masters;
-* effective-dated campaign dose programmes;
-* administrative campaign location targets;
-* effective-dated campaign questionnaire assignment on the MF-02 side;
-* vaccination center master/lifecycle;
-* recurring center `OperatingHours`;
-* temporary center unavailability through `CenterClosure`.
+* campaign lifecycle, VaccineType, and TargetGroup;
+* CampaignDoseProgramme;
+* CampaignLocationTarget;
+* CampaignQuestionnaireAssignment;
+* VaccinationCenter;
+* OperatingHours;
+* CenterClosure;
+* CampaignCenterAssignment.
 
-The most recent implementation integration is the `CenterClosure` backend foundation. It is **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED** at `e70940b7021778ae35dd2976ac5df6b649a28584`.
+`CenterClosure` remains **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED**.
 
-The next slice is `CampaignCenterAssignment`. Its architecture contract is approved, but implementation has **NOT STARTED**. Do not infer that US-12 or US-13 is complete.
+`CampaignCenterAssignment` is **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED** at backend-foundation scope through PR #26. It must not be reconstructed or replaced when work resumes.
 
-Current validation baseline:
+Current backend validation is 242 tests with zero failures, errors, or skips. Maven `test` and `verify` succeeded, the JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #26 merge.
 
-* 194 backend tests;
-* 0 failures;
-* 0 errors;
-* 0 skipped;
-* Maven `test`: success;
-* Maven `verify`: success;
-* Backend CI: success;
-* Frontend CI: success.
+Sprint 1 is not complete. `SessionRecurrenceRule`, VaccinationSession integration, migrations, API/security/UI layers, publication integration, and final Definition-of-Done evidence remain pending.
 
----
+## 2. Authority and Startup Procedure
 
-## 2. Authority and Source Order
+Use this source order:
 
-Use this order when resolving uncertainty:
+1. `docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md` for semantic requirements;
+2. live `origin/develop`, merged PRs, code, and tests for implementation truth;
+3. `docs/evidence/sprint-1/MF02_Sprint1_Evidence.md` for accumulated engineering evidence;
+4. this handoff for current context and safe next steps.
 
-1. `docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md`
-2. canonical master DOCX at `docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx`
-3. current code and tests on `origin/develop`
-4. `docs/evidence/sprint-1/MF02_Sprint1_Evidence.md`
-5. this handoff
-6. obsolete generated plans or chat context
+At the start of the next session:
 
-Canonical authority remains `3.3-AI`, revision `2026-08-08-R8`. Do not modify canonical Markdown or DOCX as part of ordinary feature implementation.
+1. fetch `origin` and verify `origin/develop`;
+2. inspect any advancement after `f9c2bbaa8f9f0c13a338ea910961820b34e88d9e`;
+3. confirm Sprint 1 and US-13 remain in progress;
+4. do broad discovery for `SessionRecurrenceRule` across canonical requirements, current domain conventions, repositories, services, tests, and session-related dependencies;
+5. produce and review a dedicated architecture plan before implementation;
+6. do not begin VaccinationSession or combine recurrence with another component in the same slice.
 
----
+Recurrence has not received the same detailed planning gate that preceded CampaignCenterAssignment. Do not claim its architecture is already complete.
 
-## 3. Freshness and Repository Checkpoint
+## 3. Repository and Integration History
 
-Expected current remote checkpoint:
-
-```text
-origin/develop = e70940b7021778ae35dd2976ac5df6b649a28584
-```
-
-Always fetch and inspect live repository state before starting. If `develop` has advanced, review the delta and use the latest compatible state rather than blindly resetting or rewriting history.
-
-The current checkpoint is the PR #24 merge commit. It is an integration checkpoint; the underlying feature commits remain the implementation evidence.
-
----
-
-## 4. Startup Procedure for the Next Agent
-
-Before implementation:
-
-1. verify the repository root, current branch, HEAD, and working tree;
-2. run `git fetch origin`;
-3. verify current `origin/develop` and inspect advancement;
-4. confirm `CampaignCenterAssignment` still does not exist;
-5. inspect nearby campaign effective-history entities, repositories, services, and tests;
-6. inspect `VaccinationCampaignRepository.findByIdForUpdate(...)`;
-7. create a fresh feature branch from current `origin/develop`;
-8. keep the feature limited to model, persistence, service, and focused tests.
-
-Do not reuse the CenterClosure or pre-closure hardening branches.
-
----
-
-## 5. Architecture Baseline
-
-The backend uses Spring Boot, Spring Data JPA, field-access entities, Maven, MySQL as the production target, and H2 in MySQL compatibility mode for current integration tests.
-
-Current MF-02 conventions:
-
-* mandatory lazy parent associations;
-* no remove cascade for operational history;
-* generated `Long` identifiers;
-* enums stored with `EnumType.STRING`;
-* `Instant` audit timestamps maintained through lifecycle callbacks;
-* UTC application `Clock` for time-sensitive services;
-* `LocalDate` for calendar-effective histories;
-* `Instant` for absolute timeline events;
-* candidate validation before entity mutation;
-* cohesive mutation methods instead of broad setter surfaces;
-* no custom entity `equals`/`hashCode` without a demonstrated need;
-* `IllegalArgumentException` for current validation and missing-state style;
-* transactional services and read-only transactions for queries;
-* parent-row pessimistic locking for cross-row history/conflict decisions;
-* scalar parent-ID lookup before the lock for child mutation workflows.
-
-Flyway business migrations remain deferred. Hibernate/H2 schema generation is test infrastructure, not production migration evidence.
-
----
-
-## 6. Cross-Function Ownership Boundaries
-
-MF-02 owns campaign, center, assignment, operating-calendar, closure, recurrence, session, and session-resource scheduling concepts.
-
-Key boundaries:
-
-* MF-01 owns questionnaire definitions, versions, publication, eligibility evaluation, and screening submissions.
-* MF-02 owns the campaign-to-questionnaire assignment record and references MF-01 through an explicit integration port until the final adapter/FK exists.
-* MF-03 owns appointments and waitlists.
-* MF-04 owns inventory and stock movement.
-* `CampaignLocationTarget` is citizen-facing administrative service-area targeting.
-* `CampaignCenterAssignment` is operational authorization for a center to host services for a campaign.
-
-Never substitute location targeting for operational center assignment.
-
----
-
-## 7. Canonical MF-02 Rules That Shape the Next Work
-
-Important rule boundaries include:
-
-* effective configuration histories must not overlap for the same logical owner/key;
-* publication prerequisites are distinct from draft/configuration invariants;
-* MF02-BR-05 later requires a session within campaign service dates, center OperatingHours, and an active effective-dated `CampaignCenterAssignment`;
-* MF02-BR-06 later combines center closures and other session constraints;
-* frontend checks never replace server-side and persistence-level enforcement;
-* operational histories must not be casually hard-deleted.
-
-The next assignment foundation does not implement session validation.
-
----
-
-## 8. Integration History
-
-| Checkpoint | Result |
+| Checkpoint | Integrated scope |
 | --- | --- |
 | PR #12 `eb4a4d9` | Campaign, dose-programme, targeting, and questionnaire-assignment foundation |
 | PR #16 `201768e` | Vaccination-center foundation and initial hardening |
@@ -161,715 +70,278 @@ The next assignment foundation does not implement session validation.
 | PR #19 `8cdb112` | Sprint evidence checkpoint |
 | PR #20 `1cad899` | OperatingHours backend foundation |
 | PR #21 `433dbe1` | OperatingHours evidence checkpoint |
-| PR #22 `fe101bb2adfc1215146793a97cd80fdc3176622c` | Evidence metadata stability checkpoint |
-| PR #23 `5a5b3e7` | Pre-closure backend hardening |
+| PR #22 `fe101bb` | Evidence metadata stability checkpoint |
+| PR #23 `5a5b3e7` | Pre-CenterClosure backend hardening |
 | PR #24 `e70940b` | CenterClosure backend foundation |
+| PR #25 `7b9398b` | Evidence/handoff synchronization after CenterClosure |
+| PR #26 `f9c2bba` | CampaignCenterAssignment backend foundation |
 
-Metadata-only synchronization checkpoints are not recursively treated as new implementation checkpoints.
+The current overall checkpoint is:
 
----
+```text
+origin/develop = f9c2bbaa8f9f0c13a338ea910961820b34e88d9e
+```
 
-## 9. Pre-Closure Hardening Checkpoint
+Older SHAs and test counts in the evidence chronology are historical milestones, not the current repository state.
 
-PR #23 merged at `5a5b3e7d285b50b7645a1c32b57f79b753b2baff`.
+## 4. Architecture and Ownership Boundaries
 
-Classification:
+The backend uses Spring Boot, Spring Data JPA, field-access entities, Maven, MySQL as the production target, and H2 in MySQL compatibility mode for current integration tests.
 
-* `0cc1ad9` — implementation hardening;
-* `3683a0d` — genuine separate-transaction invariant tests;
-* `d3efd0e` — narrow questionnaire history-boundary documentation correction;
-* merge commit — integration checkpoint only.
+Important ownership distinctions:
 
-The hardening established:
+* `CampaignLocationTarget` is administrative/service-area targeting.
+* `CampaignCenterAssignment` is operational authorization for a center to serve a campaign.
+* `OperatingHours` defines normal recurring weekly center availability.
+* `CenterClosure` records temporary exception intervals without rewriting OperatingHours.
+* `CenterStatus` is long-term facility lifecycle state, not temporary unavailability.
+* `SessionRecurrenceRule` will describe recurrence of proposed sessions; it is not an extension of OperatingHours.
+* MF-01 owns questionnaire version publication; MF-02 owns campaign linkage and still requires the final adapter/FK integration.
 
-* UTC-safe `Instant` handling for absolute/audit and campaign booking-window timestamps, plus application UTC `Clock` use;
-* half-open dose-programme history;
-* half-open questionnaire-assignment history;
-* intentionally inclusive OperatingHours calendar dates;
-* reduced entity mutation surface;
-* removal of unsafe custom entity equality/hash behavior;
-* simplified dose/questionnaire services and repositories and location-target batch handling;
-* genuine separate-transaction locking coverage.
+Do not conflate administrative targeting, operational authorization, normal hours, closures, recurrence, or actual session validity.
 
-Validation: 149 tests, Maven `test`/`verify` success, Backend CI success, and Frontend CI success.
+## 5. Shared Temporal and Locking Conventions
 
-Hosted independent GitHub approval evidence was not recorded in the controller evidence available for this checkpoint. Preserve that as a neutral process-provenance note; do not invent or backfill an approval event.
+Completed effective-history domains generally retain history and avoid normal hard-delete workflows.
 
----
+Temporal conventions must remain explicit:
 
-## 10. OperatingHours — Completed Historical Contract
+* CampaignCenterAssignment uses half-open calendar periods `[activeFrom, activeTo)`.
+* CenterClosure uses half-open absolute intervals `[startAt, endAt)`.
+* OperatingHours retains its implemented inclusive effective calendar-date convention.
+* Campaign service dates and assignment dates are independent configuration boundaries at foundation level; future session validation combines them.
+
+Locking conventions:
+
+* campaign-owned cross-row configuration decisions serialize on the campaign row;
+* center-owned cross-row scheduling decisions serialize on the center row;
+* scalar parent-ID lookup may route an existing-child mutation before the parent lock;
+* authoritative child state and business checks must be obtained only after the appropriate parent lock when stale first-level-cache state is possible;
+* future atomic session writes must follow compatible campaign/center lock discipline rather than relying only on read helpers.
+
+H2/MySQL-mode concurrency tests provide structural evidence. Production MySQL behavior remains a later integration assurance item.
+
+## 6. OperatingHours — Completed Contract
 
 OperatingHours was merged through PR #20 at `1cad899971c8b18804af31bfb079a24285f7d16d`.
 
-Historical validation at that checkpoint:
+The completed foundation includes:
 
-* 19 model tests;
-* 14 persistence tests;
-* 22 service tests;
-* 55 OperatingHours-specific tests;
-* 152 total backend tests;
-* Backend CI and Frontend CI success.
+* recurring weekday opening/closing shifts;
+* inclusive effective calendar-date boundaries;
+* multi-shift support with overlap prevention;
+* candidate pre-validation and exception-safe mutation;
+* future/current/historical configuration behavior;
+* shortening-only deactivation/end workflow;
+* center-row serialization for conflicting writes.
 
-The completed behavior is:
+Historical validation at that checkpoint was 55 OperatingHours-specific tests and 152 total backend tests. These are chronology values, not the current total.
 
-* weekly recurring shifts by `DayOfWeek`;
-* inclusive `[effectiveFrom, effectiveTo]` calendar-date applicability;
-* half-open `[opening, closing)` time intervals;
-* same-day positive-duration shifts only;
-* split and boundary-adjacent shifts allowed;
-* overlapping center/weekday/date/time configurations rejected;
-* deterministic Monday-to-Sunday listing;
-* center-parent pessimistic locking for writes;
-* scalar center-ID-before-lock ordering for mutation;
-* no normal hard-delete service;
-* configuration allowed for ACTIVE and INACTIVE centers.
+Do not reintroduce obsolete prospective OperatingHours architecture work.
 
-Older handoff material contained many pages of prospective OperatingHours decisions. Those details are now consolidated here because OperatingHours is implemented and should no longer appear as actionable work.
-
----
-
-## 11. CenterClosure — Completed Contract
+## 7. CenterClosure — Completed Contract
 
 CenterClosure was merged through PR #24 at `e70940b7021778ae35dd2976ac5df6b649a28584`.
 
-Feature branch final pointer:
+Completed behavior:
+
+* mandatory VaccinationCenter ownership;
+* UTC-safe `Instant startAt` / `endAt` with half-open `[startAt, endAt)` semantics;
+* partial-day, overnight, multi-day, ongoing, historical, and future intervals;
+* status exactly `ACTIVE` / `CANCELLED`;
+* same-center ACTIVE overlap prevention with adjacency allowed;
+* future-only normal update/cancellation, terminal cancellation, and retained history;
+* independence from CenterStatus and OperatingHours configuration;
+* center-row pessimistic serialization;
+* read-side overlap helper for later atomic VaccinationSession integration.
+
+Validation at that checkpoint was 45 CenterClosure-specific tests: 15 model, 6 persistence, 21 service, and 3 concurrency tests; 194 total backend tests. The committed fixture-isolation correction remains part of the completed test foundation.
+
+## 8. CampaignCenterAssignment — Completed Contract
+
+### 8.1 Purpose and model
+
+CampaignCenterAssignment records operational authorization for one center to serve one campaign during an effective calendar period. It is distinct from CampaignLocationTarget.
+
+Implemented types and fields:
+
+* `CampaignCenterAssignment`;
+* `CampaignCenterAssignmentStatus` with exactly `ACTIVE` and `CANCELLED`;
+* mandatory lazy campaign relationship;
+* mandatory lazy center relationship;
+* `LocalDate activeFrom`;
+* nullable exclusive `LocalDate activeTo`;
+* `Instant createdAt` and `Instant updatedAt`;
+* immutable ownership and retained history.
+
+There is no normal hard-delete service.
+
+### 8.2 Effective periods and lifecycle
+
+The effective period is half-open `[activeFrom, activeTo)`:
+
+* start is inclusive;
+* end is exclusive;
+* null end is open-ended;
+* exact adjacency is allowed;
+* zero-length and reversed finite periods are rejected;
+* same campaign-center ACTIVE periods cannot overlap;
+* CANCELLED rows are neither effective nor overlap blockers.
+
+Implemented lifecycle behavior:
+
+* historical, currently effective, and future creation;
+* future-only full-period update;
+* prospective shortening/end of a currently effective assignment;
+* future cancellation;
+* expired ACTIVE and CANCELLED rows remain retained history;
+* campaign and center status do not gate foundation configuration;
+* assignment dates may extend outside campaign service dates.
+
+Actual future session validity will combine assignment coverage with campaign dates, OperatingHours, CenterClosure, recurrence, and other session constraints.
+
+### 8.3 Persistence, locking, and authoritative reload
+
+The campaign row is the write-serialization guard.
+
+Existing-child mutation ordering is:
 
 ```text
-d6c04718639d2356f9f4800730d9d79bed5494bf
+scalar campaign ID
+→ pessimistic campaign lock
+→ authoritative assignment refresh
+→ ownership and lifecycle checks
+→ overlap check where applicable
+→ mutation
 ```
 
-Commit classification:
+`EntityManager.refresh()` is intentionally used after campaign locking so a child already managed in the persistence context cannot supply stale lifecycle, ownership, period, or center state to update, prospective-end, or cancellation decisions. Do not remove, relocate, or replace this mechanism without a new correctness review.
 
-* `8d70359` — domain and persistence implementation;
-* `f1bd663` — management service implementation;
-* `cf47f725` — lifecycle and concurrency tests;
-* `d6c0471` — test-only fixture-isolation correction discovered by CI;
-* merge commit — CenterClosure integration checkpoint.
+No entity mutation occurs before authoritative refresh and validation. Future VaccinationSession integration must use compatible campaign locking when assignment coverage is part of an atomic write decision.
 
-Implemented behavior:
+### 8.4 Commits and PR #26
 
-* direct mandatory ownership by `VaccinationCenter`;
-* absolute `Instant startAt` and `endAt`;
-* half-open `[startAt, endAt)` interval;
-* positive duration, with boundary adjacency allowed;
-* one interval model for partial-day, overnight, full-day-after-boundary-conversion, and multi-day closures;
-* mandatory normalized reason, maximum 255 characters;
-* status exactly `ACTIVE` and `CANCELLED`;
-* no overlapping ACTIVE sibling closures for one center;
-* CANCELLED history ignored by active-conflict checks;
-* creation may record future, ongoing, or historical closures;
-* update and cancellation are strictly future-only (`now < startAt`);
-* cancellation is terminal and preserves the row, interval, and original reason;
-* CenterStatus and OperatingHours do not gate closure configuration;
-* no normal hard-delete service;
-* all writes for one center serialize through the center pessimistic lock;
-* active-overlap read helper is available for future session integration.
+Reviewed implementation commits:
 
-Validation:
+* `1c2fa6edcfac0dd3306aa89b1139f3694a9bb920` — `feat(mf02): add campaign center assignment domain and persistence`
+* `c8ff2f1ec487ef39bc17a64360d95e39545bf947` — `feat(mf02): add campaign center assignment lifecycle service`
+* `f1e4da3a5d88e4de35986fccdbf699a6718feecd` — `test(mf02): cover campaign center assignment concurrency`
+* `5a3d5c23900c28293574d4552cc3a883c09a13fb` — `fix(mf02): refresh assignment state after campaign lock`
 
-* 45 CenterClosure-specific tests: 15 model, 6 persistence integration, 21 service integration, and 3 concurrency integration;
-* 194 total backend tests;
-* zero failures/errors/skips;
-* Maven test and verify success;
-* Backend CI and Frontend CI success.
+Integration facts:
 
-Independent review verdict: **ACCEPT WITH NON-BLOCKING NOTES**. Canonical, domain, persistence, lifecycle, interval/overlap, concurrency, maintainability, test-quality, and data-integrity gates passed. Optional future notes cover Flyway index review, profiling-driven overlap-query optimization, additional persisted audit-transition assertions if useful, and production MySQL concurrency validation.
+* PR #26 — `feat(mf02): add campaign center assignment backend foundation`;
+* source branch: `feature/mf02-campaign-center-assignment`;
+* preserved remote source pointer: `5a3d5c23900c28293574d4552cc3a883c09a13fb`;
+* merge commit: `f9c2bbaa8f9f0c13a338ea910961820b34e88d9e`;
+* merge parents: `7b9398b48008e627fc18e5d7a0f864686a69b588` and `5a3d5c23900c28293574d4552cc3a883c09a13fb`;
+* Backend CI and Frontend CI succeeded before merge and after merge;
+* no CI correction commit was necessary;
+* no hosted GitHub review record was visible; do not claim an approval event.
 
-H2/MySQL-mode tests provide structural concurrency evidence, not proof of production MySQL behavior. Hosted independent GitHub approval evidence was not recorded in the controller evidence available for PR #24; do not represent it as recorded.
+### 8.5 Test evidence
 
----
+CampaignCenterAssignment-specific tests: **48**
 
-## 12. Sprint and Story Status
+* model: 8;
+* persistence integration: 9;
+* service integration: 27;
+* concurrency integration: 4.
+
+Current backend total: **242 tests**, zero failures, zero errors, zero skipped. Maven `test` and `verify` both completed with `BUILD SUCCESS`, and the JAR packaged successfully.
+
+Concurrency coverage includes:
+
+1. overlapping creates for the same campaign-center;
+2. create racing with future update;
+3. independent writes for different campaigns;
+4. stale managed child followed by authoritative post-lock refresh.
+
+## 9. Story and Sprint Status
 
 Sprint 1 remains **IN PROGRESS**.
 
-| Story | Current state |
+| Story | Current status |
 | --- | --- |
-| US-09 | Backend foundation implemented; publication workflow/API/UI/DoD evidence pending |
-| US-10 | MF-02 foundation implemented and hardened; final MF-01 adapter/FK pending |
-| US-11 | Versioning and hardening implemented; later API/UI/integration pending |
-| US-12 | Architecture plan complete; implementation **NOT STARTED** |
-| US-13 | OperatingHours and CenterClosure complete; recurrence **NOT STARTED**; session/API/UI/migration pending |
-| US-27 | Backend foundation implemented; later API/UI evidence pending |
+| US-09 | In progress at full-story scope: backend foundation implemented; publication transition/API/UI/DoD work remains |
+| US-10 | In progress: MF-02 foundation hardened; final MF-01 QuestionnaireVersion adapter/FK remains |
+| US-11 | Backend foundation complete; later API/UI/integration layers remain |
+| US-12 | Backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, VaccinationSession integration, and final DoD evidence remain |
+| US-13 | **IN PROGRESS**: VaccinationCenter, OperatingHours, and CenterClosure foundations complete; SessionRecurrenceRule not started; later VaccinationSession/API/UI/migration work remains |
+| US-27 | Backend foundation implemented; later API/UI integration remains |
 
-CenterClosure completion is the backend foundation only. It does not complete all of US-13.
+Do not mark Sprint 1, US-12, or US-13 fully Definition-of-Done complete solely from these backend foundations.
 
----
+## 10. SessionRecurrenceRule Boundary
 
-## 13. Current Stopping Point
+`SessionRecurrenceRule` is the next new domain planning slice and is **NOT STARTED**.
 
-The correct next component is `CampaignCenterAssignment`.
+Known boundary only:
 
-State:
+* it belongs to US-13;
+* it describes recurrence of proposed sessions rather than normal center availability;
+* it must not duplicate OperatingHours or CenterClosure;
+* its persistence, lifecycle, temporal semantics, generation behavior, locking, and relationship to VaccinationSession require fresh discovery and an explicit architecture review.
 
-* architecture gate complete;
-* implementation-ready contract established;
-* no entity, enum, repository, service, or tests implemented yet;
-* no feature branch should be assumed to exist;
-* recurrence and session work remain deferred.
+Do not infer a recurrence model from names alone. Do not implement it before the planning gate.
 
-Do not reopen routine Java/Spring decisions unless live repository or canonical evidence creates a concrete contradiction.
+## 11. VaccinationSession Boundary
 
----
+VaccinationSession implementation remains pending. Later session validity must combine, where applicable:
 
-## 14. CampaignCenterAssignment Purpose
-
-`CampaignCenterAssignment` records operational authorization for one vaccination center to serve one campaign during an effective calendar period.
-
-It is not:
-
-* an administrative visibility target;
-* a session;
-* a recurrence rule;
-* a center opening-hours row;
-* a temporary center closure;
-* a citizen eligibility rule;
-* an appointment, waitlist, inventory, resource, or capacity record.
-
----
-
-## 15. Approved Assignment Entity Contract
-
-Planned production shape:
-
-* `CampaignCenterAssignmentStatus` — small enum;
-* `CampaignCenterAssignment` — cohesive entity;
-* `CampaignCenterAssignmentRepository` — minimal query surface;
-* `CampaignCenterAssignmentService` — compact transactional service.
-
-Planned logical fields:
-
-| Field | Type | Source of decision |
-| --- | --- | --- |
-| `id` | `Long` | Canonical concept and repository convention |
-| `campaign` | `VaccinationCampaign` | Canonical ownership |
-| `center` | `VaccinationCenter` | Canonical ownership |
-| `activeFrom` | `LocalDate` | Canonical effective date and approved implementation decision |
-| `activeTo` | nullable `LocalDate` | Canonical effective date and approved implementation decision |
-| `status` | assignment status enum | Canonical status concept and approved minimal lifecycle |
-| `createdAt` | `Instant` | Repository convention |
-| `updatedAt` | `Instant` | Repository convention |
-
-Campaign and center ownership are immutable after construction. Do not add public ownership, ID, or audit setters.
-
----
-
-## 16. Approved Effective-Period Semantics
-
-Use calendar dates:
-
-```java
-LocalDate activeFrom;
-LocalDate activeTo; // nullable
-```
-
-Semantics:
-
-* `[activeFrom, activeTo)`;
-* `activeFrom` is inclusive;
-* `activeTo` is exclusive;
-* `activeTo == null` is open-ended;
-* finite periods require `activeFrom < activeTo`;
-* adjacent periods are allowed;
-* zero-length and reversed periods are invalid.
-
-This agrees with the canonical overlap formula and the hardened dose/questionnaire history convention. It deliberately differs from OperatingHours, whose effective calendar dates are inclusive.
-
-Date effectiveness later covers a session only when the assignment is effective for the session's complete calendar-date span. Do not introduce timestamp precision merely because sessions will later have times.
-
----
-
-## 17. Approved Assignment Status Model
-
-Use exactly:
-
-* `ACTIVE`
-* `CANCELLED`
-
-Meaning:
-
-* `ACTIVE` means the assignment record has not been cancelled; dates determine whether it is currently effective.
-* `CANCELLED` is a terminal retained record and is never effective.
-* Reaching `activeTo` does not mutate status and does not create an `ENDED` status.
-
-Legal lifecycle:
-
-```text
-ACTIVE -> CANCELLED
-```
-
-There is no reactivation. Repeated cancellation should reject explicitly using current repository style.
-
----
-
-## 18. Approved Duplicate and Overlap Policy
-
-For the same campaign-center pair, non-cancelled effective periods must not overlap.
-
-Finite/open-ended overlap is true when:
-
-```text
-existing.activeFrom < candidateEnd
-AND
-candidate.activeFrom < existingEnd
-```
-
-where a null end is treated as positive infinity.
-
-Reject:
-
-* exact duplicate;
-* partial overlap;
-* containment in either direction;
-* same-start or same-end overlap;
-* any later period while a prior assignment remains open-ended.
-
-Allow:
-
-* adjacency;
-* same campaign with different centers;
-* different campaigns with the same center;
-* overlap with CANCELLED history.
-
-Do not silently close an open-ended assignment. End it explicitly first.
-
----
-
-## 19. Campaign, Center, and Campaign-Date Interaction
-
-The backend foundation permits assignment configuration independently of current campaign and center lifecycle status.
-
-Therefore:
-
-* campaign status does not gate creation/update/end/cancel in this slice;
-* an INACTIVE center may retain history and receive future configuration;
-* assignment dates may extend outside campaign service dates;
-* the assignment service does not clip periods to campaign dates.
-
-Later publication/session workflows combine campaign status/dates, center status, assignment effectiveness, OperatingHours, CenterClosure, and other constraints. Avoid duplicating those rules early.
-
----
-
-## 20. Approved Mutation and History Contract
-
-Create:
-
-* require existing campaign and center;
-* validate the complete period/status candidate;
-* lock the campaign;
-* reject overlapping ACTIVE sibling history;
-* save one ACTIVE assignment.
-
-Future update:
-
-* ownership is immutable;
-* an ACTIVE assignment that has not started may move `activeFrom`/`activeTo`;
-* validate the complete candidate before mutation;
-* reject overlap excluding the current row;
-* do not rewrite started or historical applicability.
-
-Prospective end:
-
-* an ACTIVE started/open assignment may be end-dated prospectively;
-* the new exclusive `activeTo` must be after the current date and after `activeFrom`;
-* do not backdate the end or extend an already finite period through an end command;
-* expiry retains ACTIVE status as historical non-cancelled authorization.
-
-Future cancellation:
-
-* only ACTIVE assignments not yet started may be cancelled;
-* transition to CANCELLED;
-* retain the row and original dates;
-* repeated cancellation rejects.
-
-No normal hard-delete service is planned.
-
----
-
-## 21. JPA and Database Contract
-
-Use:
-
-* mandatory lazy `ManyToOne` to `VaccinationCampaign`;
-* mandatory lazy `ManyToOne` to `VaccinationCenter`;
-* non-null foreign keys;
-* no remove cascade;
-* `EnumType.STRING`;
-* non-null `active_from`, status, created/updated timestamps;
-* nullable `active_to`;
-* manual `Instant` audit callbacks consistent with current entities.
-
-Eventual Flyway migration should include:
-
-* campaign and center foreign keys;
-* status/date non-null constraints;
-* a finite-period check equivalent to `active_to IS NULL OR active_from < active_to`;
-* indexes supporting campaign listing, center history, effective lookup, and campaign-center overlap checks.
-
-Database uniqueness alone cannot enforce interval non-overlap. Do not claim the current Hibernate schema as production migration enforcement.
-
----
-
-## 22. Minimal Repository Contract
-
-The repository should support only the approved service:
-
-* scalar campaign-ID lookup by assignment ID for mutation lock ordering;
-* deterministic campaign assignment listing;
-* deterministic center assignment history if required by the approved read contract;
-* effective assignment lookup/boolean for campaign, center, and date range;
-* ACTIVE overlap existence for create;
-* ACTIVE overlap existence excluding one assignment for update.
-
-Use explicit JPQL for null-aware half-open overlap and optional self-exclusion. Avoid loading full sibling entities when only a boolean is needed.
-
-Suggested deterministic ordering:
-
-```text
-activeFrom ASC,
-activeTo ASC with open-ended handled consistently,
-id ASC
-```
-
-Do not add speculative controller filters or generic history queries.
-
----
-
-## 23. Locking and Concurrency Contract
-
-Serialize assignment writes through the campaign row using the existing campaign pessimistic write lock.
-
-Why campaign locking is sufficient:
-
-* every competing write for one campaign-center pair shares the same campaign;
-* locking one stable existing parent protects the cross-row overlap decision;
-* it avoids double-lock ordering and deadlock complexity;
-* it matches existing dose-programme/questionnaire campaign-history conventions.
-
-Tradeoff: changes for different centers in the same campaign serialize. This is acceptable for the current scale and simpler than a compound guard entity. Different campaigns remain independent.
-
-Ordering:
-
-* create: validate candidate, resolve required parents, lock campaign, check overlap, save;
-* update/end/cancel: validate command inputs, resolve scalar campaign ID from child ID, lock campaign, reload child, verify ownership, check lifecycle/time/history rules, check overlap if applicable, mutate, persist.
-
-No child state should be relied on before the parent lock in a mutation workflow. All failure-producing checks must occur before mutation.
-
-Future session creation will need a deliberate atomic locking strategy. The assignment read helper alone is not an atomic authorization guarantee.
-
----
-
-## 24. Compact Service Contract
-
-Expected cohesive operations:
-
-* create assignment;
-* get by ID;
-* list assignments for a campaign;
-* list history for a center only if required by the approved contract;
-* update a future assignment period;
-* prospectively end an active assignment;
-* cancel a future assignment;
-* test/find effectiveness for a future session date span.
-
-The service should stay small and use existing repositories and `Clock`. Do not introduce a new exception hierarchy, validator framework, interval framework, lock manager, or generic effective-history base class.
-
----
-
-## 25. Future VaccinationSession Consumer Contract
-
-A later session validator must be able to establish:
-
-> One non-cancelled CampaignCenterAssignment for the campaign-center pair covers the session's full calendar-date span.
-
-For an inclusive session date span `[sessionStartDate, sessionEndDate]`, the assignment must satisfy:
-
-```text
-assignment.activeFrom <= sessionStartDate
-AND
-(assignment.activeTo IS NULL OR sessionEndDate < assignment.activeTo)
-AND
-assignment.status = ACTIVE
-```
-
-This helper does not implement:
-
-* campaign service-date validation;
-* OperatingHours validation;
-* CenterClosure validation;
-* session recurrence;
-* capacity or resource validation.
-
-Future atomic session creation must lock consistently before relying on the result.
-
----
-
-## 26. High-Signal Test Plan for CampaignCenterAssignment
-
-Model tests should cover:
-
-* required campaign, center, and start;
-* finite and open-ended construction;
-* equal/reversed period rejection;
-* default ACTIVE status;
-* complete candidate update and exception-safety;
-* cancellation terminality;
-* history mutation protection;
-* narrow mutation surface.
-
-Persistence tests should cover:
-
-* mandatory lazy relationships, enum, and audit behavior;
-* deterministic campaign/center listing;
-* start-inclusive/end-exclusive effective lookup;
-* open-ended effectiveness;
-* adjacency versus overlap;
-* exact duplicates and containment;
-* self-exclusion while still detecting another sibling;
-* different-center and different-campaign independence.
-
-Service tests should cover:
-
-* finite/open-ended creation;
-* missing campaign/center;
-* overlap rejection and adjacency;
-* lifecycle-status independence for campaign/center configuration;
-* future update and overlap rejection;
-* failed update preserves history;
-* started/historical mutation restrictions;
-* prospective end-dating and retroactive rejection;
-* future cancellation, repeat rejection, and retention;
-* effective lookup at both boundaries.
-
-Concurrency tests should use separate service-proxy transactions and bounded futures for:
-
-1. two overlapping creates for the same campaign-center;
-2. create racing with an overlapping update for the same pair;
-3. independent assignments for different campaigns.
-
-Assert persisted invariants rather than exact winner order. State explicitly that H2/MySQL-mode is structural evidence, not production MySQL proof.
-
----
-
-## 27. Complexity Guardrail
-
-Expected production shape is one small enum, one entity, one repository, and one service. It should be comparable to existing effective-history components and not materially larger than its business behavior requires.
-
-Avoid:
-
-* generated getter/setter boilerplate beyond JPA/domain needs;
-* custom equality/hash behavior;
-* generic interval or assignment frameworks;
-* DTO/controller/security layers in the foundation slice;
-* speculative status values;
-* duplicated candidate validation across service and entity;
-* comments that restate obvious code.
-
-Test volume should be driven by business signal, not a raw count target.
-
----
-
-## 28. Suggested Commit Sequence
-
-A coherent sequence is:
-
-1. `feat(mf02): add campaign center assignment domain and persistence`
-2. `feat(mf02): add campaign center assignment management service`
-3. `test(mf02): cover campaign center assignment concurrency invariants`
-
-A fourth commit is acceptable if separating persistence tests materially improves reviewability. Do not create one commit per file.
-
----
-
-## 29. Explicitly Deferred from the Next Slice
-
-Do not implement:
-
-* `VaccinationSession` or MF02-BR-05 enforcement;
-* `SessionRecurrenceRule` or `TimeSlot`;
-* CenterClosure changes or optional cleanup;
-* staff/resource unavailability or capacity;
-* appointments/waitlists;
-* inventory;
-* MF-01 questionnaire work;
-* REST controllers, DTOs, mappers, or OpenAPI;
-* frontend;
-* security/RBAC;
-* Flyway migration infrastructure;
-* production MySQL concurrency proof;
-* evidence or canonical-document updates;
-* PR or merge work unless separately requested.
-
----
-
-## 30. SessionRecurrenceRule Boundary
-
-Recurrence has **NOT STARTED**. It belongs to US-13 but is a separate architecture and implementation slice after CampaignCenterAssignment.
-
-Do not infer recurrence from OperatingHours. OperatingHours defines normal center availability; recurrence defines how proposed session instances repeat. CenterClosure remains an exception layer checked against resulting session intervals.
-
----
-
-## 31. VaccinationSession Boundary
-
-VaccinationSession has **NOT STARTED**. When later designed, it must combine rather than collapse:
-
-* campaign service dates/status;
-* effective CampaignCenterAssignment;
-* center lifecycle;
+* campaign lifecycle and service dates;
+* effective CampaignCenterAssignment coverage for the full session calendar span;
 * OperatingHours;
 * CenterClosure;
-* recurrence output;
-* resources/staff/capacity;
-* other canonical constraints.
+* recurrence intent;
+* capacity and other canonical session constraints.
 
-No existing helper by itself makes session creation valid or atomic.
+MF02-BR-05 assignment/hours enforcement and MF02-BR-06 closure enforcement are later integrated session concerns. Read helpers alone are insufficient for atomic session writes; compatible parent-lock ordering must be designed deliberately.
 
----
+## 12. Remaining Sprint 1 Work
 
-## 32. Database and Migration Status
-
-MySQL is the production target. H2/MySQL mode currently supports repository and structural concurrency integration tests.
-
-Still required later:
-
-* Flyway infrastructure/business migrations for implemented MF-02 tables;
-* production FK/check/index definitions;
-* migration verification on MySQL;
-* production MySQL lock/concurrency validation.
-
-Do not overstate Hibernate-generated test schemas as completed production database work.
-
----
-
-## 33. API, Security, and UI Status
-
-The current work is backend foundation only. Still pending where applicable:
-
-* REST controllers;
-* request/response DTOs and mappers;
+* broad discovery, architecture review, and foundation implementation for SessionRecurrenceRule;
+* remaining campaign publication prerequisite/transition integration;
+* VaccinationSession and session-validation integration;
+* later MF02-BR-05 assignment/hours enforcement;
+* later MF02-BR-06 closure enforcement;
+* Flyway business migrations;
+* REST/API/DTO/mapper work where required;
+* security/RBAC;
 * OpenAPI;
-* role/permission enforcement;
-* frontend screens and validation;
-* end-to-end flows and screenshots.
-
-Critical rules must be enforced server-side even when UI validation is later added.
-
----
-
-## 34. Questionnaire Integration Boundary
-
-MF-02 currently uses `QuestionnaireVersionPublicationPort` to avoid a fake production bypass while MF-01 remains incomplete.
-
-Still deferred:
-
-* authoritative MF-01 `QuestionnaireVersion` entity/table;
-* production adapter for the publication port;
-* final FK from campaign questionnaire assignment to MF-01;
-* end-to-end historical screening submission retention evidence.
-
-Do not absorb MF-01 ownership into CampaignCenterAssignment work.
-
----
-
-## 35. Evidence and Metadata Policy
-
-The living evidence record is:
-
-```text
-docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
-```
-
-Preserve historical checkpoints, raw test totals, CI outcomes, and implementation versus merge-commit classification. Metadata-only documentation commits are evidence checkpoints, not new implementation checkpoints.
-
-Do not recursively synchronize every evidence file merely because a new documentation commit exists.
-
----
-
-## 36. Git Workflow
-
-For future implementation:
-
-* branch from refreshed `origin/develop`;
-* preserve unrelated user changes;
-* use normal focused commits;
-* never force-push, amend reviewed history, or rebase solely for ceremony;
-* run focused tests during development and full Maven test/verify before handoff;
-* use `git diff --check` and inspect the complete feature diff;
-* push/create PR/merge only when explicitly authorized;
-* preserve source branches unless deletion is explicitly requested.
-
-Do not place controller prompt identifiers in branches, code, comments, commits, PR metadata, or documentation.
-
----
-
-## 37. Definition-of-Done Reality
-
-Backend foundation completion does not equal story completion. Sprint stories still need some combination of:
-
-* adjacent domain integration;
-* production migrations;
-* API and authorization;
 * frontend;
-* CI and environment validation;
-* integration demonstrations;
-* traceability/evidence.
+* final MF-01 QuestionnaireVersion adapter/FK;
+* production MySQL concurrency assurance;
+* final Sprint integration and Definition-of-Done evidence.
 
-Keep story status honest and incremental.
+## 13. Anti-Regression Guardrails
 
----
+Do not:
 
-## 38. Remaining MF-02 Work
+* rebuild or materially redesign completed OperatingHours, CenterClosure, or CampaignCenterAssignment foundations without a new scoped review;
+* remove CampaignCenterAssignment's post-lock authoritative refresh;
+* conflate CampaignLocationTarget with CampaignCenterAssignment;
+* treat ACTIVE status alone as effectiveness outside the applicable period;
+* change half-open assignment or closure semantics;
+* make assignment configuration depend on campaign status, center status, or campaign service-date containment;
+* represent H2 concurrency tests as proof of production MySQL behavior;
+* claim hosted approval evidence that GitHub does not contain;
+* mark SessionRecurrenceRule as planned or implemented before its dedicated gate;
+* begin VaccinationSession in the recurrence foundation slice;
+* mark Sprint 1 complete prematurely.
 
-Current remaining sequence, subject to later architecture gates:
-
-1. implement, review, and integrate `CampaignCenterAssignment`;
-2. plan and implement `SessionRecurrenceRule`;
-3. plan and implement `VaccinationSession`/`TimeSlot` foundations;
-4. enforce MF02-BR-05 and MF02-BR-06 atomically;
-5. complete publication transition/prerequisite behavior;
-6. add Flyway migrations and MySQL verification;
-7. add API, security, frontend, and OpenAPI layers;
-8. complete MF-01 adapter/FK integration;
-9. capture final Definition-of-Done evidence.
-
----
-
-## 39. Anti-Regression Checklist
-
-Before accepting future MF-02 changes, verify that they do not:
-
-* conflate location targeting with center assignment;
-* use `CenterStatus.INACTIVE` for temporary closure;
-* rewrite historical effective records retroactively;
-* introduce inclusive-end overlap mistakes in half-open histories;
-* bypass parent locking for sibling conflict decisions;
-* load mutable child state before the parent lock;
-* add hard-delete services for operational history;
-* add remove cascades from parents;
-* add custom entity equality/hash without need;
-* treat H2 as production MySQL proof;
-* absorb sessions, recurrence, inventory, eligibility, or appointments into the assignment slice;
-* mark US-12, US-13, or Sprint 1 complete prematurely.
-
----
-
-## 40. Final Handoff State
+## 14. Final Handoff State
 
 ```text
-Project: WBVP-SE2030
-Function: MF-02
 Canonical: 3.3-AI / 2026-08-08-R8
 Sprint: Sprint 1 — IN PROGRESS
-origin/develop: e70940b7021778ae35dd2976ac5df6b649a28584
-Latest completed component: CenterClosure backend foundation
+origin/develop: f9c2bbaa8f9f0c13a338ea910961820b34e88d9e
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Backend baseline: 194 tests, Maven test/verify success
-Next component: CampaignCenterAssignment
-Architecture: CAMPAIGNCENTERASSIGNMENT PLAN READY — SAFE TO IMPLEMENT
-Implementation: NOT STARTED
-Recurrence: NOT STARTED
-Sessions: NOT STARTED
+CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
+Backend baseline: 242 tests; Maven test/verify SUCCESS; JAR packaged
+Next slice: SessionRecurrenceRule broad discovery and architecture planning
+SessionRecurrenceRule: NOT STARTED
+VaccinationSession: NOT STARTED
 ```
 
-The next agent should implement only the approved `CampaignCenterAssignment` backend foundation after refreshing live repository state. Do not begin recurrence or session work in the same slice.
+The next AI should refresh repository state, perform broad recurrence discovery, and prepare a dedicated SessionRecurrenceRule architecture plan. It must not begin recurrence implementation or VaccinationSession in the same uncontrolled step.
