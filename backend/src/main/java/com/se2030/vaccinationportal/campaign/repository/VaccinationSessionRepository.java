@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.campaign.repository;
 
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -10,4 +11,8 @@ import org.springframework.stereotype.Repository;
 public interface VaccinationSessionRepository extends JpaRepository<VaccinationSession, Long> {
 
     Optional<VaccinationSession> findByOccurrenceKey(String occurrenceKey);
+
+    List<VaccinationSession> findByCampaignId(Long campaignId);
+
+    List<VaccinationSession> findByCenterId(Long centerId);
 }
