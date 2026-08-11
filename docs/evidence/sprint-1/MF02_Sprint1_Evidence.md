@@ -7,13 +7,13 @@
 **Sprint:** Sprint 1
 **Working window:** Weeks 1–3
 **Last updated:** 2026-08-11
-**Latest implementation integration:** merged into `develop` via PR #40 (Individual `VaccinationSession` change workflows: preview, SHA-256 stale token protection, reschedule, center transfer, cancellation, locking, recurrence provenance preservation, generator compatibility, and `SessionChangeEvent` creation)
-**Latest implementation develop checkpoint:** `b72fc6bdcff8b8e6d1817cfa35271edca90bb118`
-**Latest completed evidence integration recorded:** PR #39 (`docs(mf02): sync evidence after session change foundation`) at `f6d8c180b8bdf06886ad2647e5469c210ab5d971`
-**Evidence record prepared from implementation checkpoint:** `b72fc6bdcff8b8e6d1817cfa35271edca90bb118`
+**Latest implementation integration:** merged into `develop` via PR #42 (Series-wide `VaccinationSession` change preview foundation: read-only diff calculation, occurrence classification into `RETAINED`/`REMOVED`/`NEW`/`PRESERVED_EXCEPTION`/`INELIGIBLE`, durable individual override detection from `SessionChangeEvent` history, real `SCHEDULED` impact reader integration, candidate schedule validation via `VaccinationSessionValidator`, `bookingCloseAt` policy, and deterministic SHA-256 stale token)
+**Latest implementation develop checkpoint:** `68f6bcf7381e5b0875ac64805cdd140f0db8b208`
+**Latest completed evidence integration recorded:** PR #41 (`docs(mf02): sync evidence after individual session changes`) at `473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d`
+**Evidence record prepared from implementation checkpoint:** `68f6bcf7381e5b0875ac64805cdd140f0db8b208`
 **OperatingHours feature branch HEAD:** `4fe94df8df7c07ade3c22a39165aff3da1e8795a`
 **Canonical documentation sync checkpoint (PR #17):** `bd22cb973bad83c8456897805bc2df95b65593d0`
-**Historical evidence integration checkpoints:** PR #18 (`c120ee8530c055a6769b68777fd1342abeca193b`), PR #19 (`8cdb1125809770671325a4f47fc80fd5c48b4ddc`), PR #21 (`433dbe1dd919b93d082aa31d3592519b37a75206`), PR #25 (`7b9398b48008e627fc18e5d7a0f864686a69b588`), PR #27 (`04b53da01a80be85873b3619f9aac2b6f54003b6`), PR #29 (`7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf`), PR #31 (`b5b674fec2136a6633fff54b4784cd41f721f929`), PR #33 (`f7360fb8d195c192a0396ca75e86f9825f9f4986`), PR #35 (`f0dcff3c6109b55ae1777937988d63389532e5e8`), PR #37 (`ce540402fd845458fcbaba35b850e5cf74f6131c`), PR #39 (`f6d8c180b8bdf06886ad2647e5469c210ab5d971`)
+**Historical evidence integration checkpoints:** PR #18 (`c120ee8530c055a6769b68777fd1342abeca193b`), PR #19 (`8cdb1125809770671325a4f47fc80fd5c48b4ddc`), PR #21 (`433dbe1dd919b93d082aa31d3592519b37a75206`), PR #25 (`7b9398b48008e627fc18e5d7a0f864686a69b588`), PR #27 (`04b53da01a80be85873b3619f9aac2b6f54003b6`), PR #29 (`7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf`), PR #31 (`b5b674fec2136a6633fff54b4784cd41f721f929`), PR #33 (`f7360fb8d195c192a0396ca75e86f9825f9f4986`), PR #35 (`f0dcff3c6109b55ae1777937988d63389532e5e8`), PR #37 (`ce540402fd845458fcbaba35b850e5cf74f6131c`), PR #39 (`f6d8c180b8bdf06886ad2647e5469c210ab5d971`), PR #41 (`473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d`)
 **OperatingHours backend integration checkpoint (PR #20):** `1cad899971c8b18804af31bfb079a24285f7d16d`
 **OperatingHours source branch:** `feature/mf02-operating-hours`
 **Pre-closure hardening integration checkpoint (PR #23):** `5a5b3e7d285b50b7645a1c32b57f79b753b2baff`
@@ -42,32 +42,35 @@
 **Individual session changes integration checkpoint (PR #40):** `b72fc6bdcff8b8e6d1817cfa35271edca90bb118`
 **Individual session changes reviewed source pointer:** `2fa748903a3d630d84fbbf527e3bf73ddb8ffc3e`
 **Individual session changes actual base:** `f6d8c180b8bdf06886ad2647e5469c210ab5d971`
+**Series-wide change preview integration checkpoint (PR #42):** `68f6bcf7381e5b0875ac64805cdd140f0db8b208`
+**Series-wide change preview reviewed source pointer:** `9896ae462f880142f69963f4c9b983cf8cfe388d`
+**Series-wide change preview actual base:** `473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d`
 
 > Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
 >
 > **Metadata Stability Policy:** Metadata-only evidence synchronization commits/PRs are recorded as evidence checkpoints and are not recursively treated as new MF-02 implementation checkpoints. Implementation checkpoints remain strictly tied to actual domain/feature implementation integrations.
 >
-> This update is prepared from PR #40 implementation checkpoint `b72fc6bdcff8b8e6d1817cfa35271edca90bb118`. The merge commit that later integrates this documentation is a separate evidence-metadata checkpoint recorded by Git history and the integration report; it must not be relabeled as the PR #40 implementation SHA. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
+> This update is prepared from PR #42 implementation checkpoint `68f6bcf7381e5b0875ac64805cdd140f0db8b208`. The merge commit that later integrates this documentation is a separate evidence-metadata checkpoint recorded by Git history and the integration report; it must not be relabeled as the PR #42 implementation SHA. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
 
 ## Sprint Goal
 
-Build the MF-02 campaign and center-planning foundations needed for a valid vaccination campaign, including campaign lifecycle, dose-programme configuration, administrative service-area targeting, questionnaire linkage, center assignment, center calendar/closure foundations, recurrence foundations, concrete session foundations, session change audit foundations, and individual session change workflows.
+Build the MF-02 campaign and center-planning foundations needed for a valid vaccination campaign, including campaign lifecycle, dose-programme configuration, administrative service-area targeting, questionnaire linkage, center assignment, center calendar/closure foundations, recurrence foundations, concrete session foundations, session change audit foundations, individual session change workflows, and series-wide session change preview foundation.
 
-Expected integrated Sprint 1 outcome: a valid campaign can be linked to a published questionnaire, has approved service locations and booking/service boundaries, and has usable center-planning, concrete session, change audit, and individual change workflows.
+Expected integrated Sprint 1 outcome: a valid campaign can be linked to a published questionnaire, has approved service locations and booking/service boundaries, and has usable center-planning, concrete session, change audit, individual change, and series change preview workflows.
 
 ## Sprint Status
 
 **We are still in Sprint 1.**
 
-The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, **OperatingHours**, **CenterClosure**, **CampaignCenterAssignment**, **SessionRecurrenceRule**, **VaccinationCenter** scheduling-timezone prerequisite, **VaccinationSession** domain and repository foundation, **VaccinationSession** authoritative write-time validation / atomic one-off DRAFT creation, **SessionRecurrenceRule** occurrence generation and idempotent materialization, **SessionChangeEvent** audit model / **SessionImpactReader** integration port / **VaccinationSession** row locking foundation, and **individual VaccinationSession change workflows** (preview, stale token protection, reschedule, center transfer, cancellation, locking, and audit) are implemented, reviewed, certified, tested, CI-verified, and merged into `develop`.
+The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, **OperatingHours**, **CenterClosure**, **CampaignCenterAssignment**, **SessionRecurrenceRule**, **VaccinationCenter** scheduling-timezone prerequisite, **VaccinationSession** domain and repository foundation, **VaccinationSession** authoritative write-time validation / atomic one-off DRAFT creation, **SessionRecurrenceRule** occurrence generation and idempotent materialization, **SessionChangeEvent** audit model / **SessionImpactReader** integration port / **VaccinationSession** row locking foundation, **individual VaccinationSession change workflows** (preview, stale token protection, reschedule, center transfer, cancellation, locking, and audit), and **series-wide VaccinationSession change preview foundation** (read-only diff calculation, occurrence classification into `RETAINED`/`REMOVED`/`NEW`/`PRESERVED_EXCEPTION`/`INELIGIBLE`, durable individual override exception preservation, real `SCHEDULED` impact reader integration, `VaccinationSessionValidator` schedule bounds reuse, `bookingCloseAt` policy, and deterministic SHA-256 stale token) are implemented, reviewed, certified, tested, CI-verified, and merged into `develop`.
 
 The canonical R8 human-readable DOCX synchronization has also been merged into `develop` through PR #17.
 
 Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundations still include:
 
 * remaining campaign publication prerequisite/transition integration
-* `VaccinationSession` series-wide schedule change orchestration
-* recurrence-rule orchestration for materialized series and series exception handling
+* atomic `VaccinationSession` series-wide schedule change confirmation (`confirmSeriesChange`)
+* recurrence-rule mutation through series orchestration and series audit event emission (`SERIES_RESCHEDULED`, `SERIES_CANCELLED`)
 * MF-03 production impact reader adapter
 * outbox pattern for cross-module change events
 * `VaccinationSession` lifecycle transition services beyond initial DRAFT
@@ -77,11 +80,46 @@ Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundation
 * final MF-01 `QuestionnaireVersion` adapter/FK integration
 * final Sprint integration and Definition-of-Done evidence
 
-**MF-02 INDIVIDUAL SESSION CHANGES INTEGRATED.** This milestone covers the current backend-foundation scope for Campaign, DoseProgramme, LocationTarget, QuestionnaireAssignment, VaccinationCenter, OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, VaccinationSession domain/persistence, authoritative write-time validation / one-off DRAFT creation, recurrence occurrence generation, session change audit / locking foundation, and individual session change workflows. It does not mean MF-02, US-13, or Sprint 1 is complete.
+**MF-02 SERIES CHANGE PREVIEW FOUNDATION INTEGRATED.** This milestone covers the current backend-foundation scope for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, and series-wide session change preview. It does not mean MF-02, US-13, or Sprint 1 is complete.
 
 ## Current Verification Snapshot
 
-### Overall `develop` implementation checkpoint after PR #40 Individual session changes integration
+### Overall `develop` implementation checkpoint after PR #42 Series-wide session change preview integration
+
+```text
+Verified origin/develop at Series-wide session change preview merge:
+68f6bcf7381e5b0875ac64805cdd140f0db8b208
+
+Latest develop merge:
+PR #42
+68f6bcf7381e5b0875ac64805cdd140f0db8b208
+
+Latest MF-02 implementation checkpoint:
+PR #42
+68f6bcf7381e5b0875ac64805cdd140f0db8b208
+
+Reviewed feature source:
+9896ae462f880142f69963f4c9b983cf8cfe388d
+
+Actual base:
+473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d
+
+PR #42 status:
+MERGED
+
+Backend CI:
+SUCCESS (pre-merge 46s run 31511300256, post-merge 1m4s run 31511453360)
+
+Frontend CI:
+SUCCESS (pre-merge 19s run 31511300203, post-merge 16s run 31511453423)
+
+Backend tests:
+422 tests passing (17 net-new tests: 5 model unit, 12 integration)
+```
+
+PR #24 integrated `CenterClosure`; PR #26 integrated `CampaignCenterAssignment`; PR #28 integrated `SessionRecurrenceRule`; PR #30 integrated `VaccinationCenter` scheduling timezone; PR #32 integrated `VaccinationSession` domain and repository foundation; PR #34 integrated `VaccinationSession` authoritative write-time validation and atomic one-off DRAFT creation; PR #36 integrated `SessionRecurrenceRule` occurrence generation and idempotent materialization; PR #38 integrated the `SessionChangeEvent` audit model, `SessionImpactReader` integration port, and `VaccinationSession` pessimistic row locking foundation; PR #40 integrated individual `VaccinationSession` material change workflows; and PR #42 integrated series-wide `VaccinationSession` change preview foundation (diff calculation, occurrence classification, override preservation, impact aggregation, and SHA-256 stale token). The prior checkpoints remain historical evidence below.
+
+### Historical Individual VaccinationSession change workflows implementation / integration checkpoint (PR #40)
 
 ```text
 Verified origin/develop at Individual session changes merge:

@@ -10,15 +10,15 @@
 
 **Sprint:** Sprint 1 — **IN PROGRESS**
 
-**Current implementation checkpoint:** `b72fc6bdcff8b8e6d1817cfa35271edca90bb118` (PR #40 merge)
+**Current implementation checkpoint:** `68f6bcf7381e5b0875ac64805cdd140f0db8b208` (PR #42 merge)
 
-**Latest completed backend foundation:** `Individual VaccinationSession change workflows (preview, stale token protection, reschedule, center transfer, cancellation, locking, generator compatibility, and SessionChangeEvent creation)`
+**Latest completed backend foundation:** `Series-wide VaccinationSession change preview foundation (read-only diff calculation, occurrence classification into RETAINED/REMOVED/NEW/PRESERVED_EXCEPTION/INELIGIBLE, SessionChangeEvent-based durable individual override detection, real SCHEDULED impact reader integration, candidate VaccinationSessionValidator schedule bounds reuse, bookingCloseAt preview policy, and deterministic SHA-256 stale token protection)`
 
-**Next controlled implementation phase:** `series-wide VaccinationSession change architecture and implementation` — **READY TO START**
+**Next controlled implementation phase:** `atomic series-change confirmation, locking and event emission` — **READY TO START**
 
 > This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
 >
-> The latest MF-02 implementation integration checkpoint is PR #40 merge `b72fc6bdcff8b8e6d1817cfa35271edca90bb118`, with certified feature source `2fa748903a3d630d84fbbf527e3bf73ddb8ffc3e` and base `f6d8c180b8bdf06886ad2647e5469c210ab5d971`. Any later documentation PR merge containing this handoff is an overall repository metadata checkpoint; it does not replace or rename the PR #40 implementation checkpoint.
+> The latest MF-02 implementation integration checkpoint is PR #42 merge `68f6bcf7381e5b0875ac64805cdd140f0db8b208`, with certified feature source `9896ae462f880142f69963f4c9b983cf8cfe388d` and base `473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d`. Any later documentation PR merge containing this handoff is an overall repository metadata checkpoint; it does not replace or rename the PR #42 implementation checkpoint.
 
 ## 1. Executive Snapshot
 
@@ -38,7 +38,8 @@ The following MF-02 backend foundations are already implemented and integrated:
 * VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation;
 * SessionRecurrenceRule occurrence generation and idempotent VaccinationSession materialization;
 * SessionChangeEvent append-only audit model, SessionScheduleSnapshot, SessionChangeType, SessionChangeEventRepository, SessionImpactReader integration port, SessionImpactSummary, and VaccinationSession pessimistic row lock;
-* Individual VaccinationSession change workflows: read-only impact preview operations, cryptographic SHA-256 stale-preview protection, reschedule and center transfer confirmation, session cancellation, deterministic hierarchical locking (`campaign → center(s) → session`), occurrence provenance preservation, generator retry compatibility for individual overrides, and atomic append-only `SessionChangeEvent` creation.
+* Individual VaccinationSession change workflows: read-only impact preview operations, cryptographic SHA-256 stale-preview protection, reschedule and center transfer confirmation, session cancellation, deterministic hierarchical locking (`campaign → center(s) → session`), occurrence provenance preservation, generator retry compatibility for individual overrides, and atomic append-only `SessionChangeEvent` creation;
+* Series-wide VaccinationSession change preview foundation: read-only recurrence diff calculation, occurrence classification into `RETAINED`, `REMOVED`, `NEW`, `PRESERVED_EXCEPTION`, and `INELIGIBLE`, durable individual override detection via `SessionChangeEvent` audit history (`RESCHEDULED`, `CENTER_TRANSFERRED`, `CANCELLED`), real `SessionImpactReader` integration for `SCHEDULED` sessions (with 0 impact for `DRAFT`), candidate schedule validation using `VaccinationSessionValidator`, `bookingCloseAt = proposedStartAt` preview policy, and deterministic SHA-256 preview fingerprint token generation.
 
 `CenterClosure` remains **IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED**.
 
@@ -56,27 +57,28 @@ The `SessionRecurrenceRule` occurrence generation and idempotent `VaccinationSes
 
 The `SessionChangeEvent` audit model, `SessionImpactReader` integration port, and `VaccinationSession` pessimistic row locking foundation is **IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED** through PR #38.
 
-The individual `VaccinationSession` material change workflows are **IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED** through PR #40:
-* `SessionChangePreview` immutable record captures target session ID, `SessionChangeType`, authoritative old snapshot, proposed new snapshot, cross-module impact counts, and deterministic SHA-256 preview token.
-* Read-only preview operations (`previewReschedule`, `previewCenterTransfer`, `previewRescheduleOrTransfer`, `previewCancellation`) perform zero state mutation.
-* Reschedule and center transfer workflows revalidate candidate schedule bounds, active hosting center status, campaign service boundaries, operational assignment coverage, operating hours contiguous coverage, and closure exclusions using `VaccinationSessionValidator`. On center transfer, the session center and schedule timezone are updated to the target center.
-* Booking close policy: preserves existing `bookingCloseAt` if `<= newStartAt`; otherwise resets `bookingCloseAt` to `newStartAt` (or validates explicit new timestamp).
-* Cancellation workflow transitions lifecycle status to `CANCELLED`, retains session row, preserves recurrence provenance, validates non-blank reason (max 500 chars) and actor ID (max 64 chars), and creates append-only `SessionChangeEvent` with `CANCELLED` change type.
-* Stale preview protection: SHA-256 fingerprint token computed from session ID, authoritative old snapshot, proposed new snapshot, change type, and impact counts. At confirmation, authoritative write locks are acquired, managed state refreshed, schedule revalidated, and token recomputed; mismatches reject with `IllegalStateException` before mutation.
-* Deterministic hierarchical parent locking:
-  * Same-center change: `campaign → center → session`
-  * Center transfer: `campaign → center(min(oldId, newId)) → center(max(oldId, newId)) → session`
-  * Fully compatible with existing `campaign → center → rule` generation locking; zero lock inversion.
-* Impact count policy: `DRAFT` sessions evaluate impact as known zero; `SCHEDULED` sessions strictly require real `SessionImpactReader` counts and reject if unavailable. No fake zero-count production adapter exists.
-* Recurrence occurrence isolation: individual overrides preserve `recurrenceRule`, `occurrenceKey`, and `originOccurrenceDate`. Sibling occurrences remain untouched.
-* Generator compatibility: `SessionOccurrenceGenerationService` recognizes individually modified/transferred/cancelled occurrences as already materialized and preserves them without reset or duplicate generation. True provenance corruption remains strictly rejected.
-* Controller decision recorded: **Individually edited occurrences must be preserved during later series changes and shown as exceptions.**
+The individual `VaccinationSession` material change workflows are **IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED** through PR #40.
 
-Current backend validation is **405 tests** (26 net-new tests: 5 model unit, 3 preview record, 3 token hashing, 13 workflow integration, 2 concurrency) with zero failures, errors, or skips. Maven `test` and `verify` succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #40 merge.
+The series-wide `VaccinationSession` change preview foundation is **IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED** through PR #42:
+* `RecurrenceRuleDefinitionSnapshot` immutable value object encapsulates validated rule definition parameters (`weekdays`, `startDate`, `endDate`, `startTime`, `endTime`, `timezone`) and evaluates calendar date occurrences.
+* `SeriesOccurrenceCategory` enum defines discrete occurrence classifications: `RETAINED`, `REMOVED`, `NEW`, `PRESERVED_EXCEPTION`, and `INELIGIBLE`.
+* `SeriesOccurrencePreviewItem` immutable record captures per-occurrence identity (`<generationKey>:<originOccurrenceDate>`), origin date, category, session ID (if existing), current snapshot, proposed snapshot, and cross-module impact counts.
+* `SeriesChangePreview` immutable aggregate record contains rule ID, current definition snapshot, proposed definition snapshot, list of categorized occurrence entries, aggregate affected appointment count, aggregate affected waitlist count, and cryptographic SHA-256 preview token.
+* Read-only preview operation `SessionSeriesChangeService.previewSeriesChange` performs zero entity mutation, no repository saves, no `SessionChangeEvent` creation, and persists no `NEW` occurrences under `@Transactional(readOnly = true)`.
+* Durable individual override preservation: queries `SessionChangeEvent` history via `findBySessionIdIn`; occurrences with `RESCHEDULED`, `CENTER_TRANSFERRED`, or `CANCELLED` events are classified as `PRESERVED_EXCEPTION`, preserved untouched with original schedule/center, and excluded from series impact totals.
+* Ineligible occurrence handling: past/elapsed occurrences (`startAt <= now(clock)`), occurrences in `IN_PROGRESS` or `COMPLETED` status, and past candidate dates are classified as `INELIGIBLE` with 0 series impact.
+* Impact count policy: `DRAFT` sessions evaluate impact as known zero; `SCHEDULED` sessions strictly require real `SessionImpactReader` counts and reject if unavailable with `IllegalStateException`.
+* Candidate schedule validation: `RETAINED` and `NEW` proposed schedules reuse `VaccinationSessionValidator` to enforce campaign bounds, operational center assignment coverage, operating hours contiguous coverage, and closure exclusions.
+* Timezone policy: proposed timezone must match the hosting center timezone; timezone changes are rejected. DST resolution selects first valid offset on overlap and rejects transition gaps.
+* Booking close policy: proposed `bookingCloseAt` is set to `proposedStartAt` for rescheduled `RETAINED` and `NEW` occurrences, while `PRESERVED_EXCEPTION` sessions retain their existing `bookingCloseAt`.
+* Stale preview protection: SHA-256 fingerprint token computed deterministically from rule ID, sorted current/proposed definitions, ordered occurrence keys, category classifications, schedule snapshots, per-occurrence impact counts, and aggregate impact totals.
+* Controller decision enforced: **Individually edited occurrences are preserved as exceptions during series changes.**
 
-**MF-02 INDIVIDUAL SESSION CHANGES INTEGRATED.** This milestone covers the current backend-foundation scope for Campaign, DoseProgramme, LocationTarget, QuestionnaireAssignment, VaccinationCenter, OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, VaccinationSession domain/persistence, authoritative write-time validation / one-off DRAFT creation, recurrence occurrence generation, session change audit / locking foundation, and individual session change workflows. It does not mean MF-02, US-13, or Sprint 1 is complete.
+Current backend validation is **422 tests** (17 net-new tests: 5 model unit, 12 workflow integration) with zero failures, errors, or skips. Maven `test` and `verify` succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #42 merge.
 
-Sprint 1 remains in progress. Individual session change workflows are complete, but series-wide schedule change orchestration, recurrence-rule orchestration for materialized series, series exception handling, reverse configuration-impact workflows, MF-03 production adapter, outbox pattern, lifecycle transitions beyond initial DRAFT, migrations, API/security/UI layers, publication integration, and final Definition-of-Done evidence remain pending.
+**MF-02 SERIES CHANGE PREVIEW FOUNDATION INTEGRATED.** This milestone covers the current backend-foundation scope for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, and series-wide session change preview. It does not mean MF-02, US-13, or Sprint 1 is complete.
+
+Sprint 1 remains in progress. Series-wide preview is complete, but atomic series-change confirmation (`confirmSeriesChange`), recurrence-rule mutation through series orchestration, session mutation from series changes, `SERIES_RESCHEDULED`/`SERIES_CANCELLED` audit events, full-series cancellation, MF-03 production adapter, outbox pattern, lifecycle transitions beyond initial DRAFT, migrations, API/security/UI layers, publication integration, and final Definition-of-Done evidence remain pending.
 
 ## 2. Authority and Startup Procedure
 
@@ -90,13 +92,13 @@ Use this source order:
 At the start of the next session:
 
 1. fetch `origin` and verify `origin/develop`;
-2. inspect any advancement after the latest documentation integration checkpoint built from implementation merge `b72fc6bdcff8b8e6d1817cfa35271edca90bb118`;
+2. inspect any advancement after the latest documentation integration checkpoint built from implementation merge `68f6bcf7381e5b0875ac64805cdd140f0db8b208`;
 3. confirm Sprint 1 and US-13 remain in progress;
-4. reuse the completed domain, validator, recurrence-generation, session change audit, and individual session change workflows;
-5. perform controlled architecture/implementation for `series-wide VaccinationSession change architecture and implementation`;
+4. reuse the completed domain, validator, recurrence-generation, session change audit, individual session change workflows, and series change preview engine;
+5. perform controlled architecture/implementation for `atomic series-change confirmation, locking and event emission`;
 6. keep reverse configuration-impact workflows, lifecycle transitions beyond DRAFT, resources/capacity, migrations, and API work outside that slice.
 
-The individual session change foundations supply the building blocks, while series-wide schedule change orchestration and exception handling must be implemented in the next controlled phase.
+The series change preview foundation supplies the diff and stale-protection logic, while atomic series-change confirmation, locking, and event emission must be implemented in the next controlled phase.
 
 ## 3. Repository and Integration History
 
@@ -128,16 +130,19 @@ The individual session change foundations supply the building blocks, while seri
 | PR #38 `b407679` | SessionChangeEvent audit foundation, SessionImpactReader port, and VaccinationSession row locking |
 | PR #39 `f6d8c18` | Evidence/handoff synchronization after session change audit foundation; metadata checkpoint only |
 | PR #40 `b72fc6b` | Individual VaccinationSession change workflows (preview, stale token, reschedule, transfer, cancel, locking, and audit) |
+| PR #41 `473f115` | Evidence/handoff synchronization after individual session changes; metadata checkpoint only |
+| PR #42 `68f6bcf` | Series-wide VaccinationSession change preview foundation (diff calculation, occurrence classification, override preservation, impact aggregation, and SHA-256 stale token) |
 
 The current overall checkpoint is:
 
 ```text
-latest MF-02 implementation integration checkpoint = b72fc6bdcff8b8e6d1817cfa35271edca90bb118
-certified PR #40 feature source = 2fa748903a3d630d84fbbf527e3bf73ddb8ffc3e
-actual PR #40 base = f6d8c180b8bdf06886ad2647e5469c210ab5d971
+latest MF-02 implementation integration checkpoint = 68f6bcf7381e5b0875ac64805cdd140f0db8b208
+certified PR #42 feature source = 9896ae462f880142f69963f4c9b983cf8cfe388d
+actual PR #42 base = 473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d
 ```
 
 Older SHAs and test counts in the evidence chronology are historical milestones, not the current repository state.
+
 
 
 ## 4. Architecture and Ownership Boundaries
