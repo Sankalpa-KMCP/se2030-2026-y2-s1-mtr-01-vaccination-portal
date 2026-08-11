@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
@@ -28,6 +29,7 @@ public class SessionRecurrenceRuleService {
     private final SessionRecurrenceRuleRepository ruleRepository;
     private final VaccinationCampaignRepository campaignRepository;
     private final VaccinationCenterRepository centerRepository;
+    private final VaccinationSessionRepository sessionRepository;
     private final Clock clock;
     @PersistenceContext private EntityManager entityManager;
 
@@ -35,11 +37,13 @@ public class SessionRecurrenceRuleService {
             SessionRecurrenceRuleRepository ruleRepository,
             VaccinationCampaignRepository campaignRepository,
             VaccinationCenterRepository centerRepository,
+            VaccinationSessionRepository sessionRepository,
             Clock clock
     ) {
         this.ruleRepository = ruleRepository;
         this.campaignRepository = campaignRepository;
         this.centerRepository = centerRepository;
+        this.sessionRepository = sessionRepository;
         this.clock = clock;
     }
 
@@ -125,6 +129,10 @@ public class SessionRecurrenceRuleService {
 
         SessionRecurrenceRule target = findAuthoritativeRule(id);
         requireActive(target);
+        if (sessionRepository.existsByRecurrenceRuleId(id)) {
+            throw new IllegalArgumentException(
+                    "Cannot update recurrence definition for a rule with existing generated sessions. Series-wide modification workflow is required.");
+        }
 
         LocalDate existingToday = todayIn(target.getTimezone());
         if (!existingToday.isBefore(target.getStartDate())) {
@@ -153,6 +161,10 @@ public class SessionRecurrenceRuleService {
         }
         if (newEndDate.isBefore(today)) {
             throw new IllegalArgumentException("Recurrence end date cannot rewrite elapsed dates");
+        }
+        if (sessionRepository.existsByRecurrenceRuleIdAndOriginOccurrenceDateAfter(id, newEndDate)) {
+            throw new IllegalArgumentException(
+                    "Cannot shorten recurrence rule end date before existing generated session occurrences");
         }
 
         target.shortenEndDate(newEndDate);
