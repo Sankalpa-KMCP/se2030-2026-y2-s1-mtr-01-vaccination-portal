@@ -7,10 +7,10 @@
 **Sprint:** Sprint 1
 **Working window:** Weeks 1–3
 **Last updated:** 2026-08-11
-**Latest implementation integration:** merged into `develop` via PR #28 (`SessionRecurrenceRule` backend foundation)
-**Latest implementation develop checkpoint:** `0dd05a5dce856bbaff6924c54fcf3c395920b076`
-**Latest completed evidence integration recorded:** PR #27 (`docs(mf02): sync evidence after campaign center assignment`) at `04b53da01a80be85873b3619f9aac2b6f54003b6`
-**Evidence record prepared from implementation checkpoint:** `0dd05a5dce856bbaff6924c54fcf3c395920b076`
+**Latest implementation integration:** merged into `develop` via PR #30 (`VaccinationCenter` scheduling-timezone and mutation-locking prerequisite)
+**Latest implementation develop checkpoint:** `bab77b7a6dc421d622153d422a7d589d3057ae7a`
+**Latest completed evidence integration recorded:** PR #29 (`docs(mf02): sync evidence after session recurrence rule`) at `7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf`
+**Evidence record prepared from implementation checkpoint:** `bab77b7a6dc421d622153d422a7d589d3057ae7a`
 **OperatingHours feature branch HEAD:** `4fe94df8df7c07ade3c22a39165aff3da1e8795a`
 **Canonical documentation sync checkpoint (PR #17):** `bd22cb973bad83c8456897805bc2df95b65593d0`
 **Historical evidence integration checkpoints:** PR #18 (`c120ee8530c055a6769b68777fd1342abeca193b`), PR #19 (`8cdb1125809770671325a4f47fc80fd5c48b4ddc`), PR #21 (`433dbe1dd919b93d082aa31d3592519b37a75206`)
@@ -24,12 +24,15 @@
 **CampaignCenterAssignment documentation checkpoint (PR #27):** `04b53da01a80be85873b3619f9aac2b6f54003b6`
 **SessionRecurrenceRule integration checkpoint (PR #28):** `0dd05a5dce856bbaff6924c54fcf3c395920b076`
 **SessionRecurrenceRule source branch final pointer:** `d7409db1d621ba2995162859b3923ba061992861`
+**SessionRecurrenceRule documentation checkpoint (PR #29):** `7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf`
+**Center scheduling-timezone prerequisite integration checkpoint (PR #30):** `bab77b7a6dc421d622153d422a7d589d3057ae7a`
+**Center scheduling-timezone reviewed source pointer:** `d70c67b2ac48fe01f8d5f58491995bd19aa4b833`
 
 > Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
 >
 > **Metadata Stability Policy:** Metadata-only evidence synchronization commits/PRs are recorded as evidence checkpoints and are not recursively treated as new MF-02 implementation checkpoints. Implementation checkpoints remain strictly tied to actual domain/feature implementation integrations.
 >
-> This update is prepared from recurrence implementation checkpoint `0dd05a5dce856bbaff6924c54fcf3c395920b076`. The merge commit that later integrates this documentation is a separate evidence-metadata checkpoint recorded by Git history and the integration report; it must not be relabeled as the recurrence implementation SHA.
+> This update is prepared from PR #30 implementation checkpoint `bab77b7a6dc421d622153d422a7d589d3057ae7a`. The merge commit that later integrates this documentation is a separate evidence-metadata checkpoint recorded by Git history and the integration report; it must not be relabeled as the PR #30 implementation SHA.
 
 ## Sprint Goal
 
@@ -41,7 +44,7 @@ Expected integrated Sprint 1 outcome: a valid campaign can be linked to a publis
 
 **We are still in Sprint 1.**
 
-The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, **OperatingHours**, **CenterClosure**, **CampaignCenterAssignment**, and **SessionRecurrenceRule** backend foundations are implemented, reviewed, tested, CI-verified, and merged into `develop`.
+The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, **OperatingHours**, **CenterClosure**, **CampaignCenterAssignment**, and **SessionRecurrenceRule** backend foundations are implemented, reviewed, tested, CI-verified, and merged into `develop`. The VaccinationCenter scheduling-timezone and authoritative mutation-locking prerequisite is also independently reviewed, tested, CI-verified, and merged.
 
 The canonical R8 human-readable DOCX synchronization has also been merged into `develop` through PR #17.
 
@@ -58,21 +61,24 @@ Sprint 1 is **not complete yet** because the remaining MF-02 Sprint 1 foundation
 
 ## Current Verification Snapshot
 
-### Overall `develop` implementation checkpoint after PR #28 SessionRecurrenceRule integration
+### Overall `develop` implementation checkpoint after PR #30 center scheduling-timezone integration
 
 ```text
-Verified origin/develop at recurrence implementation merge:
-0dd05a5dce856bbaff6924c54fcf3c395920b076
+Verified origin/develop at center scheduling-timezone prerequisite merge:
+bab77b7a6dc421d622153d422a7d589d3057ae7a
 
 Latest develop merge:
-PR #28
-0dd05a5dce856bbaff6924c54fcf3c395920b076
+PR #30
+bab77b7a6dc421d622153d422a7d589d3057ae7a
 
 Latest MF-02 implementation checkpoint:
-PR #28
-0dd05a5dce856bbaff6924c54fcf3c395920b076
+PR #30
+bab77b7a6dc421d622153d422a7d589d3057ae7a
 
-PR #28 status:
+Reviewed feature source:
+d70c67b2ac48fe01f8d5f58491995bd19aa4b833
+
+PR #30 status:
 MERGED
 
 Backend CI:
@@ -82,7 +88,7 @@ Frontend CI:
 SUCCESS
 ```
 
-PR #24 integrated `CenterClosure`; PR #26 integrated `CampaignCenterAssignment`; PR #28 then integrated `SessionRecurrenceRule` with bounded weekly definitions, immutable generation identity, direct rule-row locking, and authoritative post-lock refresh. The prior checkpoints remain historical evidence below.
+PR #24 integrated `CenterClosure`; PR #26 integrated `CampaignCenterAssignment`; PR #28 integrated `SessionRecurrenceRule`; PR #29 synchronized its evidence; and PR #30 then integrated mandatory center scheduling-timezone data plus authoritative center mutation locking/refresh. The prior checkpoints remain historical evidence below.
 
 ### Historical OperatingHours implementation / integration checkpoint (PR #20)
 
@@ -116,7 +122,7 @@ All 7 OperatingHours commits recorded below are present locally, remotely, and i
 ```text
 ./mvnw test:
 BUILD SUCCESS
-272 tests
+276 tests
 0 failures
 0 errors
 0 skipped
@@ -339,6 +345,7 @@ Covered behavior:
 * exact center statuses: `ACTIVE`, `INACTIVE`
 * unique normalized center code
 * center name, address and contact master data
+* mandatory explicitly supplied scheduling timezone stored as a normalized Java `ZoneId` String
 * `safeConcurrentOccupancy` as a required positive physical-safety limit
 * optional positive `sessionServiceCeiling`
 * center activation/deactivation without hard deletion
@@ -527,6 +534,35 @@ Verification comprised 30 SessionRecurrenceRule-specific tests: 8 model, 7 persi
 
 The independent engineering review passed canonical, domain, persistence, recurrence, timezone, lifecycle, generation-key, element-collection, authoritative reload, concurrency, maintainability, test-quality, and security/data-integrity gates. GitHub showed no hosted review decision for PR #28; no approval event is claimed.
 
+### 14. VaccinationCenter scheduling-timezone prerequisite (PR #30)
+
+The center scheduling-timezone and mutation-locking prerequisite is **IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED**. PR #30, `feat(mf02): add center scheduling timezone`, merged into `develop` at `bab77b7a6dc421d622153d422a7d589d3057ae7a`. Its parents are documentation checkpoint `7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf` and reviewed feature source `d70c67b2ac48fe01f8d5f58491995bd19aa4b833`; the remote feature branch remains preserved at that source pointer.
+
+Implemented scope:
+
+* `VaccinationCenter` requires an explicitly supplied scheduling timezone;
+* the value is trimmed, validated with `ZoneId.of(...)`, normalized with `getId()`, and persisted as a non-null String;
+* no JVM, system, operating-system, database, browser, country, user-profile, or compatibility default supplies a timezone;
+* `VaccinationCenterService.createCenter(...)` requires the timezone explicitly;
+* `updateDetails` and `updateCenter` preserve timezone, with no generic setter or timezone-change service operation;
+* `updateCenter`, `activateCenter`, and `deactivateCenter` pessimistically lock the selected center row and call `EntityManager.refresh()` before mutation;
+* separate-transaction regressions prove committed opposing lifecycle state is not overwritten by stale first-level-cache state;
+* existing timezone-neutral test fixtures deliberately supply `UTC`.
+
+This is an approved implementation architecture decision that fills a concrete scheduling detail not explicitly enumerated as a VaccinationCenter field by canonical R8. Future one-off sessions are planned to inherit and snapshot the center timezone. `SessionRecurrenceRule` retains its own existing timezone contract. A center timezone-change impact workflow, center/rule compatibility checks, existing-data backfill, Flyway migration, and concrete sessions remain unimplemented.
+
+Validation and integration evidence:
+
+* 21 focused VaccinationCenter model, persistence, and concurrency tests passed;
+* full backend: 276 tests, 0 failures, 0 errors, 0 skipped;
+* Maven `test` and `verify`: `SUCCESS`;
+* executable Spring Boot JAR packaged successfully;
+* independent engineering verdict: `APPROVE FOR INTEGRATION`;
+* Backend CI and Frontend CI succeeded before merge and again on merge commit `bab77b7a6dc421d622153d422a7d589d3057ae7a`;
+* no correction commit was required, and no hosted GitHub approval event is claimed.
+
+The completed architecture-readiness gate recorded package verdict **KEEP CURRENT STRUCTURE** and **VaccinationSession Definition of Ready: PASS**. No Java package reorganization is required before the next controlled domain/repository slice.
+
 ## Important Canonical Distinctions Preserved
 
 ### MF02-BR-02
@@ -564,6 +600,7 @@ At campaign publication:
 
 * `VaccinationSession` and `TimeSlot` foundations
 * recurrence occurrence generation and unique occurrence identity
+* `SessionChangeEvent` and material-change orchestration
 * session validation under `MF02-BR-05`
 * closure/capacity validation under `MF02-BR-06`
 * full campaign publication transition/prerequisite validation workflow
@@ -602,6 +639,9 @@ Known dependency:
 * `CenterClosure` uses absolute half-open intervals, explicit cancellation, and parent-center locking without coupling to `OperatingHours`.
 * `CampaignCenterAssignment` uses half-open `LocalDate` periods, campaign-row serialization, and authoritative post-lock child refresh before existing-child business decisions.
 * `SessionRecurrenceRule` uses inclusive bounded dates, half-open same-day local times, immutable generation identity, and direct rule-row lock/refresh for existing-rule mutation.
+* `VaccinationCenter` owns authoritative one-off scheduling timezone data; future concrete sessions snapshot it rather than consulting an implicit environment default.
+* Center timezone is not generally mutable; any later change requires a separately reviewed session-impact workflow.
+* Keep the existing MF-02 model/repository/service package structure for the initial VaccinationSession foundation.
 * `safeConcurrentOccupancy` and `sessionServiceCeiling` are distinct center constraints.
 * Use small, focused logical Git commits rather than large feature commits.
 
@@ -736,6 +776,12 @@ These commits were merged through PR #26 at `f9c2bbaa8f9f0c13a338ea910961820b34e
 
 These commits were merged through PR #28 at `0dd05a5dce856bbaff6924c54fcf3c395920b076`.
 
+### H. VaccinationCenter scheduling-timezone prerequisite — 1 commit after PR #29
+
+* `d70c67b2ac48fe01f8d5f58491995bd19aa4b833` — `feat(mf02): add center scheduling timezone`
+
+This reviewed commit was merged through PR #30 at `bab77b7a6dc421d622153d422a7d589d3057ae7a`.
+
 ### Commit accounting
 
 * earlier campaign/targeting/questionnaire checkpoint: **27 commits**
@@ -745,7 +791,8 @@ These commits were merged through PR #28 at `0dd05a5dce856bbaff6924c54fcf3c39592
 * CenterClosure backend foundation after PR #23: **4 commits**
 * CampaignCenterAssignment backend foundation after PR #25: **4 commits**
 * SessionRecurrenceRule backend foundation after PR #27: **3 commits**
-* cumulative feature/hardening history listed across these seven checkpoints: **70 commits**
+* VaccinationCenter scheduling-timezone prerequisite after PR #29: **1 commit**
+* cumulative feature/hardening history listed across these eight checkpoints: **71 commits**
 * PR #12 merge checkpoint: **1 merge commit (`eb4a4d9`)**
 * PR #16 merge checkpoint: **1 merge commit (`201768e`)**
 * canonical documentation synchronization: **2 documentation commits (`8a26fe6`, `16d4193`) plus PR #17 merge commit `bd22cb9`**
@@ -761,6 +808,8 @@ These commits were merged through PR #28 at `0dd05a5dce856bbaff6924c54fcf3c39592
 * CampaignCenterAssignment integration checkpoint: **PR #26 merge commit `f9c2bba`**
 * CampaignCenterAssignment documentation checkpoint: **PR #27 merge commit `04b53da`**; evidence metadata, not a new implementation checkpoint
 * SessionRecurrenceRule integration checkpoint: **PR #28 merge commit `0dd05a5`**
+* SessionRecurrenceRule documentation checkpoint: **PR #29 merge commit `7b7896b`**; evidence metadata, not a new implementation checkpoint
+* VaccinationCenter scheduling-timezone prerequisite: **PR #30 merge commit `bab77b7`**, reviewed source `d70c67b`
 
 ## Pull Requests / Remote State
 
@@ -858,13 +907,32 @@ Confirmed state:
 * Backend CI and Frontend CI succeeded before merge and again on the merged checkpoint;
 * no CI correction commit was required, and the remote feature branch remains preserved.
 
+### SessionRecurrenceRule evidence synchronization (PR #29)
+
+PR #29 merged the recurrence handoff/evidence synchronization at `7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf`. Under the metadata stability policy, it is an overall repository/evidence checkpoint and not a new MF-02 implementation checkpoint.
+
+### VaccinationCenter scheduling-timezone prerequisite integration (PR #30)
+
+Confirmed state:
+
+* source branch: `feature/mf02-center-scheduling-timezone`;
+* reviewed and preserved source pointer: `d70c67b2ac48fe01f8d5f58491995bd19aa4b833`;
+* PR #30 contained exactly one reviewed implementation commit;
+* PR #30 changed 21 files: two production files, three focused VaccinationCenter test files, and sixteen mechanical timezone-fixture adaptations;
+* no canonical, evidence, migration, API, frontend, package-movement, recurrence-behavior, or VaccinationSession changes entered the implementation PR;
+* PR #30 merged through the normal merge-commit workflow at `bab77b7a6dc421d622153d422a7d589d3057ae7a`;
+* merge parents: `7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf` and `d70c67b2ac48fe01f8d5f58491995bd19aa4b833`;
+* the reviewed source commit is an ancestor of `develop` and its tree matches the merge result;
+* Backend CI and Frontend CI succeeded before merge and again on the merged checkpoint;
+* no CI correction commit was required, and the remote feature branch remains preserved.
+
 ## Testing Evidence
 
 ### Latest final backend verification
 
 ```text
 ./mvnw test
-Tests run: 272
+Tests run: 276
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -894,6 +962,7 @@ JAR packaged successfully
 * CenterClosure domain, persistence, service, lifecycle, and concurrency foundation: **194** tests passing (**45** CenterClosure-specific: 15 model, 6 persistence, 21 service, 3 concurrency)
 * CampaignCenterAssignment domain, persistence, service, lifecycle, and concurrency foundation: **242** tests passing (**48** CampaignCenterAssignment-specific: 8 model, 9 persistence, 27 service, 4 concurrency)
 * SessionRecurrenceRule domain, persistence, service, lifecycle, and authoritative-mutation foundation: **272** tests passing (**30** SessionRecurrenceRule-specific: 8 model, 7 persistence, 14 service, 1 concurrency)
+* VaccinationCenter scheduling-timezone and authoritative-mutation prerequisite: **276** tests passing (**21** focused center tests in the implementation/review gate)
 
 ### CI Evidence
 
@@ -907,6 +976,7 @@ JAR packaged successfully
 * PR #24 (CenterClosure Foundation): Backend CI `SUCCESS`, Frontend CI `SUCCESS`
 * PR #26 (CampaignCenterAssignment Foundation): Backend CI `SUCCESS`, Frontend CI `SUCCESS` before merge and after merge
 * PR #28 (SessionRecurrenceRule Foundation): Backend CI `SUCCESS`, Frontend CI `SUCCESS` before merge and after merge
+* PR #30 (Center Scheduling Timezone): Backend CI `SUCCESS`, Frontend CI `SUCCESS` before merge and after merge
 
 ## Current Repository State
 
@@ -914,17 +984,17 @@ JAR packaged successfully
 
 ```text
 origin/develop implementation checkpoint used to prepare this evidence update:
-0dd05a5dce856bbaff6924c54fcf3c395920b076
+bab77b7a6dc421d622153d422a7d589d3057ae7a
 
 Latest develop merge:
-PR #28
-feature/mf02-session-recurrence-rule -> develop
+PR #30
+feature/mf02-center-scheduling-timezone -> develop
 
-PR #28 merge:
-0dd05a5dce856bbaff6924c54fcf3c395920b076
+PR #30 merge:
+bab77b7a6dc421d622153d422a7d589d3057ae7a
 
 Latest implementation checkpoint:
-PR #28 (0dd05a5dce856bbaff6924c54fcf3c395920b076)
+PR #30 (bab77b7a6dc421d622153d422a7d589d3057ae7a)
 
 Evidence file:
 docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
@@ -932,7 +1002,7 @@ docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
 Canonical DOCX:
 docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx
 
-Canonical Markdown change in PR #28:
+Canonical Markdown change in PR #30:
 none
 ```
 
@@ -940,23 +1010,23 @@ none
 
 ```text
 Backend implementation checkpoint:
-0dd05a5dce856bbaff6924c54fcf3c395920b076
+bab77b7a6dc421d622153d422a7d589d3057ae7a
 
-feature/mf02-session-recurrence-rule:
-d7409db1d621ba2995162859b3923ba061992861
+feature/mf02-center-scheduling-timezone:
+d70c67b2ac48fe01f8d5f58491995bd19aa4b833
 
 feature branch local/remote:
 synchronized
 
-SessionRecurrenceRule merge:
-PR #28
-0dd05a5dce856bbaff6924c54fcf3c395920b076
+Center scheduling-timezone prerequisite merge:
+PR #30
+bab77b7a6dc421d622153d422a7d589d3057ae7a
 ```
 
 Latest backend verification remains:
 
 ```text
-272 tests passing
+276 tests passing
 0 failures
 0 errors
 0 skipped
@@ -980,7 +1050,8 @@ Already captured:
 * CenterClosure backend foundation (PR #24, merge commit `e70940b`, 45 component tests and 194 total passing tests)
 * CampaignCenterAssignment backend foundation (PR #26, merge commit `f9c2bba`, 48 component tests and 242 total passing tests)
 * SessionRecurrenceRule backend foundation (PR #28, merge commit `0dd05a5`, 30 component tests and 272 total passing tests)
-* Backend CI & Frontend CI results through PR #28, including the merged implementation checkpoint
+* VaccinationCenter scheduling-timezone prerequisite (PR #30, merge commit `bab77b7`, reviewed source `d70c67b`, 21 focused center tests and 276 total passing tests)
+* Backend CI & Frontend CI results through PR #30, including the merged implementation checkpoint
 
 Still to capture:
 
@@ -1007,11 +1078,13 @@ Still to capture:
 * CenterClosure domain, persistence, lifecycle, overlap, and separate-transaction concurrency foundation
 * CampaignCenterAssignment operational authorization, lifecycle, effective-period, and separate-transaction concurrency foundation
 * SessionRecurrenceRule bounded weekly definition, timezone/lifecycle, generation identity, element-collection, and authoritative-mutation foundation
+* VaccinationCenter explicit normalized scheduling timezone and authoritative mutation locking/refresh prerequisite
+* VaccinationSession package/readiness architecture gate: **KEEP CURRENT STRUCTURE**, Definition of Ready **PASS**
 * future-only effective configuration protection
 * campaign-row and center-row pessimistic locking for critical effective-dated configuration changes
-* 272 passing backend tests with successful Maven verify packaging
+* 276 passing backend tests with successful Maven verify packaging
 * R8 canonical DOCX synchronization merged through PR #17
-* successful Backend CI and Frontend CI through PR #28 and its merged checkpoint
+* successful Backend CI and Frontend CI through PR #30 and its merged checkpoint
 * canonical Markdown integrity preserved
 
 ### Not completed / likely carry-forward candidates if Sprint 1 closes before completion
@@ -1025,7 +1098,7 @@ Still to capture:
 
 * Small logical commits kept implementation history reviewable.
 * Canonical ownership/boundary checks were performed before each MF-02 slice.
-* Tests expanded continuously as real behavior was introduced (272 total tests).
+* Tests expanded continuously as real behavior was introduced (276 total tests).
 * Candidate pre-validation (`OperatingHours.validateParameters`) and scalar parent center lock ordering ensured mutation exception-safety and clean concurrency protection.
 * Dedicated documentation and evidence branches preserved clean separation from domain implementation history.
 * Post-merge ancestor verification ensured all feature commits are preserved directly in `develop`.
@@ -1040,14 +1113,14 @@ Still to capture:
 
 ## Exact Next Work
 
-`SessionRecurrenceRule` is implemented, reviewed, tested, CI-verified, and merged through PR #28 at implementation checkpoint `0dd05a5dce856bbaff6924c54fcf3c395920b076`. OperatingHours, CenterClosure, and CampaignCenterAssignment remain complete. **MF-02 SUPPORTING BACKEND FOUNDATIONS COMPLETE FOR THE CURRENT PRE-VACCINATIONSESSION PHASE.** Sprint 1 and US-13 remain in progress because concrete sessions, occurrence generation, integrated validation, and Definition-of-Done layers remain pending.
+`SessionRecurrenceRule` remains implemented and merged through PR #28. The VaccinationCenter scheduling-timezone and authoritative mutation-locking prerequisite is implemented, independently reviewed, tested, CI-verified, and merged through PR #30 at the latest MF-02 implementation checkpoint `bab77b7a6dc421d622153d422a7d589d3057ae7a`, with reviewed source `d70c67b2ac48fe01f8d5f58491995bd19aa4b833`. OperatingHours, CenterClosure, and CampaignCenterAssignment remain complete. **MF-02 SUPPORTING BACKEND FOUNDATIONS COMPLETE FOR THE CURRENT PRE-VACCINATIONSESSION PHASE.** Sprint 1 and US-13 remain in progress because concrete sessions, occurrence generation, integrated validation, and Definition-of-Done layers remain pending.
 
 When MF-02 feature development resumes:
 
-1. Inspect the canonical MF-02 requirements, MF-02 handoff, current repository code and relevant existing tests before planning the next slice.
-2. Perform broad discovery and architecture planning for `VaccinationSession` and MF-02 cross-component integration.
-3. Resolve concrete occurrence generation/idempotency, lifecycle, and compatible campaign/center/rule locking before implementation.
-4. Plan integrated session validation combining campaign dates, CampaignCenterAssignment, OperatingHours, CenterClosure, SessionRecurrenceRule, and later resource/capacity concerns.
-5. Complete remaining publication checks, Flyway migrations, API/UI/security integration, MF-01 adapter/FK work, production MySQL concurrency validation, and Definition-of-Done evidence in separately approved slices.
+1. Fetch live repository state and confirm the latest implementation checkpoint and any later documentation-only checkpoint.
+2. Reuse the completed package verdict **KEEP CURRENT STRUCTURE** and VaccinationSession Definition-of-Ready **PASS**.
+3. Implement the controlled `VaccinationSession` domain and repository foundation only.
+4. Keep occurrence generation/idempotency, cross-component validation, lifecycle/change orchestration, TimeSlot, resources, staffing, capacity, migrations, and API/UI/security work in separately approved slices.
+5. Later complete publication checks, MF-01 adapter/FK work, production MySQL concurrency validation, and Definition-of-Done evidence.
 
-**Current implementation stopping point:** recurrence merge `0dd05a5dce856bbaff6924c54fcf3c395920b076`; OperatingHours, CenterClosure, CampaignCenterAssignment, and SessionRecurrenceRule are complete at backend-foundation scope; `VaccinationSession` and occurrence generation are **NOT STARTED**. The next controlled phase is VaccinationSession architecture and cross-component integration planning.
+**Current implementation stopping point:** center scheduling-timezone prerequisite merge `bab77b7a6dc421d622153d422a7d589d3057ae7a`; OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, and the center-timezone prerequisite are complete at backend-foundation/prerequisite scope; `VaccinationSession`, occurrence generation, `SessionChangeEvent`, TimeSlot/resources/capacity, and migrations are **NOT STARTED**. The next controlled phase is the VaccinationSession domain and repository foundation.
