@@ -1,25 +1,33 @@
 package com.se2030.vaccinationportal.campaign;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.DoseCategory;
 import com.se2030.vaccinationportal.campaign.model.OperatingHours;
+import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.CampaignDoseProgrammeService;
 import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
 import com.se2030.vaccinationportal.campaign.service.OperatingHoursService;
 import com.se2030.vaccinationportal.campaign.service.QuestionnaireVersionPublicationPort;
+import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
+import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -75,6 +83,10 @@ class Mf02ConcurrencyIntegrationTests {
     @Autowired private CampaignDoseProgrammeService doseProgrammeService;
     @Autowired private CampaignQuestionnaireAssignmentService questionnaireAssignmentService;
     @Autowired private OperatingHoursService operatingHoursService;
+    @Autowired private VaccinationSessionService sessionService;
+    @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
+    @Autowired private VaccinationSessionRepository sessionRepository;
+    @Autowired private CampaignCenterAssignmentRepository assignmentRepository;
     @Autowired private CampaignDoseProgrammeRepository doseProgrammeRepository;
     @Autowired private CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository;
     @Autowired private OperatingHoursRepository operatingHoursRepository;
@@ -85,6 +97,9 @@ class Mf02ConcurrencyIntegrationTests {
 
     @BeforeEach
     void clearPersistedState() {
+        sessionChangeEventRepository.deleteAllInBatch();
+        sessionRepository.deleteAllInBatch();
+        assignmentRepository.deleteAllInBatch();
         operatingHoursRepository.deleteAllInBatch();
         questionnaireAssignmentRepository.deleteAllInBatch();
         doseProgrammeRepository.deleteAllInBatch();
@@ -147,7 +162,7 @@ class Mf02ConcurrencyIntegrationTests {
     @Test
     @Timeout(30)
     void concurrentOperatingHoursCreateAndUpdateCannotCommitAConflict() throws Exception {
-        VaccinationCenter center = createCenter();
+        VaccinationCenter center = createCenter("CTR-CONCURRENT-OH");
         OperatingHours existing = operatingHoursService.createOperatingHours(
                 center.getId(), DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(12, 0), INITIAL_START, null
         );
@@ -168,6 +183,100 @@ class Mf02ConcurrencyIntegrationTests {
                 assertFalse(timesOverlap(committed.get(left), committed.get(right)));
             }
         }
+    }
+
+    @Test
+    @Timeout(30)
+    void concurrentReschedulesOnSameSessionOnlyOneSucceedsDueToStaleToken() throws Exception {
+        VaccinationCampaign campaign = createCampaign("CMP-CONC-SESS-1");
+        VaccinationCenter center = createCenter("CTR-CONC-SESS-1");
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                campaign, center, LocalDate.of(2029, 1, 1), LocalDate.of(2031, 1, 1)));
+        for (DayOfWeek dow : DayOfWeek.values()) {
+            operatingHoursRepository.saveAndFlush(new OperatingHours(
+                    center, dow, LocalTime.of(8, 0), LocalTime.of(18, 0),
+                    LocalDate.of(2029, 1, 1), null));
+        }
+
+        Instant initialStart = Instant.parse("2029-06-15T09:00:00Z");
+        Instant initialEnd = Instant.parse("2029-06-15T12:00:00Z");
+        Instant initialClose = Instant.parse("2029-06-15T08:00:00Z");
+        VaccinationSession session = sessionRepository.saveAndFlush(new VaccinationSession(
+                campaign, center, initialStart, initialEnd, initialClose, "UTC"));
+
+        Instant newStartA = Instant.parse("2029-06-15T10:00:00Z");
+        Instant newEndA = Instant.parse("2029-06-15T13:00:00Z");
+        SessionChangePreview previewA = sessionService.previewReschedule(session.getId(), newStartA, newEndA, null);
+
+        Instant newStartB = Instant.parse("2029-06-15T14:00:00Z");
+        Instant newEndB = Instant.parse("2029-06-15T17:00:00Z");
+        SessionChangePreview previewB = sessionService.previewReschedule(session.getId(), newStartB, newEndB, null);
+
+        List<Outcome> outcomes = runConcurrently(
+                () -> sessionService.confirmReschedule(
+                        session.getId(), newStartA, newEndA, null, previewA.previewToken(), "Reason A", "ACTOR-A"),
+                () -> sessionService.confirmReschedule(
+                        session.getId(), newStartB, newEndB, null, previewB.previewToken(), "Reason B", "ACTOR-B")
+        );
+
+        // Exactly one must succeed, and the loser must fail with IllegalStateException (stale token)
+        assertEquals(1, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
+        Outcome rejected = outcomes.stream().filter(outcome -> !outcome.success()).findFirst().orElseThrow();
+        assertInstanceOf(IllegalStateException.class, rejected.error(), outcomes.toString());
+
+        // Verify exactly 1 SessionChangeEvent created
+        List<SessionChangeEvent> events = sessionChangeEventRepository.findBySessionIdOrderByCreatedAtAscIdAsc(session.getId());
+        assertEquals(1, events.size());
+    }
+
+    @Test
+    @Timeout(30)
+    void concurrentOppositeCenterTransfersExecuteWithoutDeadlock() throws Exception {
+        VaccinationCampaign campaign = createCampaign("CMP-CONC-SESS-2");
+        VaccinationCenter center1 = createCenter("CTR-CONC-T1");
+        VaccinationCenter center2 = createCenter("CTR-CONC-T2");
+
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                campaign, center1, LocalDate.of(2029, 1, 1), LocalDate.of(2031, 1, 1)));
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                campaign, center2, LocalDate.of(2029, 1, 1), LocalDate.of(2031, 1, 1)));
+
+        for (DayOfWeek dow : DayOfWeek.values()) {
+            operatingHoursRepository.saveAndFlush(new OperatingHours(
+                    center1, dow, LocalTime.of(8, 0), LocalTime.of(18, 0),
+                    LocalDate.of(2029, 1, 1), null));
+            operatingHoursRepository.saveAndFlush(new OperatingHours(
+                    center2, dow, LocalTime.of(8, 0), LocalTime.of(18, 0),
+                    LocalDate.of(2029, 1, 1), null));
+        }
+
+        Instant start1 = Instant.parse("2029-06-15T09:00:00Z");
+        Instant end1 = Instant.parse("2029-06-15T12:00:00Z");
+        VaccinationSession session1 = sessionRepository.saveAndFlush(new VaccinationSession(
+                campaign, center1, start1, end1, start1, "UTC"));
+
+        Instant start2 = Instant.parse("2029-06-15T13:00:00Z");
+        Instant end2 = Instant.parse("2029-06-15T16:00:00Z");
+        VaccinationSession session2 = sessionRepository.saveAndFlush(new VaccinationSession(
+                campaign, center2, start2, end2, start2, "UTC"));
+
+        // Session 1 transfers from center1 to center2
+        SessionChangePreview preview1 = sessionService.previewCenterTransfer(session1.getId(), center2.getId(), start1, end1, null);
+        // Session 2 transfers from center2 to center1
+        SessionChangePreview preview2 = sessionService.previewCenterTransfer(session2.getId(), center1.getId(), start2, end2, null);
+
+        // Run both transfers concurrently (center1 -> center2 and center2 -> center1)
+        List<Outcome> outcomes = runConcurrently(
+                () -> sessionService.confirmCenterTransfer(
+                        session1.getId(), center2.getId(), start1, end1, null, preview1.previewToken(), "Transfer 1->2", "ACTOR-1"),
+                () -> sessionService.confirmCenterTransfer(
+                        session2.getId(), center1.getId(), start2, end2, null, preview2.previewToken(), "Transfer 2->1", "ACTOR-2")
+        );
+
+        // Both must succeed without deadlock because locks are acquired deterministically in min(centerId), max(centerId) order
+        assertEquals(2, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
+        assertTrue(outcomes.get(0).success());
+        assertTrue(outcomes.get(1).success());
     }
 
     private VaccinationCampaign createCampaign(String code) {
@@ -191,9 +300,9 @@ class Mf02ConcurrencyIntegrationTests {
         ));
     }
 
-    private VaccinationCenter createCenter() {
+    private VaccinationCenter createCenter(String code) {
         return centerRepository.saveAndFlush(new VaccinationCenter(
-                "CTR-CONCURRENT", "Concurrency center", "1 Test Road", "+94 11 000 0000",
+                code, "Concurrency center", "1 Test Road", "+94 11 000 0000",
                 CenterStatus.ACTIVE, 100, 50, "UTC"
         ));
     }
