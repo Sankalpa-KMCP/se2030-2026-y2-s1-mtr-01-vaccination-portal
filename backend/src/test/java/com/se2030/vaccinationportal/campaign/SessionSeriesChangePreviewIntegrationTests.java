@@ -559,6 +559,196 @@ class SessionSeriesChangePreviewIntegrationTests {
                 .hasMessageContaining("closure");
     }
 
+    @Test
+    @DisplayName("Regression: Series extension/add-weekday with unchanged SCHEDULED retained occurrences contributes ZERO impact")
+    void testSeriesExtensionWithUnchangedScheduledRetainedOccurrencesHasZeroImpact() {
+        Set<DayOfWeek> originalWeekdays = EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY);
+        LocalDate start = LocalDate.of(2026, 10, 5);
+        LocalDate end = LocalDate.of(2026, 10, 7);
+        LocalTime startTime = LocalTime.of(9, 0);
+        LocalTime endTime = LocalTime.of(12, 0);
+
+        SessionRecurrenceRule rule = createActiveRule(originalWeekdays, start, end, startTime, endTime);
+        generationService.generateOccurrences(rule.getId());
+
+        List<VaccinationSession> sessions = sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(rule.getId());
+        VaccinationSession s1 = sessions.get(0); // Oct 5
+        VaccinationSession s2 = sessions.get(1); // Oct 7
+
+        s1.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
+        s2.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
+        sessionRepository.saveAllAndFlush(List.of(s1, s2));
+
+        // Mock impact reader configured to return non-zero if called
+        SessionImpactReader mockReader = sessionId -> new SessionImpactSummary(10, 5);
+
+        SessionSeriesChangeService customService = new SessionSeriesChangeService(
+                ruleRepository, campaignRepository, centerRepository, sessionRepository,
+                sessionChangeEventRepository, validator, mockReader, clock);
+
+        // Propose adding Friday Oct 9 with exact same time (09:00 - 12:00)
+        Set<DayOfWeek> newWeekdays = EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY);
+        LocalDate newEnd = LocalDate.of(2026, 10, 9);
+
+        SeriesChangePreview preview = customService.previewSeriesChange(
+                rule.getId(), newWeekdays, start, newEnd, startTime, endTime, centerA.getTimezone());
+
+        // Retained occurrences must not count impact
+        assertThat(preview.totalAffectedAppointmentsCount()).isEqualTo(0);
+        assertThat(preview.totalAffectedWaitlistCount()).isEqualTo(0);
+
+        Map<LocalDate, SeriesOccurrencePreviewItem> map = toDateMap(preview.occurrenceEntries());
+        assertThat(map.get(LocalDate.of(2026, 10, 5)).category()).isEqualTo(SeriesOccurrenceCategory.RETAINED);
+        assertThat(map.get(LocalDate.of(2026, 10, 5)).affectedAppointmentCount()).isEqualTo(0);
+        assertThat(map.get(LocalDate.of(2026, 10, 5)).affectedWaitlistCount()).isEqualTo(0);
+
+        assertThat(map.get(LocalDate.of(2026, 10, 7)).category()).isEqualTo(SeriesOccurrenceCategory.RETAINED);
+        assertThat(map.get(LocalDate.of(2026, 10, 7)).affectedAppointmentCount()).isEqualTo(0);
+        assertThat(map.get(LocalDate.of(2026, 10, 7)).affectedWaitlistCount()).isEqualTo(0);
+
+        assertThat(map.get(LocalDate.of(2026, 10, 9)).category()).isEqualTo(SeriesOccurrenceCategory.NEW);
+        assertThat(map.get(LocalDate.of(2026, 10, 9)).affectedAppointmentCount()).isEqualTo(0);
+        assertThat(map.get(LocalDate.of(2026, 10, 9)).affectedWaitlistCount()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("Regression: Missing SessionImpactReader does NOT block change when scheduled retained sessions are unchanged")
+    void testMissingImpactReaderAllowedWhenScheduledRetainedOccurrencesUnchanged() {
+        Set<DayOfWeek> originalWeekdays = EnumSet.of(DayOfWeek.MONDAY);
+        LocalDate start = LocalDate.of(2026, 10, 5);
+        LocalDate end = LocalDate.of(2026, 10, 5);
+        LocalTime startTime = LocalTime.of(9, 0);
+        LocalTime endTime = LocalTime.of(12, 0);
+
+        SessionRecurrenceRule rule = createActiveRule(originalWeekdays, start, end, startTime, endTime);
+        generationService.generateOccurrences(rule.getId());
+
+        VaccinationSession s1 = sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(rule.getId()).get(0);
+        s1.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
+        sessionRepository.saveAndFlush(s1);
+
+        // Service with null impact reader
+        SessionSeriesChangeService noReaderService = new SessionSeriesChangeService(
+                ruleRepository, campaignRepository, centerRepository, sessionRepository,
+                sessionChangeEventRepository, validator, null, clock);
+
+        // Extend date range to Oct 12 with same time (retained session Oct 5 is unchanged)
+        LocalDate newEnd = LocalDate.of(2026, 10, 12);
+        SeriesChangePreview preview = noReaderService.previewSeriesChange(
+                rule.getId(), originalWeekdays, start, newEnd, startTime, endTime, centerA.getTimezone());
+
+        assertThat(preview.totalAffectedAppointmentsCount()).isEqualTo(0);
+        assertThat(preview.totalAffectedWaitlistCount()).isEqualTo(0);
+        assertThat(preview.occurrenceEntries()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Regression: Backward series expansion introducing missing past occurrence is rejected")
+    void testBackwardSeriesExpansionIntroducingPastOccurrenceIsRejected() {
+        // FIXED_NOW is 2026-10-01T00:00:00Z
+        Set<DayOfWeek> weekdays = EnumSet.of(DayOfWeek.MONDAY);
+        LocalDate start = LocalDate.of(2026, 10, 5);
+        LocalDate end = LocalDate.of(2026, 10, 12);
+        LocalTime startTime = LocalTime.of(9, 0);
+        LocalTime endTime = LocalTime.of(12, 0);
+
+        SessionRecurrenceRule rule = createActiveRule(weekdays, start, end, startTime, endTime);
+        generationService.generateOccurrences(rule.getId());
+
+        // Propose expanding start date backward to Sep 21 (before FIXED_NOW, no existing session)
+        LocalDate pastStart = LocalDate.of(2026, 9, 21);
+        assertThatThrownBy(() -> seriesChangeService.previewSeriesChange(
+                rule.getId(), weekdays, pastStart, end, startTime, endTime, centerA.getTimezone()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("cannot introduce past occurrence");
+    }
+
+    @Test
+    @DisplayName("Regression: Missing occurrence on candidate date earlier today is rejected")
+    void testElapsedOccurrenceEarlierTodayIsRejected() {
+        // Clock fixed at 2026-10-05T11:00:00Z
+        Clock clockAt11Am = Clock.fixed(Instant.parse("2026-10-05T11:00:00Z"), ZoneOffset.UTC);
+
+        Set<DayOfWeek> weekdays = EnumSet.of(DayOfWeek.WEDNESDAY);
+        LocalDate start = LocalDate.of(2026, 10, 5);
+        LocalDate end = LocalDate.of(2026, 10, 7);
+        LocalTime startTime = LocalTime.of(9, 0);
+        LocalTime endTime = LocalTime.of(12, 0);
+
+        SessionRecurrenceRule rule = createActiveRule(weekdays, start, end, startTime, endTime);
+        generationService.generateOccurrences(rule.getId()); // generates Wed Oct 7 only
+
+        SessionSeriesChangeService customService = new SessionSeriesChangeService(
+                ruleRepository, campaignRepository, centerRepository, sessionRepository,
+                sessionChangeEventRepository, validator, null, clockAt11Am);
+
+        // Propose adding Monday (Oct 5) with time 09:00 - 12:00 (startAt 09:00 <= now 11:00)
+        Set<DayOfWeek> newWeekdays = EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY);
+        assertThatThrownBy(() -> customService.previewSeriesChange(
+                rule.getId(), newWeekdays, start, end, startTime, endTime, centerA.getTimezone()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("cannot introduce past occurrence");
+    }
+
+    @Test
+    @DisplayName("Regression: Missing occurrence on candidate date later today is allowed")
+    void testFutureOccurrenceLaterTodayIsAllowed() {
+        // Clock fixed at 2026-10-05T11:00:00Z
+        Clock clockAt11Am = Clock.fixed(Instant.parse("2026-10-05T11:00:00Z"), ZoneOffset.UTC);
+
+        Set<DayOfWeek> weekdays = EnumSet.of(DayOfWeek.WEDNESDAY);
+        LocalDate start = LocalDate.of(2026, 10, 5);
+        LocalDate end = LocalDate.of(2026, 10, 7);
+        LocalTime originalStart = LocalTime.of(9, 0);
+        LocalTime originalEnd = LocalTime.of(12, 0);
+
+        SessionRecurrenceRule rule = createActiveRule(weekdays, start, end, originalStart, originalEnd);
+        generationService.generateOccurrences(rule.getId()); // generates Wed Oct 7 only
+
+        SessionSeriesChangeService customService = new SessionSeriesChangeService(
+                ruleRepository, campaignRepository, centerRepository, sessionRepository,
+                sessionChangeEventRepository, validator, null, clockAt11Am);
+
+        // Propose adding Monday (Oct 5) with future time today 14:00 - 17:00 (startAt 14:00 > now 11:00)
+        Set<DayOfWeek> newWeekdays = EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY);
+        LocalTime newStart = LocalTime.of(14, 0);
+        LocalTime newEnd = LocalTime.of(17, 0);
+
+        SeriesChangePreview preview = customService.previewSeriesChange(
+                rule.getId(), newWeekdays, start, end, newStart, newEnd, centerA.getTimezone());
+
+        Map<LocalDate, SeriesOccurrencePreviewItem> map = toDateMap(preview.occurrenceEntries());
+        assertThat(map.get(LocalDate.of(2026, 10, 5)).category()).isEqualTo(SeriesOccurrenceCategory.NEW);
+        assertThat(map.get(LocalDate.of(2026, 10, 7)).category()).isEqualTo(SeriesOccurrenceCategory.RETAINED);
+    }
+
+    @Test
+    @DisplayName("Regression: Existing historical occurrences are preserved as INELIGIBLE and not rejected")
+    void testExistingHistoricalOccurrenceIsPreservedWithoutRejection() {
+        Set<DayOfWeek> weekdays = EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY);
+        LocalDate start = LocalDate.of(2026, 10, 5);
+        LocalDate end = LocalDate.of(2026, 10, 7);
+        LocalTime startTime = LocalTime.of(9, 0);
+        LocalTime endTime = LocalTime.of(12, 0);
+
+        SessionRecurrenceRule rule = createActiveRule(weekdays, start, end, startTime, endTime);
+        generationService.generateOccurrences(rule.getId()); // generates Oct 5 and Oct 7
+
+        // Clock fixed at Oct 6 (Oct 5 session is now in the past)
+        Clock clockAtOct6 = Clock.fixed(Instant.parse("2026-10-06T00:00:00Z"), ZoneOffset.UTC);
+        SessionSeriesChangeService customService = new SessionSeriesChangeService(
+                ruleRepository, campaignRepository, centerRepository, sessionRepository,
+                sessionChangeEventRepository, validator, null, clockAtOct6);
+
+        // Proposed series change: shift future sessions to 10:00 - 13:00
+        SeriesChangePreview preview = customService.previewSeriesChange(
+                rule.getId(), weekdays, start, end, LocalTime.of(10, 0), LocalTime.of(13, 0), centerA.getTimezone());
+
+        Map<LocalDate, SeriesOccurrencePreviewItem> map = toDateMap(preview.occurrenceEntries());
+        assertThat(map.get(LocalDate.of(2026, 10, 5)).category()).isEqualTo(SeriesOccurrenceCategory.INELIGIBLE);
+        assertThat(map.get(LocalDate.of(2026, 10, 7)).category()).isEqualTo(SeriesOccurrenceCategory.RETAINED);
+    }
+
     private static Map<LocalDate, SeriesOccurrencePreviewItem> toDateMap(List<SeriesOccurrencePreviewItem> items) {
         Map<LocalDate, SeriesOccurrencePreviewItem> map = new HashMap<>();
         for (SeriesOccurrencePreviewItem item : items) {

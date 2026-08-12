@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.campaign.model.CenterClosure;
 import com.se2030.vaccinationportal.campaign.model.CenterClosureStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.OperatingHours;
+import com.se2030.vaccinationportal.campaign.model.SeriesOccurrenceCategory;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeType;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -27,17 +28,22 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterReposit
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.RecurrenceGenerationResult;
+import com.se2030.vaccinationportal.campaign.service.SeriesChangePreview;
+import com.se2030.vaccinationportal.campaign.service.SeriesOccurrencePreviewItem;
 import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
 import com.se2030.vaccinationportal.campaign.service.SessionImpactReader;
 import com.se2030.vaccinationportal.campaign.service.SessionImpactSummary;
 import com.se2030.vaccinationportal.campaign.service.SessionOccurrenceGenerationService;
+import com.se2030.vaccinationportal.campaign.service.SessionSeriesChangeService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
 import com.se2030.vaccinationportal.campaign.validation.VaccinationSessionValidator;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class VaccinationSessionChangeIntegrationTests {
 
     @Autowired private VaccinationSessionService sessionService;
+    @Autowired private SessionSeriesChangeService seriesChangeService;
     @Autowired private SessionOccurrenceGenerationService generationService;
     @Autowired private VaccinationSessionRepository sessionRepository;
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
@@ -72,6 +79,7 @@ class VaccinationSessionChangeIntegrationTests {
     @Autowired private OperatingHoursRepository operatingHoursRepository;
     @Autowired private CenterClosureRepository closureRepository;
     @Autowired private VaccinationSessionValidator validator;
+    @Autowired private Clock clock;
 
     private VaccinationCampaign campaign;
     private VaccinationCenter centerA;
@@ -635,5 +643,113 @@ class VaccinationSessionChangeIntegrationTests {
         // Verify zero events persisted
         List<SessionChangeEvent> events = sessionChangeEventRepository.findBySessionIdOrderByCreatedAtAscIdAsc(session.getId());
         assertTrue(events.isEmpty());
+    }
+
+    @Test
+    void exactNoOpReschedulePreviewIsRejectedWithIllegalArgumentException() {
+        Instant start = Instant.parse("2026-10-15T09:00:00Z");
+        Instant end = Instant.parse("2026-10-15T12:00:00Z");
+        Instant close = Instant.parse("2026-10-15T08:00:00Z");
+        VaccinationSession session = createDraftSession(start, end, close);
+
+        // Preview with identical start, end, and null booking close (which defaults to original close)
+        IllegalArgumentException ex1 = assertThrows(IllegalArgumentException.class,
+                () -> sessionService.previewReschedule(session.getId(), start, end, null));
+        assertTrue(ex1.getMessage().contains("no material change"));
+
+        // Preview with identical start, end, and explicit identical close
+        IllegalArgumentException ex2 = assertThrows(IllegalArgumentException.class,
+                () -> sessionService.previewReschedule(session.getId(), start, end, close));
+        assertTrue(ex2.getMessage().contains("no material change"));
+    }
+
+    @Test
+    void exactNoOpCenterTransferPreviewIsRejectedWithIllegalArgumentException() {
+        Instant start = Instant.parse("2026-10-15T09:00:00Z");
+        Instant end = Instant.parse("2026-10-15T12:00:00Z");
+        Instant close = Instant.parse("2026-10-15T08:00:00Z");
+        VaccinationSession session = createDraftSession(start, end, close);
+
+        // Center transfer targeting the same center with identical schedule
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> sessionService.previewCenterTransfer(session.getId(), centerA.getId(), start, end, close));
+        assertTrue(ex.getMessage().contains("no material change"));
+    }
+
+    @Test
+    void exactNoOpConfirmationUnderLocksIsRejectedAndPersistsNoEvent() {
+        Instant start = Instant.parse("2026-10-15T09:00:00Z");
+        Instant end = Instant.parse("2026-10-15T12:00:00Z");
+        Instant close = Instant.parse("2026-10-15T08:00:00Z");
+        VaccinationSession session = createDraftSession(start, end, close);
+
+        // Attempt confirm with identical parameters
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> sessionService.confirmReschedule(
+                        session.getId(), start, end, close, "any-token", "Testing no-op confirm", "admin-1"));
+        assertTrue(ex.getMessage().contains("no material change"));
+
+        // Zero events created
+        List<SessionChangeEvent> events = sessionChangeEventRepository.findBySessionIdOrderByCreatedAtAscIdAsc(session.getId());
+        assertTrue(events.isEmpty());
+    }
+
+    @Test
+    void rejectedNoOpDoesNotCauseSessionToBecomePreservedExceptionInSeriesChange() {
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                campaign, centerA, EnumSet.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 12),
+                LocalTime.of(9, 0), LocalTime.of(12, 0), "UTC"));
+
+        generationService.generateOccurrences(rule.getId());
+        VaccinationSession s1 = sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(rule.getId()).get(0);
+
+        // Attempt exact no-op reschedule on s1 (rejected)
+        assertThrows(IllegalArgumentException.class,
+                () -> sessionService.previewReschedule(s1.getId(), s1.getStartAt(), s1.getEndAt(), s1.getBookingCloseAt()));
+
+        // Subsequent series change preview
+        SessionSeriesChangeService seriesChangeService = new SessionSeriesChangeService(
+                ruleRepository, campaignRepository, centerRepository, sessionRepository,
+                sessionChangeEventRepository, validator, null, clock);
+
+        SeriesChangePreview preview = seriesChangeService.previewSeriesChange(
+                rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 12),
+                LocalTime.of(10, 0), LocalTime.of(13, 0), "UTC");
+
+        // s1 must be RETAINED, NOT PRESERVED_EXCEPTION
+        SeriesOccurrencePreviewItem item1 = preview.occurrenceEntries().get(0);
+        assertEquals(SeriesOccurrenceCategory.RETAINED, item1.category());
+    }
+
+    @Test
+    void genuineRescheduleAndCenterTransferSucceeds() {
+        Instant start = Instant.parse("2026-10-15T09:00:00Z");
+        Instant end = Instant.parse("2026-10-15T12:00:00Z");
+        Instant close = Instant.parse("2026-10-15T08:00:00Z");
+        VaccinationSession session = createDraftSession(start, end, close);
+
+        // 1. Genuine reschedule (time shift)
+        Instant newStart = Instant.parse("2026-10-15T13:00:00Z");
+        Instant newEnd = Instant.parse("2026-10-15T16:00:00Z");
+        SessionChangePreview preview1 = sessionService.previewReschedule(session.getId(), newStart, newEnd, null);
+        assertNotNull(preview1);
+        sessionService.confirmReschedule(session.getId(), newStart, newEnd, null, preview1.previewToken(), "Time change", "admin-1");
+
+        VaccinationSession rescheduled = sessionRepository.findById(session.getId()).orElseThrow();
+        assertEquals(newStart, rescheduled.getStartAt());
+        assertEquals(newEnd, rescheduled.getEndAt());
+
+        // 2. Genuine center transfer (transfer to centerB)
+        SessionChangePreview preview2 = sessionService.previewCenterTransfer(session.getId(), centerB.getId(), newStart, newEnd, null);
+        assertNotNull(preview2);
+        sessionService.confirmCenterTransfer(session.getId(), centerB.getId(), newStart, newEnd, null, preview2.previewToken(), "Transfer center", "admin-1");
+
+        VaccinationSession transferred = sessionRepository.findById(session.getId()).orElseThrow();
+        assertEquals(centerB.getId(), transferred.getCenter().getId());
+
+        List<SessionChangeEvent> events = sessionChangeEventRepository.findBySessionIdOrderByCreatedAtAscIdAsc(session.getId());
+        assertEquals(2, events.size());
     }
 }
