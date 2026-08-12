@@ -22,6 +22,13 @@ out/
 coverage/
 .flattened-pom.xml
 
+# Archives & Review Packages
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
 # Logs
 *.log
 logs/
