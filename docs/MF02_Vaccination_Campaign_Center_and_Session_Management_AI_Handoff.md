@@ -525,19 +525,19 @@ Canonical authority: 3.3-AI / 2026-08-08-R8
 
 Sprint: Sprint 1 — IN PROGRESS
 
-Current implementation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491 (PR #46 merge)
+Current implementation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168 (PR #48 merge)
 
-Latest overall repository/documentation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491 (PR #46 merge)
+Latest overall repository/documentation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168 (PR #48 merge)
 
-Latest completed backend foundation: Session change regression hardening (unchanged retained SCHEDULED series occurrence zero-impact evaluation, rejection of missing elapsed recurrence occurrence introduction, and rejection of exact no-op individual session changes without audit emission or false preserved exceptions)
+Latest completed backend foundation: Full-series cancellation workflow (read-only cancellation preview previewSeriesCancellation, ACTIVE/non-expired rule validation, DRAFT/SCHEDULED future occurrence cancellation, real SCHEDULED impact counts, preserved individual exceptions, cryptographic SHA-256 stale-preview token, atomic rule + session cancellation confirmSeriesCancellation, campaign -> center -> rule -> sessions (ID ASC) locking hierarchy, append-only SERIES_CANCELLED audit events, atomic rollback, and recurrence-generator compatibility)
 
-Current backend baseline: 447 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #46 and documentation synchronization.
+Current backend baseline: 459 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #48.
 
-Next controlled implementation phase: Full-series cancellation workflow before remaining Sprint 1 backend gaps — READY TO START
+Next controlled implementation phase: reverse configuration-impact protection architecture/readiness gate — READY TO START
 
 This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
 
-The latest MF-02 implementation integration checkpoint is PR #46 merge 5ebcaadc44227d016956982a4ebf32e35c731491, with reviewed feature source a84d9e13dab956581b0d549f355998691a807ffc and base 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385. Documentation merge checkpoints do not replace or rename implementation checkpoints.
+The latest MF-02 implementation integration checkpoint is PR #48 merge 14e4976844870904b889fcd4970cc6d07439e168, with reviewed feature source 668ec98f31ea39904e7992a5f1a986e74ae8f8ab and base b12fe280b706c9ce58e3ac8b886a58c60c14f7fb. Documentation merge checkpoints do not replace or rename implementation checkpoints.
 
 1. Executive Snapshot
 The following MF-02 backend foundations are already implemented and integrated:
@@ -598,11 +598,13 @@ The atomic series-wide VaccinationSession change confirmation workflow is IMPLEM
 
 The session change regression hardening fixes (unchanged retained SCHEDULED zero-impact evaluation, latent past occurrence prevention, and exact no-op change rejection) are IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #46.
 
-The current backend baseline is 447 tests, with zero failures, errors, or skips. Maven test and verify succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #46 merge.
+The full-series cancellation workflow (previewSeriesCancellation, confirmSeriesCancellation, ACTIVE/non-expired rule validation, DRAFT/SCHEDULED future occurrence cancellation, real SCHEDULED impact counts, preserved individual exceptions, cryptographic SHA-256 stale-preview token, campaign -> center -> rule -> sessions ID ASC locking, append-only SERIES_CANCELLED audit events, atomic rollback, and recurrence-generator compatibility) is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #48.
 
-MF-02 ATOMIC SERIES-CHANGE CONFIRMATION AND REGRESSION HARDENING INTEGRATED. This milestone covers Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, authoritative write-time validation, recurrence generation, session change audit, individual session changes, series-wide preview, atomic series-wide confirmation, and session-change regression hardening. It does not mean MF-02, US-13, or Sprint 1 is complete.
+The current backend baseline is 459 tests, with zero failures, errors, or skips. Maven test and verify succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #48 merge.
 
-Sprint 1 remains in progress. All three external-review regression items (series impact over-count for unchanged retained sessions, latent past occurrence introduction, and exact no-op false overrides) are FIXED AND VERIFIED in PR #46. The immediate next controlled phase is full-series cancellation workflow, followed by reverse configuration-impact protection, campaign publication/lifecycle completion, final MF-01 questionnaire adapter/FK, and remaining Definition-of-Done layers.
+MF-02 FULL-SERIES CANCELLATION WORKFLOW INTEGRATED. This milestone covers Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, authoritative write-time validation, recurrence generation, session change audit, individual session changes, series-wide preview, atomic series-wide confirmation, session-change regression hardening, and full-series cancellation. It does not mean MF-02, US-13, or Sprint 1 is complete.
+
+Sprint 1 remains in progress. Full-series cancellation is COMPLETE in PR #48. The immediate next controlled phase is reverse configuration-impact protection architecture/readiness gate, followed by campaign publication prerequisites/transition, required session lifecycle completion/hardening, final MF-01 questionnaire adapter/FK, and remaining Definition-of-Done layers.
 
 2. Authority and Startup Procedure
 Use this source order:
@@ -619,17 +621,17 @@ At the start of the next session:
 
 fetch origin and verify origin/develop;
 
-verify the latest overall checkpoint and implementation ancestry through PR #46 (5ebcaadc44227d016956982a4ebf32e35c731491);
+verify the latest overall checkpoint and implementation ancestry through PR #48 (14e4976844870904b889fcd4970cc6d07439e168);
 
 confirm Sprint 1 and US-13 remain in progress;
 
-reuse all completed session generation, individual-change, series-preview, series-confirmation, and regression-hardened foundations;
+reuse all completed session generation, individual-change, series-preview, series-confirmation, regression-hardened, and full-series cancellation foundations;
 
-proceed with full-series cancellation workflow;
+proceed with reverse configuration-impact protection architecture/readiness gate;
 
 keep large package moves/service splits separate from functional work unless a concrete defect requires them.
 
-The immediate next phase is the full-series cancellation workflow, followed by the remaining Sprint 1 backend gaps.
+The immediate next phase is reverse configuration-impact protection architecture/readiness gate, followed by the remaining Sprint 1 backend gaps.
 
 3. Repository and Integration History
 Checkpoint	Integrated scope
@@ -665,12 +667,14 @@ PR #43 8177c7f	Evidence/handoff synchronization after series change preview; met
 PR #44 255754d	Atomic series-wide VaccinationSession change confirmation (locked stale-token revalidation, rule/session mutation, series audit events, and rollback semantics)
 PR #45 10614b5	Evidence/handoff synchronization after series change confirmation; metadata checkpoint only
 PR #46 5ebcaad	Session-change regression hardening (unchanged retained SCHEDULED series zero impact, latent past occurrence prevention, and exact no-op change rejection)
+PR #47 5ebcaad	Evidence/handoff synchronization after session-change regression hardening; metadata checkpoint only
+PR #48 14e4976	Full-series cancellation workflow (previewSeriesCancellation, confirmSeriesCancellation, ACTIVE/non-expired rule check, REMOVED/PRESERVED_EXCEPTION/INELIGIBLE categorization, real SCHEDULED impact counts, SHA-256 preview token, campaign->center->rule->sessions ASC locking, rule cancellation, session cancellation, SERIES_CANCELLED audit events, generator compatibility, 12 net-new tests, 459 total tests)
 The current checkpoint classification is:
 
-latest MF-02 implementation integration checkpoint = 5ebcaadc44227d016956982a4ebf32e35c731491
-certified PR #46 feature source = a84d9e13dab956581b0d549f355998691a807ffc
-actual PR #46 base = 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385
-latest overall repository/documentation checkpoint = 5ebcaadc44227d016956982a4ebf32e35c731491
+latest MF-02 implementation integration checkpoint = 14e4976844870904b889fcd4970cc6d07439e168
+certified PR #48 feature source = 668ec98f31ea39904e7992a5f1a986e74ae8f8ab
+actual PR #48 base = b12fe280b706c9ce58e3ac8b886a58c60c14f7fb
+latest overall repository/documentation checkpoint = 14e4976844870904b889fcd4970cc6d07439e168
 Older SHAs and test counts in the evidence chronology are historical milestones, not the current repository state.
 
 
@@ -1462,11 +1466,11 @@ mark Sprint 1 complete prematurely.
 17. Final Handoff State
 Canonical: 3.3-AI / 2026-08-08-R8
 Sprint: Sprint 1 — IN PROGRESS
-Latest MF-02 implementation merge: PR #46 / 5ebcaadc44227d016956982a4ebf32e35c731491
-PR #46 certified source: a84d9e13dab956581b0d549f355998691a807ffc
-PR #46 actual base: 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385
-Latest overall repository/documentation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
-Backend baseline: 447 tests; Maven test/verify SUCCESS; executable JAR packaged
+Latest MF-02 implementation merge: PR #48 / 14e4976844870904b889fcd4970cc6d07439e168
+PR #48 certified source: 668ec98f31ea39904e7992a5f1a986e74ae8f8ab
+PR #48 actual base: b12fe280b706c9ce58e3ac8b886a58c60c14f7fb
+Latest overall repository/documentation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
+Backend baseline: 459 tests; Maven test/verify SUCCESS; executable JAR packaged
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
@@ -1478,11 +1482,12 @@ Session change audit foundation & row locking: IMPLEMENTED, INDEPENDENTLY REVIEW
 Individual VaccinationSession change workflows: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 Series-wide VaccinationSession change preview & confirmation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 Session change regression hardening: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #46)
+Full-series cancellation workflow: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #48)
 External ZIP review: COMPLETE — 3 behavioral hardening items FIXED AND VERIFIED
 Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
-Immediate next phase: full-series cancellation workflow
-After full-series cancellation: reverse configuration-impact protection + remaining MF-02 Sprint 1 backend gaps
-The next AI should refresh live repository state and implement the full-series cancellation workflow. Keep the implementation behavior-focused and regression-tested. Do not combine it with broad package moves or large service decomposition. After full-series cancellation is independently reviewed and integrated, continue with reverse configuration-impact protection and the remaining Sprint 1 backend-gap sequence.
+Immediate next phase: reverse configuration-impact protection architecture/readiness gate
+After reverse impact protection: campaign publication prerequisites/transition + remaining MF-02 Sprint 1 backend gaps
+The next AI should refresh live repository state and perform the reverse configuration-impact protection architecture/readiness gate. Keep the implementation behavior-focused and regression-tested. Do not combine it with broad package moves or large service decomposition. After reverse configuration-impact protection is independently reviewed and integrated, continue with campaign publication prerequisites/transition and the remaining Sprint 1 backend-gap sequence.
 
 MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff_UPDATED_2026-08-12.md
 
