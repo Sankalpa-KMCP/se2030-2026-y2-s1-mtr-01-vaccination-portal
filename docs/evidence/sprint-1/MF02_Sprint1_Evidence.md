@@ -522,11 +522,11 @@ Canonical revision: 2026-08-08-R8
 Sprint: Sprint 1
 Working window: Weeks 1–3
 Last updated: 2026-08-12
-Latest implementation integration: merged into develop via PR #44 (Atomic series-wide VaccinationSession change confirmation: confirmSeriesChange, write-lock order campaign → center → rule → sessions by ID ASC, stale preview revalidation under locks, RETAINED occurrence rescheduling with bookingCloseAt = newStartAt, REMOVED occurrence cancellation without deletion, NEW DRAFT occurrence creation, preservation of PRESERVED_EXCEPTION and INELIGIBLE occurrences, SERIES_RESCHEDULED and SERIES_CANCELLED SessionChangeEvent emission, atomic rollback, and recurrence-generator compatibility)
-Latest implementation develop checkpoint: 255754dedcd4cfff5744bce69db72d09061ff560
-Latest completed evidence integration recorded: PR #45 (docs(mf02): sync evidence after series confirmation) at 10614b5f32eaf54d00133a94aadc8a695280417a
-Evidence record prepared from implementation checkpoint: 255754dedcd4cfff5744bce69db72d09061ff560
-Latest overall repository/documentation checkpoint: 10614b5f32eaf54d00133a94aadc8a695280417a (PR #45 merge)
+Latest implementation integration: merged into develop via PR #46 (Session-change regression hardening: unchanged retained SCHEDULED series zero impact, latent past occurrence prevention, and exact no-op individual change rejection)
+Latest implementation develop checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
+Latest completed evidence integration recorded: PR #46 (fix(mf02): harden session change regressions) at 5ebcaadc44227d016956982a4ebf32e35c731491
+Evidence record prepared from implementation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
+Latest overall repository/documentation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491 (PR #46 merge)
 OperatingHours feature branch HEAD: 4fe94df8df7c07ade3c22a39165aff3da1e8795a
 Canonical documentation sync checkpoint (PR #17): bd22cb973bad83c8456897805bc2df95b65593d0
 Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a)
@@ -564,12 +564,15 @@ Series-wide change preview actual base: 473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d
 Atomic series change confirmation integration checkpoint (PR #44): 255754dedcd4cfff5744bce69db72d09061ff560
 Atomic series change confirmation reviewed source pointer: 640d4044c6b5753f4e6e0f1ca73a68e5898209ed
 Atomic series change confirmation actual base: 8177c7f3b4623164c8a9a093763febc941f1532b
+Session-change regression hardening integration checkpoint (PR #46): 5ebcaadc44227d016956982a4ebf32e35c731491
+Session-change regression hardening reviewed source pointer: a84d9e13dab956581b0d549f355998691a807ffc
+Session-change regression hardening actual base: 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385
 
 Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
 
 Metadata Stability Policy: Metadata-only evidence synchronization commits/PRs are recorded as evidence checkpoints and are not recursively treated as new MF-02 implementation checkpoints. Implementation checkpoints remain strictly tied to actual domain/feature implementation integrations.
 
-This evidence records PR #44 implementation checkpoint 255754dedcd4cfff5744bce69db72d09061ff560 and the later PR #45 documentation/evidence checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a. PR #45 is metadata/documentation integration only and must not be relabeled as the PR #44 implementation SHA. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
+This evidence records PR #46 implementation checkpoint 5ebcaadc44227d016956982a4ebf32e35c731491. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
 
 Sprint Goal
 Build the MF-02 campaign and center-planning foundations needed for a valid vaccination campaign, including campaign lifecycle, dose-programme configuration, administrative service-area targeting, questionnaire linkage, center assignment, center calendar/closure foundations, recurrence foundations, concrete session foundations, session change audit foundations, individual session change workflows, series-wide session change preview foundation, and atomic series-wide session change confirmation.
@@ -605,10 +608,41 @@ final MF-01 QuestionnaireVersion adapter/FK integration
 
 final Sprint integration and Definition-of-Done evidence
 
-MF-02 ATOMIC SERIES CHANGE CONFIRMATION INTEGRATED. This milestone covers the current backend-foundation scope for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, series-wide session change preview, and atomic series change confirmation. It does not mean MF-02, US-13, or Sprint 1 is complete.
+MF-02 SESSION CHANGE REGRESSION HARDENING INTEGRATED. This milestone covers the current backend-foundation scope for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, series-wide session change preview, atomic series change confirmation, and regression-hardened session change operations. It does not mean MF-02, US-13, or Sprint 1 is complete.
 
 Current Verification Snapshot
-Overall develop implementation checkpoint after PR #44 Atomic series-wide session change confirmation integration
+Overall develop implementation checkpoint after PR #46 Session-change regression hardening integration
+Verified origin/develop at Session-change regression hardening merge:
+5ebcaadc44227d016956982a4ebf32e35c731491
+
+Latest develop merge:
+PR #46
+5ebcaadc44227d016956982a4ebf32e35c731491
+
+Latest MF-02 implementation checkpoint:
+PR #46
+5ebcaadc44227d016956982a4ebf32e35c731491
+
+Reviewed feature source:
+a84d9e13dab956581b0d549f355998691a807ffc
+
+Actual base:
+397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385
+
+PR #46 status:
+MERGED
+
+Backend CI:
+SUCCESS (pre-merge 49s run 31562201969, post-merge 58s run 31562279783)
+
+Frontend CI:
+SUCCESS (pre-merge 10s run 31562201927, post-merge 14s run 31562279780)
+
+Backend tests:
+447 tests passing (13 net-new tests: 6 preview, 2 confirmation, 5 session change)
+PR #24 integrated CenterClosure; PR #26 integrated CampaignCenterAssignment; PR #28 integrated SessionRecurrenceRule; PR #30 integrated VaccinationCenter scheduling timezone; PR #32 integrated VaccinationSession domain and repository foundation; PR #34 integrated VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation; PR #36 integrated SessionRecurrenceRule occurrence generation and idempotent materialization; PR #38 integrated the SessionChangeEvent audit model, SessionImpactReader integration port, and VaccinationSession pessimistic row locking foundation; PR #40 integrated individual VaccinationSession material change workflows; PR #42 integrated series-wide VaccinationSession change preview foundation; PR #44 integrated atomic series-wide VaccinationSession change confirmation; and PR #46 integrated session-change regression hardening. The prior checkpoints remain historical evidence below.
+
+Historical Atomic series-wide VaccinationSession change confirmation implementation / integration checkpoint (PR #44)
 Verified origin/develop at Atomic series-wide session change confirmation merge:
 255754dedcd4cfff5744bce69db72d09061ff560
 
@@ -637,7 +671,6 @@ SUCCESS (pre-merge 10s run 31552285608, post-merge 13s run 31552362229)
 
 Backend tests:
 434 tests passing (12 net-new tests: 10 integration, 2 concurrency)
-PR #24 integrated CenterClosure; PR #26 integrated CampaignCenterAssignment; PR #28 integrated SessionRecurrenceRule; PR #30 integrated VaccinationCenter scheduling timezone; PR #32 integrated VaccinationSession domain and repository foundation; PR #34 integrated VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation; PR #36 integrated SessionRecurrenceRule occurrence generation and idempotent materialization; PR #38 integrated the SessionChangeEvent audit model, SessionImpactReader integration port, and VaccinationSession pessimistic row locking foundation; PR #40 integrated individual VaccinationSession material change workflows; and PR #42 integrated series-wide VaccinationSession change preview foundation (diff calculation, occurrence classification, override preservation, impact aggregation, and SHA-256 stale token). The prior checkpoints remain historical evidence below.
 
 Historical Individual VaccinationSession change workflows implementation / integration checkpoint (PR #40)
 Verified origin/develop at Individual session changes merge:
@@ -1361,6 +1394,8 @@ Series-wide VaccinationSession change preview: 422 tests passing (17 net-new tes
 
 Atomic series-wide VaccinationSession change confirmation: 434 tests passing (12 net-new tests: 10 integration, 2 concurrency)
 
+Session-change regression hardening: 447 tests passing (13 net-new tests: 6 preview, 2 confirmation, 5 session change)
+
 CI Evidence
 PR #17 (Documentation Sync): Backend CI SUCCESS, Frontend CI SUCCESS
 
@@ -1414,40 +1449,42 @@ PR #44 (Atomic Series Change Confirmation): Backend CI SUCCESS, Frontend CI SUCC
 
 PR #45 (Series Confirmation Evidence): Backend CI SUCCESS, Frontend CI SUCCESS before merge and after merge
 
+PR #46 (Session Change Regression Hardening): Backend CI SUCCESS, Frontend CI SUCCESS before merge and after merge
+
 Current Repository State
 Latest overall develop state
 Latest overall repository/documentation checkpoint:
-10614b5f32eaf54d00133a94aadc8a695280417a
+5ebcaadc44227d016956982a4ebf32e35c731491
 
 Latest documentation merge:
-PR #45
-docs/mf02-sync-after-series-confirmation -> develop
+PR #46
+fix/mf-02-session-change-regressions -> develop
 
 Latest MF-02 implementation checkpoint:
-PR #44
-255754dedcd4cfff5744bce69db72d09061ff560
+PR #46
+5ebcaadc44227d016956982a4ebf32e35c731491
 
-Reviewed PR #44 feature source:
-640d4044c6b5753f4e6e0f1ca73a68e5898209ed
+Reviewed PR #46 feature source:
+a84d9e13dab956581b0d549f355998691a807ffc
 
 Evidence file:
 docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
 
-Canonical Markdown change through PR #45:
+Canonical Markdown change through PR #46:
 none
-Backend implementation checkpoint (PR #44 Atomic series change confirmation)
+Backend implementation checkpoint (PR #46 Session-change regression hardening)
 Backend implementation checkpoint:
-255754dedcd4cfff5744bce69db72d09061ff560
+5ebcaadc44227d016956982a4ebf32e35c731491
 
-feature/mf02-series-change-confirmation:
-640d4044c6b5753f4e6e0f1ca73a68e5898209ed
+fix/mf-02-session-change-regressions:
+a84d9e13dab956581b0d549f355998691a807ffc
 
-Atomic series change confirmation merge:
-PR #44
-255754dedcd4cfff5744bce69db72d09061ff560
+Session-change regression hardening merge:
+PR #46
+5ebcaadc44227d016956982a4ebf32e35c731491
 Latest backend verification:
 
-434 tests passing
+447 tests passing
 0 failures
 0 errors
 0 skipped
@@ -1493,7 +1530,9 @@ Series-wide VaccinationSession change preview (PR #42, 422 total tests)
 
 Atomic series-wide VaccinationSession change confirmation (PR #44, 434 total tests)
 
-Backend CI & Frontend CI results through PR #45, including PR #44 implementation and PR #45 evidence synchronization
+Session-change regression hardening (PR #46, 447 total tests)
+
+Backend CI & Frontend CI results through PR #46, including PR #44 implementation, PR #45 evidence synchronization, and PR #46 regression hardening
 
 Still to capture:
 
@@ -1519,35 +1558,24 @@ integration demonstration evidence
 
 final MF-01 questionnaire-version adapter/FK integration evidence
 
-External ZIP Review Checkpoint — 2026-08-12
+External ZIP Review Checkpoint — 2026-08-12 (Resolved in PR #46)
 A clean repository ZIP (WBVP_MF02_Sprint1_Review_2026-08-12.zip) was prepared from develop at overall checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a. The ZIP review was intentionally performed before the remaining Sprint 1 backend gaps.
 
-Review verdict
-FIX A FEW ITEMS BEFORE CONTINUING FINAL SPRINT 1 GAPS
+Review verdict: FIXED AND VERIFIED IN PR #46
 
-The review confirmed that the production package layering is acceptable and that no broad MF-02 redesign is required. It identified these concrete pending regression fixes:
+The review confirmed that the production package layering is acceptable and that no broad MF-02 redesign is required. All three concrete behavioral hardening items were resolved and verified in PR #46:
 
-Series impact over-count for unchanged retained SCHEDULED occurrences
+Series impact over-count for unchanged retained SCHEDULED occurrences — FIXED / VERIFIED (PR #46)
 
-unchanged retained sessions can currently contribute real MF-03 appointment/waitlist counts to the series preview despite receiving no schedule mutation;
+SessionSeriesChangeService now evaluates material schedule equality before querying SessionImpactReader for retained SCHEDULED occurrences. Unchanged retained occurrences contribute 0 appointments and 0 waitlist entries to series-change impact totals, allow missing impact reader when retained sessions are unchanged, and do not make the stale token depend on unrelated booking-count drift.
 
-required correction: only materially changed retained sessions contribute impact and make the preview token depend on impact counts.
+Series changes can introduce latent unmaterialized elapsed occurrences — FIXED / VERIFIED (PR #46)
 
-Series changes can introduce latent unmaterialized elapsed occurrences
+Series change proposals introducing missing candidate occurrences with proposedStartAt <= now(clock) are rejected with IllegalArgumentException before recurrence-rule mutation, preventing latent past recurrence creation while preserving existing historical occurrences.
 
-a missing elapsed proposed occurrence can be classified INELIGIBLE while the updated recurrence definition still includes its date;
+Exact no-op individual change can create false preserved-exception history — FIXED / VERIFIED (PR #46)
 
-a later ordinary recurrence-generation call may then materialize that past occurrence;
-
-required correction: series changes must not introduce new missing elapsed occurrences.
-
-Exact no-op individual change can create false preserved-exception history
-
-confirming an individual reschedule/transfer with no material state difference can still create an individual change event;
-
-durable event-based exception detection can then incorrectly classify the occurrence as PRESERVED_EXCEPTION;
-
-required correction: reject exact no-op individual material changes and verify no audit event is written.
+Individual reschedule/transfer proposals that leave center, schedule, timezone, and booking close materially unchanged are rejected with IllegalArgumentException during preview and under authoritative locks during confirmation, persisting no SessionChangeEvent and preventing false PRESERVED_EXCEPTION classification.
 
 Additional design note:
 
@@ -1556,8 +1584,6 @@ VaccinationSession.transitionLifecycleStatus(...) remains too permissive for the
 Do not mix the above fixes with broad package restructuring.
 
 Test organization and service decomposition are maintainability work, not blockers for the immediate regression-fix slice.
-
-No repository files were modified by the external review itself.
 
 Sprint Review
 To complete formally at the end of Sprint 1.
@@ -1605,17 +1631,19 @@ Recurrence occurrence isolation and generator compatibility for individual overr
 
 Series-wide preview and atomic confirmation (SessionSeriesChangeService.previewSeriesChange / confirmSeriesChange), including occurrence diff categories, durable individual-exception preservation, stale-token revalidation under locks, retained rescheduling, removed cancellation, new DRAFT materialization, series audit events, and rollback semantics
 
+Session-change regression hardening (SessionSeriesChangeService unchanged retained 0-impact, latent past occurrence creation prevention, exact no-op individual change rejection)
+
 separate-transaction concurrency tests demonstrating deactivation race rejection, deadlock-free same-center concurrent creations, closure write races, concurrent same-rule recurrence generation, same-session concurrent change serialization, and bidirectional center transfer locking
 
 future-only effective configuration protection
 
 campaign-row, center-row, and session-row pessimistic locking for critical effective-dated configuration and session changes
 
-434 passing backend tests with successful Maven verify packaging
+447 passing backend tests with successful Maven verify packaging
 
 R8 canonical DOCX synchronization merged through PR #17
 
-successful Backend CI and Frontend CI through PR #45, including PR #44 implementation integration
+successful Backend CI and Frontend CI through PR #46, including PR #44 implementation integration, PR #45 evidence synchronization, and PR #46 regression hardening
 
 canonical Markdown integrity preserved
 
@@ -1636,7 +1664,7 @@ Small logical commits kept implementation history reviewable.
 
 Canonical ownership/boundary checks were performed before each MF-02 slice.
 
-Tests expanded continuously as real behavior was introduced (434 total tests at the current implementation checkpoint).
+Tests expanded continuously as real behavior was introduced (447 total tests at the current implementation checkpoint).
 
 Candidate pre-validation (OperatingHours.validateParameters, VaccinationSession.validateSchedule, VaccinationSession.validateProvenance, VaccinationSessionValidator.validateSessionSchedule, SessionChangeEvent invariants, SessionChangePreview invariants) ensured mutation exception-safety and clean concurrency protection.
 
@@ -1656,23 +1684,19 @@ Add Flyway/API/UI evidence as those layers are implemented instead of postponing
 Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
 Exact Next Work
-The latest MF-02 implementation checkpoint is PR #44 merge 255754dedcd4cfff5744bce69db72d09061ff560, with reviewed source 640d4044c6b5753f4e6e0f1ca73a68e5898209ed. The latest overall documentation/repository checkpoint is PR #45 merge 10614b5f32eaf54d00133a94aadc8a695280417a. The backend baseline is 434 tests.
+The latest MF-02 implementation checkpoint is PR #46 merge 5ebcaadc44227d016956982a4ebf32e35c731491, with reviewed source a84d9e13dab956581b0d549f355998691a807ffc and base 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385. The latest overall documentation/repository checkpoint is 5ebcaadc44227d016956982a4ebf32e35c731491. The backend baseline is 447 tests.
 
-Before implementing full-series cancellation or other remaining Sprint 1 functionality, perform one focused regression-hardening slice:
+All three external-review regression defects have been resolved and verified in PR #46:
 
-Correct series preview impact calculation so unchanged retained SCHEDULED sessions contribute zero impact and do not unnecessarily require/consume MF-03 counts.
+Unchanged retained SCHEDULED sessions contribute 0 appointments and 0 waitlist entries to series preview impact and do not require SessionImpactReader.
 
-Prevent a series definition change from introducing new unmaterialized elapsed occurrences that ordinary recurrence generation could later create.
+Series definition changes cannot introduce new unmaterialized elapsed occurrences.
 
-Reject exact no-op individual reschedule/transfer changes so they create no SessionChangeEvent and cannot become false PRESERVED_EXCEPTION occurrences.
+Exact no-op individual reschedule/transfer proposals are rejected during preview and confirmation without writing SessionChangeEvent records or creating false PRESERVED_EXCEPTION history.
 
-Add focused regression tests for all three issues.
+With the regression hardening gate complete, proceed directly with the remaining Sprint 1 backend sequence:
 
-Independently review and integrate the fixes before starting new features.
-
-After that hardening gate, continue the remaining Sprint 1 backend sequence:
-
-full-series cancellation;
+full-series cancellation workflow (previewSeriesCancellation / confirmSeriesCancellation);
 
 reverse configuration-impact protection;
 
@@ -1682,7 +1706,7 @@ final MF-01 questionnaire adapter/FK integration;
 
 final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #44 atomic series-wide confirmation is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is regression hardening of existing individual/series session-change behavior, not a package refactor and not a new feature.
+Current implementation stopping point: PR #46 session-change regression hardening is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is the full-series cancellation workflow, not a package refactor and not reverse configuration protection.
 
 MF02_Sprint1_Evidence_UPDATED_2026-08-12.md
 
@@ -1695,11 +1719,11 @@ Canonical revision: 2026-08-08-R8
 Sprint: Sprint 1
 Working window: Weeks 1–3
 Last updated: 2026-08-12
-Latest implementation integration: merged into develop via PR #44 (Atomic series-wide VaccinationSession change confirmation: confirmSeriesChange, write-lock order campaign → center → rule → sessions by ID ASC, stale preview revalidation under locks, RETAINED occurrence rescheduling with bookingCloseAt = newStartAt, REMOVED occurrence cancellation without deletion, NEW DRAFT occurrence creation, preservation of PRESERVED_EXCEPTION and INELIGIBLE occurrences, SERIES_RESCHEDULED and SERIES_CANCELLED SessionChangeEvent emission, atomic rollback, and recurrence-generator compatibility)
-Latest implementation develop checkpoint: 255754dedcd4cfff5744bce69db72d09061ff560
-Latest completed evidence integration recorded: PR #45 (docs(mf02): sync evidence after series confirmation) at 10614b5f32eaf54d00133a94aadc8a695280417a
-Evidence record prepared from implementation checkpoint: 255754dedcd4cfff5744bce69db72d09061ff560
-Latest overall repository/documentation checkpoint: 10614b5f32eaf54d00133a94aadc8a695280417a (PR #45 merge)
+Latest implementation integration: merged into develop via PR #46 (Session-change regression hardening: unchanged retained SCHEDULED series zero impact, latent past occurrence prevention, and exact no-op individual change rejection)
+Latest implementation develop checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
+Latest completed evidence integration recorded: PR #46 (fix(mf02): harden session change regressions) at 5ebcaadc44227d016956982a4ebf32e35c731491
+Evidence record prepared from implementation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
+Latest overall repository/documentation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491 (PR #46 merge)
 OperatingHours feature branch HEAD: 4fe94df8df7c07ade3c22a39165aff3da1e8795a
 Canonical documentation sync checkpoint (PR #17): bd22cb973bad83c8456897805bc2df95b65593d0
 Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a)
@@ -1737,22 +1761,25 @@ Series-wide change preview actual base: 473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d
 Atomic series change confirmation integration checkpoint (PR #44): 255754dedcd4cfff5744bce69db72d09061ff560
 Atomic series change confirmation reviewed source pointer: 640d4044c6b5753f4e6e0f1ca73a68e5898209ed
 Atomic series change confirmation actual base: 8177c7f3b4623164c8a9a093763febc941f1532b
+Session-change regression hardening integration checkpoint (PR #46): 5ebcaadc44227d016956982a4ebf32e35c731491
+Session-change regression hardening reviewed source pointer: a84d9e13dab956581b0d549f355998691a807ffc
+Session-change regression hardening actual base: 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385
 
 Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
 
 Metadata Stability Policy: Metadata-only evidence synchronization commits/PRs are recorded as evidence checkpoints and are not recursively treated as new MF-02 implementation checkpoints. Implementation checkpoints remain strictly tied to actual domain/feature implementation integrations.
 
-This evidence records PR #44 implementation checkpoint 255754dedcd4cfff5744bce69db72d09061ff560 and the later PR #45 documentation/evidence checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a. PR #45 is metadata/documentation integration only and must not be relabeled as the PR #44 implementation SHA. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
+This evidence records PR #46 implementation checkpoint 5ebcaadc44227d016956982a4ebf32e35c731491. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
 
 Sprint Goal
-Build the MF-02 campaign and center-planning foundations needed for a valid vaccination campaign, including campaign lifecycle, dose-programme configuration, administrative service-area targeting, questionnaire linkage, center assignment, center calendar/closure foundations, recurrence foundations, concrete session foundations, session change audit foundations, individual session change workflows, series-wide session change preview foundation, and atomic series-wide session change confirmation.
+Build the MF-02 campaign and center-planning foundations needed for a valid vaccination campaign, including campaign lifecycle, dose-programme configuration, administrative service-area targeting, questionnaire linkage, center assignment, center calendar/closure foundations, recurrence foundations, concrete session foundations, session change audit foundations, individual session change workflows, series-wide session change preview foundation, atomic series-wide session change confirmation, and regression-hardened session change operations.
 
-Expected integrated Sprint 1 outcome: a valid campaign can be linked to a published questionnaire, has approved service locations and booking/service boundaries, and has usable center-planning, concrete session, change audit, individual change, series change preview, and atomic series change confirmation workflows.
+Expected integrated Sprint 1 outcome: a valid campaign can be linked to a published questionnaire, has approved service locations and booking/service boundaries, and has usable center-planning, concrete session, change audit, individual change, series change preview, atomic series change confirmation, and regression-hardened workflows.
 
 Sprint Status
 We are still in Sprint 1.
 
-The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, VaccinationCenter scheduling-timezone prerequisite, VaccinationSession domain and repository foundation, VaccinationSession authoritative write-time validation / atomic one-off DRAFT creation, SessionRecurrenceRule occurrence generation and idempotent materialization, SessionChangeEvent audit model / SessionImpactReader integration port / VaccinationSession row locking foundation, individual VaccinationSession change workflows (preview, stale token protection, reschedule, center transfer, cancellation, locking, and audit), series-wide VaccinationSession change preview foundation (read-only diff calculation, occurrence classification into RETAINED/REMOVED/NEW/PRESERVED_EXCEPTION/INELIGIBLE, durable individual override exception preservation, real SCHEDULED impact reader integration, VaccinationSessionValidator schedule bounds reuse, bookingCloseAt policy, and deterministic SHA-256 stale token), and atomic series-wide VaccinationSession change confirmation (confirmSeriesChange, write-lock order campaign → center → rule → sessions by ID ASC, stale preview revalidation under locks, RETAINED occurrence rescheduling with bookingCloseAt = newStartAt, REMOVED occurrence cancellation without deletion, NEW DRAFT occurrence creation, preservation of PRESERVED_EXCEPTION and INELIGIBLE occurrences, SERIES_RESCHEDULED and SERIES_CANCELLED SessionChangeEvent emission, atomic rollback, and recurrence-generator compatibility) are implemented, reviewed, certified, tested, CI-verified, and merged into develop.
+The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, VaccinationCenter scheduling-timezone prerequisite, VaccinationSession domain and repository foundation, VaccinationSession authoritative write-time validation / atomic one-off DRAFT creation, SessionRecurrenceRule occurrence generation and idempotent materialization, SessionChangeEvent audit model / SessionImpactReader integration port / VaccinationSession row locking foundation, individual VaccinationSession change workflows (preview, stale token protection, reschedule, center transfer, cancellation, locking, and audit), series-wide VaccinationSession change preview foundation (read-only diff calculation, occurrence classification into RETAINED/REMOVED/NEW/PRESERVED_EXCEPTION/INELIGIBLE, durable individual override exception preservation, real SCHEDULED impact reader integration, VaccinationSessionValidator schedule bounds reuse, bookingCloseAt policy, and deterministic SHA-256 stale token), atomic series-wide VaccinationSession change confirmation (confirmSeriesChange, write-lock order campaign → center → rule → sessions by ID ASC, stale preview revalidation under locks, RETAINED occurrence rescheduling with bookingCloseAt = newStartAt, REMOVED occurrence cancellation without deletion, NEW DRAFT occurrence creation, preservation of PRESERVED_EXCEPTION and INELIGIBLE occurrences, SERIES_RESCHEDULED and SERIES_CANCELLED SessionChangeEvent emission, atomic rollback, and recurrence-generator compatibility), and session-change regression hardening (PR #46: unchanged retained 0-impact, latent past occurrence prevention, exact no-op rejection) are implemented, reviewed, certified, tested, CI-verified, and merged into develop.
 
 The canonical R8 human-readable DOCX synchronization has also been merged into develop through PR #17.
 
@@ -1778,10 +1805,41 @@ final MF-01 QuestionnaireVersion adapter/FK integration
 
 final Sprint integration and Definition-of-Done evidence
 
-MF-02 ATOMIC SERIES CHANGE CONFIRMATION INTEGRATED. This milestone covers the current backend-foundation scope for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, series-wide session change preview, and atomic series change confirmation. It does not mean MF-02, US-13, or Sprint 1 is complete.
+MF-02 SESSION CHANGE REGRESSION HARDENING INTEGRATED. This milestone covers the current backend-foundation scope for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, series-wide session change preview, atomic series change confirmation, and regression-hardened session change operations. It does not mean MF-02, US-13, or Sprint 1 is complete.
 
 Current Verification Snapshot
-Overall develop implementation checkpoint after PR #44 Atomic series-wide session change confirmation integration
+Overall develop implementation checkpoint after PR #46 Session-change regression hardening integration
+Verified origin/develop at Session-change regression hardening merge:
+5ebcaadc44227d016956982a4ebf32e35c731491
+
+Latest develop merge:
+PR #46
+5ebcaadc44227d016956982a4ebf32e35c731491
+
+Latest MF-02 implementation checkpoint:
+PR #46
+5ebcaadc44227d016956982a4ebf32e35c731491
+
+Reviewed feature source:
+a84d9e13dab956581b0d549f355998691a807ffc
+
+Actual base:
+397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385
+
+PR #46 status:
+MERGED
+
+Backend CI:
+SUCCESS (pre-merge 49s run 31562201969, post-merge 58s run 31562279783)
+
+Frontend CI:
+SUCCESS (pre-merge 10s run 31562201927, post-merge 14s run 31562279780)
+
+Backend tests:
+447 tests passing (13 net-new tests: 6 preview, 2 confirmation, 5 session change)
+PR #24 integrated CenterClosure; PR #26 integrated CampaignCenterAssignment; PR #28 integrated SessionRecurrenceRule; PR #30 integrated VaccinationCenter scheduling timezone; PR #32 integrated VaccinationSession domain and repository foundation; PR #34 integrated VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation; PR #36 integrated SessionRecurrenceRule occurrence generation and idempotent materialization; PR #38 integrated the SessionChangeEvent audit model, SessionImpactReader integration port, and VaccinationSession pessimistic row locking foundation; PR #40 integrated individual VaccinationSession material change workflows; PR #42 integrated series-wide VaccinationSession change preview foundation; PR #44 integrated atomic series-wide VaccinationSession change confirmation; and PR #46 integrated session-change regression hardening. The prior checkpoints remain historical evidence below.
+
+Historical Atomic series-wide VaccinationSession change confirmation implementation / integration checkpoint (PR #44)
 Verified origin/develop at Atomic series-wide session change confirmation merge:
 255754dedcd4cfff5744bce69db72d09061ff560
 
@@ -1810,7 +1868,6 @@ SUCCESS (pre-merge 10s run 31552285608, post-merge 13s run 31552362229)
 
 Backend tests:
 434 tests passing (12 net-new tests: 10 integration, 2 concurrency)
-PR #24 integrated CenterClosure; PR #26 integrated CampaignCenterAssignment; PR #28 integrated SessionRecurrenceRule; PR #30 integrated VaccinationCenter scheduling timezone; PR #32 integrated VaccinationSession domain and repository foundation; PR #34 integrated VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation; PR #36 integrated SessionRecurrenceRule occurrence generation and idempotent materialization; PR #38 integrated the SessionChangeEvent audit model, SessionImpactReader integration port, and VaccinationSession pessimistic row locking foundation; PR #40 integrated individual VaccinationSession material change workflows; and PR #42 integrated series-wide VaccinationSession change preview foundation (diff calculation, occurrence classification, override preservation, impact aggregation, and SHA-256 stale token). The prior checkpoints remain historical evidence below.
 
 Historical Individual VaccinationSession change workflows implementation / integration checkpoint (PR #40)
 Verified origin/develop at Individual session changes merge:
@@ -2534,6 +2591,8 @@ Series-wide VaccinationSession change preview: 422 tests passing (17 net-new tes
 
 Atomic series-wide VaccinationSession change confirmation: 434 tests passing (12 net-new tests: 10 integration, 2 concurrency)
 
+Session-change regression hardening: 447 tests passing (13 net-new tests: 6 preview, 2 confirmation, 5 session change)
+
 CI Evidence
 PR #17 (Documentation Sync): Backend CI SUCCESS, Frontend CI SUCCESS
 
@@ -2587,40 +2646,42 @@ PR #44 (Atomic Series Change Confirmation): Backend CI SUCCESS, Frontend CI SUCC
 
 PR #45 (Series Confirmation Evidence): Backend CI SUCCESS, Frontend CI SUCCESS before merge and after merge
 
+PR #46 (Session Change Regression Hardening): Backend CI SUCCESS, Frontend CI SUCCESS before merge and after merge
+
 Current Repository State
 Latest overall develop state
 Latest overall repository/documentation checkpoint:
-10614b5f32eaf54d00133a94aadc8a695280417a
+5ebcaadc44227d016956982a4ebf32e35c731491
 
 Latest documentation merge:
-PR #45
-docs/mf02-sync-after-series-confirmation -> develop
+PR #46
+fix/mf-02-session-change-regressions -> develop
 
 Latest MF-02 implementation checkpoint:
-PR #44
-255754dedcd4cfff5744bce69db72d09061ff560
+PR #46
+5ebcaadc44227d016956982a4ebf32e35c731491
 
-Reviewed PR #44 feature source:
-640d4044c6b5753f4e6e0f1ca73a68e5898209ed
+Reviewed PR #46 feature source:
+a84d9e13dab956581b0d549f355998691a807ffc
 
 Evidence file:
 docs/evidence/sprint-1/MF02_Sprint1_Evidence.md
 
-Canonical Markdown change through PR #45:
+Canonical Markdown change through PR #46:
 none
-Backend implementation checkpoint (PR #44 Atomic series change confirmation)
+Backend implementation checkpoint (PR #46 Session-change regression hardening)
 Backend implementation checkpoint:
-255754dedcd4cfff5744bce69db72d09061ff560
+5ebcaadc44227d016956982a4ebf32e35c731491
 
-feature/mf02-series-change-confirmation:
-640d4044c6b5753f4e6e0f1ca73a68e5898209ed
+fix/mf-02-session-change-regressions:
+a84d9e13dab956581b0d549f355998691a807ffc
 
-Atomic series change confirmation merge:
-PR #44
-255754dedcd4cfff5744bce69db72d09061ff560
+Session-change regression hardening merge:
+PR #46
+5ebcaadc44227d016956982a4ebf32e35c731491
 Latest backend verification:
 
-434 tests passing
+447 tests passing
 0 failures
 0 errors
 0 skipped
@@ -2666,7 +2727,9 @@ Series-wide VaccinationSession change preview (PR #42, 422 total tests)
 
 Atomic series-wide VaccinationSession change confirmation (PR #44, 434 total tests)
 
-Backend CI & Frontend CI results through PR #45, including PR #44 implementation and PR #45 evidence synchronization
+Session-change regression hardening (PR #46, 447 total tests)
+
+Backend CI & Frontend CI results through PR #46, including PR #44 implementation, PR #45 evidence synchronization, and PR #46 regression hardening
 
 Still to capture:
 
@@ -2692,35 +2755,24 @@ integration demonstration evidence
 
 final MF-01 questionnaire-version adapter/FK integration evidence
 
-External ZIP Review Checkpoint — 2026-08-12
+External ZIP Review Checkpoint — 2026-08-12 (Resolved in PR #46)
 A clean repository ZIP (WBVP_MF02_Sprint1_Review_2026-08-12.zip) was prepared from develop at overall checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a. The ZIP review was intentionally performed before the remaining Sprint 1 backend gaps.
 
-Review verdict
-FIX A FEW ITEMS BEFORE CONTINUING FINAL SPRINT 1 GAPS
+Review verdict: FIXED AND VERIFIED IN PR #46
 
-The review confirmed that the production package layering is acceptable and that no broad MF-02 redesign is required. It identified these concrete pending regression fixes:
+The review confirmed that the production package layering is acceptable and that no broad MF-02 redesign is required. All three concrete behavioral hardening items were resolved and verified in PR #46:
 
-Series impact over-count for unchanged retained SCHEDULED occurrences
+Series impact over-count for unchanged retained SCHEDULED occurrences — FIXED / VERIFIED (PR #46)
 
-unchanged retained sessions can currently contribute real MF-03 appointment/waitlist counts to the series preview despite receiving no schedule mutation;
+SessionSeriesChangeService now evaluates material schedule equality before querying SessionImpactReader for retained SCHEDULED occurrences. Unchanged retained occurrences contribute 0 appointments and 0 waitlist entries to series-change impact totals, allow missing impact reader when retained sessions are unchanged, and do not make the stale token depend on unrelated booking-count drift.
 
-required correction: only materially changed retained sessions contribute impact and make the preview token depend on impact counts.
+Series changes can introduce latent unmaterialized elapsed occurrences — FIXED / VERIFIED (PR #46)
 
-Series changes can introduce latent unmaterialized elapsed occurrences
+Series change proposals introducing missing candidate occurrences with proposedStartAt <= now(clock) are rejected with IllegalArgumentException before recurrence-rule mutation, preventing latent past recurrence creation while preserving existing historical occurrences.
 
-a missing elapsed proposed occurrence can be classified INELIGIBLE while the updated recurrence definition still includes its date;
+Exact no-op individual change can create false preserved-exception history — FIXED / VERIFIED (PR #46)
 
-a later ordinary recurrence-generation call may then materialize that past occurrence;
-
-required correction: series changes must not introduce new missing elapsed occurrences.
-
-Exact no-op individual change can create false preserved-exception history
-
-confirming an individual reschedule/transfer with no material state difference can still create an individual change event;
-
-durable event-based exception detection can then incorrectly classify the occurrence as PRESERVED_EXCEPTION;
-
-required correction: reject exact no-op individual material changes and verify no audit event is written.
+Individual reschedule/transfer proposals that leave center, schedule, timezone, and booking close materially unchanged are rejected with IllegalArgumentException during preview and under authoritative locks during confirmation, persisting no SessionChangeEvent and preventing false PRESERVED_EXCEPTION classification.
 
 Additional design note:
 
@@ -2729,8 +2781,6 @@ VaccinationSession.transitionLifecycleStatus(...) remains too permissive for the
 Do not mix the above fixes with broad package restructuring.
 
 Test organization and service decomposition are maintainability work, not blockers for the immediate regression-fix slice.
-
-No repository files were modified by the external review itself.
 
 Sprint Review
 To complete formally at the end of Sprint 1.
@@ -2778,17 +2828,19 @@ Recurrence occurrence isolation and generator compatibility for individual overr
 
 Series-wide preview and atomic confirmation (SessionSeriesChangeService.previewSeriesChange / confirmSeriesChange), including occurrence diff categories, durable individual-exception preservation, stale-token revalidation under locks, retained rescheduling, removed cancellation, new DRAFT materialization, series audit events, and rollback semantics
 
+Session-change regression hardening (SessionSeriesChangeService unchanged retained 0-impact, latent past occurrence creation prevention, exact no-op individual change rejection)
+
 separate-transaction concurrency tests demonstrating deactivation race rejection, deadlock-free same-center concurrent creations, closure write races, concurrent same-rule recurrence generation, same-session concurrent change serialization, and bidirectional center transfer locking
 
 future-only effective configuration protection
 
 campaign-row, center-row, and session-row pessimistic locking for critical effective-dated configuration and session changes
 
-434 passing backend tests with successful Maven verify packaging
+447 passing backend tests with successful Maven verify packaging
 
 R8 canonical DOCX synchronization merged through PR #17
 
-successful Backend CI and Frontend CI through PR #45, including PR #44 implementation integration
+successful Backend CI and Frontend CI through PR #46, including PR #44 implementation integration, PR #45 evidence synchronization, and PR #46 regression hardening
 
 canonical Markdown integrity preserved
 
@@ -2809,7 +2861,7 @@ Small logical commits kept implementation history reviewable.
 
 Canonical ownership/boundary checks were performed before each MF-02 slice.
 
-Tests expanded continuously as real behavior was introduced (434 total tests at the current implementation checkpoint).
+Tests expanded continuously as real behavior was introduced (447 total tests at the current implementation checkpoint).
 
 Candidate pre-validation (OperatingHours.validateParameters, VaccinationSession.validateSchedule, VaccinationSession.validateProvenance, VaccinationSessionValidator.validateSessionSchedule, SessionChangeEvent invariants, SessionChangePreview invariants) ensured mutation exception-safety and clean concurrency protection.
 
@@ -2829,23 +2881,19 @@ Add Flyway/API/UI evidence as those layers are implemented instead of postponing
 Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
 Exact Next Work
-The latest MF-02 implementation checkpoint is PR #44 merge 255754dedcd4cfff5744bce69db72d09061ff560, with reviewed source 640d4044c6b5753f4e6e0f1ca73a68e5898209ed. The latest overall documentation/repository checkpoint is PR #45 merge 10614b5f32eaf54d00133a94aadc8a695280417a. The backend baseline is 434 tests.
+The latest MF-02 implementation checkpoint is PR #46 merge 5ebcaadc44227d016956982a4ebf32e35c731491, with reviewed source a84d9e13dab956581b0d549f355998691a807ffc and base 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385. The latest overall documentation/repository checkpoint is 5ebcaadc44227d016956982a4ebf32e35c731491. The backend baseline is 447 tests.
 
-Before implementing full-series cancellation or other remaining Sprint 1 functionality, perform one focused regression-hardening slice:
+All three external-review regression defects have been resolved and verified in PR #46:
 
-Correct series preview impact calculation so unchanged retained SCHEDULED sessions contribute zero impact and do not unnecessarily require/consume MF-03 counts.
+Unchanged retained SCHEDULED sessions contribute 0 appointments and 0 waitlist entries to series preview impact and do not require SessionImpactReader.
 
-Prevent a series definition change from introducing new unmaterialized elapsed occurrences that ordinary recurrence generation could later create.
+Series definition changes cannot introduce new unmaterialized elapsed occurrences.
 
-Reject exact no-op individual reschedule/transfer changes so they create no SessionChangeEvent and cannot become false PRESERVED_EXCEPTION occurrences.
+Exact no-op individual reschedule/transfer proposals are rejected during preview and confirmation without writing SessionChangeEvent records or creating false PRESERVED_EXCEPTION history.
 
-Add focused regression tests for all three issues.
+With the regression hardening gate complete, proceed directly with the remaining Sprint 1 backend sequence:
 
-Independently review and integrate the fixes before starting new features.
-
-After that hardening gate, continue the remaining Sprint 1 backend sequence:
-
-full-series cancellation;
+full-series cancellation workflow (previewSeriesCancellation / confirmSeriesCancellation);
 
 reverse configuration-impact protection;
 
@@ -2855,5 +2903,5 @@ final MF-01 questionnaire adapter/FK integration;
 
 final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #44 atomic series-wide confirmation is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is regression hardening of existing individual/series session-change behavior, not a package refactor and not a new feature.
+Current implementation stopping point: PR #46 session-change regression hardening is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is the full-series cancellation workflow, not a package refactor and not reverse configuration protection.
 
