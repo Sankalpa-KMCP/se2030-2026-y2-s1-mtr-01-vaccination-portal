@@ -940,7 +940,7 @@ US-09	High	Create/manage campaign lifecycle and target group	In progress — bac
 US-10	High	Link campaign to one published questionnaire version	In progress — MF-02 foundation implemented and hardened; final MF-01 adapter/FK integration pending
 US-11	High	Define campaign dose programme	In progress — versioning and hardening implemented; later API/UI and integration evidence pending
 US-12	High	Assign vaccination centers to a campaign	In progress — backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, session integration, and final DoD evidence pending
-US-13	High	Configure center operating hours, closures and recurring sessions	IN PROGRESS — VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence, authoritative one-off validation/creation, recurrence generation, session change audit/locking, individual reschedule/transfer/cancellation, series-wide preview, and atomic series-wide confirmation are implemented; reviewed regression hardening, full-series cancellation, reverse configuration impact, required lifecycle/publication integration, API/UI/migration, and final DoD work remain pending
+US-13	High	Configure center operating hours, closures and recurring sessions	IN PROGRESS — VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence, authoritative one-off validation/creation, recurrence generation, session change audit/locking, individual reschedule/transfer/cancellation, series-wide preview, atomic series-wide confirmation, full-series cancellation, campaign/assignment reverse-impact protection, VaccinationCenter deactivation reverse protection, OperatingHours update/end-date reverse protection, and CenterClosure create/update reverse protection are implemented; required lifecycle/publication integration, API/UI/migration, and final DoD work remain pending
 US-27	High	Define campaign service areas and booking periods	In progress — backend foundation implemented; later API/UI evidence pending
 Completed Work
 1. Campaign domain foundation
@@ -2140,7 +2140,7 @@ US-09	High	Create/manage campaign lifecycle and target group	In progress — bac
 US-10	High	Link campaign to one published questionnaire version	In progress — MF-02 foundation implemented and hardened; final MF-01 adapter/FK integration pending
 US-11	High	Define campaign dose programme	In progress — versioning and hardening implemented; later API/UI and integration evidence pending
 US-12	High	Assign vaccination centers to a campaign	In progress — backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, session integration, and final DoD evidence pending
-US-13	High	Configure center operating hours, closures and recurring sessions	IN PROGRESS — VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence, authoritative one-off validation/creation, recurrence generation, session change audit/locking, individual reschedule/transfer/cancellation, series-wide preview, and atomic series-wide confirmation are implemented; reviewed regression hardening, full-series cancellation, reverse configuration impact, required lifecycle/publication integration, API/UI/migration, and final DoD work remain pending
+US-13	High	Configure center operating hours, closures and recurring sessions	IN PROGRESS — VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence, authoritative one-off validation/creation, recurrence generation, session change audit/locking, individual reschedule/transfer/cancellation, series-wide preview, atomic series-wide confirmation, full-series cancellation, campaign/assignment reverse-impact protection, VaccinationCenter deactivation reverse protection, OperatingHours update/end-date reverse protection, and CenterClosure create/update reverse protection are implemented; required lifecycle/publication integration, API/UI/migration, and final DoD work remain pending
 US-27	High	Define campaign service areas and booking periods	In progress — backend foundation implemented; later API/UI evidence pending
 Completed Work
 1. Campaign domain foundation
@@ -2889,30 +2889,28 @@ Add Flyway/API/UI evidence as those layers are implemented instead of postponing
 Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
 Exact Next Work
-The latest MF-02 implementation checkpoint is PR #50 merge 8ff9936f447da00de00c06b802fb5c61556c0bad, with reviewed source eaff5b82334020f669c2581e47c90649575f9f08 and base 634e3dce0894b7678ba82b7d0690b277b5d44d48. Merge parents are 634e3dce0894b7678ba82b7d0690b277b5d44d48 and eaff5b82334020f669c2581e47c90649575f9f08. The latest overall repository/documentation checkpoint is 8ff9936f447da00de00c06b802fb5c61556c0bad. The backend baseline is 476 tests (459 baseline + 17 net-new tests). Pre-merge and post-merge Backend CI and Frontend CI succeeded.
+The latest MF-02 implementation checkpoint is PR #52 merge 1582c4cfa6596d1cc2dac9b977774fd8e010bc77, with reviewed source 17b45c6981a410e57daeef5eb64ba26693d1f22e and base c9993ec01d56717291f154c6fa961051db021da1. Merge parents are c9993ec01d56717291f154c6fa961051db021da1 and 17b45c6981a410e57daeef5eb64ba26693d1f22e. The latest overall repository/documentation checkpoint is 1582c4cfa6596d1cc2dac9b977774fd8e010bc77. The backend baseline is 495 tests (476 baseline + 19 net-new tests). Pre-merge and post-merge Backend CI and Frontend CI succeeded.
 
-Campaign and CampaignCenterAssignment reverse-impact protection is COMPLETE in PR #50:
+VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection is COMPLETE in PR #52:
 
-Campaign service-date reverse protection (VaccinationCampaignService.updateServiceDates) acquires a pessimistic write lock on the parent campaign (campaignRepository.findByIdForUpdate), refreshes entity state, and validates proposed bounds [serviceStartDate, serviceEndDate] against all active/scheduled sessions.
+VaccinationCenter deactivation reverse protection (VaccinationCenterService.deactivateCenter) acquires the existing center pessimistic write lock, refreshes authoritative center state, and rejects deactivation when DRAFT/SCHEDULED/IN_PROGRESS sessions with endAt > clock.instant() still reference the center.
 
-CampaignCenterAssignment reverse protection (CampaignCenterAssignmentService) enforces reverse protection in updateFutureAssignment, endAssignment, and cancelFutureAssignment to ensure blocking sessions for (campaignId, centerId) remain covered by active assignments.
+OperatingHours reverse protection (OperatingHoursService.updateOperatingHours and endOperatingHours) evaluates blocking sessions by projecting session Instant intervals into the center scheduling timezone and checking each touched calendar date for contiguous OperatingHours coverage. An update is rejected when it breaks coverage for any blocking session on any date it touches.
 
-Session intervals (startAt, endAt) project to center local dates firstTouchedDate and lastTouchedDate in the session scheduling timezone. Required active assignment coverage span is [firstTouchedDate, lastTouchedDate.plusDays(1)) (exclusive upper bound).
+CenterClosure reverse protection (CenterClosureService.createCenterClosure and updateCenterClosure) checks whether the half-open closure interval [startAt, endAt) overlaps any blocking session interval [session.startAt, session.endAt). A closure is rejected when it would cover any portion of a blocking session.
 
-Blocking status filter restricts evaluation to lifecycleStatus IN (DRAFT, SCHEDULED, IN_PROGRESS) and endAt > clock.instant(). Terminal/historical sessions (COMPLETED, CANCELLED, endAt <= now) do not block configuration updates.
+Blocking status filter restricts evaluation to lifecycleStatus IN (DRAFT, SCHEDULED, IN_PROGRESS) and endAt > clock.instant() consistently across all three protections.
 
-Concurrency serialization maintains parent-first pessimistic locking hierarchy (VaccinationCampaign lock) preventing race conditions with concurrent session creation.
+Concurrency serialization uses the existing center pessimistic lock for center deactivation and center-row serialization for OperatingHours and CenterClosure writes.
 
-17 net-new unit & integration tests added across 3 test classes (CampaignReverseImpactIntegrationTests, AssignmentReverseImpactIntegrationTests, CampaignAssignmentReverseImpactConcurrencyIntegrationTests).
+19 net-new unit & integration tests added across 3 test classes (CenterReverseImpactIntegrationTests, HoursClosureReverseImpactIntegrationTests, CenterHoursClosureReverseImpactConcurrencyIntegrationTests).
 
-With campaign and assignment reverse-impact protection complete, proceed directly with the next controlled phase:
-
-center, OperatingHours and CenterClosure reverse-impact protection;
+With all reverse configuration-impact protection complete, proceed directly with the next controlled phase:
 
 campaign publication prerequisites/transition and required session lifecycle publishing;
 
-final MF-01 questionnaire adapter/FK integration;
+final MF-01 QuestionnaireVersion adapter/FK integration;
 
 final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #50 campaign and assignment reverse-impact protection is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is center, OperatingHours and CenterClosure reverse-impact protection.
+Current implementation stopping point: PR #52 center/OperatingHours/CenterClosure reverse-impact protection is integrated. The project is not yet Sprint 1 complete. All reverse configuration-impact protection is now complete. The immediate next controlled phase is campaign publication prerequisites/transition.

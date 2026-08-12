@@ -525,15 +525,15 @@ Canonical authority: 3.3-AI / 2026-08-08-R8
 
 Sprint: Sprint 1 — IN PROGRESS
 
-Current implementation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168 (PR #48 merge)
+Current implementation checkpoint: 1582c4cfa6596d1cc2dac9b977774fd8e010bc77 (PR #52 merge)
 
-Latest overall repository/documentation checkpoint: 8ff9936f447da00de00c06b802fb5c61556c0bad (PR #50 merge)
+Latest overall repository/documentation checkpoint: 1582c4cfa6596d1cc2dac9b977774fd8e010bc77 (PR #52 merge)
 
-Latest completed backend foundation: Campaign and CampaignCenterAssignment reverse-impact protection (VaccinationCampaignService.updateServiceDates campaign date shortening protection, CampaignCenterAssignmentService reverse protection for updateFutureAssignment, endAssignment, and cancelFutureAssignment, session scheduling timezone projection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, campaign-row locking & concurrency protection, 17 net-new tests, 476 total backend tests)
+Latest completed backend foundation: VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection (deactivateCenter pessimistic lock, OperatingHours range intersection, CenterClosure half-open [startAt,endAt) intersection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, 19 net-new tests, 495 total backend tests)
 
-Current backend baseline: 476 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #50.
+Current backend baseline: 495 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #52.
 
-Next controlled implementation phase: center, OperatingHours and CenterClosure reverse-impact protection — READY TO START
+Next controlled implementation phase: campaign publication prerequisites/transition and required session lifecycle publishing
 
 
 This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
@@ -603,11 +603,13 @@ The full-series cancellation workflow (previewSeriesCancellation, confirmSeriesC
 
 The campaign and assignment reverse-impact protection (VaccinationCampaignService.updateServiceDates campaign date shortening protection, CampaignCenterAssignmentService reverse protection for updateFutureAssignment, endAssignment, and cancelFutureAssignment, session scheduling timezone projection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, campaign-row locking & concurrency protection, 17 net-new tests, 476 total backend tests) is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #50.
 
-The current backend baseline is 476 tests, with zero failures, errors, or skips. Maven test and verify succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #50 merge.
+The VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection (deactivateCenter pessimistic center lock and authoritative refresh, OperatingHours range intersection against session scheduling timezone, CenterClosure half-open [startAt,endAt) interval intersection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, 19 net-new tests, 495 total backend tests) is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #52.
 
-MF-02 CAMPAIGN AND ASSIGNMENT REVERSE-IMPACT PROTECTION INTEGRATED. This milestone covers Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, authoritative write-time validation, recurrence generation, session change audit, individual session changes, series-wide preview, atomic series-wide confirmation, session-change regression hardening, full-series cancellation, and campaign/assignment reverse protection. It does not mean MF-02, US-13, or Sprint 1 is complete.
+The current backend baseline is 495 tests, with zero failures, errors, or skips. Maven test and verify succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #52 merge.
 
-Sprint 1 remains in progress. Campaign and assignment reverse-impact protection is COMPLETE in PR #50. The immediate next controlled phase is center, OperatingHours and CenterClosure reverse-impact protection, followed by campaign publication prerequisites/transition, required session lifecycle completion/hardening, final MF-01 questionnaire adapter/FK, and remaining Definition-of-Done layers.
+MF-02 CENTER AVAILABILITY REVERSE-IMPACT PROTECTION INTEGRATED. This milestone covers Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, authoritative write-time validation, recurrence generation, session change audit, individual session changes, series-wide preview, atomic series-wide confirmation, session-change regression hardening, full-series cancellation, campaign/assignment reverse protection, and center/hours/closure reverse protection. It does not mean MF-02, US-13, or Sprint 1 is complete.
+
+Sprint 1 remains in progress. Center availability reverse-impact protection is COMPLETE in PR #52. The immediate next controlled phase is campaign publication prerequisites/transition, followed by required session lifecycle completion/hardening, final MF-01 questionnaire adapter/FK, and remaining Definition-of-Done layers.
 
 
 2. Authority and Startup Procedure
@@ -675,12 +677,14 @@ PR #47 5ebcaad	Evidence/handoff synchronization after session-change regression 
 PR #48 14e4976	Full-series cancellation workflow (previewSeriesCancellation, confirmSeriesCancellation, ACTIVE/non-expired rule check, REMOVED/PRESERVED_EXCEPTION/INELIGIBLE categorization, real SCHEDULED impact counts, SHA-256 preview token, campaign->center->rule->sessions ASC locking, rule cancellation, session cancellation, SERIES_CANCELLED audit events, generator compatibility, 12 net-new tests, 459 total tests)
 PR #49 634e3dc	Evidence/handoff synchronization after series cancellation; metadata checkpoint only
 PR #50 8ff9936	Campaign and assignment reverse-impact protection (VaccinationCampaignService.updateServiceDates, CampaignCenterAssignmentService reverse protection for updateFutureAssignment, endAssignment, cancelFutureAssignment, session scheduling timezone projection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, campaign-row locking, 17 net-new tests, 476 total tests)
+PR #51 c9993ec	Evidence/handoff synchronization after campaign and assignment reverse-impact protection; metadata checkpoint only
+PR #52 1582c4c	VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection (deactivateCenter pessimistic lock, OperatingHours range intersection, CenterClosure half-open [startAt,endAt) intersection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, 19 net-new tests, 495 total tests)
 The current checkpoint classification is:
 
-latest MF-02 implementation integration checkpoint = 8ff9936f447da00de00c06b802fb5c61556c0bad
-certified PR #50 feature source = eaff5b82334020f669c2581e47c90649575f9f08
-actual PR #50 base = 634e3dce0894b7678ba82b7d0690b277b5d44d48
-latest overall repository/documentation checkpoint = 8ff9936f447da00de00c06b802fb5c61556c0bad
+latest MF-02 implementation integration checkpoint = 1582c4cfa6596d1cc2dac9b977774fd8e010bc77
+certified PR #52 feature source = 17b45c6981a410e57daeef5eb64ba26693d1f22e
+actual PR #52 base = c9993ec01d56717291f154c6fa961051db021da1
+latest overall repository/documentation checkpoint = 1582c4cfa6596d1cc2dac9b977774fd8e010bc77
 Older SHAs and test counts in the evidence chronology are historical milestones, not the current repository state.
 
 
@@ -2453,7 +2457,7 @@ introduce a fake zero-count MF-03 production adapter;
 
 introduce a generic same-center session overlap prohibition;
 
-claim reverse configuration-impact protections or full-series cancellation commands are implemented;
+claim center, OperatingHours, or CenterClosure reverse configuration-impact protections are NOT implemented (they ARE implemented through PR #52);
 
 count unchanged retained SCHEDULED occurrences as affected by a series change;
 
@@ -2465,15 +2469,15 @@ perform broad package moves or large service refactors in the same commit as beh
 
 mark Sprint 1 complete prematurely.
 
-2461. 17. Final Handoff State
+17. Final Handoff State
 Canonical: 3.3-AI / 2026-08-08-R8
 Sprint: Sprint 1 — IN PROGRESS
-Latest MF-02 implementation merge: PR #50 / 8ff9936f447da00de00c06b802fb5c61556c0bad
-PR #50 certified source: eaff5b82334020f669c2581e47c90649575f9f08
-PR #50 actual base: 634e3dce0894b7678ba82b7d0690b277b5d44d48
-PR #50 merge parents: 634e3dce0894b7678ba82b7d0690b277b5d44d48 and eaff5b82334020f669c2581e47c90649575f9f08
-Latest overall repository/documentation checkpoint: PR #50 / 8ff9936f447da00de00c06b802fb5c61556c0bad
-Backend baseline: 476 tests; Maven test/verify SUCCESS; executable JAR packaged
+Latest MF-02 implementation merge: PR #52 / 1582c4cfa6596d1cc2dac9b977774fd8e010bc77
+PR #52 certified source: 17b45c6981a410e57daeef5eb64ba26693d1f22e
+PR #52 actual base: c9993ec01d56717291f154c6fa961051db021da1
+PR #52 merge parents: c9993ec01d56717291f154c6fa961051db021da1 and 17b45c6981a410e57daeef5eb64ba26693d1f22e
+Latest overall repository/documentation checkpoint: PR #52 / 1582c4cfa6596d1cc2dac9b977774fd8e010bc77
+Backend baseline: 495 tests; Maven test/verify SUCCESS; executable JAR packaged
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
@@ -2487,7 +2491,10 @@ Series-wide VaccinationSession change preview & confirmation: IMPLEMENTED, INDEP
 Regression hardening (3 external-review fixes): IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #46)
 Full-series cancellation command: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #48)
 Campaign and assignment reverse-impact protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #50)
+VaccinationCenter deactivation reverse protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #52)
+OperatingHours update/end-date reverse protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #52)
+CenterClosure create/update reverse protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #52)
 Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
-Immediate next phase: center, OperatingHours and CenterClosure reverse-impact protection
-Pending Sprint 1 gaps: VaccinationCenter reverse protection, OperatingHours reverse protection, CenterClosure reverse protection, campaign publication/lifecycle, MF-01 adapter, final Sprint DoD
-The next AI should refresh live repository state and implement center, OperatingHours and CenterClosure reverse-impact protection. Keep the slice focused and regression-tested. Do not implement publication, MF-01 adapter, or mark Sprint 1 complete prematurely.
+Immediate next phase: campaign publication prerequisites/transition and required session lifecycle publishing
+Pending Sprint 1 gaps: campaign publication/lifecycle transition, MF-01 QuestionnaireVersion adapter/FK, final Sprint DoD evidence
+The next AI should refresh live repository state and proceed with campaign publication prerequisites/transition. All reverse configuration-impact protection is now complete. Keep the implementation behavior-focused and regression-tested. Do not mark Sprint 1 complete prematurely.
