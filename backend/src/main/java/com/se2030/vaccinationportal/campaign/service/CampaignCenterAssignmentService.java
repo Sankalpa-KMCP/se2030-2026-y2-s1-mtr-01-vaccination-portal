@@ -2,17 +2,26 @@ package com.se2030.vaccinationportal.campaign.service;
 
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignmentStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +30,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class CampaignCenterAssignmentService {
 
+    private static final Set<SessionLifecycleStatus> BLOCKING_SESSION_STATUSES = EnumSet.of(
+            SessionLifecycleStatus.DRAFT,
+            SessionLifecycleStatus.SCHEDULED,
+            SessionLifecycleStatus.IN_PROGRESS
+    );
+
     private final CampaignCenterAssignmentRepository assignmentRepository;
     private final VaccinationCampaignRepository campaignRepository;
     private final VaccinationCenterRepository centerRepository;
+    private final VaccinationSessionRepository sessionRepository;
     private final Clock clock;
     @PersistenceContext private EntityManager entityManager;
 
@@ -31,13 +47,17 @@ public class CampaignCenterAssignmentService {
             CampaignCenterAssignmentRepository assignmentRepository,
             VaccinationCampaignRepository campaignRepository,
             VaccinationCenterRepository centerRepository,
+            VaccinationSessionRepository sessionRepository,
             Clock clock
     ) {
         this.assignmentRepository = assignmentRepository;
         this.campaignRepository = campaignRepository;
         this.centerRepository = centerRepository;
+        this.sessionRepository = sessionRepository;
         this.clock = clock;
     }
+
+
 
     public CampaignCenterAssignment createAssignment(
             Long campaignId,
@@ -136,6 +156,8 @@ public class CampaignCenterAssignmentService {
         rejectActiveOverlap(
                 campaignId, target.getCenter().getId(), id, activeFrom, activeTo);
 
+        validateAssignmentReverseImpact(campaignId, target.getCenter().getId(), id, activeFrom, activeTo);
+
         target.updatePeriod(activeFrom, activeTo);
         return assignmentRepository.save(target);
     }
@@ -160,6 +182,8 @@ public class CampaignCenterAssignmentService {
             throw new IllegalArgumentException("Assignment end date must be after today");
         }
 
+        validateAssignmentReverseImpact(campaignId, target.getCenter().getId(), id, target.getActiveFrom(), activeTo);
+
         target.endAt(activeTo);
         return assignmentRepository.save(target);
     }
@@ -178,9 +202,84 @@ public class CampaignCenterAssignmentService {
             throw new IllegalArgumentException("A started campaign-center assignment cannot be cancelled");
         }
 
+        validateAssignmentCancellationReverseImpact(campaignId, target.getCenter().getId(), id);
+
         target.cancel();
         return assignmentRepository.save(target);
     }
+
+    private void validateAssignmentReverseImpact(
+            Long campaignId,
+            Long centerId,
+            Long targetAssignmentId,
+            LocalDate proposedActiveFrom,
+            LocalDate proposedActiveTo
+    ) {
+        List<VaccinationSession> blockingSessions = sessionRepository.findBlockingSessionsForCampaignAndCenter(
+                campaignId, centerId, BLOCKING_SESSION_STATUSES, clock.instant()
+        );
+        for (VaccinationSession session : blockingSessions) {
+            ZoneId zoneId = ZoneId.of(session.getScheduleTimezone());
+            ZonedDateTime startZdt = session.getStartAt().atZone(zoneId);
+            LocalDate firstTouchedDate = startZdt.toLocalDate();
+            Instant lastContainedInstant = session.getEndAt().minusNanos(1);
+            LocalDate lastTouchedDate = lastContainedInstant.atZone(zoneId).toLocalDate();
+            LocalDate requiredToExclusive = lastTouchedDate.plusDays(1);
+
+            boolean isCoveredByProposedTarget = (!proposedActiveFrom.isAfter(firstTouchedDate))
+                    && (proposedActiveTo == null || !requiredToExclusive.isAfter(proposedActiveTo));
+
+            if (!isCoveredByProposedTarget) {
+                boolean isCoveredBySibling = assignmentRepository.existsActiveAssignmentCovering(
+                        campaignId,
+                        centerId,
+                        CampaignCenterAssignmentStatus.ACTIVE,
+                        targetAssignmentId,
+                        firstTouchedDate,
+                        requiredToExclusive
+                );
+                if (!isCoveredBySibling) {
+                    throw new IllegalArgumentException(
+                            "Cannot modify campaign-center assignment because active or scheduled session(s) would fall outside active assignment coverage"
+                    );
+                }
+            }
+        }
+    }
+
+    private void validateAssignmentCancellationReverseImpact(
+            Long campaignId,
+            Long centerId,
+            Long cancelledAssignmentId
+    ) {
+        List<VaccinationSession> blockingSessions = sessionRepository.findBlockingSessionsForCampaignAndCenter(
+                campaignId, centerId, BLOCKING_SESSION_STATUSES, clock.instant()
+        );
+
+        for (VaccinationSession session : blockingSessions) {
+            ZoneId zoneId = ZoneId.of(session.getScheduleTimezone());
+            ZonedDateTime startZdt = session.getStartAt().atZone(zoneId);
+            LocalDate firstTouchedDate = startZdt.toLocalDate();
+            Instant lastContainedInstant = session.getEndAt().minusNanos(1);
+            LocalDate lastTouchedDate = lastContainedInstant.atZone(zoneId).toLocalDate();
+            LocalDate requiredToExclusive = lastTouchedDate.plusDays(1);
+
+            boolean isCoveredBySibling = assignmentRepository.existsActiveAssignmentCovering(
+                    campaignId,
+                    centerId,
+                    CampaignCenterAssignmentStatus.ACTIVE,
+                    cancelledAssignmentId,
+                    firstTouchedDate,
+                    requiredToExclusive
+            );
+            if (!isCoveredBySibling) {
+                throw new IllegalArgumentException(
+                        "Cannot cancel campaign-center assignment because active or scheduled session(s) depend on it"
+                );
+            }
+        }
+    }
+
 
     private Long findCampaignId(Long assignmentId) {
         return assignmentRepository.findCampaignIdById(assignmentId)
