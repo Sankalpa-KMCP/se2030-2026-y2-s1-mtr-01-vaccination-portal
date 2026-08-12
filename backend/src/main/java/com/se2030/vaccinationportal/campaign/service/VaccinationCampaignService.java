@@ -1,11 +1,15 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
+import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import jakarta.persistence.EntityManager;
@@ -38,17 +42,129 @@ public class VaccinationCampaignService {
 
     private final VaccinationCampaignRepository campaignRepository;
     private final VaccinationSessionRepository sessionRepository;
+    private final CampaignDoseProgrammeRepository doseProgrammeRepository;
+    private final CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository;
+    private final QuestionnaireVersionPublicationPort publicationPort;
     private final Clock clock;
     @PersistenceContext private EntityManager entityManager;
 
     public VaccinationCampaignService(
             VaccinationCampaignRepository campaignRepository,
             VaccinationSessionRepository sessionRepository,
+            CampaignDoseProgrammeRepository doseProgrammeRepository,
+            CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository,
+            @Autowired(required = false) QuestionnaireVersionPublicationPort publicationPort,
             Clock clock
     ) {
         this.campaignRepository = campaignRepository;
         this.sessionRepository = sessionRepository;
+        this.doseProgrammeRepository = doseProgrammeRepository;
+        this.questionnaireAssignmentRepository = questionnaireAssignmentRepository;
+        this.publicationPort = publicationPort;
         this.clock = clock;
+    }
+
+    /**
+     * Publishes a VaccinationCampaign (transitions status to PUBLISHED).
+     * Enforces all publication prerequisites under the campaign pessimistic write lock:
+     * 1. Lock campaign row with findByIdForUpdate.
+     * 2. Refresh authoritative state via entityManager.refresh.
+     * 3. Allowed status sources: DRAFT -> PUBLISHED or SCHEDULED -> PUBLISHED.
+     * 4. Valid campaign date and booking window invariants.
+     * 5. Require active VaccineType.
+     * 6. Require active TargetGroup with non-blank description.
+     * 7. Require exactly one effective CampaignDoseProgramme.
+     * 8. Require exactly one effective CampaignQuestionnaireAssignment.
+     * 9. Require the assigned QuestionnaireVersion to be in PUBLISHED status via QuestionnaireVersionPublicationPort.
+     *
+     * Note: Location targets, center assignments, recurrence rules, and sessions are NOT publication prerequisites.
+     *
+     * @param campaignId ID of the VaccinationCampaign to publish
+     * @return Saved VaccinationCampaign in PUBLISHED status
+     */
+    public VaccinationCampaign publishCampaign(Long campaignId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        if (campaign.getStatus() != CampaignStatus.DRAFT && campaign.getStatus() != CampaignStatus.SCHEDULED) {
+            throw new IllegalStateException("Cannot publish campaign in " + campaign.getStatus() + " status");
+        }
+
+        // Validate date & booking window invariants
+        campaign.validateDateConsistency();
+
+        // Require VaccineType
+        VaccineType vaccineType = campaign.getVaccineType();
+        if (vaccineType == null || !vaccineType.isActive()) {
+            throw new IllegalStateException("Campaign requires an active VaccineType for publication");
+        }
+
+        // Require TargetGroup description
+        TargetGroup targetGroup = campaign.getTargetGroup();
+        if (targetGroup == null || !targetGroup.isActive() || targetGroup.getDescription() == null || targetGroup.getDescription().trim().isEmpty()) {
+            throw new IllegalStateException("Campaign requires a TargetGroup with a non-blank description for publication");
+        }
+
+        // Evaluation date for effective version resolution
+        LocalDate today = LocalDate.now(clock);
+        LocalDate evaluationDate = today;
+        if (campaign.getServiceStartDate() != null && campaign.getServiceStartDate().isAfter(today)) {
+            evaluationDate = campaign.getServiceStartDate();
+        }
+
+        // Require exactly one effective CampaignDoseProgramme
+        List<CampaignDoseProgramme> effectiveProgrammes = doseProgrammeRepository.findEffectiveProgrammesForDateList(campaignId, evaluationDate);
+        if (effectiveProgrammes.isEmpty() && !evaluationDate.equals(today)) {
+            effectiveProgrammes = doseProgrammeRepository.findEffectiveProgrammesForDateList(campaignId, today);
+        }
+        if (effectiveProgrammes.isEmpty()) {
+            throw new IllegalStateException("Campaign requires exactly one effective dose programme for publication; found 0");
+        }
+        if (effectiveProgrammes.size() > 1) {
+            throw new IllegalStateException("Campaign requires exactly one effective dose programme for publication; found " + effectiveProgrammes.size());
+        }
+
+        // Require exactly one effective CampaignQuestionnaireAssignment
+        List<CampaignQuestionnaireAssignment> effectiveAssignments = questionnaireAssignmentRepository.findEffectiveAssignmentsAtList(campaignId, evaluationDate);
+        if (effectiveAssignments.isEmpty() && !evaluationDate.equals(today)) {
+            effectiveAssignments = questionnaireAssignmentRepository.findEffectiveAssignmentsAtList(campaignId, today);
+        }
+        if (effectiveAssignments.isEmpty()) {
+            throw new IllegalStateException("Campaign requires exactly one effective questionnaire assignment for publication; found 0");
+        }
+        if (effectiveAssignments.size() > 1) {
+            throw new IllegalStateException("Campaign requires exactly one effective questionnaire assignment for publication; found " + effectiveAssignments.size());
+        }
+
+        // Require assigned QuestionnaireVersion to be PUBLISHED in MF-01
+        CampaignQuestionnaireAssignment assignment = effectiveAssignments.get(0);
+        Long questionnaireVersionId = assignment.getQuestionnaireVersionId();
+        if (questionnaireVersionId == null) {
+            throw new IllegalStateException("Assigned questionnaire version ID is required");
+        }
+
+        if (publicationPort == null) {
+            throw new IllegalStateException(
+                    "QuestionnaireVersionPublicationPort implementation is not registered. MF-01 integration pending."
+            );
+        }
+
+        if (!publicationPort.isPublished(questionnaireVersionId)) {
+            throw new IllegalStateException(
+                    "Assigned questionnaire version " + questionnaireVersionId + " is not in PUBLISHED status in MF-01"
+            );
+        }
+
+        campaign.publish();
+        return campaignRepository.save(campaign);
     }
 
 
