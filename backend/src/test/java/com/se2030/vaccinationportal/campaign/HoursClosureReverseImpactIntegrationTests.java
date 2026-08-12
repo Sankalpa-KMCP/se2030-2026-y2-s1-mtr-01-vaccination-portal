@@ -106,7 +106,18 @@ class HoursClosureReverseImpactIntegrationTests {
                 campaign, targetCenter, startAt, endAt, startAt.minusSeconds(3600), targetCenter.getTimezone()
         );
         if (status != SessionLifecycleStatus.DRAFT) {
-            session.transitionLifecycleStatus(status);
+            if (status == SessionLifecycleStatus.SCHEDULED) {
+                session.schedule();
+            } else if (status == SessionLifecycleStatus.IN_PROGRESS) {
+                session.schedule();
+                session.start();
+            } else if (status == SessionLifecycleStatus.COMPLETED) {
+                session.schedule();
+                session.start();
+                session.complete();
+            } else if (status == SessionLifecycleStatus.CANCELLED) {
+                session.cancel();
+            }
         }
         return sessionRepository.saveAndFlush(session);
     }

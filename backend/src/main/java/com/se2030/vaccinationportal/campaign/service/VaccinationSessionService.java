@@ -137,6 +137,60 @@ public class VaccinationSessionService {
     }
 
     /**
+     * Schedules a DRAFT vaccination session (transitions to SCHEDULED).
+     * Lifecycle-only transition: does NOT create a SessionChangeEvent.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @return Saved VaccinationSession in SCHEDULED lifecycle status
+     */
+    public VaccinationSession scheduleSession(Long sessionId) {
+        requireId(sessionId, "Session ID is required");
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+        session.schedule();
+        return sessionRepository.save(session);
+    }
+
+    /**
+     * Starts a SCHEDULED vaccination session (transitions to IN_PROGRESS).
+     * Lifecycle-only transition: does NOT create a SessionChangeEvent.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @return Saved VaccinationSession in IN_PROGRESS lifecycle status
+     */
+    public VaccinationSession startSession(Long sessionId) {
+        requireId(sessionId, "Session ID is required");
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+        session.start();
+        return sessionRepository.save(session);
+    }
+
+    /**
+     * Completes an IN_PROGRESS vaccination session (transitions to COMPLETED).
+     * Lifecycle-only transition: does NOT create a SessionChangeEvent.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @return Saved VaccinationSession in COMPLETED lifecycle status
+     */
+    public VaccinationSession completeSession(Long sessionId) {
+        requireId(sessionId, "Session ID is required");
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+        session.complete();
+        return sessionRepository.save(session);
+    }
+
+    /**
      * Previews a proposed same-center reschedule of a vaccination session without mutating state.
      *
      * @param sessionId         ID of the target VaccinationSession

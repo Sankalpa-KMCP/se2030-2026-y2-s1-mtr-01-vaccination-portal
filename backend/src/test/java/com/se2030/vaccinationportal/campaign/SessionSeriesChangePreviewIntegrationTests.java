@@ -506,9 +506,12 @@ class SessionSeriesChangePreviewIntegrationTests {
         VaccinationSession s3 = sessions.get(2); // Oct 9
 
         // Set s1 to IN_PROGRESS
-        s1.transitionLifecycleStatus(SessionLifecycleStatus.IN_PROGRESS);
+        s1.schedule();
+        s1.start();
         // Set s2 to COMPLETED
-        s2.transitionLifecycleStatus(SessionLifecycleStatus.COMPLETED);
+        s2.schedule();
+        s2.start();
+        s2.complete();
         sessionRepository.saveAllAndFlush(List.of(s1, s2));
 
         // Use clock set to Oct 8 (making s1 and s2 past, s3 future)
