@@ -60,13 +60,25 @@ public interface CampaignCenterAssignmentRepository
             "FROM CampaignCenterAssignment a " +
             "WHERE a.campaign.id = :campaignId AND a.center.id = :centerId " +
             "AND a.status = :status " +
+            "AND (:excludeId IS NULL OR a.id <> :excludeId) " +
             "AND a.activeFrom <= :requiredFrom " +
             "AND (a.activeTo IS NULL OR :requiredToExclusive <= a.activeTo)")
     boolean existsActiveAssignmentCovering(
             @Param("campaignId") Long campaignId,
             @Param("centerId") Long centerId,
             @Param("status") CampaignCenterAssignmentStatus status,
+            @Param("excludeId") Long excludeId,
             @Param("requiredFrom") LocalDate requiredFrom,
             @Param("requiredToExclusive") LocalDate requiredToExclusive
     );
+
+    default boolean existsActiveAssignmentCovering(
+            Long campaignId,
+            Long centerId,
+            CampaignCenterAssignmentStatus status,
+            LocalDate requiredFrom,
+            LocalDate requiredToExclusive
+    ) {
+        return existsActiveAssignmentCovering(campaignId, centerId, status, null, requiredFrom, requiredToExclusive);
+    }
 }

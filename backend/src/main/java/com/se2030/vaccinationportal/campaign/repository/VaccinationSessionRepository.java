@@ -1,8 +1,11 @@
 package com.se2030.vaccinationportal.campaign.repository;
 
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,4 +33,21 @@ public interface VaccinationSessionRepository extends JpaRepository<VaccinationS
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM VaccinationSession s WHERE s.id = :id")
     Optional<VaccinationSession> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("SELECT s FROM VaccinationSession s WHERE s.campaign.id = :campaignId " +
+            "AND s.lifecycleStatus IN :statuses AND s.endAt > :now")
+    List<VaccinationSession> findBlockingSessionsForCampaign(
+            @Param("campaignId") Long campaignId,
+            @Param("statuses") Collection<SessionLifecycleStatus> statuses,
+            @Param("now") Instant now
+    );
+
+    @Query("SELECT s FROM VaccinationSession s WHERE s.campaign.id = :campaignId " +
+            "AND s.center.id = :centerId AND s.lifecycleStatus IN :statuses AND s.endAt > :now")
+    List<VaccinationSession> findBlockingSessionsForCampaignAndCenter(
+            @Param("campaignId") Long campaignId,
+            @Param("centerId") Long centerId,
+            @Param("statuses") Collection<SessionLifecycleStatus> statuses,
+            @Param("now") Instant now
+    );
 }
