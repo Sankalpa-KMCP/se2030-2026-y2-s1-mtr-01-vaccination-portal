@@ -1,17 +1,26 @@
 package com.se2030.vaccinationportal.campaign.service;
 
 import com.se2030.vaccinationportal.campaign.model.OperatingHours;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service managing OperatingHours schedules, versioning, conflict enforcement,
@@ -22,13 +31,26 @@ import java.util.Optional;
 @Transactional
 public class OperatingHoursService {
 
+    private static final List<SessionLifecycleStatus> BLOCKING_STATUSES = List.of(
+            SessionLifecycleStatus.DRAFT,
+            SessionLifecycleStatus.SCHEDULED,
+            SessionLifecycleStatus.IN_PROGRESS
+    );
+
     private final OperatingHoursRepository operatingHoursRepository;
     private final VaccinationCenterRepository centerRepository;
+    private final VaccinationSessionRepository sessionRepository;
+    private final Clock clock;
+    @PersistenceContext private EntityManager entityManager;
 
     public OperatingHoursService(OperatingHoursRepository operatingHoursRepository,
-                                 VaccinationCenterRepository centerRepository) {
+                                 VaccinationCenterRepository centerRepository,
+                                 VaccinationSessionRepository sessionRepository,
+                                 Clock clock) {
         this.operatingHoursRepository = operatingHoursRepository;
         this.centerRepository = centerRepository;
+        this.sessionRepository = sessionRepository;
+        this.clock = clock;
     }
 
     /**
@@ -56,6 +78,9 @@ public class OperatingHoursService {
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
                 .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+        if (entityManager != null) {
+            entityManager.refresh(center);
+        }
 
         OperatingHours.validateParameters(center, dayOfWeek, opening, closing, effectiveFrom, effectiveTo);
 
@@ -100,8 +125,11 @@ public class OperatingHoursService {
         Long centerId = operatingHoursRepository.findCenterIdById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Operating hours not found with ID: " + id));
 
-        centerRepository.findByIdForUpdate(centerId)
+        VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
                 .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+        if (entityManager != null) {
+            entityManager.refresh(center);
+        }
 
         OperatingHours target = operatingHoursRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Operating hours not found with ID: " + id));
@@ -110,6 +138,15 @@ public class OperatingHoursService {
 
         List<OperatingHours> siblings = operatingHoursRepository.findByCenterIdAndDayOfWeek(centerId, dayOfWeek);
         validateNoConflict(siblings, id, opening, closing, effectiveFrom, effectiveTo);
+
+        List<OperatingHours> allHours = operatingHoursRepository.findByCenterId(centerId);
+        List<OperatingHours> simulatedHours = allHours.stream()
+                .map(oh -> id.equals(oh.getId())
+                        ? new OperatingHours(center, dayOfWeek, opening, closing, effectiveFrom, effectiveTo)
+                        : oh)
+                .toList();
+
+        validateOperatingHoursReverseImpact(centerId, center, simulatedHours);
 
         target.updateSchedule(dayOfWeek, opening, closing, effectiveFrom, effectiveTo);
 
@@ -136,8 +173,11 @@ public class OperatingHoursService {
         Long centerId = operatingHoursRepository.findCenterIdById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Operating hours not found with ID: " + id));
 
-        centerRepository.findByIdForUpdate(centerId)
+        VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
                 .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+        if (entityManager != null) {
+            entityManager.refresh(center);
+        }
 
         OperatingHours target = operatingHoursRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Operating hours not found with ID: " + id));
@@ -149,6 +189,15 @@ public class OperatingHoursService {
         if (target.getEffectiveTo() != null && endDate.isAfter(target.getEffectiveTo())) {
             throw new IllegalArgumentException("End date (" + endDate + ") cannot extend beyond current effective to date (" + target.getEffectiveTo() + "). Use updateSchedule for schedule extensions.");
         }
+
+        List<OperatingHours> allHours = operatingHoursRepository.findByCenterId(centerId);
+        List<OperatingHours> simulatedHours = allHours.stream()
+                .map(oh -> id.equals(oh.getId())
+                        ? new OperatingHours(center, oh.getDayOfWeek(), oh.getOpening(), oh.getClosing(), oh.getEffectiveFrom(), endDate)
+                        : oh)
+                .toList();
+
+        validateOperatingHoursReverseImpact(centerId, center, simulatedHours);
 
         target.endOn(endDate);
 
@@ -254,6 +303,106 @@ public class OperatingHoursService {
                         sibling.getEffectiveFrom(),
                         sibling.getEffectiveTo() != null ? sibling.getEffectiveTo() : "open-ended"
                 ));
+            }
+        }
+    }
+
+    private void validateOperatingHoursReverseImpact(
+            Long centerId,
+            VaccinationCenter center,
+            List<OperatingHours> simulatedHours
+    ) {
+        List<VaccinationSession> blockingSessions = sessionRepository.findBlockingSessionsForCenter(
+                centerId,
+                BLOCKING_STATUSES,
+                clock.instant()
+        );
+        if (blockingSessions.isEmpty()) {
+            return;
+        }
+
+        ZoneId zoneId = ZoneId.of(center.getTimezone().trim());
+
+        for (VaccinationSession session : blockingSessions) {
+            Instant startAt = session.getStartAt();
+            Instant endAt = session.getEndAt();
+
+            LocalDate firstTouchedDate = startAt.atZone(zoneId).toLocalDate();
+            LocalDate lastTouchedDate = endAt.minusNanos(1).atZone(zoneId).toLocalDate();
+
+            for (LocalDate date = firstTouchedDate; !date.isAfter(lastTouchedDate); date = date.plusDays(1)) {
+                LocalDate evalDate = date;
+                ZonedDateTime dayStartZdt = evalDate.atStartOfDay(zoneId);
+                ZonedDateTime nextDayStartZdt = evalDate.plusDays(1).atStartOfDay(zoneId);
+                Instant dayStart = dayStartZdt.toInstant();
+                Instant nextDayStart = nextDayStartZdt.toInstant();
+
+                if (!endAt.isBefore(nextDayStart)) {
+                    throw new IllegalArgumentException(
+                            "Operating hours change leaves session (" + session.getOccurrenceKey() +
+                                    ") extending across midnight on " + evalDate);
+                }
+
+                LocalTime requiredStart = startAt.isAfter(dayStart)
+                        ? startAt.atZone(zoneId).toLocalTime()
+                        : LocalTime.MIN;
+                LocalTime requiredEnd = endAt.atZone(zoneId).toLocalTime();
+
+                List<OperatingHours> hoursList = simulatedHours.stream()
+                        .filter(oh -> oh.getDayOfWeek() == evalDate.getDayOfWeek())
+                        .filter(oh -> !evalDate.isBefore(oh.getEffectiveFrom()))
+                        .filter(oh -> oh.getEffectiveTo() == null || !evalDate.isAfter(oh.getEffectiveTo()))
+                        .sorted(Comparator.comparing(OperatingHours::getOpening))
+                        .toList();
+
+                if (hoursList.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Operating hours change leaves session (" + session.getOccurrenceKey() +
+                                    ") without operating hours on " + evalDate + " (" + evalDate.getDayOfWeek() + ")");
+                }
+
+                LocalTime coveredUntil = null;
+                for (OperatingHours shift : hoursList) {
+                    LocalTime opening = shift.getOpening();
+                    LocalTime closing = shift.getClosing();
+
+                    if (!closing.isAfter(requiredStart)) {
+                        continue;
+                    }
+                    if (!opening.isBefore(requiredEnd)) {
+                        break;
+                    }
+
+                    if (coveredUntil == null) {
+                        if (opening.isAfter(requiredStart)) {
+                            throw new IllegalArgumentException(
+                                    "Operating hours change leaves session start time (" + requiredStart +
+                                            ") un-covered by center opening time (" + opening + ") on " + date);
+                        }
+                        coveredUntil = closing;
+                    } else {
+                        if (opening.isAfter(coveredUntil)) {
+                            if (coveredUntil.isBefore(requiredEnd)) {
+                                throw new IllegalArgumentException(
+                                        "Operating hours change introduces a gap in coverage between " +
+                                                coveredUntil + " and " + opening + " on " + date);
+                            }
+                        }
+                        if (closing.isAfter(coveredUntil)) {
+                            coveredUntil = closing;
+                        }
+                    }
+
+                    if (!coveredUntil.isBefore(requiredEnd)) {
+                        break;
+                    }
+                }
+
+                if (coveredUntil == null || coveredUntil.isBefore(requiredEnd)) {
+                    throw new IllegalArgumentException(
+                            "Operating hours change leaves session end time (" + requiredEnd +
+                                    ") extending beyond center operating hours on " + date);
+                }
             }
         }
     }

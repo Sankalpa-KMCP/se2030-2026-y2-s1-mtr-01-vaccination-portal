@@ -50,4 +50,12 @@ public interface VaccinationSessionRepository extends JpaRepository<VaccinationS
             @Param("statuses") Collection<SessionLifecycleStatus> statuses,
             @Param("now") Instant now
     );
+
+    @Query("SELECT s FROM VaccinationSession s WHERE s.center.id = :centerId " +
+            "AND s.lifecycleStatus IN :statuses AND s.endAt > :now")
+    List<VaccinationSession> findBlockingSessionsForCenter(
+            @Param("centerId") Long centerId,
+            @Param("statuses") Collection<SessionLifecycleStatus> statuses,
+            @Param("now") Instant now
+    );
 }

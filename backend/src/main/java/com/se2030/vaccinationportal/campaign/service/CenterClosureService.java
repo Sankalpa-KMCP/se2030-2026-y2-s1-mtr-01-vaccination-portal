@@ -2,9 +2,14 @@ package com.se2030.vaccinationportal.campaign.service;
 
 import com.se2030.vaccinationportal.campaign.model.CenterClosure;
 import com.se2030.vaccinationportal.campaign.model.CenterClosureStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -17,17 +22,27 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class CenterClosureService {
 
+    private static final List<SessionLifecycleStatus> BLOCKING_STATUSES = List.of(
+            SessionLifecycleStatus.DRAFT,
+            SessionLifecycleStatus.SCHEDULED,
+            SessionLifecycleStatus.IN_PROGRESS
+    );
+
     private final CenterClosureRepository closureRepository;
     private final VaccinationCenterRepository centerRepository;
+    private final VaccinationSessionRepository sessionRepository;
     private final Clock clock;
+    @PersistenceContext private EntityManager entityManager;
 
     public CenterClosureService(
             CenterClosureRepository closureRepository,
             VaccinationCenterRepository centerRepository,
+            VaccinationSessionRepository sessionRepository,
             Clock clock
     ) {
         this.closureRepository = closureRepository;
         this.centerRepository = centerRepository;
+        this.sessionRepository = sessionRepository;
         this.clock = clock;
     }
 
@@ -35,10 +50,9 @@ public class CenterClosureService {
         requireId(centerId, "Center ID is required");
         CenterClosure.validateCandidate(startAt, endAt, reason);
 
-        VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Vaccination center not found with ID: " + centerId));
+        VaccinationCenter center = lockCenter(centerId);
         rejectActiveOverlap(centerId, null, startAt, endAt);
+        validateClosureSessionExclusion(centerId, startAt, endAt);
 
         return closureRepository.save(new CenterClosure(center, startAt, endAt, reason));
     }
@@ -78,6 +92,7 @@ public class CenterClosureService {
             throw new IllegalArgumentException("Updated center closure must start in the future");
         }
         rejectActiveOverlap(centerId, id, startAt, endAt);
+        validateClosureSessionExclusion(centerId, startAt, endAt);
 
         target.updateDetails(startAt, endAt, reason);
         return closureRepository.save(target);
@@ -119,10 +134,14 @@ public class CenterClosureService {
                         "Center closure not found with ID: " + closureId));
     }
 
-    private void lockCenter(Long centerId) {
-        centerRepository.findByIdForUpdate(centerId)
+    private VaccinationCenter lockCenter(Long centerId) {
+        VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Vaccination center not found with ID: " + centerId));
+        if (entityManager != null) {
+            entityManager.refresh(center);
+        }
+        return center;
     }
 
     private CenterClosure findClosure(Long closureId) {
@@ -135,6 +154,22 @@ public class CenterClosureService {
         if (closureRepository.existsOverlappingClosure(
                 centerId, CenterClosureStatus.ACTIVE, excludedId, startAt, endAt)) {
             throw new IllegalArgumentException("Center closure overlaps an active closure");
+        }
+    }
+
+    private void validateClosureSessionExclusion(Long centerId, Instant startAt, Instant endAt) {
+        List<VaccinationSession> blockingSessions = sessionRepository.findBlockingSessionsForCenter(
+                centerId,
+                BLOCKING_STATUSES,
+                clock.instant()
+        );
+        for (VaccinationSession session : blockingSessions) {
+            if (session.getStartAt().isBefore(endAt) && session.getEndAt().isAfter(startAt)) {
+                throw new IllegalArgumentException(
+                        "Active center closure overlaps an active or scheduled session (" +
+                                session.getOccurrenceKey() + ")"
+                );
+            }
         }
     }
 
