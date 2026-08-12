@@ -2472,12 +2472,12 @@ mark Sprint 1 complete prematurely.
 17. Final Handoff State
 Canonical: 3.3-AI / 2026-08-08-R8
 Sprint: Sprint 1 — IN PROGRESS
-Latest MF-02 implementation merge: PR #53 / 7da7e09288ff02e1306ac22ead33a48af74e8e2a
-PR #53 certified source: a13d526b3989eb03fbc22f852a05ae092c6e1b9e
-PR #53 actual base: 8868b3f40aa6ef06aab716d74c730494c507367c
-PR #53 merge parents: 8868b3f40aa6ef06aab716d74c730494c507367c and a13d526b3989eb03fbc22f852a05ae092c6e1b9e
-Latest overall repository/documentation checkpoint: PR #53 / 7da7e09288ff02e1306ac22ead33a48af74e8e2a
-Backend baseline: 507 tests; Maven test/verify SUCCESS; executable JAR packaged
+Latest MF-02 implementation merge: PR #55 / 9a470da982f1510213163b3b909a02bd0f85973b
+PR #55 certified source: d1d9e63a5398687e78734f835357fb9c6ded34d8
+PR #55 actual base: 62f9743a7caa50fb1f26551edb611ee4edbbcccf
+PR #55 merge parents: 62f9743a7caa50fb1f26551edb611ee4edbbcccf and d1d9e63a5398687e78734f835357fb9c6ded34d8
+Latest overall repository/documentation checkpoint: PR #55 / 9a470da982f1510213163b3b909a02bd0f85973b
+Backend baseline: 521 tests; Maven test/verify SUCCESS; executable JAR packaged
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
@@ -2495,12 +2495,18 @@ VaccinationCenter deactivation reverse protection: IMPLEMENTED, INDEPENDENTLY RE
 OperatingHours update/end-date reverse protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #52)
 CenterClosure create/update reverse protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #52)
 VaccinationSession lifecycle state machine hardening: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #53)
-- Strict state machine: DRAFT -> SCHEDULED, SCHEDULED -> IN_PROGRESS, IN_PROGRESS -> COMPLETED, DRAFT -> CANCELLED, SCHEDULED -> CANCELLED
-- Terminal states: COMPLETED and CANCELLED reject all further transitions
-- Domain actions: schedule(), start(), complete(), cancel(), transitionLifecycleStatus(...) enforce state invariants with no broad setters
-- Service locking: scheduleSession, startSession, completeSession use pessimistic row locking (findByIdForUpdate) and post-lock entity refresh
-- Audit semantics: Lifecycle-only transitions generate no SessionChangeEvent audit records
+VaccinationCampaign publication prerequisites and transition: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #55)
+- Controlled transition: DRAFT/SCHEDULED -> PUBLISHED (rejects all other source statuses)
+- Mandatory publication prerequisites (enforced under campaign pessimistic write lock findByIdForUpdate and post-lock entity refresh):
+  * Valid campaign service dates & booking window (validateDateConsistency)
+  * Active VaccineType requirement
+  * Active TargetGroup with non-blank description requirement
+  * Exactly one effective CampaignDoseProgramme requirement
+  * Exactly one effective CampaignQuestionnaireAssignment requirement
+  * Referenced QuestionnaireVersion is PUBLISHED via QuestionnaireVersionPublicationPort
+- Non-prerequisites: CampaignLocationTarget, CampaignCenterAssignment, SessionRecurrenceRule, and VaccinationSession remain optional and do not block publication
+- 14 net-new tests added in CampaignPublicationIntegrationTests (521 total backend tests passing)
 Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
-Immediate next phase: campaign publication prerequisites and transition implementation
-Pending Sprint 1 gaps: campaign publication prerequisites/transition, any required campaign lifecycle operations, MF-01 QuestionnaireVersion adapter/FK, final Sprint DoD evidence
-The next AI should refresh live repository state and proceed with campaign publication prerequisites and transition implementation. Session lifecycle hardening and all reverse configuration-impact protections are complete. Keep the implementation behavior-focused and regression-tested. Do not mark Sprint 1 complete prematurely.
+Immediate next phase: remaining campaign lifecycle transitions readiness gate
+Pending Sprint 1 gaps: remaining campaign lifecycle transitions, MF-01 QuestionnaireVersion production adapter/FK integration, final Sprint DoD evidence
+The next AI should start a fresh chat/session, refresh live repository state, and proceed with the remaining campaign lifecycle transitions readiness gate. Campaign publication, session lifecycle hardening, and all reverse configuration-impact protections are complete. Keep implementation behavior-focused and regression-tested. Do not mark Sprint 1 complete prematurely.
