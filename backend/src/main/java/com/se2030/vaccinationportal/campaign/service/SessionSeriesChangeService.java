@@ -183,6 +183,200 @@ public class SessionSeriesChangeService {
     }
 
     /**
+     * Previews a full-series cancellation of an active recurrence rule and its generated sessions.
+     *
+     * @param ruleId ID of the target SessionRecurrenceRule
+     * @return Immutable {@link SeriesChangePreview}
+     */
+    public SeriesChangePreview previewSeriesCancellation(Long ruleId) {
+        requireId(ruleId, "Session recurrence rule ID is required");
+
+        SessionRecurrenceRule rule = ruleRepository.findById(ruleId)
+                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+
+        if (rule.getStatus() != SessionRecurrenceRuleStatus.ACTIVE) {
+            throw new IllegalArgumentException("Session recurrence rule must be ACTIVE to preview cancellation");
+        }
+
+        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(rule.getTimezone())));
+        if (today.isAfter(rule.getEndDate())) {
+            throw new IllegalArgumentException("An expired session recurrence rule cannot be cancelled");
+        }
+
+        VaccinationCenter center = rule.getCenter();
+        VaccinationCampaign campaign = rule.getCampaign();
+
+        List<VaccinationSession> existingSessions =
+                sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(ruleId);
+
+        Instant now = Instant.now(clock);
+        return calculateCancellationPreviewInternal(rule, campaign, center, existingSessions, now);
+    }
+
+    /**
+     * Confirms and atomically executes a full-series cancellation of an active recurrence rule and its generated sessions.
+     *
+     * @param ruleId       ID of the target SessionRecurrenceRule
+     * @param previewToken SHA-256 fingerprint token obtained from a prior preview
+     * @param reason       Mandatory business justification for the cancellation (max 500 chars)
+     * @param actorId      Mandatory identifier of the user or system actor (max 64 chars)
+     * @return Immutable {@link SeriesChangeResult}
+     */
+    @Transactional
+    public SeriesChangeResult confirmSeriesCancellation(
+            Long ruleId,
+            String previewToken,
+            String reason,
+            String actorId
+    ) {
+        requireId(ruleId, "Session recurrence rule ID is required");
+        if (previewToken == null || previewToken.isBlank()) {
+            throw new IllegalArgumentException("Preview token is required");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Reason is required");
+        }
+        String trimmedReason = reason.trim();
+        if (trimmedReason.length() > 500) {
+            throw new IllegalArgumentException("Reason cannot exceed 500 characters");
+        }
+        if (actorId == null || actorId.isBlank()) {
+            throw new IllegalArgumentException("Actor ID is required");
+        }
+        String trimmedActorId = actorId.trim();
+        if (trimmedActorId.length() > 64) {
+            throw new IllegalArgumentException("Actor ID cannot exceed 64 characters");
+        }
+
+        // Step 1: Discover unlocked rule to obtain campaign and center IDs
+        SessionRecurrenceRule unlockedRule = ruleRepository.findById(ruleId)
+                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+
+        Long campaignId = unlockedRule.getCampaign().getId();
+        Long centerId = unlockedRule.getCenter().getId();
+
+        // Step 2: Acquire deterministic write locks in lock order: campaign -> center -> rule -> sessions (by ID ASC)
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Vaccination campaign not found with ID: " + campaignId));
+
+        VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
+                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+
+        SessionRecurrenceRule rule = ruleRepository.findByIdForUpdate(ruleId)
+                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+
+        if (rule.getStatus() != SessionRecurrenceRuleStatus.ACTIVE) {
+            throw new IllegalArgumentException("Session recurrence rule must be ACTIVE to confirm cancellation");
+        }
+
+        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(rule.getTimezone())));
+        if (today.isAfter(rule.getEndDate())) {
+            throw new IllegalArgumentException("An expired session recurrence rule cannot be cancelled");
+        }
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+            entityManager.refresh(center);
+            entityManager.refresh(rule);
+        }
+
+        List<VaccinationSession> unlockedSessions =
+                sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(ruleId);
+
+        List<Long> sessionIdsToLock = unlockedSessions.stream()
+                .map(VaccinationSession::getId)
+                .sorted()
+                .toList();
+
+        List<VaccinationSession> lockedSessions = new ArrayList<>();
+        for (Long sid : sessionIdsToLock) {
+            VaccinationSession s = sessionRepository.findByIdForUpdate(sid)
+                    .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sid));
+            if (entityManager != null) {
+                entityManager.refresh(s);
+            }
+            lockedSessions.add(s);
+        }
+
+        // Step 3: Re-evaluate preview under locks for stale token protection
+        Instant now = Instant.now(clock);
+        SeriesChangePreview preview = calculateCancellationPreviewInternal(rule, campaign, center, lockedSessions, now);
+
+        if (!preview.previewToken().equals(previewToken.trim())) {
+            throw new IllegalStateException("Preview is stale or session state has changed; please review the updated preview before confirming");
+        }
+
+        // Step 4: Cancel recurrence rule
+        rule.cancel();
+        ruleRepository.saveAndFlush(rule);
+
+        // Step 5: Execute atomic occurrence mutations
+        Map<LocalDate, VaccinationSession> existingByOriginDate = new HashMap<>();
+        for (VaccinationSession s : lockedSessions) {
+            existingByOriginDate.put(s.getOriginOccurrenceDate(), s);
+        }
+
+        List<VaccinationSession> sessionsToSave = new ArrayList<>();
+        List<SessionChangeEvent> eventsToSave = new ArrayList<>();
+
+        int cancelledCount = 0;
+        int preservedCount = 0;
+        int ineligibleCount = 0;
+
+        for (SeriesOccurrencePreviewItem item : preview.occurrenceEntries()) {
+            LocalDate date = item.originOccurrenceDate();
+            SeriesOccurrenceCategory cat = item.category();
+            VaccinationSession existing = existingByOriginDate.get(date);
+
+            switch (cat) {
+                case PRESERVED_EXCEPTION -> preservedCount++;
+                case INELIGIBLE -> ineligibleCount++;
+                case REMOVED -> {
+                    if (existing == null) {
+                        throw new IllegalStateException("Expected existing session for REMOVED occurrence date: " + date);
+                    }
+                    SessionScheduleSnapshot oldSnapshot = SessionScheduleSnapshot.from(existing);
+                    existing.cancel();
+                    SessionScheduleSnapshot newSnapshot = SessionScheduleSnapshot.from(existing);
+                    sessionsToSave.add(existing);
+
+                    SessionChangeEvent event = new SessionChangeEvent(
+                            existing,
+                            SessionChangeType.SERIES_CANCELLED,
+                            oldSnapshot,
+                            newSnapshot,
+                            trimmedReason,
+                            item.affectedAppointmentCount(),
+                            item.affectedWaitlistCount(),
+                            trimmedActorId
+                    );
+                    eventsToSave.add(event);
+                    cancelledCount++;
+                }
+                default -> throw new IllegalStateException("Unexpected occurrence category in series cancellation: " + cat);
+            }
+        }
+
+        if (!sessionsToSave.isEmpty()) {
+            sessionRepository.saveAllAndFlush(sessionsToSave);
+        }
+        if (!eventsToSave.isEmpty()) {
+            sessionChangeEventRepository.saveAllAndFlush(eventsToSave);
+        }
+
+        return new SeriesChangeResult(
+                rule,
+                preview,
+                0,
+                cancelledCount,
+                0,
+                preservedCount,
+                ineligibleCount,
+                eventsToSave.size()
+        );
+    }
+
+    /**
      * Confirms and atomically executes a series-wide schedule change to a recurrence rule and its generated sessions.
      *
      * @param ruleId       ID of the target SessionRecurrenceRule
@@ -662,6 +856,132 @@ public class SessionSeriesChangeService {
                     ));
                 }
             }
+        }
+
+        String previewToken = generateSeriesPreviewToken(
+                ruleId,
+                currentDefinition,
+                proposedDefinition,
+                entries,
+                totalAffectedAppointments,
+                totalAffectedWaitlist
+        );
+
+        return new SeriesChangePreview(
+                ruleId,
+                currentDefinition,
+                proposedDefinition,
+                entries,
+                totalAffectedAppointments,
+                totalAffectedWaitlist,
+                previewToken
+        );
+    }
+
+    private SeriesChangePreview calculateCancellationPreviewInternal(
+            SessionRecurrenceRule rule,
+            VaccinationCampaign campaign,
+            VaccinationCenter center,
+            List<VaccinationSession> existingSessions,
+            Instant now
+    ) {
+        Long ruleId = rule.getId();
+        RecurrenceRuleDefinitionSnapshot currentDefinition = RecurrenceRuleDefinitionSnapshot.from(rule);
+        RecurrenceRuleDefinitionSnapshot proposedDefinition = currentDefinition;
+
+        // Detect individually overridden occurrences via durable SessionChangeEvent history
+        Set<Long> overriddenSessionIds = new HashSet<>();
+        if (!existingSessions.isEmpty()) {
+            List<Long> sessionIds = existingSessions.stream().map(VaccinationSession::getId).toList();
+            List<SessionChangeEvent> changeEvents = sessionChangeEventRepository.findBySessionIdIn(sessionIds);
+            for (SessionChangeEvent event : changeEvents) {
+                if (INDIVIDUAL_OVERRIDE_TYPES.contains(event.getChangeType())) {
+                    overriddenSessionIds.add(event.getSession().getId());
+                }
+            }
+        }
+
+        List<SeriesOccurrencePreviewItem> entries = new ArrayList<>();
+        int totalAffectedAppointments = 0;
+        int totalAffectedWaitlist = 0;
+
+        for (VaccinationSession existing : existingSessions) {
+            LocalDate date = existing.getOriginOccurrenceDate();
+            String occurrenceKey = rule.getGenerationKey() + ":" + date;
+            SessionScheduleSnapshot currentSnapshot = SessionScheduleSnapshot.from(existing);
+
+            // Case A: Preserved individual exception
+            if (overriddenSessionIds.contains(existing.getId())) {
+                entries.add(new SeriesOccurrencePreviewItem(
+                        occurrenceKey,
+                        date,
+                        SeriesOccurrenceCategory.PRESERVED_EXCEPTION,
+                        existing.getId(),
+                        currentSnapshot,
+                        currentSnapshot,
+                        0,
+                        0
+                ));
+                continue;
+            }
+
+            // Case B: Ineligible (past/elapsed or terminal/non-mutable lifecycle)
+            boolean isElapsed = !existing.getStartAt().isAfter(now);
+            boolean isTerminalOrSpecial = existing.getLifecycleStatus() == SessionLifecycleStatus.IN_PROGRESS
+                    || existing.getLifecycleStatus() == SessionLifecycleStatus.COMPLETED
+                    || existing.getLifecycleStatus() == SessionLifecycleStatus.CANCELLED;
+
+            if (isElapsed || isTerminalOrSpecial) {
+                entries.add(new SeriesOccurrencePreviewItem(
+                        occurrenceKey,
+                        date,
+                        SeriesOccurrenceCategory.INELIGIBLE,
+                        existing.getId(),
+                        currentSnapshot,
+                        currentSnapshot,
+                        0,
+                        0
+                ));
+                continue;
+            }
+
+            // Case C: Eligible future DRAFT or SCHEDULED session -> REMOVED
+            int affectedAppts = 0;
+            int affectedWait = 0;
+            if (existing.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED) {
+                if (sessionImpactReader == null) {
+                    throw new IllegalStateException("Session impact reader is not available to assess SCHEDULED session changes");
+                }
+                var impact = sessionImpactReader.getSessionImpact(existing.getId());
+                if (impact == null) {
+                    throw new IllegalStateException("Session impact reader returned null summary for session ID: " + existing.getId());
+                }
+                affectedAppts = impact.affectedAppointmentCount();
+                affectedWait = impact.affectedWaitlistCount();
+            }
+
+            totalAffectedAppointments += affectedAppts;
+            totalAffectedWaitlist += affectedWait;
+
+            SessionScheduleSnapshot proposedSnapshot = new SessionScheduleSnapshot(
+                    center.getId(),
+                    center.getTimezone(),
+                    existing.getStartAt(),
+                    existing.getEndAt(),
+                    existing.getBookingCloseAt(),
+                    SessionLifecycleStatus.CANCELLED
+            );
+
+            entries.add(new SeriesOccurrencePreviewItem(
+                    occurrenceKey,
+                    date,
+                    SeriesOccurrenceCategory.REMOVED,
+                    existing.getId(),
+                    currentSnapshot,
+                    proposedSnapshot,
+                    affectedAppts,
+                    affectedWait
+            ));
         }
 
         String previewToken = generateSeriesPreviewToken(
