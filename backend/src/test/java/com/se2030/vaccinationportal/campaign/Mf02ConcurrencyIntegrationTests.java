@@ -376,6 +376,97 @@ class Mf02ConcurrencyIntegrationTests {
         assertInstanceOf(IllegalStateException.class, rejected.error(), outcomes.toString());
     }
 
+    @Test
+    @Timeout(15)
+    void concurrentSeriesCancellationsOnSameRuleSerializeCleanly() throws Exception {
+        VaccinationCampaign campaign = createCampaign("CONC-SERIES-CANC");
+        VaccinationCenter center = createCenter("LOC-SERIES-CANC");
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                campaign, center, LocalDate.of(2029, 1, 1), LocalDate.of(2031, 1, 1)));
+
+        for (DayOfWeek dow : DayOfWeek.values()) {
+            operatingHoursRepository.saveAndFlush(new OperatingHours(
+                    center, dow, LocalTime.of(8, 0), LocalTime.of(18, 0),
+                    LocalDate.of(2029, 1, 1), null));
+        }
+
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                campaign, center, EnumSet.of(DayOfWeek.MONDAY),
+                LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                LocalTime.of(9, 0), LocalTime.of(12, 0), "UTC"));
+
+        generationService.generateOccurrences(rule.getId());
+
+        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview preview =
+                seriesChangeService.previewSeriesCancellation(rule.getId());
+
+        // Run two series cancellations with the same preview token concurrently
+        List<Outcome> outcomes = runConcurrently(
+                () -> seriesChangeService.confirmSeriesCancellation(
+                        rule.getId(), preview.previewToken(), "First cancel", "ACTOR-1"),
+                () -> seriesChangeService.confirmSeriesCancellation(
+                        rule.getId(), preview.previewToken(), "Second cancel", "ACTOR-2")
+        );
+
+        // Exactly one must succeed, the other rejected (rule not active or stale preview)
+        assertEquals(1, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
+        Outcome rejected = outcomes.stream().filter(o -> !o.success()).findFirst().orElseThrow();
+        assertTrue(
+                rejected.error() instanceof IllegalArgumentException || rejected.error() instanceof IllegalStateException,
+                "Expected IllegalArgumentException or IllegalStateException but got: " + rejected.error()
+        );
+    }
+
+    @Test
+    @Timeout(15)
+    void concurrentSeriesCancellationAndSeriesChangeSerializeCleanly() throws Exception {
+        VaccinationCampaign campaign = createCampaign("CONC-SERIES-CC");
+        VaccinationCenter center = createCenter("LOC-SERIES-CC");
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                campaign, center, LocalDate.of(2029, 1, 1), LocalDate.of(2031, 1, 1)));
+
+        for (DayOfWeek dow : DayOfWeek.values()) {
+            operatingHoursRepository.saveAndFlush(new OperatingHours(
+                    center, dow, LocalTime.of(8, 0), LocalTime.of(18, 0),
+                    LocalDate.of(2029, 1, 1), null));
+        }
+
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                campaign, center, EnumSet.of(DayOfWeek.MONDAY),
+                LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                LocalTime.of(9, 0), LocalTime.of(12, 0), "UTC"));
+
+        generationService.generateOccurrences(rule.getId());
+
+        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview cancelPreview =
+                seriesChangeService.previewSeriesCancellation(rule.getId());
+
+        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview changePreview =
+                seriesChangeService.previewSeriesChange(
+                        rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
+                        LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                        LocalTime.of(10, 0), LocalTime.of(13, 0), "UTC");
+
+        // Run cancel and schedule change concurrently
+        List<Outcome> outcomes = runConcurrently(
+                () -> seriesChangeService.confirmSeriesCancellation(
+                        rule.getId(), cancelPreview.previewToken(), "Concurrent cancel", "ACTOR-1"),
+                () -> seriesChangeService.confirmSeriesChange(
+                        rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
+                        LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                        LocalTime.of(10, 0), LocalTime.of(13, 0), "UTC",
+                        changePreview.previewToken(), "Concurrent shift", "ACTOR-2")
+        );
+
+        // Exactly one must succeed, the other rejected cleanly
+        assertEquals(1, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
+        Outcome rejected = outcomes.stream().filter(o -> !o.success()).findFirst().orElseThrow();
+        assertTrue(
+                rejected.error() instanceof IllegalArgumentException || rejected.error() instanceof IllegalStateException,
+                "Expected IllegalArgumentException or IllegalStateException but got: " + rejected.error()
+        );
+    }
+
     private VaccinationCampaign createCampaign(String code) {
         VaccineType vaccineType = vaccineTypeRepository.saveAndFlush(
                 new VaccineType("VAX-" + code, "Concurrency vaccine")
