@@ -522,14 +522,14 @@ Canonical revision: 2026-08-08-R8
 Sprint: Sprint 1
 Working window: Weeks 1–3
 Last updated: 2026-08-12
-Latest implementation integration: merged into develop via PR #46 (Session-change regression hardening: unchanged retained SCHEDULED series zero impact, latent past occurrence prevention, and exact no-op individual change rejection)
-Latest implementation develop checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
-Latest completed evidence integration recorded: PR #46 (fix(mf02): harden session change regressions) at 5ebcaadc44227d016956982a4ebf32e35c731491
-Evidence record prepared from implementation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
-Latest overall repository/documentation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491 (PR #46 merge)
+Latest implementation integration: merged into develop via PR #48 (Full-series cancellation workflow: previewSeriesCancellation / confirmSeriesCancellation, ACTIVE/non-expired rule check, REMOVED/PRESERVED_EXCEPTION/INELIGIBLE categorization, real SCHEDULED impact counts, SHA-256 preview token, campaign->center->rule->sessions ASC locking, rule cancellation, session cancellation, SERIES_CANCELLED audit events, generator compatibility)
+Latest implementation develop checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
+Latest completed evidence integration recorded: PR #48 (feat(mf02): add full-series cancellation) at 14e4976844870904b889fcd4970cc6d07439e168
+Evidence record prepared from implementation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
+Latest overall repository/documentation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168 (PR #48 merge)
 OperatingHours feature branch HEAD: 4fe94df8df7c07ade3c22a39165aff3da1e8795a
 Canonical documentation sync checkpoint (PR #17): bd22cb973bad83c8456897805bc2df95b65593d0
-Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a)
+Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a), PR #47 (5ebcaadc44227d016956982a4ebf32e35c731491)
 OperatingHours backend integration checkpoint (PR #20): 1cad899971c8b18804af31bfb079a24285f7d16d
 OperatingHours source branch: feature/mf02-operating-hours
 Pre-closure hardening integration checkpoint (PR #23): 5a5b3e7d285b50b7645a1c32b57f79b753b2baff
@@ -567,12 +567,15 @@ Atomic series change confirmation actual base: 8177c7f3b4623164c8a9a093763febc94
 Session-change regression hardening integration checkpoint (PR #46): 5ebcaadc44227d016956982a4ebf32e35c731491
 Session-change regression hardening reviewed source pointer: a84d9e13dab956581b0d549f355998691a807ffc
 Session-change regression hardening actual base: 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385
+Full-series cancellation integration checkpoint (PR #48): 14e4976844870904b889fcd4970cc6d07439e168
+Full-series cancellation reviewed source pointer: 668ec98f31ea39904e7992a5f1a986e74ae8f8ab
+Full-series cancellation actual base: b12fe280b706c9ce58e3ac8b886a58c60c14f7fb
 
 Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
 
 Metadata Stability Policy: Metadata-only evidence synchronization commits/PRs are recorded as evidence checkpoints and are not recursively treated as new MF-02 implementation checkpoints. Implementation checkpoints remain strictly tied to actual domain/feature implementation integrations.
 
-This evidence records PR #46 implementation checkpoint 5ebcaadc44227d016956982a4ebf32e35c731491. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
+This evidence records PR #48 implementation checkpoint 14e4976844870904b889fcd4970cc6d07439e168. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
 
 Sprint Goal
 Build the MF-02 campaign and center-planning foundations needed for a valid vaccination campaign, including campaign lifecycle, dose-programme configuration, administrative service-area targeting, questionnaire linkage, center assignment, center calendar/closure foundations, recurrence foundations, concrete session foundations, session change audit foundations, individual session change workflows, series-wide session change preview foundation, and atomic series-wide session change confirmation.
@@ -1719,14 +1722,14 @@ Canonical revision: 2026-08-08-R8
 Sprint: Sprint 1
 Working window: Weeks 1–3
 Last updated: 2026-08-12
-Latest implementation integration: merged into develop via PR #46 (Session-change regression hardening: unchanged retained SCHEDULED series zero impact, latent past occurrence prevention, and exact no-op individual change rejection)
-Latest implementation develop checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
-Latest completed evidence integration recorded: PR #46 (fix(mf02): harden session change regressions) at 5ebcaadc44227d016956982a4ebf32e35c731491
-Evidence record prepared from implementation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491
-Latest overall repository/documentation checkpoint: 5ebcaadc44227d016956982a4ebf32e35c731491 (PR #46 merge)
+Latest implementation integration: merged into develop via PR #48 (Full-series cancellation workflow: previewSeriesCancellation / confirmSeriesCancellation, ACTIVE/non-expired rule check, REMOVED/PRESERVED_EXCEPTION/INELIGIBLE categorization, real SCHEDULED impact counts, SHA-256 preview token, campaign->center->rule->sessions ASC locking, rule cancellation, session cancellation, SERIES_CANCELLED audit events, generator compatibility)
+Latest implementation develop checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
+Latest completed evidence integration recorded: PR #48 (feat(mf02): add full-series cancellation) at 14e4976844870904b889fcd4970cc6d07439e168
+Evidence record prepared from implementation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
+Latest overall repository/documentation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168 (PR #48 merge)
 OperatingHours feature branch HEAD: 4fe94df8df7c07ade3c22a39165aff3da1e8795a
 Canonical documentation sync checkpoint (PR #17): bd22cb973bad83c8456897805bc2df95b65593d0
-Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a)
+Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a), PR #47 (5ebcaadc44227d016956982a4ebf32e35c731491)
 OperatingHours backend integration checkpoint (PR #20): 1cad899971c8b18804af31bfb079a24285f7d16d
 OperatingHours source branch: feature/mf02-operating-hours
 Pre-closure hardening integration checkpoint (PR #23): 5a5b3e7d285b50b7645a1c32b57f79b753b2baff
@@ -1764,12 +1767,15 @@ Atomic series change confirmation actual base: 8177c7f3b4623164c8a9a093763febc94
 Session-change regression hardening integration checkpoint (PR #46): 5ebcaadc44227d016956982a4ebf32e35c731491
 Session-change regression hardening reviewed source pointer: a84d9e13dab956581b0d549f355998691a807ffc
 Session-change regression hardening actual base: 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385
+Full-series cancellation integration checkpoint (PR #48): 14e4976844870904b889fcd4970cc6d07439e168
+Full-series cancellation reviewed source pointer: 668ec98f31ea39904e7992a5f1a986e74ae8f8ab
+Full-series cancellation actual base: b12fe280b706c9ce58e3ac8b886a58c60c14f7fb
 
 Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
 
 Metadata Stability Policy: Metadata-only evidence synchronization commits/PRs are recorded as evidence checkpoints and are not recursively treated as new MF-02 implementation checkpoints. Implementation checkpoints remain strictly tied to actual domain/feature implementation integrations.
 
-This evidence records PR #46 implementation checkpoint 5ebcaadc44227d016956982a4ebf32e35c731491. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
+This evidence records PR #48 implementation checkpoint 14e4976844870904b889fcd4970cc6d07439e168. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
 
 Sprint Goal
 Build the MF-02 campaign and center-planning foundations needed for a valid vaccination campaign, including campaign lifecycle, dose-programme configuration, administrative service-area targeting, questionnaire linkage, center assignment, center calendar/closure foundations, recurrence foundations, concrete session foundations, session change audit foundations, individual session change workflows, series-wide session change preview foundation, atomic series-wide session change confirmation, and regression-hardened session change operations.
@@ -2729,7 +2735,9 @@ Atomic series-wide VaccinationSession change confirmation (PR #44, 434 total tes
 
 Session-change regression hardening (PR #46, 447 total tests)
 
-Backend CI & Frontend CI results through PR #46, including PR #44 implementation, PR #45 evidence synchronization, and PR #46 regression hardening
+Full-series cancellation workflow (PR #48, merge commit 14e4976844870904b889fcd4970cc6d07439e168, reviewed source 668ec98f31ea39904e7992a5f1a986e74ae8f8ab, actual base b12fe280b706c9ce58e3ac8b886a58c60c14f7fb, 12 net-new tests and 459 total passing tests)
+
+Backend CI & Frontend CI results through PR #48, including PR #46 regression hardening, PR #47 evidence synchronization, and PR #48 full-series cancellation integration
 
 Still to capture:
 
@@ -2861,7 +2869,7 @@ Small logical commits kept implementation history reviewable.
 
 Canonical ownership/boundary checks were performed before each MF-02 slice.
 
-Tests expanded continuously as real behavior was introduced (447 total tests at the current implementation checkpoint).
+Tests expanded continuously as real behavior was introduced (459 total tests at the current implementation checkpoint).
 
 Candidate pre-validation (OperatingHours.validateParameters, VaccinationSession.validateSchedule, VaccinationSession.validateProvenance, VaccinationSessionValidator.validateSessionSchedule, SessionChangeEvent invariants, SessionChangePreview invariants) ensured mutation exception-safety and clean concurrency protection.
 
@@ -2881,21 +2889,19 @@ Add Flyway/API/UI evidence as those layers are implemented instead of postponing
 Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
 Exact Next Work
-The latest MF-02 implementation checkpoint is PR #46 merge 5ebcaadc44227d016956982a4ebf32e35c731491, with reviewed source a84d9e13dab956581b0d549f355998691a807ffc and base 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385. The latest overall documentation/repository checkpoint is 5ebcaadc44227d016956982a4ebf32e35c731491. The backend baseline is 447 tests.
+The latest MF-02 implementation checkpoint is PR #48 merge 14e4976844870904b889fcd4970cc6d07439e168, with reviewed source 668ec98f31ea39904e7992a5f1a986e74ae8f8ab and base b12fe280b706c9ce58e3ac8b886a58c60c14f7fb. The latest overall documentation/repository checkpoint is 14e4976844870904b889fcd4970cc6d07439e168. The backend baseline is 459 tests.
 
-All three external-review regression defects have been resolved and verified in PR #46:
+Full-series cancellation workflow is COMPLETE in PR #48:
 
-Unchanged retained SCHEDULED sessions contribute 0 appointments and 0 waitlist entries to series preview impact and do not require SessionImpactReader.
+Read-only cancellation preview (previewSeriesCancellation) classifies future eligible DRAFT/SCHEDULED sessions as REMOVED, preserves individual exceptions (PRESERVED_EXCEPTION) and elapsed sessions (INELIGIBLE), and generates a cryptographic SHA-256 preview token.
 
-Series definition changes cannot introduce new unmaterialized elapsed occurrences.
+Atomic cancellation confirmation (confirmSeriesCancellation) acquires write locks in strict order (campaign -> center -> rule -> sessions ID ASC), re-evaluates stale preview tokens, transitions rule to CANCELLED, cancels eligible REMOVED sessions, and writes append-only SERIES_CANCELLED audit events.
 
-Exact no-op individual reschedule/transfer proposals are rejected during preview and confirmation without writing SessionChangeEvent records or creating false PRESERVED_EXCEPTION history.
+Recurrence generator skips cancelled rules cleanly while preserving existing occurrence keys.
 
-With the regression hardening gate complete, proceed directly with the remaining Sprint 1 backend sequence:
+With full-series cancellation complete, proceed directly with the remaining Sprint 1 backend sequence:
 
-full-series cancellation workflow (previewSeriesCancellation / confirmSeriesCancellation);
-
-reverse configuration-impact protection;
+reverse configuration-impact protection architecture/readiness gate;
 
 campaign publication prerequisites/transition and required session lifecycle publishing;
 
@@ -2903,5 +2909,5 @@ final MF-01 questionnaire adapter/FK integration;
 
 final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #46 session-change regression hardening is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is the full-series cancellation workflow, not a package refactor and not reverse configuration protection.
+Current implementation stopping point: PR #48 full-series cancellation is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is the reverse configuration-impact protection architecture/readiness gate.
 
