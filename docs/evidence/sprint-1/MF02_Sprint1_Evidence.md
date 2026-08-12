@@ -2889,30 +2889,32 @@ Add Flyway/API/UI evidence as those layers are implemented instead of postponing
 Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
 Exact Next Work
-The latest MF-02 implementation checkpoint is PR #53 merge 7da7e09288ff02e1306ac22ead33a48af74e8e2a, with reviewed source a13d526b3989eb03fbc22f852a05ae092c6e1b9e and base 8868b3f40aa6ef06aab716d74c730494c507367c. Merge parents are 8868b3f40aa6ef06aab716d74c730494c507367c and a13d526b3989eb03fbc22f852a05ae092c6e1b9e. The latest overall repository/documentation checkpoint is 7da7e09288ff02e1306ac22ead33a48af74e8e2a. The backend baseline is 507 tests (495 baseline + 12 net-new tests). Pre-merge and post-merge Backend CI and Frontend CI succeeded.
+The latest MF-02 implementation checkpoint is PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b, with reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8 and base 62f9743a7caa50fb1f26551edb611ee4edbbcccf. Merge parents are 62f9743a7caa50fb1f26551edb611ee4edbbcccf and d1d9e63a5398687e78734f835357fb9c6ded34d8. The latest overall repository/documentation checkpoint is 9a470da982f1510213163b3b909a02bd0f85973b. The backend baseline is 521 tests (507 baseline + 14 net-new tests). Pre-merge and post-merge Backend CI and Frontend CI succeeded.
 
-VaccinationSession lifecycle state machine hardening is COMPLETE in PR #53:
+VaccinationCampaign publication prerequisites and transition is COMPLETE in PR #55:
 
-Enforces strict session lifecycle state machine transitions: DRAFT -> SCHEDULED, SCHEDULED -> IN_PROGRESS, IN_PROGRESS -> COMPLETED, DRAFT -> CANCELLED, SCHEDULED -> CANCELLED.
+Enforces controlled campaign publication transitions: DRAFT -> PUBLISHED and SCHEDULED -> PUBLISHED. All other source statuses (ACTIVE, COMPLETED, CANCELLED, SUSPENDED, ARCHIVED, PUBLISHED) reject publication attempts with IllegalStateException.
 
-COMPLETED and CANCELLED are terminal lifecycle states; any attempt to transition out of terminal states is rejected.
+Mandatory publication prerequisites (validated under campaign row pessimistic write lock findByIdForUpdate and post-lock entity refresh):
+1. Valid campaign service dates & booking window (serviceEndDate > serviceStartDate, bookingCloseAt > bookingOpenAt).
+2. Active VaccineType requirement.
+3. Active TargetGroup with non-blank description requirement.
+4. Exactly one effective CampaignDoseProgramme requirement on campaign evaluation date.
+5. Exactly one effective CampaignQuestionnaireAssignment requirement on campaign evaluation date.
+6. Assigned QuestionnaireVersion is in PUBLISHED status via QuestionnaireVersionPublicationPort.isPublished(...).
 
-All invalid transitions (including DRAFT -> IN_PROGRESS, DRAFT -> COMPLETED, SCHEDULED -> COMPLETED, IN_PROGRESS -> SCHEDULED, IN_PROGRESS -> CANCELLED, and same-status transitions) are rejected with IllegalStateException.
+Non-prerequisite entities: CampaignLocationTarget, CampaignCenterAssignment, SessionRecurrenceRule, and VaccinationSession remain optional and do NOT block campaign publication.
 
-Controlled domain API: schedule(), start(), complete(), cancel(), and transitionLifecycleStatus(...) enforce state machine invariants cleanly with no broad setter surfaces.
+Domain API & Service Locking: publishCampaign(Long campaignId) locks the campaign row with findByIdForUpdate, refreshes entity state via entityManager.refresh, validates all prerequisites, and invokes domain publish() method before saving. Validation failure rolls back transaction leaving campaign status unchanged in database.
 
-Pessimistic session locking: scheduleSession, startSession, and completeSession in VaccinationSessionService acquire session write locks (findByIdForUpdate) and refresh entity state (entityManager.refresh) before performing state transitions.
+14 net-new unit & integration tests added in CampaignPublicationIntegrationTests (521 total backend tests passing).
 
-Audit semantics: Lifecycle-only transitions generate no SessionChangeEvent audit records.
+With campaign publication prerequisites and transition complete, proceed directly with the next controlled phase:
 
-12 net-new unit & integration tests added in SessionLifecycleHardeningIntegrationTests (507 total backend tests passing).
-
-With session lifecycle hardening and all reverse configuration-impact protections complete, proceed directly with the next controlled phase:
-
-1. campaign publication prerequisites/transition and required campaign lifecycle operations;
+1. remaining campaign lifecycle transitions readiness gate (e.g. PUBLISHED -> ACTIVE, ACTIVE -> COMPLETED, SUSPEND, RESUME, CANCEL, ARCHIVE);
 
 2. final MF-01 QuestionnaireVersion adapter/FK integration;
 
 3. final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #53 session lifecycle hardening is integrated. The project is not yet Sprint 1 complete. Session lifecycle state machine hardening is complete. The immediate next controlled phase is campaign publication prerequisites and transition implementation.
+Current implementation stopping point: PR #55 campaign publication is integrated. The project is not yet Sprint 1 complete. Campaign publication is complete. The immediate next controlled phase is remaining campaign lifecycle transitions readiness gate.
