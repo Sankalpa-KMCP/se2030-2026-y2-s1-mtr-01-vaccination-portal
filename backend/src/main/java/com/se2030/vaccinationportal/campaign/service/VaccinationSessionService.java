@@ -224,6 +224,16 @@ public class VaccinationSessionService {
                 ? newBookingCloseAt
                 : (session.getBookingCloseAt().isAfter(newStartAt) ? newStartAt : session.getBookingCloseAt());
 
+        boolean isNoOp = session.getCenter().getId().equals(targetCenter.getId())
+                && session.getScheduleTimezone().equals(targetCenter.getTimezone())
+                && session.getStartAt().equals(newStartAt)
+                && session.getEndAt().equals(newEndAt)
+                && session.getBookingCloseAt().equals(effectiveBookingClose);
+
+        if (isNoOp) {
+            throw new IllegalArgumentException("Proposed session change makes no material change to center or schedule");
+        }
+
         validator.validateSessionSchedule(session.getCampaign(), targetCenter, newStartAt, newEndAt, effectiveBookingClose);
 
         int affectedAppointments = 0;
@@ -406,6 +416,16 @@ public class VaccinationSessionService {
         Instant effectiveBookingClose = (newBookingCloseAt != null)
                 ? newBookingCloseAt
                 : (session.getBookingCloseAt().isAfter(newStartAt) ? newStartAt : session.getBookingCloseAt());
+
+        boolean isNoOp = session.getCenter().getId().equals(targetCenter.getId())
+                && session.getScheduleTimezone().equals(targetCenter.getTimezone())
+                && session.getStartAt().equals(newStartAt)
+                && session.getEndAt().equals(newEndAt)
+                && session.getBookingCloseAt().equals(effectiveBookingClose);
+
+        if (isNoOp) {
+            throw new IllegalArgumentException("Proposed session change makes no material change to center or schedule");
+        }
 
         // Step 6: Revalidate schedule against authoritatively locked entities
         validator.validateSessionSchedule(campaign, targetCenter, newStartAt, newEndAt, effectiveBookingClose);

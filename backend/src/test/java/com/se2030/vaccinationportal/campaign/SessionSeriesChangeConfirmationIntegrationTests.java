@@ -439,4 +439,74 @@ class SessionSeriesChangeConfirmationIntegrationTests {
         assertThat(genResult.createdCount()).isEqualTo(0);
         assertThat(genResult.existingCount()).isEqualTo(sessionCountAfterConfirm);
     }
+
+    @Test
+    @DisplayName("Regression: confirmSeriesChange with unchanged SCHEDULED retained occurrences creates 0 reschedule events and allows missing impact reader")
+    void confirmSeriesChange_unchangedScheduledRetainedOccurrences_zeroImpactAndAllowedWithoutImpactReader() {
+        LocalDate startDate = LocalDate.of(2026, 10, 5);
+        LocalDate endDate = LocalDate.of(2026, 10, 5);
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                campaign, centerA, EnumSet.of(DayOfWeek.MONDAY),
+                startDate, endDate, LocalTime.of(9, 0), LocalTime.of(12, 0), TIMEZONE));
+
+        generationService.generateOccurrences(rule.getId());
+
+        VaccinationSession s1 = sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(rule.getId()).get(0);
+        s1.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
+        sessionRepository.saveAndFlush(s1);
+
+        // Service with null impact reader
+        SessionSeriesChangeService noReaderService = new SessionSeriesChangeService(
+                ruleRepository, campaignRepository, centerRepository, sessionRepository,
+                sessionChangeEventRepository, validator, null, clock);
+
+        // Propose adding Friday Oct 9 with same time (09:00 - 12:00)
+        Set<DayOfWeek> newWeekdays = EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.FRIDAY);
+        LocalDate newEndDate = LocalDate.of(2026, 10, 9);
+
+        SeriesChangePreview preview = noReaderService.previewSeriesChange(
+                rule.getId(), newWeekdays, startDate, newEndDate, LocalTime.of(9, 0), LocalTime.of(12, 0), TIMEZONE);
+
+        assertThat(preview.totalAffectedAppointmentsCount()).isEqualTo(0);
+        assertThat(preview.totalAffectedWaitlistCount()).isEqualTo(0);
+
+        SeriesChangeResult result = noReaderService.confirmSeriesChange(
+                rule.getId(), newWeekdays, startDate, newEndDate, LocalTime.of(9, 0), LocalTime.of(12, 0), TIMEZONE,
+                preview.previewToken(), "Adding Friday without modifying Monday", "admin-1");
+
+        assertThat(result.rescheduledCount()).isEqualTo(0);
+        assertThat(result.newCount()).isEqualTo(1);
+        assertThat(result.eventsCreatedCount()).isEqualTo(0);
+
+        // Verify s1 is untouched SCHEDULED and zero events exist
+        VaccinationSession reloadedS1 = sessionRepository.findById(s1.getId()).orElseThrow();
+        assertThat(reloadedS1.getLifecycleStatus()).isEqualTo(SessionLifecycleStatus.SCHEDULED);
+        assertThat(sessionChangeEventRepository.findBySessionIdIn(List.of(s1.getId()))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Regression: confirmSeriesChange rejects backward expansion introducing past occurrence before mutating rule")
+    void confirmSeriesChange_backwardSeriesExpansionPastOccurrence_rejectedBeforeMutation() {
+        LocalDate startDate = LocalDate.of(2026, 10, 5);
+        LocalDate endDate = LocalDate.of(2026, 10, 12);
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                campaign, centerA, EnumSet.of(DayOfWeek.MONDAY),
+                startDate, endDate, LocalTime.of(9, 0), LocalTime.of(12, 0), TIMEZONE));
+
+        generationService.generateOccurrences(rule.getId());
+
+        // Attempt confirm introducing Sep 21 (past date before FIXED_NOW)
+        LocalDate pastStart = LocalDate.of(2026, 9, 21);
+        RecurrenceRuleDefinitionSnapshot proposedDef = new RecurrenceRuleDefinitionSnapshot(
+                EnumSet.of(DayOfWeek.MONDAY), pastStart, endDate, LocalTime.of(9, 0), LocalTime.of(12, 0), TIMEZONE);
+
+        assertThatThrownBy(() -> seriesChangeService.confirmSeriesChange(
+                rule.getId(), proposedDef, "any-token", "Attempting past expansion", "admin-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("cannot introduce past occurrence");
+
+        // Rule must remain untouched in DB
+        SessionRecurrenceRule untouchedRule = ruleRepository.findById(rule.getId()).orElseThrow();
+        assertThat(untouchedRule.getStartDate()).isEqualTo(startDate);
+    }
 }

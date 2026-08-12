@@ -540,9 +540,24 @@ public class SessionSeriesChangeService {
 
                     validator.validateSessionSchedule(campaign, center, proposedStartAt, proposedEndAt, proposedBookingCloseAt);
 
+                    SessionScheduleSnapshot proposedSnapshot = new SessionScheduleSnapshot(
+                            center.getId(),
+                            center.getTimezone(),
+                            proposedStartAt,
+                            proposedEndAt,
+                            proposedBookingCloseAt,
+                            existing.getLifecycleStatus()
+                    );
+
+                    boolean scheduleShifted = !currentSnapshot.getStartAt().equals(proposedStartAt)
+                            || !currentSnapshot.getEndAt().equals(proposedEndAt)
+                            || !currentSnapshot.getBookingCloseAt().equals(proposedBookingCloseAt)
+                            || !currentSnapshot.getCenterId().equals(center.getId())
+                            || !currentSnapshot.getScheduleTimezone().equals(center.getTimezone());
+
                     int affectedAppts = 0;
                     int affectedWait = 0;
-                    if (existing.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED) {
+                    if (scheduleShifted && existing.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED) {
                         if (sessionImpactReader == null) {
                             throw new IllegalStateException("Session impact reader is not available to assess SCHEDULED session changes");
                         }
@@ -556,15 +571,6 @@ public class SessionSeriesChangeService {
 
                     totalAffectedAppointments += affectedAppts;
                     totalAffectedWaitlist += affectedWait;
-
-                    SessionScheduleSnapshot proposedSnapshot = new SessionScheduleSnapshot(
-                            center.getId(),
-                            center.getTimezone(),
-                            proposedStartAt,
-                            proposedEndAt,
-                            proposedBookingCloseAt,
-                            existing.getLifecycleStatus()
-                    );
 
                     entries.add(new SeriesOccurrencePreviewItem(
                             occurrenceKey,
@@ -626,42 +632,34 @@ public class SessionSeriesChangeService {
                     Instant proposedEndAt = resolveLocalToInstant(localEnd, zoneRules, zoneId, "end");
                     Instant proposedBookingCloseAt = proposedStartAt;
 
-                    if (proposedStartAt.isAfter(now)) {
-                        // NEW occurrence
-                        validator.validateSessionSchedule(campaign, center, proposedStartAt, proposedEndAt, proposedBookingCloseAt);
-
-                        SessionScheduleSnapshot proposedSnapshot = new SessionScheduleSnapshot(
-                                center.getId(),
-                                center.getTimezone(),
-                                proposedStartAt,
-                                proposedEndAt,
-                                proposedBookingCloseAt,
-                                SessionLifecycleStatus.DRAFT
-                        );
-
-                        entries.add(new SeriesOccurrencePreviewItem(
-                                occurrenceKey,
-                                date,
-                                SeriesOccurrenceCategory.NEW,
-                                null,
-                                null,
-                                proposedSnapshot,
-                                0,
-                                0
-                        ));
-                    } else {
-                        // Candidate date in the past -> INELIGIBLE
-                        entries.add(new SeriesOccurrencePreviewItem(
-                                occurrenceKey,
-                                date,
-                                SeriesOccurrenceCategory.INELIGIBLE,
-                                null,
-                                null,
-                                null,
-                                0,
-                                0
-                        ));
+                    if (!proposedStartAt.isAfter(now)) {
+                        throw new IllegalArgumentException(
+                                "Proposed series change cannot introduce past occurrence on " + date +
+                                        " with start time " + proposedStartAt + " at or before current time " + now);
                     }
+
+                    // NEW occurrence
+                    validator.validateSessionSchedule(campaign, center, proposedStartAt, proposedEndAt, proposedBookingCloseAt);
+
+                    SessionScheduleSnapshot proposedSnapshot = new SessionScheduleSnapshot(
+                            center.getId(),
+                            center.getTimezone(),
+                            proposedStartAt,
+                            proposedEndAt,
+                            proposedBookingCloseAt,
+                            SessionLifecycleStatus.DRAFT
+                    );
+
+                    entries.add(new SeriesOccurrencePreviewItem(
+                            occurrenceKey,
+                            date,
+                            SeriesOccurrenceCategory.NEW,
+                            null,
+                            null,
+                            proposedSnapshot,
+                            0,
+                            0
+                    ));
                 }
             }
         }
