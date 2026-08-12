@@ -2889,19 +2889,25 @@ Add Flyway/API/UI evidence as those layers are implemented instead of postponing
 Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
 Exact Next Work
-The latest MF-02 implementation checkpoint is PR #48 merge 14e4976844870904b889fcd4970cc6d07439e168, with reviewed source 668ec98f31ea39904e7992a5f1a986e74ae8f8ab and base b12fe280b706c9ce58e3ac8b886a58c60c14f7fb. The latest overall documentation/repository checkpoint is 14e4976844870904b889fcd4970cc6d07439e168. The backend baseline is 459 tests.
+The latest MF-02 implementation checkpoint is PR #50 merge 8ff9936f447da00de00c06b802fb5c61556c0bad, with reviewed source eaff5b82334020f669c2581e47c90649575f9f08 and base 634e3dce0894b7678ba82b7d0690b277b5d44d48. Merge parents are 634e3dce0894b7678ba82b7d0690b277b5d44d48 and eaff5b82334020f669c2581e47c90649575f9f08. The latest overall repository/documentation checkpoint is 8ff9936f447da00de00c06b802fb5c61556c0bad. The backend baseline is 476 tests (459 baseline + 17 net-new tests). Pre-merge and post-merge Backend CI and Frontend CI succeeded.
 
-Full-series cancellation workflow is COMPLETE in PR #48:
+Campaign and CampaignCenterAssignment reverse-impact protection is COMPLETE in PR #50:
 
-Read-only cancellation preview (previewSeriesCancellation) classifies future eligible DRAFT/SCHEDULED sessions as REMOVED, preserves individual exceptions (PRESERVED_EXCEPTION) and elapsed sessions (INELIGIBLE), and generates a cryptographic SHA-256 preview token.
+Campaign service-date reverse protection (VaccinationCampaignService.updateServiceDates) acquires a pessimistic write lock on the parent campaign (campaignRepository.findByIdForUpdate), refreshes entity state, and validates proposed bounds [serviceStartDate, serviceEndDate] against all active/scheduled sessions.
 
-Atomic cancellation confirmation (confirmSeriesCancellation) acquires write locks in strict order (campaign -> center -> rule -> sessions ID ASC), re-evaluates stale preview tokens, transitions rule to CANCELLED, cancels eligible REMOVED sessions, and writes append-only SERIES_CANCELLED audit events.
+CampaignCenterAssignment reverse protection (CampaignCenterAssignmentService) enforces reverse protection in updateFutureAssignment, endAssignment, and cancelFutureAssignment to ensure blocking sessions for (campaignId, centerId) remain covered by active assignments.
 
-Recurrence generator skips cancelled rules cleanly while preserving existing occurrence keys.
+Session intervals (startAt, endAt) project to center local dates firstTouchedDate and lastTouchedDate in the session scheduling timezone. Required active assignment coverage span is [firstTouchedDate, lastTouchedDate.plusDays(1)) (exclusive upper bound).
 
-With full-series cancellation complete, proceed directly with the remaining Sprint 1 backend sequence:
+Blocking status filter restricts evaluation to lifecycleStatus IN (DRAFT, SCHEDULED, IN_PROGRESS) and endAt > clock.instant(). Terminal/historical sessions (COMPLETED, CANCELLED, endAt <= now) do not block configuration updates.
 
-reverse configuration-impact protection architecture/readiness gate;
+Concurrency serialization maintains parent-first pessimistic locking hierarchy (VaccinationCampaign lock) preventing race conditions with concurrent session creation.
+
+17 net-new unit & integration tests added across 3 test classes (CampaignReverseImpactIntegrationTests, AssignmentReverseImpactIntegrationTests, CampaignAssignmentReverseImpactConcurrencyIntegrationTests).
+
+With campaign and assignment reverse-impact protection complete, proceed directly with the next controlled phase:
+
+center, OperatingHours and CenterClosure reverse-impact protection;
 
 campaign publication prerequisites/transition and required session lifecycle publishing;
 
@@ -2909,5 +2915,4 @@ final MF-01 questionnaire adapter/FK integration;
 
 final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #48 full-series cancellation is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is the reverse configuration-impact protection architecture/readiness gate.
-
+Current implementation stopping point: PR #50 campaign and assignment reverse-impact protection is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is center, OperatingHours and CenterClosure reverse-impact protection.
