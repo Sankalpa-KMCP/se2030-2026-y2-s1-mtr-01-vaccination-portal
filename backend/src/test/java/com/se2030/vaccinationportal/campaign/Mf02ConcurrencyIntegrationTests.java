@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.DoseCategory;
 import com.se2030.vaccinationportal.campaign.model.OperatingHours;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
+import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
@@ -17,6 +18,7 @@ import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRep
 import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
@@ -27,11 +29,14 @@ import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssign
 import com.se2030.vaccinationportal.campaign.service.OperatingHoursService;
 import com.se2030.vaccinationportal.campaign.service.QuestionnaireVersionPublicationPort;
 import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
+import com.se2030.vaccinationportal.campaign.service.SessionOccurrenceGenerationService;
+import com.se2030.vaccinationportal.campaign.service.SessionSeriesChangeService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -84,6 +89,9 @@ class Mf02ConcurrencyIntegrationTests {
     @Autowired private CampaignQuestionnaireAssignmentService questionnaireAssignmentService;
     @Autowired private OperatingHoursService operatingHoursService;
     @Autowired private VaccinationSessionService sessionService;
+    @Autowired private SessionSeriesChangeService seriesChangeService;
+    @Autowired private SessionOccurrenceGenerationService generationService;
+    @Autowired private SessionRecurrenceRuleRepository ruleRepository;
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
     @Autowired private VaccinationSessionRepository sessionRepository;
     @Autowired private CampaignCenterAssignmentRepository assignmentRepository;
@@ -99,6 +107,7 @@ class Mf02ConcurrencyIntegrationTests {
     void clearPersistedState() {
         sessionChangeEventRepository.deleteAllInBatch();
         sessionRepository.deleteAllInBatch();
+        ruleRepository.deleteAllInBatch();
         assignmentRepository.deleteAllInBatch();
         operatingHoursRepository.deleteAllInBatch();
         questionnaireAssignmentRepository.deleteAllInBatch();
@@ -277,6 +286,94 @@ class Mf02ConcurrencyIntegrationTests {
         assertEquals(2, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
         assertTrue(outcomes.get(0).success());
         assertTrue(outcomes.get(1).success());
+    }
+
+    @Test
+    @Timeout(15)
+    void concurrentSeriesConfirmationAndGeneratorDoNotDeadlock() throws Exception {
+        VaccinationCampaign campaign = createCampaign("CONC-SERIES-GEN");
+        VaccinationCenter center = createCenter("LOC-SERIES-GEN");
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                campaign, center, LocalDate.of(2029, 1, 1), LocalDate.of(2031, 1, 1)));
+
+        for (DayOfWeek dow : DayOfWeek.values()) {
+            operatingHoursRepository.saveAndFlush(new OperatingHours(
+                    center, dow, LocalTime.of(8, 0), LocalTime.of(18, 0),
+                    LocalDate.of(2029, 1, 1), null));
+        }
+
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                campaign, center, EnumSet.of(DayOfWeek.MONDAY),
+                LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                LocalTime.of(9, 0), LocalTime.of(12, 0), "UTC"));
+
+        generationService.generateOccurrences(rule.getId());
+
+        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview preview =
+                seriesChangeService.previewSeriesChange(
+                        rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
+                        LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                        LocalTime.of(10, 0), LocalTime.of(13, 0), "UTC");
+
+        // Run series confirmation and occurrence generator concurrently on the same rule
+        List<Outcome> outcomes = runConcurrently(
+                () -> seriesChangeService.confirmSeriesChange(
+                        rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
+                        LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                        LocalTime.of(10, 0), LocalTime.of(13, 0), "UTC",
+                        preview.previewToken(), "Concurrent series shift", "ACTOR-1"),
+                () -> generationService.generateOccurrences(rule.getId())
+        );
+
+        // Both complete without deadlock
+        assertEquals(2, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
+    }
+
+    @Test
+    @Timeout(15)
+    void concurrentSeriesConfirmationsOnSameRuleSerializeCleanly() throws Exception {
+        VaccinationCampaign campaign = createCampaign("CONC-SERIES-SER");
+        VaccinationCenter center = createCenter("LOC-SERIES-SER");
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                campaign, center, LocalDate.of(2029, 1, 1), LocalDate.of(2031, 1, 1)));
+
+        for (DayOfWeek dow : DayOfWeek.values()) {
+            operatingHoursRepository.saveAndFlush(new OperatingHours(
+                    center, dow, LocalTime.of(8, 0), LocalTime.of(18, 0),
+                    LocalDate.of(2029, 1, 1), null));
+        }
+
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                campaign, center, EnumSet.of(DayOfWeek.MONDAY),
+                LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                LocalTime.of(9, 0), LocalTime.of(12, 0), "UTC"));
+
+        generationService.generateOccurrences(rule.getId());
+
+        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview preview =
+                seriesChangeService.previewSeriesChange(
+                        rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
+                        LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                        LocalTime.of(10, 0), LocalTime.of(13, 0), "UTC");
+
+        // Run two series confirmations with the same preview token concurrently
+        List<Outcome> outcomes = runConcurrently(
+                () -> seriesChangeService.confirmSeriesChange(
+                        rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
+                        LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                        LocalTime.of(10, 0), LocalTime.of(13, 0), "UTC",
+                        preview.previewToken(), "First confirm", "ACTOR-1"),
+                () -> seriesChangeService.confirmSeriesChange(
+                        rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
+                        LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
+                        LocalTime.of(10, 0), LocalTime.of(13, 0), "UTC",
+                        preview.previewToken(), "Second confirm", "ACTOR-2")
+        );
+
+        // One must succeed, and the second must be rejected due to stale token (state mutated by the first)
+        assertEquals(1, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
+        Outcome rejected = outcomes.stream().filter(o -> !o.success()).findFirst().orElseThrow();
+        assertInstanceOf(IllegalStateException.class, rejected.error(), outcomes.toString());
     }
 
     private VaccinationCampaign createCampaign(String code) {
