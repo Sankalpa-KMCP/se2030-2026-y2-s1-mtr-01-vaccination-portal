@@ -1,14 +1,18 @@
 package com.se2030.vaccinationportal.campaign.service;
 
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service managing the physical vaccination center master registry.
@@ -26,11 +30,23 @@ import java.util.Optional;
 @Transactional
 public class VaccinationCenterService {
 
+    private static final List<SessionLifecycleStatus> BLOCKING_STATUSES = List.of(
+            SessionLifecycleStatus.DRAFT,
+            SessionLifecycleStatus.SCHEDULED,
+            SessionLifecycleStatus.IN_PROGRESS
+    );
+
     private final VaccinationCenterRepository centerRepository;
+    private final VaccinationSessionRepository sessionRepository;
+    private final Clock clock;
     @PersistenceContext private EntityManager entityManager;
 
-    public VaccinationCenterService(VaccinationCenterRepository centerRepository) {
+    public VaccinationCenterService(VaccinationCenterRepository centerRepository,
+                                    VaccinationSessionRepository sessionRepository,
+                                    Clock clock) {
         this.centerRepository = centerRepository;
+        this.sessionRepository = sessionRepository;
+        this.clock = clock;
     }
 
     /**
@@ -120,6 +136,18 @@ public class VaccinationCenterService {
      */
     public VaccinationCenter deactivateCenter(Long id) {
         VaccinationCenter center = findAuthoritativeCenter(id);
+
+        List<VaccinationSession> blockingSessions = sessionRepository.findBlockingSessionsForCenter(
+                id,
+                BLOCKING_STATUSES,
+                clock.instant()
+        );
+        if (!blockingSessions.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Cannot deactivate vaccination center because " + blockingSessions.size() +
+                            " future or in-progress session(s) depend on it"
+            );
+        }
 
         center.deactivate();
         return centerRepository.save(center);
