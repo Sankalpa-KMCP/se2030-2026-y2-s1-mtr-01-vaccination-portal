@@ -2889,28 +2889,30 @@ Add Flyway/API/UI evidence as those layers are implemented instead of postponing
 Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
 Exact Next Work
-The latest MF-02 implementation checkpoint is PR #52 merge 1582c4cfa6596d1cc2dac9b977774fd8e010bc77, with reviewed source 17b45c6981a410e57daeef5eb64ba26693d1f22e and base c9993ec01d56717291f154c6fa961051db021da1. Merge parents are c9993ec01d56717291f154c6fa961051db021da1 and 17b45c6981a410e57daeef5eb64ba26693d1f22e. The latest overall repository/documentation checkpoint is 1582c4cfa6596d1cc2dac9b977774fd8e010bc77. The backend baseline is 495 tests (476 baseline + 19 net-new tests). Pre-merge and post-merge Backend CI and Frontend CI succeeded.
+The latest MF-02 implementation checkpoint is PR #53 merge 7da7e09288ff02e1306ac22ead33a48af74e8e2a, with reviewed source a13d526b3989eb03fbc22f852a05ae092c6e1b9e and base 8868b3f40aa6ef06aab716d74c730494c507367c. Merge parents are 8868b3f40aa6ef06aab716d74c730494c507367c and a13d526b3989eb03fbc22f852a05ae092c6e1b9e. The latest overall repository/documentation checkpoint is 7da7e09288ff02e1306ac22ead33a48af74e8e2a. The backend baseline is 507 tests (495 baseline + 12 net-new tests). Pre-merge and post-merge Backend CI and Frontend CI succeeded.
 
-VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection is COMPLETE in PR #52:
+VaccinationSession lifecycle state machine hardening is COMPLETE in PR #53:
 
-VaccinationCenter deactivation reverse protection (VaccinationCenterService.deactivateCenter) acquires the existing center pessimistic write lock, refreshes authoritative center state, and rejects deactivation when DRAFT/SCHEDULED/IN_PROGRESS sessions with endAt > clock.instant() still reference the center.
+Enforces strict session lifecycle state machine transitions: DRAFT -> SCHEDULED, SCHEDULED -> IN_PROGRESS, IN_PROGRESS -> COMPLETED, DRAFT -> CANCELLED, SCHEDULED -> CANCELLED.
 
-OperatingHours reverse protection (OperatingHoursService.updateOperatingHours and endOperatingHours) evaluates blocking sessions by projecting session Instant intervals into the center scheduling timezone and checking each touched calendar date for contiguous OperatingHours coverage. An update is rejected when it breaks coverage for any blocking session on any date it touches.
+COMPLETED and CANCELLED are terminal lifecycle states; any attempt to transition out of terminal states is rejected.
 
-CenterClosure reverse protection (CenterClosureService.createCenterClosure and updateCenterClosure) checks whether the half-open closure interval [startAt, endAt) overlaps any blocking session interval [session.startAt, session.endAt). A closure is rejected when it would cover any portion of a blocking session.
+All invalid transitions (including DRAFT -> IN_PROGRESS, DRAFT -> COMPLETED, SCHEDULED -> COMPLETED, IN_PROGRESS -> SCHEDULED, IN_PROGRESS -> CANCELLED, and same-status transitions) are rejected with IllegalStateException.
 
-Blocking status filter restricts evaluation to lifecycleStatus IN (DRAFT, SCHEDULED, IN_PROGRESS) and endAt > clock.instant() consistently across all three protections.
+Controlled domain API: schedule(), start(), complete(), cancel(), and transitionLifecycleStatus(...) enforce state machine invariants cleanly with no broad setter surfaces.
 
-Concurrency serialization uses the existing center pessimistic lock for center deactivation and center-row serialization for OperatingHours and CenterClosure writes.
+Pessimistic session locking: scheduleSession, startSession, and completeSession in VaccinationSessionService acquire session write locks (findByIdForUpdate) and refresh entity state (entityManager.refresh) before performing state transitions.
 
-19 net-new unit & integration tests added across 3 test classes (CenterReverseImpactIntegrationTests, HoursClosureReverseImpactIntegrationTests, CenterHoursClosureReverseImpactConcurrencyIntegrationTests).
+Audit semantics: Lifecycle-only transitions generate no SessionChangeEvent audit records.
 
-With all reverse configuration-impact protection complete, proceed directly with the next controlled phase:
+12 net-new unit & integration tests added in SessionLifecycleHardeningIntegrationTests (507 total backend tests passing).
 
-campaign publication prerequisites/transition and required session lifecycle publishing;
+With session lifecycle hardening and all reverse configuration-impact protections complete, proceed directly with the next controlled phase:
 
-final MF-01 QuestionnaireVersion adapter/FK integration;
+1. campaign publication prerequisites/transition and required campaign lifecycle operations;
 
-final Sprint integration and Definition-of-Done evidence.
+2. final MF-01 QuestionnaireVersion adapter/FK integration;
 
-Current implementation stopping point: PR #52 center/OperatingHours/CenterClosure reverse-impact protection is integrated. The project is not yet Sprint 1 complete. All reverse configuration-impact protection is now complete. The immediate next controlled phase is campaign publication prerequisites/transition.
+3. final Sprint integration and Definition-of-Done evidence.
+
+Current implementation stopping point: PR #53 session lifecycle hardening is integrated. The project is not yet Sprint 1 complete. Session lifecycle state machine hardening is complete. The immediate next controlled phase is campaign publication prerequisites and transition implementation.
