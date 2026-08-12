@@ -270,7 +270,8 @@ class CampaignReverseImpactIntegrationTests {
         VaccinationSession session = new VaccinationSession(
                 campaign, center, sessionStart, sessionEnd, sessionStart.minusSeconds(3600), "UTC"
         );
-        session.transitionLifecycleStatus(SessionLifecycleStatus.IN_PROGRESS);
+        session.schedule();
+        session.start();
         sessionRepository.saveAndFlush(session);
 
         LocalDate tomorrow = today.plusDays(1);
@@ -295,7 +296,9 @@ class CampaignReverseImpactIntegrationTests {
         VaccinationSession completedSession = new VaccinationSession(
                 campaign, center, pastStart, pastEnd, pastStart.minusSeconds(3600), "UTC"
         );
-        completedSession.transitionLifecycleStatus(SessionLifecycleStatus.COMPLETED);
+        completedSession.schedule();
+        completedSession.start();
+        completedSession.complete();
         sessionRepository.saveAndFlush(completedSession);
 
         // Future CANCELLED session on today + 5

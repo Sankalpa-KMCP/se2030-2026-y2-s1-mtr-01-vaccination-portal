@@ -285,7 +285,8 @@ class AssignmentReverseImpactIntegrationTests {
         VaccinationSession session = new VaccinationSession(
                 campaign, centerA, sessionStart, sessionEnd, sessionStart.minusSeconds(3600), "UTC"
         );
-        session.transitionLifecycleStatus(SessionLifecycleStatus.IN_PROGRESS);
+        session.schedule();
+        session.start();
         sessionRepository.saveAndFlush(session);
 
         assertThrows(IllegalArgumentException.class, () ->
@@ -310,7 +311,9 @@ class AssignmentReverseImpactIntegrationTests {
         VaccinationSession completedSession = new VaccinationSession(
                 campaign, centerA, pastStart, pastEnd, pastStart.minusSeconds(3600), "UTC"
         );
-        completedSession.transitionLifecycleStatus(SessionLifecycleStatus.COMPLETED);
+        completedSession.schedule();
+        completedSession.start();
+        completedSession.complete();
         sessionRepository.saveAndFlush(completedSession);
 
         // Future CANCELLED session

@@ -419,7 +419,8 @@ class VaccinationSessionChangeIntegrationTests {
 
         // IN_PROGRESS
         VaccinationSession inProgress = createDraftSession(start, end, close);
-        inProgress.transitionLifecycleStatus(SessionLifecycleStatus.IN_PROGRESS);
+        inProgress.schedule();
+        inProgress.start();
         sessionRepository.saveAndFlush(inProgress);
 
         assertThrows(IllegalArgumentException.class, () -> sessionService.previewReschedule(inProgress.getId(), start.plusSeconds(3600), end.plusSeconds(3600), null));
@@ -427,7 +428,9 @@ class VaccinationSessionChangeIntegrationTests {
 
         // COMPLETED
         VaccinationSession completed = createDraftSession(start, end, close);
-        completed.transitionLifecycleStatus(SessionLifecycleStatus.COMPLETED);
+        completed.schedule();
+        completed.start();
+        completed.complete();
         sessionRepository.saveAndFlush(completed);
 
         assertThrows(IllegalArgumentException.class, () -> sessionService.previewReschedule(completed.getId(), start.plusSeconds(3600), end.plusSeconds(3600), null));
