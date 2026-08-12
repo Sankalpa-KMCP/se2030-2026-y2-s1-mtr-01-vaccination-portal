@@ -44,6 +44,22 @@ public interface CampaignDoseProgrammeRepository extends JpaRepository<CampaignD
     );
 
     /**
+     * Query all effective dose programme versions for a campaign on a given evaluation date.
+     *
+     * @param campaignId VaccinationCampaign entity ID
+     * @param evaluationDate Evaluation date
+     * @return List of effective CampaignDoseProgramme records
+     */
+    @Query("SELECT p FROM CampaignDoseProgramme p " +
+            "WHERE p.campaign.id = :campaignId " +
+            "AND p.activeFrom <= :evaluationDate " +
+            "AND (p.activeTo IS NULL OR p.activeTo > :evaluationDate)")
+    List<CampaignDoseProgramme> findEffectiveProgrammesForDateList(
+            @Param("campaignId") Long campaignId,
+            @Param("evaluationDate") LocalDate evaluationDate
+    );
+
+    /**
      * Query versions whose half-open effective periods overlap [activeFrom, activeTo).
      * An open-ended activeTo is treated as extending indefinitely.
      *

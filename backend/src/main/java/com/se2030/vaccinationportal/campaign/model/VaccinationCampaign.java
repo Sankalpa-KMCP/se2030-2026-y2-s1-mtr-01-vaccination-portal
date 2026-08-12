@@ -242,6 +242,19 @@ public class VaccinationCampaign {
         this.status = status;
     }
 
+    /**
+     * Transitions campaign status to PUBLISHED.
+     * Allowed only from DRAFT or SCHEDULED status.
+     */
+    public void publish() {
+        if (this.status != CampaignStatus.DRAFT && this.status != CampaignStatus.SCHEDULED) {
+            throw new IllegalStateException(
+                    "Cannot publish campaign in " + this.status + " status. Only DRAFT or SCHEDULED campaigns can be published."
+            );
+        }
+        this.status = CampaignStatus.PUBLISHED;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }

@@ -41,6 +41,22 @@ public interface CampaignQuestionnaireAssignmentRepository extends JpaRepository
     );
 
     /**
+     * Finds all effective questionnaire assignments for a campaign on a specific evaluation date.
+     *
+     * @param campaignId ID of the VaccinationCampaign
+     * @param date Evaluation date
+     * @return List of effective assignments found
+     */
+    @Query("SELECT a FROM CampaignQuestionnaireAssignment a " +
+           "WHERE a.campaign.id = :campaignId " +
+           "AND a.activeFrom <= :date " +
+           "AND (a.activeTo IS NULL OR a.activeTo > :date)")
+    List<CampaignQuestionnaireAssignment> findEffectiveAssignmentsAtList(
+            @Param("campaignId") Long campaignId,
+            @Param("date") LocalDate date
+    );
+
+    /**
      * Finds the open-ended questionnaire assignment (activeTo IS NULL) for a campaign, if one exists.
      * Note: Open-ended does not automatically mean currently effective if activeFrom is in the future.
      *
