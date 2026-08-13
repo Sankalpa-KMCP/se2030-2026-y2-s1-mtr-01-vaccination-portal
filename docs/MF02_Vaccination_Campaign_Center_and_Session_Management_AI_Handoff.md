@@ -1380,10 +1380,10 @@ Maven test and verify succeeded and executable JAR packaged;
 
 Backend CI and Frontend CI succeeded before and after merge.
 
-13. Story and Sprint Status
-Sprint 1 remains IN PROGRESS.
+13. Historical PR #46 Story and Sprint Status (retained within the PR #48 snapshot)
+At the PR #46 checkpoint, Sprint 1 remained IN PROGRESS. This historical table is retained for provenance and is superseded by the maintained current-state section below.
 
-Story	Current status
+Story	Status at the PR #46 checkpoint
 US-09	In progress at full-story scope: backend foundation implemented; publication transition/API/UI/DoD work remains
 US-10	In progress: MF-02 foundation hardened; final MF-01 QuestionnaireVersion adapter/FK remains
 US-11	Backend foundation complete; later API/UI/integration layers remain
@@ -1410,10 +1410,10 @@ plain definition updates on rules with materialized sessions are guarded; series
 15. VaccinationSession Operational Boundary & Remaining Work
 The domain foundation, shared validator, one-off creation service, recurrence occurrence generation, session change audit / locking foundation, individual session change workflows, series preview, atomic series change confirmation (confirmSeriesChange), and regression hardening are complete.
 
-Immediate next controlled phase
+Historical immediate next controlled phase at PR #46
 full-series cancellation workflow (previewSeriesCancellation / confirmSeriesCancellation);
 
-Remaining Sprint 1 backend gaps
+Historical remaining Sprint 1 backend gaps at PR #46
 reverse configuration-impact protection for campaign dates/status, center deactivation, CampaignCenterAssignment changes, OperatingHours changes, and CenterClosure changes where existing sessions would be invalidated;
 
 campaign publication prerequisite/transition integration and required session lifecycle publishing;
@@ -1500,9 +1500,9 @@ Session change regression hardening: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED
 Full-series cancellation workflow: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #48)
 External ZIP review: COMPLETE — 3 behavioral hardening items FIXED AND VERIFIED
 Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
-Immediate next phase: reverse configuration-impact protection architecture/readiness gate
-After reverse impact protection: campaign publication prerequisites/transition + remaining MF-02 Sprint 1 backend gaps
-The next AI should refresh live repository state and perform the reverse configuration-impact protection architecture/readiness gate. Keep the implementation behavior-focused and regression-tested. Do not combine it with broad package moves or large service decomposition. After reverse configuration-impact protection is independently reviewed and integrated, continue with campaign publication prerequisites/transition and the remaining Sprint 1 backend-gap sequence.
+Historical immediate next phase at PR #48: reverse configuration-impact protection architecture/readiness gate
+Historical sequence after reverse-impact protection: campaign publication prerequisites/transition plus the remaining MF-02 Sprint 1 backend gaps
+At the PR #48 checkpoint, the next controlled action was the reverse configuration-impact protection architecture/readiness gate. That historical instruction is superseded by the maintained current phase in section 17.
 
 MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff_UPDATED_2026-08-12.md
 
@@ -1517,21 +1517,25 @@ Canonical authority: 3.3-AI / 2026-08-08-R8
 
 Sprint: Sprint 1 — IN PROGRESS
 
-Latest MF-02 feature implementation: PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b (reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8)
+Latest campaign product-transition feature: PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b (reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8)
 
-Latest regression-hardening integration: PR #58 merge f5b424fc2f69ae5b8ef0b687555963def744c660 (reviewed source 0cca456eab97c6143c80951f417a44d0639e7509)
+Latest lifecycle-integrity implementation: PR #61 merge d5dff09c6d0ed643cb4537abff64056b7d20656c (independently reviewed source d394886bbcfb640536b369b400052c267d61129e)
 
-Latest overall repository checkpoint: f5b424fc2f69ae5b8ef0b687555963def744c660 (PR #58 merge)
+Historical deterministic regression-hardening integration: PR #58 merge f5b424fc2f69ae5b8ef0b687555963def744c660 (reviewed source 0cca456eab97c6143c80951f417a44d0639e7509); documentation synchronized through PR #59 merge 23f151a07bf156ad3d647fe39e904ce41e033fc5.
 
-Latest completed feature implementation: VaccinationCampaign publication prerequisites and controlled publication transition through PR #55. PR #58 is test-only regression hardening and is not a product feature.
+Latest verified MF-02/backend evidence checkpoint: d5dff09c6d0ed643cb4537abff64056b7d20656c (PR #61 merge)
 
-Current backend baseline: 521 tests — 0 failures, 0 errors, 0 skipped; Maven verify SUCCESS; Backend CI PASS and Frontend CI PASS for PR #58.
+Upstream repository state observed during this documentation synchronization: PR #62 / cbe2353a4077c39579933be31c5b1eb7b1f41e65. PR #62 added unrelated MF-05 frontend work and supplied no newer MF-02 implementation or backend verification evidence. This SHA is a synchronization-time observation, not a durable latest-repository field; future sessions must refresh live origin/develop.
 
-Next controlled implementation phase: remaining VaccinationCampaign lifecycle transitions readiness/discovery gate
+Latest completed campaign transition feature remains VaccinationCampaign publication through PR #55. PR #61 hardens lifecycle state integrity without implementing a new lifecycle transition.
+
+Current backend baseline: 523 tests — 0 failures, 0 errors, 0 skipped; Maven verify SUCCESS; Backend CI PASS and Frontend CI PASS for PR #61.
+
+Next controlled phase: decision/design for the next implementable VaccinationCampaign lifecycle slice; full lifecycle implementation is only partially ready.
 
 This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
 
-The latest MF-02 feature implementation remains PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b. The latest overall repository checkpoint is PR #58 merge f5b424fc2f69ae5b8ef0b687555963def744c660, which integrates the reviewed test-only source 0cca456eab97c6143c80951f417a44d0639e7509. Feature, documentation, and regression-hardening checkpoints remain distinct.
+The latest campaign product-transition feature remains PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b. The latest lifecycle-integrity implementation and latest verified MF-02/backend evidence checkpoint is PR #61 merge d5dff09c6d0ed643cb4537abff64056b7d20656c, which integrates independently reviewed source d394886bbcfb640536b369b400052c267d61129e. Product-transition, integrity-hardening, evidence, documentation, and regression-hardening checkpoints remain distinct from the transient repository tip.
 
 1. Executive Snapshot
 The following MF-02 backend foundations are already implemented and integrated:
@@ -1614,11 +1618,11 @@ Stale preview protection: SHA-256 fingerprint token computed deterministically f
 
 Controller decision enforced: Individually edited occurrences are preserved as exceptions during series changes.
 
-The series-wide preview foundation was integrated through PR #42 and the atomic confirmation workflow was subsequently integrated through PR #44. The current backend baseline is 434 tests, with zero failures, errors, or skips. Maven test and verify succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #44 merge.
+The series-wide preview foundation was integrated through PR #42 and the atomic confirmation workflow was subsequently integrated through PR #44. The historical backend baseline at the PR #44 milestone was 434 tests, with zero failures, errors, or skips. Maven test and verify succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #44 merge.
 
 MF-02 ATOMIC SERIES-CHANGE CONFIRMATION INTEGRATED. This milestone covers Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, authoritative write-time validation, recurrence generation, session change audit, individual session changes, series-wide preview, and atomic series-wide confirmation. It does not mean MF-02, US-13, or Sprint 1 is complete.
 
-Sprint 1 remains in progress. Before adding the remaining Sprint 1 gaps, an independent ZIP-based review identified three regression-hardening items that should be corrected first: unchanged SCHEDULED retained occurrences are currently counted as affected during series preview; a series change can introduce an unmaterialized elapsed date that a later ordinary generator call may materialize; and an exact no-op individual reschedule/transfer can still create an audit event and therefore incorrectly become a durable PRESERVED_EXCEPTION. These are review findings only and are NOT IMPLEMENTED YET. Full-series cancellation, reverse configuration-impact protection, campaign publication/lifecycle completion, final MF-01 questionnaire adapter/FK, and remaining Definition-of-Done layers also remain pending.
+Historical PR #44 review state: an independent ZIP-based review identified three regression-hardening items—unchanged SCHEDULED retained-occurrence impact counting, latent elapsed occurrence creation, and exact no-op individual changes creating false PRESERVED_EXCEPTION history. Those findings were subsequently resolved in PR #46. At the PR #44 milestone, full-series cancellation, reverse configuration-impact protection, campaign publication/lifecycle work, the final MF-01 questionnaire adapter/FK, and remaining Definition-of-Done layers were still pending.
 
 2. Authority and Startup Procedure
 Use this source order:
@@ -1635,17 +1639,19 @@ At the start of the next session:
 
 fetch origin and verify origin/develop;
 
-verify the latest overall checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a and implementation ancestry through PR #44;
+inspect live origin/develop, distinguish its current repository tip from the latest MF-02 implementation/evidence checkpoint, and determine whether commits after PR #61 affect MF-02 code, tests, documentation, canonical semantics, or backend verification before relying on PR #61 evidence;
+
+verify implementation ancestry through reviewed PR #61 source d394886bbcfb640536b369b400052c267d61129e;
 
 confirm Sprint 1 and US-13 remain in progress;
 
 reuse all completed session generation, individual-change, series-preview, and series-confirmation foundations;
 
-fix the three externally reviewed regression items before implementing more Sprint 1 behavior;
+preserve the completed PR #46 regression hardening and all subsequently integrated MF-02 foundations;
 
-keep large package moves/service splits separate from functional fixes unless a concrete defect requires them.
+keep large package moves/service splits separate from lifecycle decision/design work unless a concrete defect requires them.
 
-The immediate next phase is regression hardening of already integrated session-change behavior, followed by the remaining Sprint 1 backend gaps.
+The maintained immediate next phase is controlled decision/design for the next safely implementable remaining VaccinationCampaign lifecycle slice. Do not implement unresolved transitions without that decision step.
 
 3. Repository and Integration History
 Checkpoint	Integrated scope
@@ -1680,12 +1686,12 @@ PR #42 68f6bcf	Series-wide VaccinationSession change preview foundation (diff ca
 PR #43 8177c7f	Evidence/handoff synchronization after series change preview; metadata checkpoint only
 PR #44 255754d	Atomic series-wide VaccinationSession change confirmation (locked stale-token revalidation, rule/session mutation, series audit events, and rollback semantics)
 PR #45 10614b5	Evidence/handoff synchronization after series change confirmation; metadata checkpoint only
-The current checkpoint classification is:
+The historical PR #44/45 checkpoint classification was:
 
-latest MF-02 implementation integration checkpoint = 255754dedcd4cfff5744bce69db72d09061ff560
+historical MF-02 implementation integration checkpoint = 255754dedcd4cfff5744bce69db72d09061ff560
 certified PR #44 feature source = 640d4044c6b5753f4e6e0f1ca73a68e5898209ed
 actual PR #44 base = 8177c7f3b4623164c8a9a093763febc941f1532b
-latest overall repository/documentation checkpoint = 10614b5f32eaf54d00133a94aadc8a695280417a
+historical overall repository/documentation checkpoint = 10614b5f32eaf54d00133a94aadc8a695280417a
 Older SHAs and test counts in the evidence chronology are historical milestones, not the current repository state.
 
 
@@ -2328,12 +2334,13 @@ Maven test and verify succeeded and executable JAR packaged;
 
 Backend CI and Frontend CI succeeded before and after merge.
 
-12.9 External ZIP Review — Regression Hardening Findings
+12.9 Historical PR #44/45 External ZIP Review — Regression Hardening Findings
+This historical checkpoint is retained for provenance. Its pending findings and next-step language describe the PR #44/45 state, were superseded by PR #46, and are not current instructions. See section 17 for maintained current guidance.
 A full repository ZIP review was performed against the clean develop checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a, whose latest MF-02 implementation ancestor is PR #44 merge 255754dedcd4cfff5744bce69db72d09061ff560.
 
 The review did not identify a need for a broad MF-02 redesign. Production package layering remains acceptable. It identified three concrete behavioral hardening items that should be fixed before the remaining Sprint 1 features:
 
-Series impact over-count for unchanged retained SCHEDULED occurrences — PENDING FIX
+Series impact over-count for unchanged retained SCHEDULED occurrences — PENDING FIX AT PR #44; RESOLVED IN PR #46
 
 SessionSeriesChangeService currently resolves and aggregates MF-03 impact for retained SCHEDULED occurrences even when the proposed schedule is identical to the current schedule.
 
@@ -2341,7 +2348,7 @@ Unchanged retained occurrences should contribute 0 appointments and 0 waitlist e
 
 Add regression tests for range extension / weekday addition where existing retained sessions are unchanged.
 
-Latent elapsed occurrence introduction through series definition change — PENDING FIX
+Latent elapsed occurrence introduction through series definition change — PENDING FIX AT PR #44; RESOLVED IN PR #46
 
 Series preview can classify a missing elapsed proposed occurrence as INELIGIBLE, while confirmation still updates the recurrence definition to include that date.
 
@@ -2349,7 +2356,7 @@ A later ordinary recurrence-generation call can then see the missing date and ma
 
 Series changes must not introduce new unmaterialized elapsed occurrences. Reject such a proposal (or otherwise enforce an equivalent invariant) and add a generator regression test.
 
-Exact no-op individual change creates false durable override — PENDING FIX
+Exact no-op individual change creates false durable override — PENDING FIX AT PR #44; RESOLVED IN PR #46
 
 An individual reschedule/transfer proposal that leaves center, schedule, timezone, booking close and lifecycle materially unchanged can still proceed to confirmation and create a RESCHEDULED/CENTER_TRANSFERRED audit event.
 
@@ -2367,17 +2374,17 @@ The test package is the main organization problem: MF-02 tests are flat and nume
 
 VaccinationSessionService and SessionSeriesChangeService have grown large. Consider later extraction of cohesive change/planning responsibilities, but do not combine this structural refactor with the regression-fix slice.
 
-External review verdict: FIX A FEW ITEMS BEFORE CONTINUING FINAL SPRINT 1 GAPS.
+Historical PR #44 review verdict: FIX A FEW ITEMS BEFORE CONTINUING FINAL SPRINT 1 GAPS. These items were resolved in PR #46.
 
-13. Story and Sprint Status
-Sprint 1 remains IN PROGRESS.
+13. Historical PR #44/45 Story and Sprint Status
+At the PR #44/45 checkpoint, Sprint 1 remained IN PROGRESS. This historical table is superseded by the maintained current-state section below.
 
-Story	Current status
+Story	Status at the PR #44/45 checkpoint
 US-09	In progress at full-story scope: backend foundation implemented; publication transition/API/UI/DoD work remains
 US-10	In progress: MF-02 foundation hardened; final MF-01 QuestionnaireVersion adapter/FK remains
 US-11	Backend foundation complete; later API/UI/integration layers remain
 US-12	Backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, VaccinationSession integration, and final DoD evidence remain
-US-13	IN PROGRESS: VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession foundations, recurrence generation, individual and series change workflows, full-series cancellation, reverse-impact protection, session lifecycle hardening, and campaign publication are implemented; remaining VaccinationCampaign lifecycle transitions, MF-03 adapter, API/UI/migration, and final DoD work remain
+US-13	IN PROGRESS: VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence foundations, authoritative write-time validation / atomic one-off DRAFT creation, recurrence occurrence generation, session change audit / locking foundation, individual session change workflows, series-wide change preview engine, and atomic series change confirmation complete; session-change regression hardening, full-series cancellation, MF-03 adapter, lifecycle transitions beyond DRAFT, reverse configuration impact, API/UI/migration, and final DoD work remain
 US-27	Backend foundation implemented; later API/UI integration remains
 Do not mark Sprint 1, US-12, or US-13 fully Definition-of-Done complete solely from these backend foundations.
 
@@ -2399,7 +2406,7 @@ plain definition updates on rules with materialized sessions are guarded; series
 15. VaccinationSession Operational Boundary & Remaining Work
 The domain foundation, shared validator, one-off creation service, recurrence occurrence generation, session change audit / locking foundation, individual session change workflows, series preview, and atomic series change confirmation (confirmSeriesChange) are complete.
 
-Immediate regression hardening — required before new feature work
+Historical immediate next work at PR #44/45 — regression hardening before new feature work
 correct series impact totals so unchanged retained SCHEDULED occurrences are not counted as affected;
 
 prevent series changes from introducing unmaterialized elapsed occurrences that a later generator call could create;
@@ -2480,14 +2487,17 @@ Canonical: 3.3-AI / 2026-08-08-R8
 Sprint: Sprint 1 — IN PROGRESS
 MF-02: IN PROGRESS
 US-13: IN PROGRESS
-Latest MF-02 implementation merge: PR #55 / 9a470da982f1510213163b3b909a02bd0f85973b
+Latest campaign product-transition feature: PR #55 / 9a470da982f1510213163b3b909a02bd0f85973b
 PR #55 certified source: d1d9e63a5398687e78734f835357fb9c6ded34d8
 PR #55 actual base: 62f9743a7caa50fb1f26551edb611ee4edbbcccf
 PR #55 merge parents: 62f9743a7caa50fb1f26551edb611ee4edbbcccf and d1d9e63a5398687e78734f835357fb9c6ded34d8
-Latest regression-hardening integration: PR #58 / f5b424fc2f69ae5b8ef0b687555963def744c660
+Historical deterministic regression-hardening integration: PR #58 / f5b424fc2f69ae5b8ef0b687555963def744c660
 PR #58 independently reviewed source: 0cca456eab97c6143c80951f417a44d0639e7509
-Latest overall repository checkpoint: PR #58 / f5b424fc2f69ae5b8ef0b687555963def744c660
-Backend baseline: 521 tests; 0 failures, 0 errors, 0 skipped; Maven verify SUCCESS; Backend CI PASS; Frontend CI PASS
+Historical documentation synchronization checkpoint: PR #59 / 23f151a07bf156ad3d647fe39e904ce41e033fc5
+Latest lifecycle-integrity implementation: PR #61 / d5dff09c6d0ed643cb4537abff64056b7d20656c
+PR #61 independently reviewed source: d394886bbcfb640536b369b400052c267d61129e
+Latest verified MF-02/backend evidence checkpoint: PR #61 / d5dff09c6d0ed643cb4537abff64056b7d20656c
+Backend baseline: 523 tests; 0 failures, 0 errors, 0 skipped; Maven verify SUCCESS; Backend CI PASS; Frontend CI PASS
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
@@ -2520,7 +2530,23 @@ Deterministic reverse-impact test hardening: INDEPENDENTLY REVIEWED, CI-VERIFIED
 - Root cause: time-sensitive fixtures used system-clock date calculation while services used the injected Clock, and weekday selection could choose the current weekday.
 - Resolution: fixtures now use the injected Clock and strictly future weekday selection.
 - Scope: two MF-02 test files only; production reverse-impact logic and business behavior were unchanged, including the rule that elapsed sessions do not block present configuration mutations.
+VaccinationCampaign lifecycle state-integrity hardening: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #61)
+- New production campaigns are created only in DRAFT.
+- Caller-selected initial lifecycle status was removed from production construction and service APIs.
+- Generic public campaign status mutation was removed; controlled publication remains the only implemented campaign transition API in this slice.
+- Existing DRAFT/SCHEDULED -> PUBLISHED publication behavior remains unchanged.
+- Status helpers now distinguish operational closure from archival eligibility: COMPLETED and CANCELLED are archivable, not treated as universally final.
+- Arbitrary historical campaign states needed by tests are localized to test-only CampaignTestFixtures support.
+- No DRAFT -> SCHEDULED, activation, suspension/resumption, completion, cancellation, archival, audit/event infrastructure, or security/API behavior was added.
+Lifecycle API regression-test maintenance note (non-blocking): the PR #61 regression test checks several conventional generic mutator names rather than generically rejecting every possible future public method accepting CampaignStatus.
 Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
-Immediate next phase: remaining VaccinationCampaign lifecycle transitions readiness/discovery gate
-Pending Sprint 1 gaps: remaining campaign lifecycle transitions, MF-01 QuestionnaireVersion production adapter/FK integration, final Sprint DoD evidence
-The next AI should start a fresh chat/session, refresh live repository state, and proceed with the remaining VaccinationCampaign lifecycle transitions readiness/discovery gate. Campaign publication, session lifecycle hardening, and all reverse configuration-impact protections are complete. Keep implementation behavior-focused and regression-tested. Do not mark Sprint 1 complete prematurely.
+Immediate next phase: controlled decision/design for the next implementable VaccinationCampaign lifecycle slice; full implementation is only partially ready.
+Unresolved lifecycle decisions:
+- DRAFT -> SCHEDULED requires the exact meaning of “centers valid” and the authoritative campaign civil-date basis.
+- PUBLISHED -> ACTIVE requires authoritative campaign time/date semantics.
+- Resumption requires blocking-condition clearance semantics and an authoritative time basis.
+- Completion requires a definition of “service work closed.”
+- Dependent cancellation requires cascade/dependency policy and truthful MF-03 impact integration.
+- Archival remains blocked by USER_DATA_REQUIRED retention policy.
+Pending Sprint 1 gaps: controlled resolution of lifecycle decisions and later implementable transitions, MF-01 QuestionnaireVersion production adapter/FK integration, and final Sprint DoD evidence.
+The next AI should refresh live repository state and perform one controlled decision/design step for the next implementable VaccinationCampaign lifecycle slice. Do not infer or implement unsupported transitions. Campaign publication, lifecycle state-integrity hardening, session lifecycle hardening, and reverse configuration-impact protections are complete at their stated scopes. Do not mark Sprint 1 complete prematurely.
