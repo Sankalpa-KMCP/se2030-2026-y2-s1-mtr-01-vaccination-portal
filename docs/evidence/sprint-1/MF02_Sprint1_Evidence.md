@@ -1728,13 +1728,16 @@ MF-02 status: IN PROGRESS
 US-13 status: IN PROGRESS
 Working window: Weeks 1–3
 Last updated: 2026-08-13
-Latest campaign product-transition feature: PR #55 campaign publication prerequisites and transition
+Latest campaign lifecycle transition implementation: PR #65 campaign suspension
+Reviewed PR #65 source commit: 22626f360da147fa52e9e4d21c53bef52832b4cb
+PR #65 merge checkpoint: 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3
+Campaign publication milestone: PR #55 campaign publication prerequisites and transition
 PR #55 feature checkpoint: 9a470da982f1510213163b3b909a02bd0f85973b
-Latest lifecycle-integrity implementation: PR #61 campaign lifecycle state-integrity hardening
+Lifecycle-integrity hardening milestone: PR #61 campaign lifecycle state-integrity hardening
 Reviewed PR #61 source commit: d394886bbcfb640536b369b400052c267d61129e
-Latest verified MF-02/backend evidence checkpoint: d5dff09c6d0ed643cb4537abff64056b7d20656c (PR #61 merge)
-Evidence record prepared from MF-02 checkpoint: d5dff09c6d0ed643cb4537abff64056b7d20656c
-Upstream repository state observed during this documentation synchronization: PR #62 / cbe2353a4077c39579933be31c5b1eb7b1f41e65; unrelated MF-05 frontend work with no newer MF-02 implementation or backend verification evidence. This is a synchronization-time observation, not a durable latest-repository checkpoint. Future sessions must fetch and inspect live origin/develop.
+Latest verified MF-02/backend evidence checkpoint: 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3 (PR #65 merge)
+Evidence record prepared from MF-02 checkpoint: 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3
+Upstream repository state observed during this documentation synchronization: PR #65 / 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3. This is the synchronization-time MF-02 implementation/evidence checkpoint, not a permanent latest-repository field. Future sessions must fetch and inspect live origin/develop.
 OperatingHours feature branch HEAD: 4fe94df8df7c07ade3c22a39165aff3da1e8795a
 Canonical documentation sync checkpoint (PR #17): bd22cb973bad83c8456897805bc2df95b65593d0
 Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a), PR #47 (5ebcaadc44227d016956982a4ebf32e35c731491)
@@ -1785,12 +1788,15 @@ Deterministic reverse-impact hardening reviewed source pointer: 0cca456eab97c614
 Deterministic reverse-impact documentation checkpoint (PR #59): 23f151a07bf156ad3d647fe39e904ce41e033fc5
 Campaign lifecycle state-integrity integration checkpoint (PR #61): d5dff09c6d0ed643cb4537abff64056b7d20656c
 Campaign lifecycle state-integrity reviewed source pointer: d394886bbcfb640536b369b400052c267d61129e
+Campaign lifecycle documentation synchronization checkpoint (PR #64): 8a83da13dffa93413c40df080328828104eb0214
+Campaign suspension integration checkpoint (PR #65): 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3
+Campaign suspension reviewed source pointer: 22626f360da147fa52e9e4d21c53bef52832b4cb
 
 Living evidence record. Update it as Sprint 1 progresses and finalize it at the Sprint Review/Retrospective. This file records implementation and integration evidence; the canonical Markdown remains the requirements source of truth.
 
 Metadata Stability Policy: Metadata-only evidence synchronization commits/PRs are recorded as evidence checkpoints and are not recursively treated as new MF-02 implementation checkpoints. Implementation checkpoints remain strictly tied to actual domain/feature implementation integrations.
 
-This maintained evidence records the PR #61 lifecycle-integrity implementation checkpoint d5dff09c6d0ed643cb4537abff64056b7d20656c while preserving older implementation and documentation checkpoints as historical evidence. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
+This maintained evidence records the PR #65 campaign-suspension implementation and verified-backend checkpoint 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3 while preserving PR #55 publication, PR #61 lifecycle-integrity hardening, and older implementation/documentation checkpoints as historical evidence. Full Git object identities were re-verified against live Git/GitHub before documentation synchronization.
 
 Sprint Goal
 Build the MF-02 campaign and center-planning foundations needed for a valid vaccination campaign, including campaign lifecycle, dose-programme configuration, administrative service-area targeting, questionnaire linkage, center assignment, center calendar/closure foundations, recurrence foundations, concrete session foundations, session change audit foundations, individual session change workflows, series-wide session change preview foundation, atomic series-wide session change confirmation, and regression-hardened session change operations.
@@ -1800,31 +1806,11 @@ Expected integrated Sprint 1 outcome: a valid campaign can be linked to a publis
 Sprint Status
 We are still in Sprint 1.
 
-The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, VaccinationCenter scheduling-timezone prerequisite, VaccinationSession domain and repository foundation, VaccinationSession authoritative write-time validation / atomic one-off DRAFT creation, SessionRecurrenceRule occurrence generation and idempotent materialization, SessionChangeEvent audit model / SessionImpactReader integration port / VaccinationSession row locking foundation, individual VaccinationSession change workflows (preview, stale token protection, reschedule, center transfer, cancellation, locking, and audit), series-wide VaccinationSession change preview foundation (read-only diff calculation, occurrence classification into RETAINED/REMOVED/NEW/PRESERVED_EXCEPTION/INELIGIBLE, durable individual override exception preservation, real SCHEDULED impact reader integration, VaccinationSessionValidator schedule bounds reuse, bookingCloseAt policy, and deterministic SHA-256 stale token), atomic series-wide VaccinationSession change confirmation (confirmSeriesChange, write-lock order campaign → center → rule → sessions by ID ASC, stale preview revalidation under locks, RETAINED occurrence rescheduling with bookingCloseAt = newStartAt, REMOVED occurrence cancellation without deletion, NEW DRAFT occurrence creation, preservation of PRESERVED_EXCEPTION and INELIGIBLE occurrences, SERIES_RESCHEDULED and SERIES_CANCELLED SessionChangeEvent emission, atomic rollback, and recurrence-generator compatibility), and session-change regression hardening (PR #46: unchanged retained 0-impact, latent past occurrence prevention, exact no-op rejection) are implemented, reviewed, certified, tested, CI-verified, and merged into develop. Subsequent completed milestones include full-series cancellation (PR #48), reverse-impact protection (PRs #50 and #52), session lifecycle hardening (PR #53), campaign publication (PR #55), deterministic reverse-impact test hardening (PR #58), and campaign lifecycle state-integrity hardening (PR #61).
+The campaign foundation, dose-programme foundation, administrative location targeting, MF-02 questionnaire-assignment side, vaccination-center master foundation, pre-closure hardening, OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, VaccinationCenter scheduling-timezone prerequisite, VaccinationSession domain and repository foundation, VaccinationSession authoritative write-time validation / atomic one-off DRAFT creation, SessionRecurrenceRule occurrence generation and idempotent materialization, SessionChangeEvent audit model / SessionImpactReader integration port / VaccinationSession row locking foundation, individual VaccinationSession change workflows (preview, stale token protection, reschedule, center transfer, cancellation, locking, and audit), series-wide VaccinationSession change preview foundation (read-only diff calculation, occurrence classification into RETAINED/REMOVED/NEW/PRESERVED_EXCEPTION/INELIGIBLE, durable individual override exception preservation, real SCHEDULED impact reader integration, VaccinationSessionValidator schedule bounds reuse, bookingCloseAt policy, and deterministic SHA-256 stale token), atomic series-wide VaccinationSession change confirmation (confirmSeriesChange, write-lock order campaign → center → rule → sessions by ID ASC, stale preview revalidation under locks, RETAINED occurrence rescheduling with bookingCloseAt = newStartAt, REMOVED occurrence cancellation without deletion, NEW DRAFT occurrence creation, preservation of PRESERVED_EXCEPTION and INELIGIBLE occurrences, SERIES_RESCHEDULED and SERIES_CANCELLED SessionChangeEvent emission, atomic rollback, and recurrence-generator compatibility), and session-change regression hardening (PR #46: unchanged retained 0-impact, latent past occurrence prevention, exact no-op rejection) are implemented, reviewed, certified, tested, CI-verified, and merged into develop. Subsequent completed milestones include full-series cancellation (PR #48), reverse-impact protection (PRs #50 and #52), session lifecycle hardening (PR #53), campaign publication (PR #55), deterministic reverse-impact test hardening (PR #58), campaign lifecycle state-integrity hardening (PR #61), and campaign suspension (PR #65).
 
 The canonical R8 human-readable DOCX synchronization has also been merged into develop through PR #17.
 
-Sprint 1 is not complete yet because the remaining MF-02 Sprint 1 foundations still include:
-
-remaining campaign publication prerequisite/transition integration
-
-full-series cancellation command (cancelSeries)
-
-reverse configuration-impact workflows (later modifications to campaigns, centers, assignments, operating hours, or closures retroactively impacting existing sessions)
-
-MF-03 production impact reader adapter
-
-outbox pattern for cross-module change events
-
-VaccinationSession lifecycle transition services beyond initial DRAFT
-
-REST/API/DTO/mapper, OpenAPI, security/RBAC, and frontend work where required
-
-Flyway business migrations
-
-final MF-01 QuestionnaireVersion adapter/FK integration
-
-final Sprint integration and Definition-of-Done evidence
+Sprint 1 is not complete. Remaining MF-02 work includes controlled decisions and later implementation for unimplemented campaign lifecycle transitions, the unresolved campaign-status policy for session planning/materialization, the MF-03 production impact adapter, reliable cross-module event delivery/outbox, REST/API/security/frontend layers where required, Flyway business migrations, the final MF-01 QuestionnaireVersion adapter/FK integration, and final Sprint integration/Definition-of-Done evidence.
 
 MF-02 SESSION CHANGE REGRESSION HARDENING INTEGRATED. This historical PR #46 milestone covers the backend-foundation scope at that checkpoint for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, series-wide session change preview, atomic series change confirmation, and regression-hardened session change operations. It does not mean MF-02, US-13, or Sprint 1 is complete.
 
@@ -2962,8 +2948,51 @@ Validation evidence:
 
 Non-blocking maintenance note: the lifecycle API regression test checks several conventional generic mutator names rather than generically rejecting every possible future public method accepting `CampaignStatus`. This is a test-hardening opportunity, not a functional defect or integration blocker.
 
+Campaign Suspension Lifecycle Evidence (PR #65)
+
+PR #65, `feat(mf02): add campaign suspension lifecycle`, merged branch `feat/mf02-campaign-suspension` into `develop` as 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3. The independently reviewed source commit was 22626f360da147fa52e9e4d21c53bef52832b4cb, with review verdict APPROVED FOR INTEGRATION. Integration preserved the exact reviewed 12-file candidate, and the reviewed source remains an ancestor of `develop`.
+
+Implemented:
+
+- explicit named `VaccinationCampaign.suspend()` transition;
+- PUBLISHED -> SUSPENDED and ACTIVE -> SUSPENDED;
+- rejection without lifecycle mutation from DRAFT, SCHEDULED, SUSPENDED, COMPLETED, CANCELLED, and ARCHIVED;
+- mandatory normalized reason (maximum 500 characters) and opaque actor ID (maximum 64 characters);
+- campaign pessimistic write lock and authoritative post-lock entity refresh;
+- campaign-specific `CampaignLifecycleEvent` recording campaign, change type, previous status, new status, reason, actor ID, and deterministic created-at timestamp from the injected `Clock`;
+- atomic campaign-status and lifecycle-event transaction;
+- MF-02 verification that `SUSPENDED` fails the intake predicate and is excluded from the open-for-booking repository query;
+- rollback coverage for event-save failure and genuine separate-transaction simultaneous-suspension concurrency coverage.
+
+Explicitly not implemented:
+
+- no DRAFT -> SCHEDULED or PUBLISHED -> ACTIVE;
+- no resume, completion, campaign cancellation, or archival;
+- no session cancellation/rescheduling cascade or recurrence cancellation;
+- no appointment/waitlist mutation and no `SessionImpactReader` aggregation;
+- no campaign-status guard for one-off DRAFT session creation or recurrence occurrence materialization;
+- no MF-03 production adapter, cross-module event delivery, or outbox;
+- no API/controller, Spring Security/RBAC, Flyway production migration, or frontend work.
+
+The `CampaignLifecycleEvent` is an append-only-style lifecycle audit model. It does not record appointment/waitlist counts or session snapshots, and it does not claim reliable cross-module publication or deletion-proof storage. MF-02 intake behavior is proven locally; end-to-end MF-03 booking enforcement is outside this evidence.
+
+Validation evidence:
+
+- focused suspension/event/publication/lifecycle-integrity suite: 65 tests PASS;
+- Maven `verify`: SUCCESS, 554 tests, 0 failures, 0 errors, 0 skipped;
+- Backend CI: PASS;
+- Frontend CI: PASS;
+- independent review: APPROVED FOR INTEGRATION;
+- reviewed implementation changed during integration: NO.
+
+Non-blocking carried-forward findings:
+
+- MINOR: persistence tests do not directly dirty and flush an already-persisted `CampaignLifecycleEvent` to prove update rejection; this is a test-hardening gap, not a functional suspension defect;
+- NOTE: `CampaignLifecycleEventRepository` inherits normal `JpaRepository` delete methods, so append-only behavior is an entity/API/mapping convention rather than deletion-proof persistence;
+- NOTE: H2 concurrency tests establish structural locking evidence but do not certify production-MySQL concurrency behavior.
+
 Exact Next Work
-The latest campaign product-transition feature remains PR #55 publication, merged as 9a470da982f1510213163b3b909a02bd0f85973b from reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8. The latest lifecycle-integrity implementation and latest verified MF-02/backend evidence checkpoint is PR #61, merged as d5dff09c6d0ed643cb4537abff64056b7d20656c from independently reviewed source d394886bbcfb640536b369b400052c267d61129e. The verified backend baseline at that checkpoint is 523 tests, 0 failures, 0 errors, and 0 skipped; Maven verify, Backend CI, and Frontend CI succeeded. Repository-wide tip freshness must be established from live origin/develop rather than inferred from this evidence checkpoint.
+The latest campaign lifecycle transition implementation and latest verified MF-02/backend evidence checkpoint is PR #65 suspension, merged as 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3 from independently reviewed source 22626f360da147fa52e9e4d21c53bef52832b4cb. PR #55 remains the publication milestone, and PR #61 remains the lifecycle state-integrity hardening milestone. The verified backend baseline at PR #65 is 554 tests, 0 failures, 0 errors, and 0 skipped; Maven verify, Backend CI, and Frontend CI succeeded. Repository-wide tip freshness must be established from live origin/develop rather than inferred from this evidence checkpoint.
 
 VaccinationCampaign publication prerequisites and transition is COMPLETE in PR #55:
 
@@ -2983,7 +3012,7 @@ Domain API & Service Locking: publishCampaign(Long campaignId) locks the campaig
 
 14 net-new unit & integration tests added in CampaignPublicationIntegrationTests (521 total backend tests passing).
 
-Campaign publication and lifecycle state-integrity hardening are complete at their stated scopes. Full lifecycle implementation is only partially ready. The next engineering action is one controlled decision/design step for the next implementable lifecycle slice, preserving these unresolved areas:
+Campaign publication, lifecycle state-integrity hardening, and suspension are complete at their stated scopes. Full campaign lifecycle implementation remains incomplete. The next engineering action is one controlled discovery/design decision for the next safely implementable remaining campaign lifecycle or lifecycle-integration slice, preserving these unresolved areas:
 
 1. DRAFT -> SCHEDULED needs the exact meaning of “centers valid” and the authoritative campaign civil-date basis.
 2. PUBLISHED -> ACTIVE needs authoritative campaign time/date semantics.
@@ -2991,7 +3020,8 @@ Campaign publication and lifecycle state-integrity hardening are complete at the
 4. Completion needs a definition of “service work closed.”
 5. Dependent cancellation needs cascade/dependency policy plus truthful MF-03 impact integration.
 6. Archival remains blocked by USER_DATA_REQUIRED retention policy.
+7. Session planning/materialization campaign-status policy remains unresolved: one-off DRAFT session creation and recurrence occurrence materialization currently do not use campaign lifecycle status as a planning guard. This is a separate policy gap, not a PR #65 suspension defect.
 
 After a lifecycle decision is made and separately reviewed, later controlled work still includes the applicable implementable transition slice, final MF-01 QuestionnaireVersion adapter/FK integration, and final Sprint integration and Definition-of-Done evidence.
 
-Current MF-02 implementation stopping point: PR #55 remains the latest campaign transition feature; PR #61 remains the latest lifecycle-integrity implementation and latest verified MF-02/backend evidence checkpoint. Sprint 1, MF-02, and US-13 remain IN PROGRESS. No unimplemented lifecycle transition should be inferred as complete, and the live repository tip must be refreshed independently.
+Current MF-02 implementation stopping point: PR #65 is the latest campaign lifecycle transition and verified MF-02/backend evidence checkpoint; PR #55 remains the publication milestone, and PR #61 remains the lifecycle-integrity hardening milestone. Sprint 1, MF-02, and US-13 remain IN PROGRESS. No unimplemented lifecycle transition or planning/materialization policy should be inferred as complete, and the live repository tip must be refreshed independently.
