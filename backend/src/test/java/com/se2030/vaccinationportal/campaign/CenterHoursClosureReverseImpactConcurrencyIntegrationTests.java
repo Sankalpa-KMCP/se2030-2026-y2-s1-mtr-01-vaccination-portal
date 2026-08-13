@@ -35,6 +35,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -95,7 +96,7 @@ class CenterHoursClosureReverseImpactConcurrencyIntegrationTests {
                     )));
             centerId = center.getId();
 
-            LocalDate today = LocalDate.now(clock.getZone());
+            LocalDate today = LocalDate.now(clock);
             VaccinationCampaign campaign = campaignRepository.findByCode("CMP-CONC-1")
                     .orElseGet(() -> campaignRepository.saveAndFlush(new VaccinationCampaign(
                             "CMP-CONC-1", "Concurrency Campaign", "Desc", vaccineType, targetGroup,
@@ -127,14 +128,12 @@ class CenterHoursClosureReverseImpactConcurrencyIntegrationTests {
         AtomicBoolean deactivationSucceeded = new AtomicBoolean(false);
         AtomicBoolean sessionCreationSucceeded = new AtomicBoolean(false);
 
-        LocalDate today = LocalDate.now(clock.getZone());
-        LocalDate monday = today;
-        while (monday.getDayOfWeek() != DayOfWeek.MONDAY) {
-            monday = monday.plusDays(1);
-        }
+        LocalDate today = LocalDate.now(clock);
+        LocalDate monday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
         ZoneId zoneId = ZoneId.of("Asia/Colombo");
         Instant startAt = monday.atTime(9, 0).atZone(zoneId).toInstant();
         Instant endAt = monday.atTime(12, 0).atZone(zoneId).toInstant();
+        assertTrue(startAt.isAfter(clock.instant()), "Deactivation concurrency test requires a future session fixture");
 
         Future<?> f1 = executor.submit(() -> {
             try {
@@ -182,14 +181,12 @@ class CenterHoursClosureReverseImpactConcurrencyIntegrationTests {
         AtomicBoolean closureSucceeded = new AtomicBoolean(false);
         AtomicBoolean sessionCreationSucceeded = new AtomicBoolean(false);
 
-        LocalDate today = LocalDate.now(clock.getZone());
-        LocalDate tuesday = today;
-        while (tuesday.getDayOfWeek() != DayOfWeek.TUESDAY) {
-            tuesday = tuesday.plusDays(1);
-        }
+        LocalDate today = LocalDate.now(clock);
+        LocalDate tuesday = today.with(TemporalAdjusters.next(DayOfWeek.TUESDAY));
         ZoneId zoneId = ZoneId.of("Asia/Colombo");
         Instant startAt = tuesday.atTime(9, 0).atZone(zoneId).toInstant();
         Instant endAt = tuesday.atTime(12, 0).atZone(zoneId).toInstant();
+        assertTrue(startAt.isAfter(clock.instant()), "Closure concurrency test requires a future session fixture");
 
         Future<?> f1 = executor.submit(() -> {
             try {
