@@ -124,6 +124,10 @@ public class SessionOccurrenceGenerationService {
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalArgumentException(
+                    "Cannot generate session occurrences for operationally closed campaign with ID: " + campaignId);
+        }
 
         // Step 3: Acquire pessimistic write lock on center and refresh
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)

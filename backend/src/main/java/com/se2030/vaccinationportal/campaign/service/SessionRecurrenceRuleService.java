@@ -62,9 +62,17 @@ public class SessionRecurrenceRuleService {
         SessionRecurrenceRule.validateDefinition(
                 weekdays, startDate, endDate, startTime, endTime, timezone);
 
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalArgumentException(
+                    "Cannot create session recurrence rule for operationally closed campaign with ID: " + campaignId);
+        }
+
         VaccinationCenter center = centerRepository.findById(centerId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Vaccination center not found with ID: " + centerId));
@@ -126,6 +134,20 @@ public class SessionRecurrenceRuleService {
         requireId(id, "Session recurrence rule ID is required");
         SessionRecurrenceRule.validateDefinition(
                 weekdays, startDate, endDate, startTime, endTime, timezone);
+
+        SessionRecurrenceRule unlockedTarget = ruleRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + id));
+        Long campaignId = unlockedTarget.getCampaign().getId();
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalArgumentException(
+                    "Cannot update future session recurrence rule for operationally closed campaign with ID: " + campaignId);
+        }
 
         SessionRecurrenceRule target = findAuthoritativeRule(id);
         requireActive(target);
