@@ -1,5 +1,7 @@
 MF02_Sprint1_Evidence.md
 File
+Historical controller transcript retained for provenance; all checkpoint statements in this transcript are superseded by the maintained evidence section below.
+
 You are continuing my existing WEB_01 — Web-Based Vaccination Portal (WBVP-SE2030) project as my Codex-first AI Coding Project Controller.
 
 I have uploaded the current authoritative project/controller files.
@@ -515,6 +517,8 @@ Document
 
 
 MF-02 Sprint 1 Evidence Record
+Historical PR #48-era evidence snapshot retained for provenance; its checkpoint language is not current.
+
 Project: Web-Based Vaccination Portal (WBVP-SE2030)
 Function: MF-02 — Vaccination Campaign, Center and Session Management
 Canonical version: 3.3-AI
@@ -526,7 +530,7 @@ Latest implementation integration: merged into develop via PR #48 (Full-series c
 Latest implementation develop checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
 Latest completed evidence integration recorded: PR #48 (feat(mf02): add full-series cancellation) at 14e4976844870904b889fcd4970cc6d07439e168
 Evidence record prepared from implementation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
-Latest overall repository/documentation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168 (PR #48 merge)
+Historical overall repository/documentation checkpoint for this retained PR #48 snapshot: 14e4976844870904b889fcd4970cc6d07439e168 (PR #48 merge)
 OperatingHours feature branch HEAD: 4fe94df8df7c07ade3c22a39165aff3da1e8795a
 Canonical documentation sync checkpoint (PR #17): bd22cb973bad83c8456897805bc2df95b65593d0
 Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a), PR #47 (5ebcaadc44227d016956982a4ebf32e35c731491)
@@ -940,7 +944,7 @@ US-09	High	Create/manage campaign lifecycle and target group	In progress — bac
 US-10	High	Link campaign to one published questionnaire version	In progress — MF-02 foundation implemented and hardened; final MF-01 adapter/FK integration pending
 US-11	High	Define campaign dose programme	In progress — versioning and hardening implemented; later API/UI and integration evidence pending
 US-12	High	Assign vaccination centers to a campaign	In progress — backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, session integration, and final DoD evidence pending
-US-13	High	Configure center operating hours, closures and recurring sessions	IN PROGRESS — VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence, authoritative one-off validation/creation, recurrence generation, session change audit/locking, individual reschedule/transfer/cancellation, series-wide preview, atomic series-wide confirmation, full-series cancellation, campaign/assignment reverse-impact protection, VaccinationCenter deactivation reverse protection, OperatingHours update/end-date reverse protection, and CenterClosure create/update reverse protection are implemented; required lifecycle/publication integration, API/UI/migration, and final DoD work remain pending
+US-13	High	Configure center operating hours, closures and recurring sessions	IN PROGRESS — VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession foundations, recurrence generation, session change workflows, full-series cancellation, reverse-impact protection, session lifecycle hardening, and campaign publication are implemented; remaining VaccinationCampaign lifecycle transitions, API/UI/migration, and final DoD work remain pending
 US-27	High	Define campaign service areas and booking periods	In progress — backend foundation implemented; later API/UI evidence pending
 Completed Work
 1. Campaign domain foundation
@@ -1454,9 +1458,9 @@ PR #45 (Series Confirmation Evidence): Backend CI SUCCESS, Frontend CI SUCCESS b
 
 PR #46 (Session Change Regression Hardening): Backend CI SUCCESS, Frontend CI SUCCESS before merge and after merge
 
-Current Repository State
-Latest overall develop state
-Latest overall repository/documentation checkpoint:
+Historical Repository State (retained PR #46 snapshot)
+Historical develop state
+Historical overall repository/documentation checkpoint for this retained snapshot:
 5ebcaadc44227d016956982a4ebf32e35c731491
 
 Latest documentation merge:
@@ -1709,7 +1713,7 @@ final MF-01 questionnaire adapter/FK integration;
 
 final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #46 session-change regression hardening is integrated. The project is not yet Sprint 1 complete. The immediate next controlled phase is the full-series cancellation workflow, not a package refactor and not reverse configuration protection.
+Historical implementation stopping point: PR #46 session-change regression hardening was integrated. At that checkpoint, the next controlled phase was the full-series cancellation workflow.
 
 MF02_Sprint1_Evidence_UPDATED_2026-08-12.md
 
@@ -1719,14 +1723,17 @@ Project: Web-Based Vaccination Portal (WBVP-SE2030)
 Function: MF-02 — Vaccination Campaign, Center and Session Management
 Canonical version: 3.3-AI
 Canonical revision: 2026-08-08-R8
-Sprint: Sprint 1
+Sprint: Sprint 1 — IN PROGRESS
+MF-02 status: IN PROGRESS
+US-13 status: IN PROGRESS
 Working window: Weeks 1–3
-Last updated: 2026-08-12
-Latest implementation integration: merged into develop via PR #48 (Full-series cancellation workflow: previewSeriesCancellation / confirmSeriesCancellation, ACTIVE/non-expired rule check, REMOVED/PRESERVED_EXCEPTION/INELIGIBLE categorization, real SCHEDULED impact counts, SHA-256 preview token, campaign->center->rule->sessions ASC locking, rule cancellation, session cancellation, SERIES_CANCELLED audit events, generator compatibility)
-Latest implementation develop checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
-Latest completed evidence integration recorded: PR #48 (feat(mf02): add full-series cancellation) at 14e4976844870904b889fcd4970cc6d07439e168
-Evidence record prepared from implementation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
-Latest overall repository/documentation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168 (PR #48 merge)
+Last updated: 2026-08-13
+Latest feature implementation integration: PR #55 campaign publication prerequisites and transition
+Latest feature implementation develop checkpoint: 9a470da982f1510213163b3b909a02bd0f85973b
+Latest regression-hardening integration: PR #58 deterministic reverse-impact test fixtures
+Reviewed PR #58 source commit: 0cca456eab97c6143c80951f417a44d0639e7509
+Latest overall repository checkpoint: f5b424fc2f69ae5b8ef0b687555963def744c660 (PR #58 merge)
+Evidence record prepared from overall checkpoint: f5b424fc2f69ae5b8ef0b687555963def744c660
 OperatingHours feature branch HEAD: 4fe94df8df7c07ade3c22a39165aff3da1e8795a
 Canonical documentation sync checkpoint (PR #17): bd22cb973bad83c8456897805bc2df95b65593d0
 Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a), PR #47 (5ebcaadc44227d016956982a4ebf32e35c731491)
@@ -2140,7 +2147,7 @@ US-09	High	Create/manage campaign lifecycle and target group	In progress — bac
 US-10	High	Link campaign to one published questionnaire version	In progress — MF-02 foundation implemented and hardened; final MF-01 adapter/FK integration pending
 US-11	High	Define campaign dose programme	In progress — versioning and hardening implemented; later API/UI and integration evidence pending
 US-12	High	Assign vaccination centers to a campaign	In progress — backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, session integration, and final DoD evidence pending
-US-13	High	Configure center operating hours, closures and recurring sessions	IN PROGRESS — VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence, authoritative one-off validation/creation, recurrence generation, session change audit/locking, individual reschedule/transfer/cancellation, series-wide preview, atomic series-wide confirmation, full-series cancellation, campaign/assignment reverse-impact protection, VaccinationCenter deactivation reverse protection, OperatingHours update/end-date reverse protection, and CenterClosure create/update reverse protection are implemented; required lifecycle/publication integration, API/UI/migration, and final DoD work remain pending
+US-13	High	Configure center operating hours, closures and recurring sessions	IN PROGRESS — VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession foundations, recurrence generation, session change workflows, full-series cancellation, reverse-impact protection, session lifecycle hardening, and campaign publication are implemented; remaining VaccinationCampaign lifecycle transitions, API/UI/migration, and final DoD work remain pending
 US-27	High	Define campaign service areas and booking periods	In progress — backend foundation implemented; later API/UI evidence pending
 Completed Work
 1. Campaign domain foundation
@@ -2654,9 +2661,11 @@ PR #45 (Series Confirmation Evidence): Backend CI SUCCESS, Frontend CI SUCCESS b
 
 PR #46 (Session Change Regression Hardening): Backend CI SUCCESS, Frontend CI SUCCESS before merge and after merge
 
-Current Repository State
-Latest overall develop state
-Latest overall repository/documentation checkpoint:
+PR #58 (Deterministic Reverse-Impact Test Hardening): Backend CI PASS, Frontend CI PASS before merge
+
+Historical Repository State (retained PR #46 snapshot)
+Historical develop state
+Historical overall repository/documentation checkpoint for this retained snapshot:
 5ebcaadc44227d016956982a4ebf32e35c731491
 
 Latest documentation merge:
@@ -2888,8 +2897,31 @@ Add Flyway/API/UI evidence as those layers are implemented instead of postponing
 
 Keep evidence updates as derivatives of the existing living record rather than replacing the record with shortened reconstructions.
 
+Deterministic Reverse-Impact Regression-Hardening Evidence (PR #58)
+
+PR #58, `test(mf02): make reverse-impact fixtures deterministic`, merged into `develop` as f5b424fc2f69ae5b8ef0b687555963def744c660. The independently reviewed source commit was 0cca456eab97c6143c80951f417a44d0639e7509, with review verdict APPROVED FOR INTEGRATION.
+
+Scope was test-only and limited to:
+
+- `HoursClosureReverseImpactIntegrationTests.java`;
+- `CenterHoursClosureReverseImpactConcurrencyIntegrationTests.java`.
+
+Root cause: time-sensitive reverse-impact fixtures mixed system-clock date calculation with injected `Clock` semantics and could select the current weekday. On the target weekday, a fixture session could therefore be current or elapsed instead of strictly future.
+
+Resolution: the fixtures now derive dates from the injected `Clock`, use strictly future weekday selection, and assert the required future-session precondition where applicable. Production reverse-impact code and canonical business behavior were unchanged; elapsed sessions continue not to block present configuration mutations.
+
+Validation evidence:
+
+- focused original regression test: PASS;
+- both affected classes: 14 tests PASS;
+- Maven `verify`: SUCCESS, 521 tests, 0 failures, 0 errors, 0 skipped;
+- Backend CI: PASS;
+- Frontend CI: PASS;
+- independent review: APPROVED FOR INTEGRATION;
+- production behavior changed: NO.
+
 Exact Next Work
-The latest MF-02 implementation checkpoint is PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b, with reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8 and base 62f9743a7caa50fb1f26551edb611ee4edbbcccf. Merge parents are 62f9743a7caa50fb1f26551edb611ee4edbbcccf and d1d9e63a5398687e78734f835357fb9c6ded34d8. The latest overall repository/documentation checkpoint is 9a470da982f1510213163b3b909a02bd0f85973b. The backend baseline is 521 tests (507 baseline + 14 net-new tests). Pre-merge and post-merge Backend CI and Frontend CI succeeded.
+The latest MF-02 feature implementation checkpoint remains PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b, with reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8 and base 62f9743a7caa50fb1f26551edb611ee4edbbcccf. Merge parents are 62f9743a7caa50fb1f26551edb611ee4edbbcccf and d1d9e63a5398687e78734f835357fb9c6ded34d8. The latest regression-hardening integration and latest overall repository checkpoint is PR #58 merge f5b424fc2f69ae5b8ef0b687555963def744c660, with reviewed test-only source 0cca456eab97c6143c80951f417a44d0639e7509. The backend baseline is 521 tests, 0 failures, 0 errors, and 0 skipped; Maven verify, Backend CI, and Frontend CI succeeded.
 
 VaccinationCampaign publication prerequisites and transition is COMPLETE in PR #55:
 
@@ -2909,12 +2941,12 @@ Domain API & Service Locking: publishCampaign(Long campaignId) locks the campaig
 
 14 net-new unit & integration tests added in CampaignPublicationIntegrationTests (521 total backend tests passing).
 
-With campaign publication prerequisites and transition complete, proceed directly with the next controlled phase:
+With campaign publication prerequisites and transition complete and deterministic reverse-impact test hardening integrated, proceed with the next controlled phase:
 
-1. remaining campaign lifecycle transitions readiness gate (e.g. PUBLISHED -> ACTIVE, ACTIVE -> COMPLETED, SUSPEND, RESUME, CANCEL, ARCHIVE);
+1. remaining VaccinationCampaign lifecycle transitions readiness/discovery gate (e.g. PUBLISHED -> ACTIVE, ACTIVE -> COMPLETED, SUSPEND, RESUME, CANCEL, ARCHIVE);
 
 2. final MF-01 QuestionnaireVersion adapter/FK integration;
 
 3. final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #55 campaign publication is integrated. The project is not yet Sprint 1 complete. Campaign publication is complete. The immediate next controlled phase is remaining campaign lifecycle transitions readiness gate.
+Current implementation stopping point: PR #55 campaign publication is the latest feature implementation, and PR #58 deterministic reverse-impact test hardening is the latest overall integration. The project is not yet Sprint 1 complete. Campaign publication is complete. The immediate next controlled phase is the remaining VaccinationCampaign lifecycle transitions readiness/discovery gate.
