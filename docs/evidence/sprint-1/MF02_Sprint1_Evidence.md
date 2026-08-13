@@ -2991,8 +2991,44 @@ Non-blocking carried-forward findings:
 - NOTE: `CampaignLifecycleEventRepository` inherits normal `JpaRepository` delete methods, so append-only behavior is an entity/API/mapping convention rather than deletion-proof persistence;
 - NOTE: H2 concurrency tests establish structural locking evidence but do not certify production-MySQL concurrency behavior.
 
+Terminal-State Session-Planning Guard Evidence (PR #67)
+
+PR #67, `fix(mf02): block session planning for closed campaigns`, merged branch `fix/mf02-terminal-campaign-planning-guard` into `develop` as 296c763b48bac4ab837dafeb67cc9788b071912d. The independently reviewed source commit was cb5872066360173c717f5f123e5b4d0f25d5bad2, with review verdict APPROVED FOR INTEGRATION. Integration preserved the exact reviewed 6-file candidate, and the reviewed source remains an ancestor of `develop`.
+
+Problem fixed:
+Session planning and progression operations lacked a parent campaign operational closure check, allowing new recurrence rules, one-off DRAFT sessions, recurrence occurrences, and DRAFT -> SCHEDULED session progressions to be created or mutated against closed campaigns.
+
+Implemented:
+- reuses existing `CampaignStatus.isOperationallyClosed()` (`COMPLETED`, `CANCELLED`, `ARCHIVED`);
+- blocks 5 write paths when parent campaign status is operationally closed:
+  1. `SessionRecurrenceRuleService.createRule`
+  2. `SessionRecurrenceRuleService.updateFutureRule`
+  3. `VaccinationSessionService.createOneOffDraftSession`
+  4. `SessionOccurrenceGenerationService.generateOccurrences`
+  5. `VaccinationSessionService.scheduleSession`
+- campaign row pessimistic write lock (`findByIdForUpdate`) and authoritative post-lock entity refresh (`entityManager.refresh`) prior to status evaluation;
+- strict parent-first lock ordering (`Campaign -> Rule`, `Campaign -> Center`, `Campaign -> Session`);
+- occurrence generation fast rejection on operationally closed campaigns even when all requested occurrence identities already exist in the database;
+- 11 net-new integration tests added.
+
+Explicitly not implemented / preserved boundaries:
+- no change to `shortenRuleEnd` or `cancelRule` (rule closure operations remain outside guard scope);
+- no change to individual session reschedule, center transfer, session cancellation, series preview/change, or full-series cancellation;
+- zero automatic mutation or deletion of existing sessions, rules, assignments, operating hours, closures, `SessionChangeEvent`, `CampaignLifecycleEvent`, appointments, or waitlists;
+- `SUSPENDED` campaign planning policy remains UNRESOLVED and UNCHANGED (`isOperationallyClosed()` excludes `SUSPENDED`);
+- `DRAFT` campaign session-scheduling policy remains UNRESOLVED and UNCHANGED;
+- no comprehensive non-terminal status matrix or generic allow-list was created.
+
+Validation evidence:
+- Maven `test`: SUCCESS, 566 tests, 0 failures, 0 errors, 0 skipped;
+- Maven `verify`: SUCCESS, 566 tests, 0 failures, 0 errors, 0 skipped;
+- Backend CI: PASS;
+- Frontend CI: PASS;
+- independent review: APPROVED FOR INTEGRATION;
+- reviewed implementation changed during integration: NO.
+
 Exact Next Work
-The latest campaign lifecycle transition implementation and latest verified MF-02/backend evidence checkpoint is PR #65 suspension, merged as 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3 from independently reviewed source 22626f360da147fa52e9e4d21c53bef52832b4cb. PR #55 remains the publication milestone, and PR #61 remains the lifecycle state-integrity hardening milestone. The verified backend baseline at PR #65 is 554 tests, 0 failures, 0 errors, and 0 skipped; Maven verify, Backend CI, and Frontend CI succeeded. Repository-wide tip freshness must be established from live origin/develop rather than inferred from this evidence checkpoint.
+The latest campaign lifecycle transition implementation is PR #65 suspension (228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3) and the latest verified MF-02/backend evidence checkpoint is PR #67 terminal planning guard, merged as 296c763b48bac4ab837dafeb67cc9788b071912d from independently reviewed source cb5872066360173c717f5f123e5b4d0f25d5bad2. PR #55 remains the publication milestone, and PR #61 remains the lifecycle state-integrity hardening milestone. The verified backend baseline at PR #67 is 566 tests, 0 failures, 0 errors, and 0 skipped; Maven test, Maven verify, Backend CI, and Frontend CI succeeded. Repository-wide tip freshness must be established from live origin/develop rather than inferred from this evidence checkpoint.
 
 VaccinationCampaign publication prerequisites and transition is COMPLETE in PR #55:
 
@@ -3012,7 +3048,7 @@ Domain API & Service Locking: publishCampaign(Long campaignId) locks the campaig
 
 14 net-new unit & integration tests added in CampaignPublicationIntegrationTests (521 total backend tests passing).
 
-Campaign publication, lifecycle state-integrity hardening, and suspension are complete at their stated scopes. Full campaign lifecycle implementation remains incomplete. The next engineering action is one controlled discovery/design decision for the next safely implementable remaining campaign lifecycle or lifecycle-integration slice, preserving these unresolved areas:
+Campaign publication, lifecycle state-integrity hardening, campaign suspension, and terminal-state session-planning guard are complete at their stated scopes. Full campaign lifecycle implementation remains incomplete. The next engineering action is one controlled discovery/design decision for the next safely implementable remaining campaign lifecycle or lifecycle-integration slice, preserving these unresolved areas:
 
 1. DRAFT -> SCHEDULED needs the exact meaning of “centers valid” and the authoritative campaign civil-date basis.
 2. PUBLISHED -> ACTIVE needs authoritative campaign time/date semantics.
@@ -3020,8 +3056,9 @@ Campaign publication, lifecycle state-integrity hardening, and suspension are co
 4. Completion needs a definition of “service work closed.”
 5. Dependent cancellation needs cascade/dependency policy plus truthful MF-03 impact integration.
 6. Archival remains blocked by USER_DATA_REQUIRED retention policy.
-7. Session planning/materialization campaign-status policy remains unresolved: one-off DRAFT session creation and recurrence occurrence materialization currently do not use campaign lifecycle status as a planning guard. This is a separate policy gap, not a PR #65 suspension defect.
+7. Planning policy for `SUSPENDED` campaigns (recurrence-rule creation, DRAFT creation, materialization, DRAFT -> SCHEDULED progression) remains unresolved and open for product/design decision.
+8. Planning policy for `DRAFT` campaigns session-scheduling (`DRAFT` campaign + `DRAFT` session -> `SCHEDULED` session) remains unresolved and open for product/design decision.
 
 After a lifecycle decision is made and separately reviewed, later controlled work still includes the applicable implementable transition slice, final MF-01 QuestionnaireVersion adapter/FK integration, and final Sprint integration and Definition-of-Done evidence.
 
-Current MF-02 implementation stopping point: PR #65 is the latest campaign lifecycle transition and verified MF-02/backend evidence checkpoint; PR #55 remains the publication milestone, and PR #61 remains the lifecycle-integrity hardening milestone. Sprint 1, MF-02, and US-13 remain IN PROGRESS. No unimplemented lifecycle transition or planning/materialization policy should be inferred as complete, and the live repository tip must be refreshed independently.
+Current MF-02 implementation stopping point: PR #65 is the latest campaign lifecycle transition, and PR #67 is the latest terminal planning guard milestone and verified MF-02/backend evidence checkpoint; PR #55 remains the publication milestone, and PR #61 remains the lifecycle-integrity hardening milestone. Sprint 1, MF-02, and US-13 remain IN PROGRESS. No unimplemented lifecycle transition or planning/materialization policy should be inferred as complete, and the live repository tip must be refreshed independently.

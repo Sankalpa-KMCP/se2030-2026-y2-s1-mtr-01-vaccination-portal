@@ -1523,21 +1523,23 @@ Campaign publication milestone: PR #55 merge 9a470da982f1510213163b3b909a02bd0f8
 
 Lifecycle-integrity hardening milestone: PR #61 merge d5dff09c6d0ed643cb4537abff64056b7d20656c (independently reviewed source d394886bbcfb640536b369b400052c267d61129e)
 
+Terminal-state session-planning guard milestone: PR #67 merge 296c763b48bac4ab837dafeb67cc9788b071912d (independently reviewed source cb5872066360173c717f5f123e5b4d0f25d5bad2)
+
 Historical deterministic regression-hardening integration: PR #58 merge f5b424fc2f69ae5b8ef0b687555963def744c660 (reviewed source 0cca456eab97c6143c80951f417a44d0639e7509); documentation synchronized through PR #59 merge 23f151a07bf156ad3d647fe39e904ce41e033fc5.
 
-Latest verified MF-02/backend evidence checkpoint: 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3 (PR #65 merge)
+Latest verified MF-02/backend evidence checkpoint: 296c763b48bac4ab837dafeb67cc9788b071912d (PR #67 merge)
 
-Upstream repository state observed during this documentation synchronization: PR #65 / 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3. This is the MF-02 suspension implementation/evidence checkpoint observed while preparing this handoff, not a permanent repository-tip field; future sessions must fetch and inspect live origin/develop.
+Upstream repository state observed during this documentation synchronization: PR #67 / 296c763b48bac4ab837dafeb67cc9788b071912d. This is the MF-02 terminal-state planning guard implementation/evidence checkpoint observed while preparing this handoff, not a permanent repository-tip field; future sessions must fetch and inspect live origin/develop.
 
-Latest completed campaign lifecycle transition is VaccinationCampaign suspension through PR #65. PR #55 remains the publication milestone, and PR #61 remains the lifecycle state-integrity hardening milestone.
+Latest completed campaign lifecycle transition is VaccinationCampaign suspension through PR #65. PR #55 remains the publication milestone, PR #61 remains the lifecycle state-integrity hardening milestone, and PR #67 is the terminal-state session-planning guard milestone.
 
-Current verified MF-02/backend baseline: 554 tests — 0 failures, 0 errors, 0 skipped; Maven verify SUCCESS; Backend CI PASS and Frontend CI PASS for PR #65.
+Current verified MF-02/backend baseline: 566 tests — 0 failures, 0 errors, 0 skipped; Maven test SUCCESS; Maven verify SUCCESS; Backend CI PASS and Frontend CI PASS for PR #67.
 
 Next controlled phase: one discovery/design decision for the next safely implementable remaining VaccinationCampaign lifecycle or lifecycle-integration slice; full lifecycle implementation remains incomplete.
 
 This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
 
-The latest campaign lifecycle transition implementation and verified MF-02/backend evidence checkpoint is PR #65 merge 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3, integrating independently reviewed source 22626f360da147fa52e9e4d21c53bef52832b4cb. PR #55 publication and PR #61 integrity hardening remain distinct earlier milestones. Implementation, integrity-hardening, evidence, documentation, and regression-hardening checkpoints remain distinct from the transient repository tip.
+The latest campaign state integration milestone and verified MF-02/backend evidence checkpoint is PR #67 merge 296c763b48bac4ab837dafeb67cc9788b071912d, integrating independently reviewed source cb5872066360173c717f5f123e5b4d0f25d5bad2. PR #65 suspension, PR #61 integrity hardening, and PR #55 publication remain distinct earlier milestones. Implementation, integrity-hardening, evidence, documentation, and regression-hardening checkpoints remain distinct from the transient repository tip.
 
 1. Executive Snapshot
 The following MF-02 backend foundations are already implemented and integrated:
@@ -2511,8 +2513,10 @@ PR #58 independently reviewed source: 0cca456eab97c6143c80951f417a44d0639e7509
 Historical documentation synchronization checkpoint: PR #59 / 23f151a07bf156ad3d647fe39e904ce41e033fc5
 Lifecycle-integrity hardening milestone: PR #61 / d5dff09c6d0ed643cb4537abff64056b7d20656c
 PR #61 independently reviewed source: d394886bbcfb640536b369b400052c267d61129e
-Latest verified MF-02/backend evidence checkpoint: PR #65 / 228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3
-Backend baseline: 554 tests; 0 failures, 0 errors, 0 skipped; Maven verify SUCCESS; Backend CI PASS; Frontend CI PASS
+Terminal-state session-planning guard milestone: PR #67 / 296c763b48bac4ab837dafeb67cc9788b071912d
+PR #67 independently reviewed source: cb5872066360173c717f5f123e5b4d0f25d5bad2
+Latest verified MF-02/backend evidence checkpoint: PR #67 / 296c763b48bac4ab837dafeb67cc9788b071912d
+Backend baseline: 566 tests; 0 failures, 0 errors, 0 skipped; Maven test SUCCESS; Maven verify SUCCESS; Backend CI PASS; Frontend CI PASS
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
@@ -2565,6 +2569,20 @@ VaccinationCampaign suspension lifecycle: IMPLEMENTED, INDEPENDENTLY REVIEWED, T
 - Existing sessions, recurrence rules, assignments, operating hours, closures, appointments, and waitlists are not cascaded, cancelled, rescheduled, or deleted.
 - No DRAFT -> SCHEDULED, activation, resume, completion, campaign cancellation, archival, session-generation guard, MF-03 adapter, cross-module delivery/outbox, API/controller, security/RBAC, Flyway migration, or frontend work was added.
 Campaign lifecycle event maintenance notes (non-blocking): persistence tests do not directly dirty and flush an already-persisted event to prove update rejection; the repository inherits normal `JpaRepository` delete methods, so append-only behavior is an entity/API/mapping convention rather than deletion-proof persistence; H2 concurrency tests provide structural locking evidence, not production-MySQL certification.
+Terminal-state session-planning guard: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #67)
+- Blocks 5 session-planning/progression write operations when parent campaign status is operationally closed (`COMPLETED`, `CANCELLED`, `ARCHIVED`) using existing `CampaignStatus.isOperationallyClosed()`:
+  1. Recurrence-rule creation (`SessionRecurrenceRuleService.createRule`)
+  2. Future recurrence-rule definition update (`SessionRecurrenceRuleService.updateFutureRule`)
+  3. One-off DRAFT session creation (`VaccinationSessionService.createOneOffDraftSession`)
+  4. Recurrence occurrence generation (`SessionOccurrenceGenerationService.generateOccurrences`)
+  5. DRAFT session -> SCHEDULED progression (`VaccinationSessionService.scheduleSession`)
+- Authoritative locking discipline: acquires campaign pessimistic write lock (`findByIdForUpdate`) and refreshes entity state (`entityManager.refresh(campaign)`) prior to evaluating status.
+- Strict parent-first lock ordering: `Campaign -> Rule`, `Campaign -> Center`, `Campaign -> Session`.
+- Session occurrence generation rejects fast on operationally closed campaigns even if all requested occurrence identities were already materialized. Existing generated database sessions remain untouched.
+- Existing records preserved: zero automatic mutation or deletion of existing sessions, rules, assignments, operating hours, closures, `SessionChangeEvent`, `CampaignLifecycleEvent`, appointments, or waitlists.
+- Scope boundaries preserved: `shortenRuleEnd` and `cancelRule` remain outside terminal guard scope. Individual session reschedule, center transfer, session cancellation, series preview/change, and full-series cancellation remain untouched.
+- Policy boundaries preserved: `SUSPENDED` campaign planning policy and `DRAFT` campaign session-scheduling policy remain explicitly UNRESOLVED and UNCHANGED. No generalized non-terminal allow-list or status planning matrix was introduced.
+- 11 net-new integration tests added (566 total backend tests passing).
 Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
 Immediate next phase: one controlled discovery/design decision for the next safely implementable remaining VaccinationCampaign lifecycle or lifecycle-integration slice; campaign lifecycle remains incomplete.
 Unresolved lifecycle decisions:
@@ -2574,6 +2592,7 @@ Unresolved lifecycle decisions:
 - Completion requires a definition of “service work closed.”
 - Dependent cancellation requires cascade/dependency policy and truthful MF-03 impact integration.
 - Archival remains blocked by USER_DATA_REQUIRED retention policy.
-- Session planning/materialization campaign-status policy remains unresolved: one-off DRAFT session creation and recurrence occurrence materialization currently do not use campaign lifecycle status as a planning guard. This is a separate policy gap, not a defect in PR #65 suspension intake blocking.
+- Planning policy for `SUSPENDED` campaigns (recurrence-rule creation, DRAFT creation, materialization, DRAFT -> SCHEDULED progression) remains unresolved and open for product/design decision.
+- Planning policy for `DRAFT` campaigns session-scheduling (`DRAFT` campaign + `DRAFT` session -> `SCHEDULED` session) remains unresolved and open for product/design decision.
 Pending Sprint 1 gaps: controlled resolution of lifecycle decisions and later implementable transitions, MF-01 QuestionnaireVersion production adapter/FK integration, and final Sprint DoD evidence.
-The next AI should refresh live repository state and perform one controlled discovery/design decision for the next safely implementable remaining VaccinationCampaign lifecycle or lifecycle-integration slice. Do not infer or implement unsupported transitions or resolve the planning/materialization matrix by assumption. Campaign publication, lifecycle state-integrity hardening, campaign suspension, session lifecycle hardening, and reverse configuration-impact protections are complete only at their stated scopes. Do not mark Sprint 1 complete prematurely.
+The next AI should refresh live repository state and perform one controlled discovery/design decision for the next safely implementable remaining VaccinationCampaign lifecycle or lifecycle-integration slice. Do not infer or implement unsupported transitions or resolve the planning/materialization matrix by assumption. Campaign publication, lifecycle state-integrity hardening, campaign suspension, terminal-state planning guard, session lifecycle hardening, and reverse configuration-impact protections are complete only at their stated scopes. Do not mark Sprint 1 complete prematurely.
