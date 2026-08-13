@@ -57,6 +57,12 @@ final class CampaignTestFixtures {
             campaign.publish();
             return;
         }
+        if (targetStatus == CampaignStatus.SUSPENDED
+                && (campaign.getStatus() == CampaignStatus.PUBLISHED
+                || campaign.getStatus() == CampaignStatus.ACTIVE)) {
+            campaign.suspend();
+            return;
+        }
         try {
             STATUS_FIELD.set(campaign, targetStatus);
         } catch (IllegalAccessException error) {
