@@ -202,4 +202,54 @@ class VaccinationSessionServiceIntegrationTests {
         assertThrows(IllegalArgumentException.class, () -> service.getSessionsForCampaign(null));
         assertThrows(IllegalArgumentException.class, () -> service.getSessionsForCenter(null));
     }
+
+    @Test
+    void createOneOffDraftSession_whenCampaignIsOperationallyClosed_throwsIllegalArgumentException() {
+        Instant startAt = Instant.parse("2026-10-14T03:30:00Z");
+        Instant endAt = Instant.parse("2026-10-14T06:30:00Z");
+        Instant bookingCloseAt = Instant.parse("2026-10-14T02:30:00Z");
+
+        VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-SESS-CLOSED", "Vaccine"));
+        TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-SESS-CLOSED", "Group"));
+
+        for (CampaignStatus status : List.of(CampaignStatus.COMPLETED, CampaignStatus.CANCELLED, CampaignStatus.ARCHIVED)) {
+            VaccinationCampaign closedCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                    "CMP-CLOSED-" + status.name(), "Closed Campaign", null, vax, tg,
+                    CAMPAIGN_START, CAMPAIGN_END,
+                    Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-10-31T23:59:59Z"), status));
+            assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                    closedCampaign, center, CAMPAIGN_START, CAMPAIGN_END.plusDays(1)));
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                    service.createOneOffDraftSession(closedCampaign.getId(), center.getId(), startAt, endAt, bookingCloseAt));
+            assertTrue(ex.getMessage().contains("Cannot create one-off session for operationally closed campaign"));
+        }
+    }
+
+    @Test
+    void scheduleSession_whenCampaignIsOperationallyClosed_throwsIllegalArgumentException() {
+        Instant startAt = Instant.parse("2026-10-14T03:30:00Z");
+        Instant endAt = Instant.parse("2026-10-14T06:30:00Z");
+        Instant bookingCloseAt = Instant.parse("2026-10-14T02:30:00Z");
+
+        VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-SCHED-CLOSED", "Vaccine"));
+        TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-SCHED-CLOSED", "Group"));
+
+        for (CampaignStatus status : List.of(CampaignStatus.COMPLETED, CampaignStatus.CANCELLED, CampaignStatus.ARCHIVED)) {
+            VaccinationCampaign closedCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                    "CMP-SCHED-CLOSED-" + status.name(), "Closed Campaign", null, vax, tg,
+                    CAMPAIGN_START, CAMPAIGN_END,
+                    Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-10-31T23:59:59Z"), status));
+            assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                    closedCampaign, center, CAMPAIGN_START, CAMPAIGN_END.plusDays(1)));
+
+            VaccinationSession draftSession = sessionRepository.saveAndFlush(new VaccinationSession(
+                    closedCampaign, center, startAt, endAt, bookingCloseAt, "Asia/Colombo"));
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                    service.scheduleSession(draftSession.getId()));
+            assertTrue(ex.getMessage().contains("Cannot schedule session for operationally closed campaign"));
+            assertEquals(SessionLifecycleStatus.DRAFT, sessionRepository.findById(draftSession.getId()).orElseThrow().getLifecycleStatus());
+        }
+    }
 }

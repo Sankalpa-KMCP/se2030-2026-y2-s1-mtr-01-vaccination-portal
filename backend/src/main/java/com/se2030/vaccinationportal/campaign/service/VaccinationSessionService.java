@@ -97,6 +97,10 @@ public class VaccinationSessionService {
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalArgumentException(
+                    "Cannot create one-off session for operationally closed campaign with ID: " + campaignId);
+        }
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
                 .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
@@ -145,11 +149,31 @@ public class VaccinationSessionService {
      */
     public VaccinationSession scheduleSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
+        VaccinationSession unlockedSession = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+        Long campaignId = unlockedSession.getCampaign().getId();
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
+
+        if (!session.getCampaign().getId().equals(campaignId)) {
+            throw new IllegalStateException("Authoritative session parent campaign changed concurrently");
+        }
+
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalArgumentException(
+                    "Cannot schedule session for operationally closed campaign with ID: " + campaignId);
+        }
+
         session.schedule();
         return sessionRepository.save(session);
     }

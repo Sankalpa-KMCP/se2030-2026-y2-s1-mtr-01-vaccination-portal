@@ -112,7 +112,7 @@ class SessionRecurrenceRuleServiceIntegrationTests {
 
     @Test
     void configurationIgnoresParentLifecyclesServiceDatesAndOtherFoundations() {
-        VaccinationCampaign campaign = campaign("INDEPENDENT", CampaignStatus.CANCELLED);
+        VaccinationCampaign campaign = campaign("INDEPENDENT", CampaignStatus.DRAFT);
         VaccinationCenter center = center("INDEPENDENT", CenterStatus.INACTIVE);
 
         SessionRecurrenceRule rule = create(
@@ -433,6 +433,32 @@ class SessionRecurrenceRuleServiceIntegrationTests {
         VaccinationSession remainingSession = sessionRepository.findById(session.getId()).orElseThrow();
         assertEquals(SessionLifecycleStatus.DRAFT, remainingSession.getLifecycleStatus());
         assertEquals(rule.getId(), remainingSession.getRecurrenceRule().getId());
+    }
+
+    @Test
+    void createRule_whenCampaignIsOperationallyClosed_throwsIllegalArgumentException() {
+        VaccinationCenter center = center("CLOSED-CTR", CenterStatus.ACTIVE);
+        for (CampaignStatus status : List.of(CampaignStatus.COMPLETED, CampaignStatus.CANCELLED, CampaignStatus.ARCHIVED)) {
+            VaccinationCampaign closedCampaign = campaign("CLOSED-" + status.name(), status);
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> create(
+                    closedCampaign, center, Set.of(DayOfWeek.MONDAY),
+                    LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5), MORNING, NOON, "UTC"));
+            assertTrue(ex.getMessage().contains("Cannot create session recurrence rule for operationally closed campaign"));
+        }
+    }
+
+    @Test
+    void updateFutureRule_whenCampaignIsOperationallyClosed_throwsIllegalArgumentException() {
+        VaccinationCenter center = center("UPD-CLOSED-CTR", CenterStatus.ACTIVE);
+        for (CampaignStatus status : List.of(CampaignStatus.COMPLETED, CampaignStatus.CANCELLED, CampaignStatus.ARCHIVED)) {
+            VaccinationCampaign closedCampaign = campaign("UPD-CLOSED-" + status.name(), status);
+            SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                    closedCampaign, center, Set.of(DayOfWeek.MONDAY),
+                    LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5), MORNING, NOON, "UTC"));
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> updateToTuesday(rule));
+            assertTrue(ex.getMessage().contains("Cannot update future session recurrence rule for operationally closed campaign"));
+        }
     }
 
     private void updateToTuesday(SessionRecurrenceRule rule) {

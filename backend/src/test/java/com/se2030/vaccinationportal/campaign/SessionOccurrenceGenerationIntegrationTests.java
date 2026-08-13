@@ -559,4 +559,51 @@ class SessionOccurrenceGenerationIntegrationTests {
                 () -> generationService.generateOccurrences(rule.getId()));
         assertTrue(ex.getMessage().contains("must be ACTIVE"));
     }
+
+    @Test
+    void generationRejectsOperationallyClosedCampaign() {
+        for (CampaignStatus status : List.of(CampaignStatus.COMPLETED, CampaignStatus.CANCELLED, CampaignStatus.ARCHIVED)) {
+            VaccinationCampaign closedCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                    "CMP-GEN-CLOSED-" + status.name(), "Closed Gen Campaign", null,
+                    vaccineType, targetGroup,
+                    CAMPAIGN_START, CAMPAIGN_END,
+                    Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-10-20T18:00:00Z"), status));
+
+            assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                    closedCampaign, center, CAMPAIGN_START, CAMPAIGN_END.plusDays(1)));
+
+            SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                    closedCampaign, center, Set.of(DayOfWeek.WEDNESDAY),
+                    CAMPAIGN_START, CAMPAIGN_END, MORNING_START, MORNING_END, "UTC"));
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> generationService.generateOccurrences(rule.getId()));
+            assertTrue(ex.getMessage().contains("Cannot generate session occurrences for operationally closed campaign"));
+        }
+    }
+
+    @Test
+    void generationRejectsOperationallyClosedCampaign_evenWhenAllOccurrencesAlreadyExist() {
+        // First generate on DRAFT campaign
+        SessionRecurrenceRule rule = ruleService.createRule(
+                campaign.getId(), center.getId(), Set.of(DayOfWeek.WEDNESDAY),
+                CAMPAIGN_START, CAMPAIGN_END, MORNING_START, MORNING_END, "UTC");
+
+        RecurrenceGenerationResult initial = generationService.generateOccurrences(
+                rule.getId(), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 10));
+        assertEquals(1, initial.createdCount());
+
+        // Change campaign to COMPLETED
+        CampaignTestFixtures.forceStatus(campaign, CampaignStatus.COMPLETED);
+        campaignRepository.saveAndFlush(campaign);
+
+        // Attempt generating occurrences again on COMPLETED campaign - must reject fast
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> generationService.generateOccurrences(rule.getId(), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 10)));
+        assertTrue(ex.getMessage().contains("Cannot generate session occurrences for operationally closed campaign"));
+
+        // Existing session remains in DB intact
+        List<VaccinationSession> existing = sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(rule.getId());
+        assertEquals(1, existing.size());
+    }
 }
