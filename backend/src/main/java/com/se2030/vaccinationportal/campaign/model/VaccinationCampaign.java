@@ -250,6 +250,19 @@ public class VaccinationCampaign {
         this.status = CampaignStatus.PUBLISHED;
     }
 
+    /**
+     * Transitions campaign status to SUSPENDED.
+     * Allowed only from PUBLISHED or ACTIVE status.
+     */
+    public void suspend() {
+        if (this.status != CampaignStatus.PUBLISHED && this.status != CampaignStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "Cannot suspend campaign in " + this.status + " status. Only PUBLISHED or ACTIVE campaigns can be suspended."
+            );
+        }
+        this.status = CampaignStatus.SUSPENDED;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }

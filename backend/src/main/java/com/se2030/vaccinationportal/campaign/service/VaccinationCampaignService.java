@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.campaign.service;
 
 import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
+import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleChangeType;
+import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleEvent;
 import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -9,6 +11,7 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
@@ -41,6 +44,7 @@ public class VaccinationCampaignService {
     );
 
     private final VaccinationCampaignRepository campaignRepository;
+    private final CampaignLifecycleEventRepository campaignLifecycleEventRepository;
     private final VaccinationSessionRepository sessionRepository;
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository;
@@ -50,6 +54,7 @@ public class VaccinationCampaignService {
 
     public VaccinationCampaignService(
             VaccinationCampaignRepository campaignRepository,
+            CampaignLifecycleEventRepository campaignLifecycleEventRepository,
             VaccinationSessionRepository sessionRepository,
             CampaignDoseProgrammeRepository doseProgrammeRepository,
             CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository,
@@ -57,6 +62,7 @@ public class VaccinationCampaignService {
             Clock clock
     ) {
         this.campaignRepository = campaignRepository;
+        this.campaignLifecycleEventRepository = campaignLifecycleEventRepository;
         this.sessionRepository = sessionRepository;
         this.doseProgrammeRepository = doseProgrammeRepository;
         this.questionnaireAssignmentRepository = questionnaireAssignmentRepository;
@@ -165,6 +171,46 @@ public class VaccinationCampaignService {
 
         campaign.publish();
         return campaignRepository.save(campaign);
+    }
+
+    /**
+     * Suspends a PUBLISHED or ACTIVE campaign and records the impact as an append-only lifecycle event.
+     * The campaign status and event are persisted atomically under the campaign pessimistic write lock.
+     *
+     * @param campaignId ID of the campaign to suspend
+     * @param reason mandatory operational reason
+     * @param actorId mandatory opaque identifier of the trusted actor
+     * @return managed campaign in SUSPENDED status
+     */
+    public VaccinationCampaign suspendCampaign(Long campaignId, String reason, String actorId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        String validatedReason = CampaignLifecycleEvent.validateReason(reason);
+        String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        CampaignStatus previousStatus = campaign.getStatus();
+        campaign.suspend();
+
+        CampaignLifecycleEvent event = new CampaignLifecycleEvent(
+                campaign,
+                CampaignLifecycleChangeType.SUSPENDED,
+                previousStatus,
+                campaign.getStatus(),
+                validatedReason,
+                validatedActorId,
+                clock.instant()
+        );
+        campaignLifecycleEventRepository.save(event);
+
+        return campaign;
     }
 
 
