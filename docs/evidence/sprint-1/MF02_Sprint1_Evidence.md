@@ -593,15 +593,19 @@ The campaign foundation, dose-programme foundation, administrative location targ
 
 The canonical R8 human-readable DOCX synchronization has also been merged into develop through PR #17.
 
-Sprint 1 is not complete yet because the remaining MF-02 Sprint 1 work still includes:
+Historical remaining work at the PR #48 checkpoint (retained for provenance and superseded by Exact Next Work below):
 
-controlled resolution of the remaining campaign lifecycle decisions documented in Exact Next Work, followed only by separately reviewed implementable transition slices
+reverse configuration-impact workflows for campaigns, centers, assignments, operating hours, and closures
+
+campaign publication prerequisite/transition integration
+
+VaccinationSession lifecycle transition services beyond initial DRAFT
+
+remaining VaccinationCampaign lifecycle transition work beyond the then-existing foundation
 
 MF-03 production impact reader adapter
 
 outbox pattern for cross-module change events
-
-VaccinationSession lifecycle transition services beyond initial DRAFT
 
 REST/API/DTO/mapper, OpenAPI, security/RBAC, and frontend work where required
 
@@ -1821,18 +1825,18 @@ final MF-01 QuestionnaireVersion adapter/FK integration
 
 final Sprint integration and Definition-of-Done evidence
 
-MF-02 SESSION CHANGE REGRESSION HARDENING INTEGRATED. This milestone covers the current backend-foundation scope for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, series-wide session change preview, atomic series change confirmation, and regression-hardened session change operations. It does not mean MF-02, US-13, or Sprint 1 is complete.
+MF-02 SESSION CHANGE REGRESSION HARDENING INTEGRATED. This historical PR #46 milestone covers the backend-foundation scope at that checkpoint for Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, write-time validation, recurrence generation, session change audit, individual session changes, series-wide session change preview, atomic series change confirmation, and regression-hardened session change operations. It does not mean MF-02, US-13, or Sprint 1 is complete.
 
-Current Verification Snapshot
-Overall develop implementation checkpoint after PR #46 Session-change regression hardening integration
-Verified origin/develop at Session-change regression hardening merge:
+Historical PR #46 Verification Snapshot
+Historical develop implementation checkpoint after PR #46 Session-change regression hardening integration
+Verified origin/develop at that Session-change regression hardening merge:
 5ebcaadc44227d016956982a4ebf32e35c731491
 
-Latest develop merge:
+Develop merge at that checkpoint:
 PR #46
 5ebcaadc44227d016956982a4ebf32e35c731491
 
-Latest MF-02 implementation checkpoint:
+MF-02 implementation checkpoint at that milestone:
 PR #46
 5ebcaadc44227d016956982a4ebf32e35c731491
 
@@ -1859,11 +1863,11 @@ Historical Atomic series-wide VaccinationSession change confirmation implementat
 Verified origin/develop at Atomic series-wide session change confirmation merge:
 255754dedcd4cfff5744bce69db72d09061ff560
 
-Latest develop merge:
+Develop merge at the PR #44 checkpoint:
 PR #44
 255754dedcd4cfff5744bce69db72d09061ff560
 
-Latest MF-02 implementation checkpoint:
+MF-02 implementation checkpoint at the PR #44 milestone:
 PR #44
 255754dedcd4cfff5744bce69db72d09061ff560
 
@@ -1889,11 +1893,11 @@ Historical Individual VaccinationSession change workflows implementation / integ
 Verified origin/develop at Individual session changes merge:
 b72fc6bdcff8b8e6d1817cfa35271edca90bb118
 
-Latest develop merge:
+Develop merge at the PR #40 checkpoint:
 PR #40
 b72fc6bdcff8b8e6d1817cfa35271edca90bb118
 
-Latest MF-02 implementation checkpoint:
+MF-02 implementation checkpoint at the PR #40 milestone:
 PR #40
 b72fc6bdcff8b8e6d1817cfa35271edca90bb118
 
@@ -2671,11 +2675,11 @@ Historical develop state
 Historical overall repository/documentation checkpoint for this retained snapshot:
 5ebcaadc44227d016956982a4ebf32e35c731491
 
-Latest documentation merge:
+Documentation merge at the retained PR #46 checkpoint:
 PR #46
 fix/mf-02-session-change-regressions -> develop
 
-Latest MF-02 implementation checkpoint:
+MF-02 implementation checkpoint at the retained PR #46 milestone:
 PR #46
 5ebcaadc44227d016956982a4ebf32e35c731491
 
@@ -2881,7 +2885,7 @@ Small logical commits kept implementation history reviewable.
 
 Canonical ownership/boundary checks were performed before each MF-02 slice.
 
-Tests expanded continuously as real behavior was introduced (459 total tests at the current implementation checkpoint).
+At the historical PR #48 implementation checkpoint, tests had expanded to 459 passing backend tests.
 
 Candidate pre-validation (OperatingHours.validateParameters, VaccinationSession.validateSchedule, VaccinationSession.validateProvenance, VaccinationSessionValidator.validateSessionSchedule, SessionChangeEvent invariants, SessionChangePreview invariants) ensured mutation exception-safety and clean concurrency protection.
 
