@@ -1,6 +1,8 @@
 
 MF02_Sprint1_Evidence.md
 File
+Historical controller transcript retained for provenance; all checkpoint statements in this transcript are superseded by the maintained handoff section below.
+
 You are continuing my existing WEB_01 — Web-Based Vaccination Portal (WBVP-SE2030) project as my Codex-first AI Coding Project Controller.
 
 I have uploaded the current authoritative project/controller files.
@@ -517,6 +519,8 @@ Document
 
 MF-02 — Vaccination Campaign, Center and Session Management
 AI Engineering Handoff
+Historical PR #52-era handoff snapshot retained for evidence; its checkpoint language is not current.
+
 Project: Web-Based Vaccination Portal (WBVP-SE2030)
 
 Function: MF-02 — Vaccination Campaign, Center and Session Management
@@ -525,15 +529,15 @@ Canonical authority: 3.3-AI / 2026-08-08-R8
 
 Sprint: Sprint 1 — IN PROGRESS
 
-Current implementation checkpoint: 1582c4cfa6596d1cc2dac9b977774fd8e010bc77 (PR #52 merge)
+Historical implementation checkpoint (retained PR #52 snapshot): 1582c4cfa6596d1cc2dac9b977774fd8e010bc77 (PR #52 merge)
 
-Latest overall repository/documentation checkpoint: 1582c4cfa6596d1cc2dac9b977774fd8e010bc77 (PR #52 merge)
+Historical overall repository/documentation checkpoint for this retained snapshot: 1582c4cfa6596d1cc2dac9b977774fd8e010bc77 (PR #52 merge)
 
 Latest completed backend foundation: VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection (deactivateCenter pessimistic lock, OperatingHours range intersection, CenterClosure half-open [startAt,endAt) intersection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, 19 net-new tests, 495 total backend tests)
 
-Current backend baseline: 495 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #52.
+Historical backend baseline for this retained snapshot: 495 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #52.
 
-Next controlled implementation phase: campaign publication prerequisites/transition and required session lifecycle publishing
+Historical next controlled implementation phase for this retained snapshot: campaign publication prerequisites/transition and required session lifecycle publishing
 
 
 This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
@@ -1474,13 +1478,13 @@ perform broad package moves or large service refactors in the same commit as beh
 
 mark Sprint 1 complete prematurely.
 
-17. Final Handoff State
+17. Historical Final Handoff State (retained PR #48 snapshot)
 Canonical: 3.3-AI / 2026-08-08-R8
 Sprint: Sprint 1 — IN PROGRESS
-Latest MF-02 implementation merge: PR #48 / 14e4976844870904b889fcd4970cc6d07439e168
+Historical MF-02 implementation merge: PR #48 / 14e4976844870904b889fcd4970cc6d07439e168
 PR #48 certified source: 668ec98f31ea39904e7992a5f1a986e74ae8f8ab
 PR #48 actual base: b12fe280b706c9ce58e3ac8b886a58c60c14f7fb
-Latest overall repository/documentation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
+Historical overall repository/documentation checkpoint for this retained snapshot: 14e4976844870904b889fcd4970cc6d07439e168
 Backend baseline: 459 tests; Maven test/verify SUCCESS; executable JAR packaged
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
@@ -1513,19 +1517,21 @@ Canonical authority: 3.3-AI / 2026-08-08-R8
 
 Sprint: Sprint 1 — IN PROGRESS
 
-Current implementation checkpoint: 255754dedcd4cfff5744bce69db72d09061ff560 (PR #44 merge)
+Latest MF-02 feature implementation: PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b (reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8)
 
-Latest overall repository/documentation checkpoint: 10614b5f32eaf54d00133a94aadc8a695280417a (PR #45 documentation merge)
+Latest regression-hardening integration: PR #58 merge f5b424fc2f69ae5b8ef0b687555963def744c660 (reviewed source 0cca456eab97c6143c80951f417a44d0639e7509)
 
-Latest completed backend foundation: Atomic series-wide VaccinationSession change confirmation (locked stale-preview revalidation, recurrence-rule update, retained occurrence reschedule, removed occurrence cancellation, new DRAFT materialization, exception preservation, and append-only SERIES_RESCHEDULED/SERIES_CANCELLED audit emission)
+Latest overall repository checkpoint: f5b424fc2f69ae5b8ef0b687555963def744c660 (PR #58 merge)
 
-Current backend baseline: 434 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #44 and documentation synchronization.
+Latest completed feature implementation: VaccinationCampaign publication prerequisites and controlled publication transition through PR #55. PR #58 is test-only regression hardening and is not a product feature.
 
-Next controlled implementation phase: External-review regression hardening before remaining Sprint 1 backend gaps — READY TO START
+Current backend baseline: 521 tests — 0 failures, 0 errors, 0 skipped; Maven verify SUCCESS; Backend CI PASS and Frontend CI PASS for PR #58.
+
+Next controlled implementation phase: remaining VaccinationCampaign lifecycle transitions readiness/discovery gate
 
 This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
 
-The latest MF-02 implementation integration checkpoint is PR #44 merge 255754dedcd4cfff5744bce69db72d09061ff560, with reviewed feature source 640d4044c6b5753f4e6e0f1ca73a68e5898209ed and base 8177c7f3b4623164c8a9a093763febc941f1532b. The latest overall documentation/repository checkpoint is PR #45 merge 10614b5f32eaf54d00133a94aadc8a695280417a. Documentation merge checkpoints do not replace or rename implementation checkpoints.
+The latest MF-02 feature implementation remains PR #55 merge 9a470da982f1510213163b3b909a02bd0f85973b. The latest overall repository checkpoint is PR #58 merge f5b424fc2f69ae5b8ef0b687555963def744c660, which integrates the reviewed test-only source 0cca456eab97c6143c80951f417a44d0639e7509. Feature, documentation, and regression-hardening checkpoints remain distinct.
 
 1. Executive Snapshot
 The following MF-02 backend foundations are already implemented and integrated:
@@ -2371,7 +2377,7 @@ US-09	In progress at full-story scope: backend foundation implemented; publicati
 US-10	In progress: MF-02 foundation hardened; final MF-01 QuestionnaireVersion adapter/FK remains
 US-11	Backend foundation complete; later API/UI/integration layers remain
 US-12	Backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, VaccinationSession integration, and final DoD evidence remain
-US-13	IN PROGRESS: VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence foundations, authoritative write-time validation / atomic one-off DRAFT creation, recurrence occurrence generation, session change audit / locking foundation, individual session change workflows (preview, stale token, reschedule, transfer, cancel, locking, and audit), series-wide change preview engine, and atomic series change confirmation (confirmSeriesChange, SERIES_RESCHEDULED, SERIES_CANCELLED) complete; full-series cancellation command, recurrence-rule orchestration for materialized series, series exception handling, MF-03 adapter, lifecycle transition services beyond DRAFT, reverse configuration impact, API/UI/migration, and final DoD work remain
+US-13	IN PROGRESS: VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession foundations, recurrence generation, individual and series change workflows, full-series cancellation, reverse-impact protection, session lifecycle hardening, and campaign publication are implemented; remaining VaccinationCampaign lifecycle transitions, MF-03 adapter, API/UI/migration, and final DoD work remain
 US-27	Backend foundation implemented; later API/UI integration remains
 Do not mark Sprint 1, US-12, or US-13 fully Definition-of-Done complete solely from these backend foundations.
 
@@ -2472,12 +2478,16 @@ mark Sprint 1 complete prematurely.
 17. Final Handoff State
 Canonical: 3.3-AI / 2026-08-08-R8
 Sprint: Sprint 1 — IN PROGRESS
+MF-02: IN PROGRESS
+US-13: IN PROGRESS
 Latest MF-02 implementation merge: PR #55 / 9a470da982f1510213163b3b909a02bd0f85973b
 PR #55 certified source: d1d9e63a5398687e78734f835357fb9c6ded34d8
 PR #55 actual base: 62f9743a7caa50fb1f26551edb611ee4edbbcccf
 PR #55 merge parents: 62f9743a7caa50fb1f26551edb611ee4edbbcccf and d1d9e63a5398687e78734f835357fb9c6ded34d8
-Latest overall repository/documentation checkpoint: PR #55 / 9a470da982f1510213163b3b909a02bd0f85973b
-Backend baseline: 521 tests; Maven test/verify SUCCESS; executable JAR packaged
+Latest regression-hardening integration: PR #58 / f5b424fc2f69ae5b8ef0b687555963def744c660
+PR #58 independently reviewed source: 0cca456eab97c6143c80951f417a44d0639e7509
+Latest overall repository checkpoint: PR #58 / f5b424fc2f69ae5b8ef0b687555963def744c660
+Backend baseline: 521 tests; 0 failures, 0 errors, 0 skipped; Maven verify SUCCESS; Backend CI PASS; Frontend CI PASS
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
@@ -2506,7 +2516,11 @@ VaccinationCampaign publication prerequisites and transition: IMPLEMENTED, INDEP
   * Referenced QuestionnaireVersion is PUBLISHED via QuestionnaireVersionPublicationPort
 - Non-prerequisites: CampaignLocationTarget, CampaignCenterAssignment, SessionRecurrenceRule, and VaccinationSession remain optional and do not block publication
 - 14 net-new tests added in CampaignPublicationIntegrationTests (521 total backend tests passing)
+Deterministic reverse-impact test hardening: INDEPENDENTLY REVIEWED, CI-VERIFIED, AND MERGED (PR #58)
+- Root cause: time-sensitive fixtures used system-clock date calculation while services used the injected Clock, and weekday selection could choose the current weekday.
+- Resolution: fixtures now use the injected Clock and strictly future weekday selection.
+- Scope: two MF-02 test files only; production reverse-impact logic and business behavior were unchanged, including the rule that elapsed sessions do not block present configuration mutations.
 Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
-Immediate next phase: remaining campaign lifecycle transitions readiness gate
+Immediate next phase: remaining VaccinationCampaign lifecycle transitions readiness/discovery gate
 Pending Sprint 1 gaps: remaining campaign lifecycle transitions, MF-01 QuestionnaireVersion production adapter/FK integration, final Sprint DoD evidence
-The next AI should start a fresh chat/session, refresh live repository state, and proceed with the remaining campaign lifecycle transitions readiness gate. Campaign publication, session lifecycle hardening, and all reverse configuration-impact protections are complete. Keep implementation behavior-focused and regression-tested. Do not mark Sprint 1 complete prematurely.
+The next AI should start a fresh chat/session, refresh live repository state, and proceed with the remaining VaccinationCampaign lifecycle transitions readiness/discovery gate. Campaign publication, session lifecycle hardening, and all reverse configuration-impact protections are complete. Keep implementation behavior-focused and regression-tested. Do not mark Sprint 1 complete prematurely.
