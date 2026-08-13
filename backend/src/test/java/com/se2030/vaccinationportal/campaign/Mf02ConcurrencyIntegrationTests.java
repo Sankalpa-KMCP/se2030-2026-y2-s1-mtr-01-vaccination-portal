@@ -474,7 +474,7 @@ class Mf02ConcurrencyIntegrationTests {
         TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-" + code, "Concurrency target")
         );
-        return campaignRepository.saveAndFlush(new VaccinationCampaign(
+        return campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 code,
                 "Concurrency campaign",
                 null,

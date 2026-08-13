@@ -122,7 +122,7 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
                 new TargetGroup("TG-ALL-QA", "General Population QA Test", true)
         );
 
-        campaignA = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaignA = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-QA-A",
                 "Campaign A Questionnaire",
                 "Campaign A description",
@@ -135,7 +135,7 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
                 CampaignStatus.DRAFT
         ));
 
-        campaignB = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaignB = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-QA-B",
                 "Campaign B Questionnaire",
                 "Campaign B description",

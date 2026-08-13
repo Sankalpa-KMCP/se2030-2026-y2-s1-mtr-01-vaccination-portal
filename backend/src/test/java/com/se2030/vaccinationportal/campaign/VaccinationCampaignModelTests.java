@@ -7,6 +7,8 @@ import com.se2030.vaccinationportal.campaign.model.VaccineType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.time.LocalDate;
 import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,7 +35,7 @@ class VaccinationCampaignModelTests {
         Instant bookingOpen = Instant.parse("2026-08-15T08:00:00Z");
         Instant bookingClose = Instant.parse("2026-12-30T18:00:00Z");
 
-        VaccinationCampaign campaign = new VaccinationCampaign(
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
                 "CMP-2026-01",
                 "National Autumn Vaccination Drive",
                 "Phase 1 vaccination campaign",
@@ -59,7 +61,7 @@ class VaccinationCampaignModelTests {
         Instant bookingClose = Instant.parse("2026-09-01T18:00:00Z");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCampaign(
+                CampaignTestFixtures.campaign(
                         "CMP-INVALID-01",
                         "Invalid Campaign",
                         null,
@@ -86,7 +88,7 @@ class VaccinationCampaignModelTests {
         Instant bookingClose = Instant.parse("2026-09-15T18:00:00Z");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCampaign(
+                CampaignTestFixtures.campaign(
                         "CMP-INVALID-02",
                         "Invalid Dates Campaign",
                         null,
@@ -112,7 +114,7 @@ class VaccinationCampaignModelTests {
         Instant sameTimestamp = Instant.parse("2026-08-15T08:00:00Z");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCampaign(
+                CampaignTestFixtures.campaign(
                         "CMP-INVALID-03",
                         "Invalid Window Campaign",
                         null,
@@ -140,7 +142,7 @@ class VaccinationCampaignModelTests {
         Instant bookingClose = Instant.parse("2026-08-15T08:00:00Z");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                new VaccinationCampaign(
+                CampaignTestFixtures.campaign(
                         "CMP-INVALID-04",
                         "Invalid Inverted Window Campaign",
                         null,
@@ -166,7 +168,7 @@ class VaccinationCampaignModelTests {
         Instant bookingOpen = Instant.parse("2026-08-15T08:00:00Z");
         Instant bookingClose = Instant.parse("2026-12-30T18:00:00Z");
 
-        VaccinationCampaign campaign = new VaccinationCampaign(
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
                 "CMP-INTAKE-01",
                 "Intake Test Campaign",
                 null,
@@ -195,13 +197,42 @@ class VaccinationCampaignModelTests {
         assertFalse(campaign.isBookingWindowOpenAt(Instant.parse("2026-12-30T18:01:00Z")));
 
         // Inactive / non-intake status blocks bookings even during open dates (MF02-BR-03)
-        campaign.setStatus(CampaignStatus.SUSPENDED);
+        CampaignTestFixtures.forceStatus(campaign, CampaignStatus.SUSPENDED);
         assertFalse(campaign.isBookingWindowOpenAt(Instant.parse("2026-10-01T12:00:00Z")));
 
-        campaign.setStatus(CampaignStatus.DRAFT);
+        CampaignTestFixtures.forceStatus(campaign, CampaignStatus.DRAFT);
         assertFalse(campaign.isBookingWindowOpenAt(Instant.parse("2026-10-01T12:00:00Z")));
 
-        campaign.setStatus(CampaignStatus.ACTIVE);
+        CampaignTestFixtures.forceStatus(campaign, CampaignStatus.ACTIVE);
         assertTrue(campaign.isBookingWindowOpenAt(Instant.parse("2026-10-01T12:00:00Z")));
+    }
+
+    @Test
+    @DisplayName("New campaigns start in DRAFT and expose no generic public status mutator")
+    void campaignLifecycleSurfaceIsConstrained() {
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                "CMP-INTEGRITY-01",
+                "Lifecycle Integrity Campaign",
+                null,
+                sampleVaccineType,
+                sampleTargetGroup,
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 12, 31),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
+                CampaignStatus.DRAFT
+        );
+
+        assertEquals(CampaignStatus.DRAFT, campaign.getStatus());
+        assertTrue(java.util.Arrays.stream(VaccinationCampaign.class.getConstructors())
+                .flatMap(constructor -> java.util.Arrays.stream(constructor.getParameterTypes()))
+                .noneMatch(CampaignStatus.class::equals));
+        assertTrue(java.util.Arrays.stream(VaccinationCampaign.class.getMethods())
+                .filter(method -> Modifier.isPublic(method.getModifiers()))
+                .map(Method::getName)
+                .noneMatch(name -> name.equals("setStatus")
+                        || name.equals("changeStatus")
+                        || name.equals("transitionTo")
+                        || name.equals("updateStatus")));
     }
 }

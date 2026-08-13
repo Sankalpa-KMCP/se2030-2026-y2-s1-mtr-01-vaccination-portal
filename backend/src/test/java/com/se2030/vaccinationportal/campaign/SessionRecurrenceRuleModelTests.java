@@ -38,7 +38,7 @@ class SessionRecurrenceRuleModelTests {
 
     @BeforeEach
     void setUp() {
-        campaign = new VaccinationCampaign(
+        campaign = CampaignTestFixtures.campaign(
                 "CMP-RULE-M", "Recurrence Model Campaign", null,
                 new VaccineType("VAX-RULE-M", "Recurrence Vaccine"),
                 new TargetGroup("TG-RULE-M", "Recurrence Group"),

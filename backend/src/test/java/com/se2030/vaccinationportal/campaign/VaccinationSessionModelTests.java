@@ -42,7 +42,7 @@ class VaccinationSessionModelTests {
 
     @BeforeEach
     void setUp() {
-        campaign = new VaccinationCampaign(
+        campaign = CampaignTestFixtures.campaign(
                 "CMP-SESS-M", "Session Model Campaign", null,
                 new VaccineType("VAX-SESS-M", "Session Vaccine"),
                 new TargetGroup("TG-SESS-M", "Session Group"),

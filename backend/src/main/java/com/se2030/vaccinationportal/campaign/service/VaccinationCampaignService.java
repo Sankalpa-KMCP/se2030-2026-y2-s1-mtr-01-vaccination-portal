@@ -177,8 +177,7 @@ public class VaccinationCampaignService {
             LocalDate serviceStartDate,
             LocalDate serviceEndDate,
             Instant bookingOpenAt,
-            Instant bookingCloseAt,
-            CampaignStatus status
+            Instant bookingCloseAt
     ) {
         String normalizedCode = code != null ? code.trim() : null;
         if (campaignRepository.existsByCode(normalizedCode)) {
@@ -194,8 +193,7 @@ public class VaccinationCampaignService {
                 serviceStartDate,
                 serviceEndDate,
                 bookingOpenAt,
-                bookingCloseAt,
-                status != null ? status : CampaignStatus.DRAFT
+                bookingCloseAt
         );
 
         return campaignRepository.save(campaign);

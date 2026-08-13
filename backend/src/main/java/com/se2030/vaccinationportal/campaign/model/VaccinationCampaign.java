@@ -83,7 +83,7 @@ public class VaccinationCampaign {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public VaccinationCampaign() {
+    protected VaccinationCampaign() {
     }
 
     public VaccinationCampaign(String code,
@@ -94,8 +94,7 @@ public class VaccinationCampaign {
                                LocalDate serviceStartDate,
                                LocalDate serviceEndDate,
                                Instant bookingOpenAt,
-                               Instant bookingCloseAt,
-                               CampaignStatus status) {
+                               Instant bookingCloseAt) {
         this.code = code;
         this.name = name;
         this.description = description;
@@ -105,7 +104,7 @@ public class VaccinationCampaign {
         this.serviceEndDate = serviceEndDate;
         this.bookingOpenAt = bookingOpenAt;
         this.bookingCloseAt = bookingCloseAt;
-        this.status = status != null ? status : CampaignStatus.DRAFT;
+        this.status = CampaignStatus.DRAFT;
         validateDateConsistency();
     }
 
@@ -236,10 +235,6 @@ public class VaccinationCampaign {
 
     public CampaignStatus getStatus() {
         return status;
-    }
-
-    public void setStatus(CampaignStatus status) {
-        this.status = status;
     }
 
     /**

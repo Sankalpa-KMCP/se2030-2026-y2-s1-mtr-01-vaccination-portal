@@ -60,7 +60,7 @@ class CampaignLocationTargetPersistenceIntegrationTests {
                 new TargetGroup("TG-ALL-LOC", "General Population Location Test", true)
         );
 
-        campaignA = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaignA = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-LOC-A",
                 "Campaign A Western",
                 "Western province targeting",
@@ -73,7 +73,7 @@ class CampaignLocationTargetPersistenceIntegrationTests {
                 CampaignStatus.DRAFT
         ));
 
-        campaignB = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaignB = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-LOC-B",
                 "Campaign B Central",
                 "Central province targeting",

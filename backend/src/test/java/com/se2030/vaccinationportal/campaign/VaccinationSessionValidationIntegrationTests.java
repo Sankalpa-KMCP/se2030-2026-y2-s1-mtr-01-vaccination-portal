@@ -67,7 +67,7 @@ class VaccinationSessionValidationIntegrationTests {
         TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-SESS-VAL", "Session Val Target Group"));
 
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-SESS-VAL", "Session Validation Campaign", "Description",
                 vaccineType, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,
@@ -228,7 +228,7 @@ class VaccinationSessionValidationIntegrationTests {
 
     @Test
     void validateSessionSchedule_missingAssignment_throws() {
-        VaccinationCampaign unassignedCampaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign unassignedCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-NO-ASSIGN", "No Assign Campaign", "Desc",
                 campaign.getVaccineType(), campaign.getTargetGroup(),
                 CAMPAIGN_START, CAMPAIGN_END,
@@ -246,7 +246,7 @@ class VaccinationSessionValidationIntegrationTests {
 
     @Test
     void validateSessionSchedule_cancelledAssignment_throws() {
-        VaccinationCampaign otherCampaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign otherCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-CANC-ASSIGN", "Cancelled Assign Campaign", "Desc",
                 campaign.getVaccineType(), campaign.getTargetGroup(),
                 CAMPAIGN_START, CAMPAIGN_END,
@@ -269,7 +269,7 @@ class VaccinationSessionValidationIntegrationTests {
 
     @Test
     void validateSessionSchedule_assignmentStartsAfterSession_throws() {
-        VaccinationCampaign otherCampaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign otherCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-LATE-ASSIGN", "Late Assign Campaign", "Desc",
                 campaign.getVaccineType(), campaign.getTargetGroup(),
                 CAMPAIGN_START, CAMPAIGN_END,
@@ -290,7 +290,7 @@ class VaccinationSessionValidationIntegrationTests {
 
     @Test
     void validateSessionSchedule_assignmentEndsBeforeSession_throws() {
-        VaccinationCampaign otherCampaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign otherCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-EARLY-END", "Early End Assign Campaign", "Desc",
                 campaign.getVaccineType(), campaign.getTargetGroup(),
                 CAMPAIGN_START, CAMPAIGN_END,
@@ -311,7 +311,7 @@ class VaccinationSessionValidationIntegrationTests {
 
     @Test
     void validateSessionSchedule_openEndedAssignment_success() {
-        VaccinationCampaign openCampaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign openCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-OPEN-ASSIGN", "Open Assign Campaign", "Desc",
                 campaign.getVaccineType(), campaign.getTargetGroup(),
                 CAMPAIGN_START, CAMPAIGN_END,
@@ -331,7 +331,7 @@ class VaccinationSessionValidationIntegrationTests {
 
     @Test
     void validateSessionSchedule_administrativeTargetWithoutAssignment_throws() {
-        VaccinationCampaign targetOnlyCampaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign targetOnlyCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-TARGET-ONLY", "Target Only Campaign", "Desc",
                 campaign.getVaccineType(), campaign.getTargetGroup(),
                 CAMPAIGN_START, CAMPAIGN_END,

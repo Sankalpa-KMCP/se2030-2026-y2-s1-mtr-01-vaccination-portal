@@ -99,7 +99,7 @@ class VaccinationSessionChangeIntegrationTests {
         targetGroup = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-CHG-TEST", "Change Workflow Target Group"));
 
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-CHG-TEST", "Change Workflow Campaign", "Testing session change workflows",
                 vaccineType, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,

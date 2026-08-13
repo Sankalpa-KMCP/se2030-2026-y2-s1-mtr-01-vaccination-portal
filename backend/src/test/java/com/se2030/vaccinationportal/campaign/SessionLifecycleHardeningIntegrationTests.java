@@ -62,7 +62,7 @@ class SessionLifecycleHardeningIntegrationTests {
                 .orElseGet(() -> targetGroupRepository.saveAndFlush(new TargetGroup("TG-LIFECYCLE", "Lifecycle Group", true)));
 
         LocalDate today = LocalDate.now();
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-LIFECYCLE", "Lifecycle Campaign", "Test", vaccineType, targetGroup,
                 today.minusDays(10), today.plusDays(60),
                 today.minusDays(10).atStartOfDay(ZoneId.of("UTC")).toInstant(),

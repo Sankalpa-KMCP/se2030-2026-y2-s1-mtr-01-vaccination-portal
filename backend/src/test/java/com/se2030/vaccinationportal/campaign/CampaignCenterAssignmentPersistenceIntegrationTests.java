@@ -256,7 +256,7 @@ class CampaignCenterAssignmentPersistenceIntegrationTests {
             VaccineType vaccine,
             TargetGroup group
     ) {
-        return campaignRepository.saveAndFlush(new VaccinationCampaign(
+        return campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 code, "Assignment Campaign " + code, null, vaccine, group,
                 LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31),
                 Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-12-30T00:00:00Z"), status));

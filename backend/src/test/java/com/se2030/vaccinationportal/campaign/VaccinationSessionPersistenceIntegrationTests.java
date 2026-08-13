@@ -65,7 +65,7 @@ class VaccinationSessionPersistenceIntegrationTests {
                 new VaccineType("VAX-SESS-P", "Session Persistence Vaccine"));
         TargetGroup group = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-SESS-P", "Session Persistence Group"));
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-SESS-P", "Session Persistence Campaign", null,
                 vaccine, group,
                 LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31),

@@ -152,7 +152,7 @@ class CampaignCenterAssignmentModelTests {
     }
 
     private VaccinationCampaign campaign() {
-        return new VaccinationCampaign(
+        return CampaignTestFixtures.campaign(
                 "CMP-ASSIGN-MODEL", "Assignment Model Campaign", null,
                 new VaccineType("VAX-ASSIGN-MODEL", "Assignment Vaccine"),
                 new TargetGroup("TG-ASSIGN-MODEL", "Assignment Group"),
