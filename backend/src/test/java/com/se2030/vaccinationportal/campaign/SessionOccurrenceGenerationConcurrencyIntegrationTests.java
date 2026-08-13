@@ -174,7 +174,7 @@ class SessionOccurrenceGenerationConcurrencyIntegrationTests {
         TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-" + suffix, "Target Group " + suffix));
 
-        return campaignRepository.saveAndFlush(new VaccinationCampaign(
+        return campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-" + suffix, "Campaign " + suffix, "Desc",
                 vaccineType, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,

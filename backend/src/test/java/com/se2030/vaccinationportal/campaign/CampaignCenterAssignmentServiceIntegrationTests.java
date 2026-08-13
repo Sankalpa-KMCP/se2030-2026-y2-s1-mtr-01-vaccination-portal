@@ -328,7 +328,7 @@ class CampaignCenterAssignmentServiceIntegrationTests {
                 new VaccineType("VAX-" + suffix, "Vaccine " + suffix));
         TargetGroup group = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-" + suffix, "Group " + suffix));
-        return campaignRepository.saveAndFlush(new VaccinationCampaign(
+        return campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-" + suffix, "Campaign " + suffix, null, vaccine, group,
                 LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31),
                 Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-12-30T00:00:00Z"), status));

@@ -52,16 +52,20 @@ class CampaignStatusTests {
     }
 
     @Test
-    @DisplayName("CampaignStatus terminal state identification")
-    void terminalStatusesIdentifiedCorrectly() {
-        assertTrue(CampaignStatus.COMPLETED.isTerminal(), "COMPLETED is a terminal state");
-        assertTrue(CampaignStatus.CANCELLED.isTerminal(), "CANCELLED is a terminal state");
-        assertTrue(CampaignStatus.ARCHIVED.isTerminal(), "ARCHIVED is a terminal state");
+    @DisplayName("Operationally closed and archivable statuses remain distinct")
+    void closedAndArchivableStatusesAreDistinguished() {
+        assertTrue(CampaignStatus.COMPLETED.isOperationallyClosed());
+        assertTrue(CampaignStatus.CANCELLED.isOperationallyClosed());
+        assertTrue(CampaignStatus.ARCHIVED.isOperationallyClosed());
 
-        assertFalse(CampaignStatus.DRAFT.isTerminal());
-        assertFalse(CampaignStatus.SCHEDULED.isTerminal());
-        assertFalse(CampaignStatus.PUBLISHED.isTerminal());
-        assertFalse(CampaignStatus.ACTIVE.isTerminal());
-        assertFalse(CampaignStatus.SUSPENDED.isTerminal());
+        assertTrue(CampaignStatus.COMPLETED.isArchivable());
+        assertTrue(CampaignStatus.CANCELLED.isArchivable());
+        assertFalse(CampaignStatus.ARCHIVED.isArchivable(), "ARCHIVED has no canonical outgoing transition");
+
+        assertFalse(CampaignStatus.DRAFT.isOperationallyClosed());
+        assertFalse(CampaignStatus.SCHEDULED.isOperationallyClosed());
+        assertFalse(CampaignStatus.PUBLISHED.isOperationallyClosed());
+        assertFalse(CampaignStatus.ACTIVE.isOperationallyClosed());
+        assertFalse(CampaignStatus.SUSPENDED.isOperationallyClosed());
     }
 }

@@ -26,7 +26,7 @@ class CampaignDoseProgrammeModelTests {
     void setUp() {
         VaccineType vt = new VaccineType("VAX-MRNA", "mRNA Vaccine", "dose", true);
         TargetGroup tg = new TargetGroup("TG-ADULT", "Adults 18+", true);
-        sampleCampaign = new VaccinationCampaign(
+        sampleCampaign = CampaignTestFixtures.campaign(
                 "CMP-2026-TEST",
                 "Test Campaign",
                 "Description",

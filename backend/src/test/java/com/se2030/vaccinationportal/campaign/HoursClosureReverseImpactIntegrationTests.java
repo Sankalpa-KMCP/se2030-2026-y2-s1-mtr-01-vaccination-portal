@@ -102,7 +102,7 @@ class HoursClosureReverseImpactIntegrationTests {
         ));
 
         LocalDate today = LocalDate.now(clock);
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-HOURS-1", "Hours Closure Campaign", "Desc", vaccineType, targetGroup,
                 today.minusDays(10), today.plusDays(30),
                 Instant.now(clock).minusSeconds(3600), Instant.now(clock).plusSeconds(86400 * 180),

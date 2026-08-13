@@ -109,7 +109,7 @@ class SessionSeriesChangePreviewIntegrationTests {
         TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-SERIES-TEST", "Series Test Target Group"));
 
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-SERIES-TEST", "Series Campaign", "Testing series change workflows",
                 vaccineType, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,

@@ -25,7 +25,7 @@ class CampaignLocationTargetModelTests {
     void setUp() {
         VaccineType vt = new VaccineType("VAX-COV", "COVID-19 Vaccine", "dose", true);
         TargetGroup tg = new TargetGroup("TG-GENERAL", "General Population", true);
-        sampleCampaign = new VaccinationCampaign(
+        sampleCampaign = CampaignTestFixtures.campaign(
                 "CMP-LOC-TEST",
                 "Location Test Campaign",
                 "Description",

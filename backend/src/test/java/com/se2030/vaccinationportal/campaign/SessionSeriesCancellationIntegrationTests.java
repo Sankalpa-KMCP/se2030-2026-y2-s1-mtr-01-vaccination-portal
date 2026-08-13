@@ -121,7 +121,7 @@ class SessionSeriesCancellationIntegrationTests {
         VaccineType vt = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-CANCEL-TEST", "Series Cancel Vaccine"));
         TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-CANCEL-TEST", "Series Cancel Target Group"));
 
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-CANCEL-TEST", "Cancel Campaign", "Testing series cancel",
                 vt, tg,
                 CAMPAIGN_START, CAMPAIGN_END,

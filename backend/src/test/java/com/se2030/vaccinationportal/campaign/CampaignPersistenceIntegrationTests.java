@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.model.VaccineType;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,38 @@ class CampaignPersistenceIntegrationTests {
 
     @Autowired
     private VaccinationCampaignRepository campaignRepository;
+
+    @Autowired
+    private VaccinationCampaignService campaignService;
+
+    @Test
+    @DisplayName("Production campaign creation always starts in DRAFT")
+    void serviceCreationAlwaysStartsInDraft() {
+        VaccineType vaccineType = vaccineTypeRepository.saveAndFlush(
+                new VaccineType("VAX-CREATE-DRAFT", "Draft Creation Vaccine", "dose", true)
+        );
+        TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
+                new TargetGroup("TG-CREATE-DRAFT", "Draft Creation Target", true)
+        );
+
+        VaccinationCampaign created = campaignService.createCampaign(
+                "CMP-CREATE-DRAFT",
+                "Draft Creation Campaign",
+                null,
+                vaccineType,
+                targetGroup,
+                LocalDate.of(2026, 10, 1),
+                LocalDate.of(2026, 12, 31),
+                Instant.parse("2026-09-01T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z")
+        );
+
+        assertEquals(CampaignStatus.DRAFT, created.getStatus());
+        assertTrue(java.util.Arrays.stream(VaccinationCampaignService.class.getMethods())
+                .filter(method -> method.getName().equals("createCampaign"))
+                .flatMap(method -> java.util.Arrays.stream(method.getParameterTypes()))
+                .noneMatch(CampaignStatus.class::equals));
+    }
 
     @Test
     @DisplayName("Successfully persist and retrieve VaccineType entity")
@@ -114,7 +147,7 @@ class CampaignPersistenceIntegrationTests {
         Instant bookingOpen = Instant.parse("2026-09-15T08:00:00Z");
         Instant bookingClose = Instant.parse("2027-03-30T18:00:00Z");
 
-        VaccinationCampaign campaign = new VaccinationCampaign(
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
                 "CMP-FLU-2026",
                 "National Seasonal Flu Campaign 2026/2027",
                 "Annual flu immunization drive",
@@ -160,7 +193,7 @@ class CampaignPersistenceIntegrationTests {
         VaccineType vt = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-SHARED", "Shared Vax", "dose", true));
         TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-SHARED", "Shared Target", true));
 
-        VaccinationCampaign c1 = new VaccinationCampaign(
+        VaccinationCampaign c1 = CampaignTestFixtures.campaign(
                 "CMP-UNIQUE-CODE-01",
                 "Campaign One",
                 null,
@@ -174,7 +207,7 @@ class CampaignPersistenceIntegrationTests {
         );
         campaignRepository.saveAndFlush(c1);
 
-        VaccinationCampaign c2 = new VaccinationCampaign(
+        VaccinationCampaign c2 = CampaignTestFixtures.campaign(
                 "CMP-UNIQUE-CODE-01",
                 "Campaign Two with same code",
                 null,
@@ -201,7 +234,7 @@ class CampaignPersistenceIntegrationTests {
         Instant now = Instant.parse("2026-10-15T10:00:00Z");
 
         // Campaign 1: Published & inside window
-        VaccinationCampaign publishedOpen = new VaccinationCampaign(
+        VaccinationCampaign publishedOpen = CampaignTestFixtures.campaign(
                 "CMP-PUB-OPEN",
                 "Published Open",
                 null,
@@ -216,7 +249,7 @@ class CampaignPersistenceIntegrationTests {
         campaignRepository.saveAndFlush(publishedOpen);
 
         // Campaign 2: Active & inside window
-        VaccinationCampaign activeOpen = new VaccinationCampaign(
+        VaccinationCampaign activeOpen = CampaignTestFixtures.campaign(
                 "CMP-ACT-OPEN",
                 "Active Open",
                 null,
@@ -231,7 +264,7 @@ class CampaignPersistenceIntegrationTests {
         campaignRepository.saveAndFlush(activeOpen);
 
         // Campaign 3: Suspended & inside date window (must be excluded per MF02-BR-03)
-        VaccinationCampaign suspended = new VaccinationCampaign(
+        VaccinationCampaign suspended = CampaignTestFixtures.campaign(
                 "CMP-SUSPENDED",
                 "Suspended Campaign",
                 null,
@@ -246,7 +279,7 @@ class CampaignPersistenceIntegrationTests {
         campaignRepository.saveAndFlush(suspended);
 
         // Campaign 4: Published but booking window is closed
-        VaccinationCampaign closedWindow = new VaccinationCampaign(
+        VaccinationCampaign closedWindow = CampaignTestFixtures.campaign(
                 "CMP-CLOSED-WIN",
                 "Closed Window Campaign",
                 null,
@@ -287,7 +320,7 @@ class CampaignPersistenceIntegrationTests {
         VaccineType vt = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-HPV", "HPV Recombinant", "dose", true));
         TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-ADOLESCENT", "Adolescents 12-15", true));
 
-        VaccinationCampaign campaign = new VaccinationCampaign(
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
                 "CMP-SPRING-2026",
                 "Spring 2026 School Campaign",
                 null,
@@ -322,7 +355,7 @@ class CampaignPersistenceIntegrationTests {
         VaccineType vt = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-LOCK-01", "Lock Test Vaccine", "dose", true));
         TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-LOCK-01", "Lock Test Target Group", true));
 
-        VaccinationCampaign campaign = new VaccinationCampaign(
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
                 "CMP-LOCK-01",
                 "Lock Test Campaign",
                 null,

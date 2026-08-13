@@ -24,7 +24,7 @@ class CampaignQuestionnaireAssignmentModelTests {
     void setUp() {
         VaccineType vt = new VaccineType("VAX-MRNA-Q", "mRNA Vaccine", "dose", true);
         TargetGroup tg = new TargetGroup("TG-ADULT-Q", "Adult Population", true);
-        sampleCampaign = new VaccinationCampaign(
+        sampleCampaign = CampaignTestFixtures.campaign(
                 "CMP-Q-TEST",
                 "Questionnaire Test Campaign",
                 "Campaign for questionnaire linkage tests",

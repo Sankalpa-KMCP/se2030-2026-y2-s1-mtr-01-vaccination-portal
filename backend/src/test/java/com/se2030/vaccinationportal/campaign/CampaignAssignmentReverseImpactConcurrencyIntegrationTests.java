@@ -122,7 +122,7 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
 
         Long campaignId = transactionTemplate.execute(status -> {
             VaccinationCampaign campaign = campaignRepository.saveAndFlush(
-                    new VaccinationCampaign(
+                    CampaignTestFixtures.campaign(
                             "CMP-CONCUR-01",
                             "Concur Campaign 01",
                             "Desc",

@@ -45,7 +45,7 @@ class SessionChangeEventModelTests {
 
     @BeforeEach
     void setUp() {
-        VaccinationCampaign campaign = new VaccinationCampaign(
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
                 "CMP-AUDIT-M", "Audit Campaign", null,
                 new VaccineType("VAX-AUDIT", "Audit Vaccine"),
                 new TargetGroup("TG-AUDIT", "Audit Group"),

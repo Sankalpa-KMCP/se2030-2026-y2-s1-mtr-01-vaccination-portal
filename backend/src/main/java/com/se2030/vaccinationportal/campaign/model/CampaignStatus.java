@@ -56,11 +56,21 @@ public enum CampaignStatus {
     }
 
     /**
-     * Checks if this status is terminal.
+     * Checks whether campaign operations and new intake have permanently closed.
+     * COMPLETED and CANCELLED remain eligible for the separate archival transition.
      *
      * @return true if status is COMPLETED, CANCELLED, or ARCHIVED
      */
-    public boolean isTerminal() {
+    public boolean isOperationallyClosed() {
         return this == COMPLETED || this == CANCELLED || this == ARCHIVED;
+    }
+
+    /**
+     * Checks whether the canonical archival transition may originate from this status.
+     *
+     * @return true if status is COMPLETED or CANCELLED
+     */
+    public boolean isArchivable() {
+        return this == COMPLETED || this == CANCELLED;
     }
 }

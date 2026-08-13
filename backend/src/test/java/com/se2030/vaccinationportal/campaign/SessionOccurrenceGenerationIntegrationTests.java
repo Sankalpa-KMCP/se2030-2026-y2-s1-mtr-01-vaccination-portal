@@ -84,7 +84,7 @@ class SessionOccurrenceGenerationIntegrationTests {
                 new TargetGroup("TG-GEN-TEST", "Recurrence Gen Target Group"));
 
         // Campaign with booking close set distinctly to Oct 20 (before campaign service end)
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-GEN-TEST", "Recurrence Gen Campaign", "Description",
                 vaccineType, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,
@@ -360,7 +360,7 @@ class SessionOccurrenceGenerationIntegrationTests {
 
         LocalDate marchStart = LocalDate.of(2026, 3, 1);
         LocalDate marchEnd = LocalDate.of(2026, 3, 31);
-        VaccinationCampaign marchCampaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign marchCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-MARCH-DST", "March Campaign", "Description",
                 vaccineType, targetGroup,
                 marchStart, marchEnd,
@@ -391,7 +391,7 @@ class SessionOccurrenceGenerationIntegrationTests {
         // 01:30:00 local is ambiguous (UTC-4 vs UTC-5). Earlier offset validOffsets.get(0) is UTC-4.
         LocalDate novStart = LocalDate.of(2026, 11, 1);
         LocalDate novEnd = LocalDate.of(2026, 11, 30);
-        VaccinationCampaign novCampaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign novCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-NOV-DST", "November Campaign", "Description",
                 vaccineType, targetGroup,
                 novStart, novEnd,

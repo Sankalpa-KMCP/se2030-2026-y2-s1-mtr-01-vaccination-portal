@@ -66,7 +66,7 @@ class VaccinationSessionServiceIntegrationTests {
         TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-SESS-SRV", "Session Service Target Group"));
 
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-SESS-SRV", "Session Service Campaign", "Description",
                 vaccineType, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,

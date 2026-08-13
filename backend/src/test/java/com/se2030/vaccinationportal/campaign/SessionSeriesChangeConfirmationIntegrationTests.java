@@ -119,7 +119,7 @@ class SessionSeriesChangeConfirmationIntegrationTests {
         VaccineType vt = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-CONFIRM-TEST", "Series Confirm Vaccine"));
         TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-CONFIRM-TEST", "Series Confirm Target Group"));
 
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-CONFIRM-TEST", "Confirm Campaign", "Testing series confirm",
                 vt, tg,
                 CAMPAIGN_START, CAMPAIGN_END,
