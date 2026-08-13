@@ -1732,8 +1732,9 @@ Latest campaign product-transition feature: PR #55 campaign publication prerequi
 PR #55 feature checkpoint: 9a470da982f1510213163b3b909a02bd0f85973b
 Latest lifecycle-integrity implementation: PR #61 campaign lifecycle state-integrity hardening
 Reviewed PR #61 source commit: d394886bbcfb640536b369b400052c267d61129e
-Latest overall repository checkpoint: d5dff09c6d0ed643cb4537abff64056b7d20656c (PR #61 merge)
-Evidence record prepared from overall checkpoint: d5dff09c6d0ed643cb4537abff64056b7d20656c
+Latest verified MF-02/backend evidence checkpoint: d5dff09c6d0ed643cb4537abff64056b7d20656c (PR #61 merge)
+Evidence record prepared from MF-02 checkpoint: d5dff09c6d0ed643cb4537abff64056b7d20656c
+Upstream repository state observed during this documentation synchronization: PR #62 / cbe2353a4077c39579933be31c5b1eb7b1f41e65; unrelated MF-05 frontend work with no newer MF-02 implementation or backend verification evidence. This is a synchronization-time observation, not a durable latest-repository checkpoint. Future sessions must fetch and inspect live origin/develop.
 OperatingHours feature branch HEAD: 4fe94df8df7c07ade3c22a39165aff3da1e8795a
 Canonical documentation sync checkpoint (PR #17): bd22cb973bad83c8456897805bc2df95b65593d0
 Historical evidence integration checkpoints: PR #18 (c120ee8530c055a6769b68777fd1342abeca193b), PR #19 (8cdb1125809770671325a4f47fc80fd5c48b4ddc), PR #21 (433dbe1dd919b93d082aa31d3592519b37a75206), PR #25 (7b9398b48008e627fc18e5d7a0f864686a69b588), PR #27 (04b53da01a80be85873b3619f9aac2b6f54003b6), PR #29 (7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf), PR #31 (b5b674fec2136a6633fff54b4784cd41f721f929), PR #33 (f7360fb8d195c192a0396ca75e86f9825f9f4986), PR #35 (f0dcff3c6109b55ae1777937988d63389532e5e8), PR #37 (ce540402fd845458fcbaba35b850e5cf74f6131c), PR #39 (f6d8c180b8bdf06886ad2647e5469c210ab5d971), PR #41 (473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d), PR #43 (8177c7f3b4623164c8a9a093763febc941f1532b), PR #45 (10614b5f32eaf54d00133a94aadc8a695280417a), PR #47 (5ebcaadc44227d016956982a4ebf32e35c731491)
@@ -2962,7 +2963,7 @@ Validation evidence:
 Non-blocking maintenance note: the lifecycle API regression test checks several conventional generic mutator names rather than generically rejecting every possible future public method accepting `CampaignStatus`. This is a test-hardening opportunity, not a functional defect or integration blocker.
 
 Exact Next Work
-The latest campaign product-transition feature remains PR #55 publication, merged as 9a470da982f1510213163b3b909a02bd0f85973b from reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8. The latest lifecycle-integrity implementation is PR #61, merged as d5dff09c6d0ed643cb4537abff64056b7d20656c from independently reviewed source d394886bbcfb640536b369b400052c267d61129e. PR #61 is also the latest overall repository checkpoint. The backend baseline is 523 tests, 0 failures, 0 errors, and 0 skipped; Maven verify, Backend CI, and Frontend CI succeeded.
+The latest campaign product-transition feature remains PR #55 publication, merged as 9a470da982f1510213163b3b909a02bd0f85973b from reviewed source d1d9e63a5398687e78734f835357fb9c6ded34d8. The latest lifecycle-integrity implementation and latest verified MF-02/backend evidence checkpoint is PR #61, merged as d5dff09c6d0ed643cb4537abff64056b7d20656c from independently reviewed source d394886bbcfb640536b369b400052c267d61129e. The verified backend baseline at that checkpoint is 523 tests, 0 failures, 0 errors, and 0 skipped; Maven verify, Backend CI, and Frontend CI succeeded. Repository-wide tip freshness must be established from live origin/develop rather than inferred from this evidence checkpoint.
 
 VaccinationCampaign publication prerequisites and transition is COMPLETE in PR #55:
 
@@ -2993,4 +2994,4 @@ Campaign publication and lifecycle state-integrity hardening are complete at the
 
 After a lifecycle decision is made and separately reviewed, later controlled work still includes the applicable implementable transition slice, final MF-01 QuestionnaireVersion adapter/FK integration, and final Sprint integration and Definition-of-Done evidence.
 
-Current implementation stopping point: PR #55 remains the latest campaign transition feature; PR #61 is the latest lifecycle-integrity implementation and latest overall repository checkpoint. Sprint 1, MF-02, and US-13 remain IN PROGRESS. No unimplemented lifecycle transition should be inferred as complete.
+Current MF-02 implementation stopping point: PR #55 remains the latest campaign transition feature; PR #61 remains the latest lifecycle-integrity implementation and latest verified MF-02/backend evidence checkpoint. Sprint 1, MF-02, and US-13 remain IN PROGRESS. No unimplemented lifecycle transition should be inferred as complete, and the live repository tip must be refreshed independently.
