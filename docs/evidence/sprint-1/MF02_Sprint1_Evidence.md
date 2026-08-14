@@ -3020,15 +3020,51 @@ Explicitly not implemented / preserved boundaries:
 - no comprehensive non-terminal status matrix or generic allow-list was created.
 
 Validation evidence:
-- Maven `test`: SUCCESS, 566 tests, 0 failures, 0 errors, 0 skipped;
-- Maven `verify`: SUCCESS, 566 tests, 0 failures, 0 errors, 0 skipped;
+- Maven `test`: SUCCESS, 560 tests, 0 failures, 0 errors, 0 skipped (subsequent clean-build reconciliation established 560 as the authoritative PR #67 code baseline; earlier 566 reporting was non-authoritative and is superseded);
+- Maven `verify`: SUCCESS, 560 tests, 0 failures, 0 errors, 0 skipped;
 - Backend CI: PASS;
 - Frontend CI: PASS;
 - independent review: APPROVED FOR INTEGRATION;
 - reviewed implementation changed during integration: NO.
 
+SUSPENDED Session-Planning Freeze Evidence (PR #69)
+
+PR #69, `fix(mf02): freeze session planning while suspended`, merged branch `fix/mf02-freeze-session-planning-while-suspended` into `develop` as 545075aaedda338a2c16e7d97803704b55fef951. The independently reviewed source commit was b95c1fc4a099a27b9726c2133bf892e8d5ab1232, with review verdicts APPROVED FOR INTEGRATION and VALIDATION RECONCILED — APPROVED FOR INTEGRATION. Integration preserved the exact reviewed 8-file candidate, and the reviewed source remains an ancestor of `develop`.
+
+Problem resolved:
+Project decision on administrative session planning while campaign is SUSPENDED. While canonical explicitly establishes that SUSPENDED blocks citizen intake/booking, requires a suspension reason/audit, preserves records, and may later resume or proceed to terminal outcomes, canonical did not explicitly define internal administrative session planning while suspended.
+
+Policy selected:
+Project/product-domain Policy S3 (`NEW PLANNING FROZEN, REMEDIATION ALLOWED`), derived from canonical silence plus operational design reasoning (not an explicit canonical mandate).
+
+Implemented:
+- blocks 5 planning and progression write operations when parent campaign status is SUSPENDED:
+  1. `SessionRecurrenceRuleService.createRule`
+  2. `SessionRecurrenceRuleService.updateFutureRule`
+  3. `VaccinationSessionService.createOneOffDraftSession`
+  4. `SessionOccurrenceGenerationService.generateOccurrences`
+  5. `VaccinationSessionService.scheduleSession`
+- distinct predicate semantics: `CampaignStatus.isOperationallyClosed()` remains strictly `COMPLETED`, `CANCELLED`, `ARCHIVED` (SUSPENDED is NOT operationally closed); `CampaignStatus.isNewSessionPlanningBlocked()` added as helper returning `this == SUSPENDED || isOperationallyClosed()`, strictly isolated to new planning/progression entry points;
+- remediation boundary preserved: `shortenRuleEnd` and `cancelRule` remain permitted for SUSPENDED campaigns (verified by focused integration tests); individual session reschedule, center transfer, session cancellation, series change workflows, and full-series cancellation remain untouched and permitted under existing rules;
+- fast rejection on occurrence generation: `generateOccurrences` fast-rejects on SUSPENDED campaigns prior to new materialization, even if all requested occurrence identities already exist in the database; existing generated database sessions remain untouched;
+- scheduling progression semantics: scheduling rejection keeps session status in `DRAFT`;
+- representative concurrency coverage: added separate-transaction race between occurrence generation and campaign suspension (`SessionOccurrenceGenerationConcurrencyIntegrationTests`). Establishes deterministic serialization via parent campaign write lock (`Campaign -> Center -> Rule`). (H2 structural locking evidence; not production-MySQL certification);
+- 9 net-new integration test executions added.
+
+Validation evidence:
+- Clean base count (PR #67): 560 tests;
+- Clean candidate count (PR #69): 569 tests;
+- Net-new executions: 9;
+- Maven `clean test`: SUCCESS, 569 tests, 0 failures, 0 errors, 0 skipped;
+- Maven `clean verify`: SUCCESS, 569 tests, 0 failures, 0 errors, 0 skipped, executable JAR packaged;
+- Surefire XML sum: 569 tests across 64 report files;
+- Backend CI: PASS;
+- Frontend CI: PASS;
+- independent review: APPROVED FOR INTEGRATION / VALIDATION RECONCILED — APPROVED FOR INTEGRATION;
+- reviewed implementation changed during integration: NO.
+
 Exact Next Work
-The latest campaign lifecycle transition implementation is PR #65 suspension (228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3) and the latest verified MF-02/backend evidence checkpoint is PR #67 terminal planning guard, merged as 296c763b48bac4ab837dafeb67cc9788b071912d from independently reviewed source cb5872066360173c717f5f123e5b4d0f25d5bad2. PR #55 remains the publication milestone, and PR #61 remains the lifecycle state-integrity hardening milestone. The verified backend baseline at PR #67 is 566 tests, 0 failures, 0 errors, and 0 skipped; Maven test, Maven verify, Backend CI, and Frontend CI succeeded. Repository-wide tip freshness must be established from live origin/develop rather than inferred from this evidence checkpoint.
+The latest campaign lifecycle transition implementation is PR #65 suspension (228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3), the latest terminal planning guard milestone is PR #67 (296c763b48bac4ab837dafeb67cc9788b071912d), and the latest verified MF-02/backend evidence checkpoint is PR #69 SUSPENDED session-planning freeze, merged as 545075aaedda338a2c16e7d97803704b55fef951 from independently reviewed source b95c1fc4a099a27b9726c2133bf892e8d5ab1232. PR #55 remains the publication milestone, and PR #61 remains the lifecycle state-integrity hardening milestone. The verified backend baseline at PR #69 is 569 tests, 0 failures, 0 errors, and 0 skipped; Maven clean test, Maven clean verify, Backend CI, and Frontend CI succeeded. Repository-wide tip freshness must be established from live origin/develop rather than inferred from this evidence checkpoint.
 
 VaccinationCampaign publication prerequisites and transition is COMPLETE in PR #55:
 
@@ -3048,7 +3084,7 @@ Domain API & Service Locking: publishCampaign(Long campaignId) locks the campaig
 
 14 net-new unit & integration tests added in CampaignPublicationIntegrationTests (521 total backend tests passing).
 
-Campaign publication, lifecycle state-integrity hardening, campaign suspension, and terminal-state session-planning guard are complete at their stated scopes. Full campaign lifecycle implementation remains incomplete. The next engineering action is one controlled discovery/design decision for the next safely implementable remaining campaign lifecycle or lifecycle-integration slice, preserving these unresolved areas:
+Campaign publication, lifecycle state-integrity hardening, campaign suspension, terminal-state session-planning guard, and SUSPENDED session-planning freeze are complete at their stated scopes. Full campaign lifecycle implementation remains incomplete. The next engineering action is one controlled discovery/design decision for the next safely implementable remaining campaign lifecycle or lifecycle-integration slice, preserving these unresolved areas:
 
 1. DRAFT -> SCHEDULED needs the exact meaning of “centers valid” and the authoritative campaign civil-date basis.
 2. PUBLISHED -> ACTIVE needs authoritative campaign time/date semantics.
@@ -3056,9 +3092,8 @@ Campaign publication, lifecycle state-integrity hardening, campaign suspension, 
 4. Completion needs a definition of “service work closed.”
 5. Dependent cancellation needs cascade/dependency policy plus truthful MF-03 impact integration.
 6. Archival remains blocked by USER_DATA_REQUIRED retention policy.
-7. Planning policy for `SUSPENDED` campaigns (recurrence-rule creation, DRAFT creation, materialization, DRAFT -> SCHEDULED progression) remains unresolved and open for product/design decision.
-8. Planning policy for `DRAFT` campaigns session-scheduling (`DRAFT` campaign + `DRAFT` session -> `SCHEDULED` session) remains unresolved and open for product/design decision.
+7. Planning policy for `DRAFT` campaigns session-scheduling (`DRAFT` campaign + `DRAFT` session -> `SCHEDULED` session) remains unresolved and open for product/design decision.
 
 After a lifecycle decision is made and separately reviewed, later controlled work still includes the applicable implementable transition slice, final MF-01 QuestionnaireVersion adapter/FK integration, and final Sprint integration and Definition-of-Done evidence.
 
-Current MF-02 implementation stopping point: PR #65 is the latest campaign lifecycle transition, and PR #67 is the latest terminal planning guard milestone and verified MF-02/backend evidence checkpoint; PR #55 remains the publication milestone, and PR #61 remains the lifecycle-integrity hardening milestone. Sprint 1, MF-02, and US-13 remain IN PROGRESS. No unimplemented lifecycle transition or planning/materialization policy should be inferred as complete, and the live repository tip must be refreshed independently.
+Current MF-02 implementation stopping point: PR #65 is the latest campaign lifecycle transition, PR #67 is the terminal planning guard milestone, and PR #69 is the SUSPENDED session-planning freeze milestone and latest verified MF-02/backend evidence checkpoint; PR #55 remains the publication milestone, and PR #61 remains the lifecycle-integrity hardening milestone. Sprint 1, MF-02, and US-13 remain IN PROGRESS. No unimplemented lifecycle transition or planning/materialization policy should be inferred as complete, and the live repository tip must be refreshed independently.

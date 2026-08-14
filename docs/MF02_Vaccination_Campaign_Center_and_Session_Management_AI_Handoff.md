@@ -1525,21 +1525,24 @@ Lifecycle-integrity hardening milestone: PR #61 merge d5dff09c6d0ed643cb4537abff
 
 Terminal-state session-planning guard milestone: PR #67 merge 296c763b48bac4ab837dafeb67cc9788b071912d (independently reviewed source cb5872066360173c717f5f123e5b4d0f25d5bad2)
 
+SUSPENDED session-planning freeze milestone: PR #69 merge 545075aaedda338a2c16e7d97803704b55fef951 (independently reviewed source b95c1fc4a099a27b9726c2133bf892e8d5ab1232)
+
 Historical deterministic regression-hardening integration: PR #58 merge f5b424fc2f69ae5b8ef0b687555963def744c660 (reviewed source 0cca456eab97c6143c80951f417a44d0639e7509); documentation synchronized through PR #59 merge 23f151a07bf156ad3d647fe39e904ce41e033fc5.
 
-Latest verified MF-02/backend evidence checkpoint: 296c763b48bac4ab837dafeb67cc9788b071912d (PR #67 merge)
+Latest verified MF-02/backend evidence checkpoint: 545075aaedda338a2c16e7d97803704b55fef951 (PR #69 merge)
 
-Upstream repository state observed during this documentation synchronization: PR #67 / 296c763b48bac4ab837dafeb67cc9788b071912d. This is the MF-02 terminal-state planning guard implementation/evidence checkpoint observed while preparing this handoff, not a permanent repository-tip field; future sessions must fetch and inspect live origin/develop.
+Upstream repository state observed during this documentation synchronization: PR #69 / 545075aaedda338a2c16e7d97803704b55fef951. This is the MF-02 SUSPENDED session-planning freeze implementation/evidence checkpoint observed while preparing this handoff, not a permanent repository-tip field; future sessions must fetch and inspect live origin/develop.
 
-Latest completed campaign lifecycle transition is VaccinationCampaign suspension through PR #65. PR #55 remains the publication milestone, PR #61 remains the lifecycle state-integrity hardening milestone, and PR #67 is the terminal-state session-planning guard milestone.
+Latest completed campaign lifecycle transition is VaccinationCampaign suspension through PR #65. PR #55 remains the publication milestone, PR #61 remains the lifecycle state-integrity hardening milestone, PR #67 is the terminal-state session-planning guard milestone, and PR #69 is the SUSPENDED session-planning freeze milestone (Policy S3).
 
-Current verified MF-02/backend baseline: 566 tests — 0 failures, 0 errors, 0 skipped; Maven test SUCCESS; Maven verify SUCCESS; Backend CI PASS and Frontend CI PASS for PR #67.
+Current verified MF-02/backend baseline: 569 tests — 0 failures, 0 errors, 0 skipped; Maven test SUCCESS; Maven verify SUCCESS; Backend CI PASS and Frontend CI PASS for PR #69.
+(Note on baseline reconciliation: subsequent clean-build reconciliation established that the PR #67 backend code checkpoint contains 560 executable tests; earlier 566 reporting was non-authoritative and is superseded. PR #69 adds 9 net-new test executions for an authoritative baseline of 569 tests.)
 
 Next controlled phase: one discovery/design decision for the next safely implementable remaining VaccinationCampaign lifecycle or lifecycle-integration slice; full lifecycle implementation remains incomplete.
 
 This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
 
-The latest campaign state integration milestone and verified MF-02/backend evidence checkpoint is PR #67 merge 296c763b48bac4ab837dafeb67cc9788b071912d, integrating independently reviewed source cb5872066360173c717f5f123e5b4d0f25d5bad2. PR #65 suspension, PR #61 integrity hardening, and PR #55 publication remain distinct earlier milestones. Implementation, integrity-hardening, evidence, documentation, and regression-hardening checkpoints remain distinct from the transient repository tip.
+The latest campaign state integration milestone and verified MF-02/backend evidence checkpoint is PR #69 merge 545075aaedda338a2c16e7d97803704b55fef951, integrating independently reviewed source b95c1fc4a099a27b9726c2133bf892e8d5ab1232. PR #67 terminal planning guard, PR #65 suspension, PR #61 integrity hardening, and PR #55 publication remain distinct earlier milestones. Implementation, integrity-hardening, evidence, documentation, and regression-hardening checkpoints remain distinct from the transient repository tip.
 
 1. Executive Snapshot
 The following MF-02 backend foundations are already implemented and integrated:
@@ -2515,8 +2518,11 @@ Lifecycle-integrity hardening milestone: PR #61 / d5dff09c6d0ed643cb4537abff6405
 PR #61 independently reviewed source: d394886bbcfb640536b369b400052c267d61129e
 Terminal-state session-planning guard milestone: PR #67 / 296c763b48bac4ab837dafeb67cc9788b071912d
 PR #67 independently reviewed source: cb5872066360173c717f5f123e5b4d0f25d5bad2
-Latest verified MF-02/backend evidence checkpoint: PR #67 / 296c763b48bac4ab837dafeb67cc9788b071912d
-Backend baseline: 566 tests; 0 failures, 0 errors, 0 skipped; Maven test SUCCESS; Maven verify SUCCESS; Backend CI PASS; Frontend CI PASS
+SUSPENDED session-planning freeze milestone: PR #69 / 545075aaedda338a2c16e7d97803704b55fef951
+PR #69 independently reviewed source: b95c1fc4a099a27b9726c2133bf892e8d5ab1232
+Latest verified MF-02/backend evidence checkpoint: PR #69 / 545075aaedda338a2c16e7d97803704b55fef951
+Backend baseline: 569 tests; 0 failures, 0 errors, 0 skipped; Maven test SUCCESS; Maven verify SUCCESS; Backend CI PASS; Frontend CI PASS
+(Note on baseline reconciliation: subsequent clean-build reconciliation established that the PR #67 backend code checkpoint contains 560 executable tests; earlier 566 reporting was non-authoritative and is superseded. PR #69 adds 9 net-new test executions for an authoritative baseline of 569 tests.)
 CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
 SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
@@ -2581,8 +2587,26 @@ Terminal-state session-planning guard: IMPLEMENTED, INDEPENDENTLY REVIEWED, TEST
 - Session occurrence generation rejects fast on operationally closed campaigns even if all requested occurrence identities were already materialized. Existing generated database sessions remain untouched.
 - Existing records preserved: zero automatic mutation or deletion of existing sessions, rules, assignments, operating hours, closures, `SessionChangeEvent`, `CampaignLifecycleEvent`, appointments, or waitlists.
 - Scope boundaries preserved: `shortenRuleEnd` and `cancelRule` remain outside terminal guard scope. Individual session reschedule, center transfer, session cancellation, series preview/change, and full-series cancellation remain untouched.
-- Policy boundaries preserved: `SUSPENDED` campaign planning policy and `DRAFT` campaign session-scheduling policy remain explicitly UNRESOLVED and UNCHANGED. No generalized non-terminal allow-list or status planning matrix was introduced.
-- 11 net-new integration tests added (566 total backend tests passing).
+- Policy boundaries preserved: `SUSPENDED` campaign planning policy and `DRAFT` campaign session-scheduling policy remain explicitly UNRESOLVED and UNCHANGED at PR #67 scope. No generalized non-terminal allow-list or status planning matrix was introduced.
+- 11 net-new integration tests added (560 total backend tests passing; earlier 566 count superseded by clean-build reconciliation).
+SUSPENDED session-planning freeze (Policy S3): IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #69)
+- Implements selected project/product-domain Policy S3 (`NEW PLANNING FROZEN, REMEDIATION ALLOWED`), derived from canonical silence and operational design reasoning (not an explicit canonical SUSPENDED session-planning matrix).
+- Extends the session planning freeze to `SUSPENDED` campaigns across the 5 write operations:
+  1. Recurrence-rule creation (`SessionRecurrenceRuleService.createRule`)
+  2. Future recurrence-rule definition update (`SessionRecurrenceRuleService.updateFutureRule`)
+  3. One-off DRAFT session creation (`VaccinationSessionService.createOneOffDraftSession`)
+  4. Recurrence occurrence generation (`SessionOccurrenceGenerationService.generateOccurrences`)
+  5. DRAFT session -> SCHEDULED progression (`VaccinationSessionService.scheduleSession`)
+- Distinct predicate semantics:
+  * `CampaignStatus.isOperationallyClosed()` remains strictly `COMPLETED`, `CANCELLED`, `ARCHIVED` (`SUSPENDED` is NOT operationally closed).
+  * `CampaignStatus.isNewSessionPlanningBlocked()` added as helper returning `this == SUSPENDED || isOperationallyClosed()`, strictly isolated to new planning/progression commands.
+- Remediation boundary preserved:
+  * `shortenRuleEnd` and `cancelRule` remain fully permitted while `SUSPENDED` (verified by integration tests).
+  * Individual session reschedule, center transfer, session cancellation, series change workflows, and full-series cancellation remain untouched and permitted under existing rules.
+- Fast rejection on generation: `generateOccurrences` fast-rejects on `SUSPENDED` campaigns prior to new materialization, even if all requested occurrence identities already exist in the database. Existing database sessions remain untouched.
+- Scheduling progression semantics: scheduling rejection keeps the session status in `DRAFT`.
+- Representative concurrency coverage: added separate-transaction race between occurrence generation and campaign suspension (`SessionOccurrenceGenerationConcurrencyIntegrationTests`). Establishes deterministic serialization via parent campaign write lock (`Campaign -> Center -> Rule`). (H2 structural locking evidence; not production-MySQL certification).
+- 9 net-new integration test executions added (560 clean base + 9 = 569 total backend tests passing, 0 failures, 0 errors, 0 skipped; Surefire XML sum = 569).
 Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
 Immediate next phase: one controlled discovery/design decision for the next safely implementable remaining VaccinationCampaign lifecycle or lifecycle-integration slice; campaign lifecycle remains incomplete.
 Unresolved lifecycle decisions:
@@ -2592,7 +2616,6 @@ Unresolved lifecycle decisions:
 - Completion requires a definition of “service work closed.”
 - Dependent cancellation requires cascade/dependency policy and truthful MF-03 impact integration.
 - Archival remains blocked by USER_DATA_REQUIRED retention policy.
-- Planning policy for `SUSPENDED` campaigns (recurrence-rule creation, DRAFT creation, materialization, DRAFT -> SCHEDULED progression) remains unresolved and open for product/design decision.
 - Planning policy for `DRAFT` campaigns session-scheduling (`DRAFT` campaign + `DRAFT` session -> `SCHEDULED` session) remains unresolved and open for product/design decision.
 Pending Sprint 1 gaps: controlled resolution of lifecycle decisions and later implementable transitions, MF-01 QuestionnaireVersion production adapter/FK integration, and final Sprint DoD evidence.
-The next AI should refresh live repository state and perform one controlled discovery/design decision for the next safely implementable remaining VaccinationCampaign lifecycle or lifecycle-integration slice. Do not infer or implement unsupported transitions or resolve the planning/materialization matrix by assumption. Campaign publication, lifecycle state-integrity hardening, campaign suspension, terminal-state planning guard, session lifecycle hardening, and reverse configuration-impact protections are complete only at their stated scopes. Do not mark Sprint 1 complete prematurely.
+The next AI should refresh live repository state and perform one controlled discovery/design decision for the next safely implementable remaining VaccinationCampaign lifecycle or lifecycle-integration slice. Do not infer or implement unsupported transitions or resolve the planning/materialization matrix by assumption. Campaign publication, lifecycle state-integrity hardening, campaign suspension, terminal-state planning guard, SUSPENDED session-planning freeze, session lifecycle hardening, and reverse configuration-impact protections are complete only at their stated scopes. Do not mark Sprint 1 complete prematurely.
