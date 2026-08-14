@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRuleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
@@ -67,6 +68,10 @@ public class SessionRecurrenceRuleService {
                         "Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
+        }
+        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot create session recurrence rule for suspended campaign with ID: " + campaignId);
         }
         if (campaign.getStatus().isOperationallyClosed()) {
             throw new IllegalArgumentException(
@@ -143,6 +148,10 @@ public class SessionRecurrenceRuleService {
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
+        }
+        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot update future session recurrence rule for suspended campaign with ID: " + campaignId);
         }
         if (campaign.getStatus().isOperationallyClosed()) {
             throw new IllegalArgumentException(

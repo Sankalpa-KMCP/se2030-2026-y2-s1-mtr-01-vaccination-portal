@@ -204,6 +204,52 @@ class VaccinationSessionServiceIntegrationTests {
     }
 
     @Test
+    void createOneOffDraftSession_whenCampaignIsSuspended_throwsIllegalArgumentException() {
+        Instant startAt = Instant.parse("2026-10-14T03:30:00Z");
+        Instant endAt = Instant.parse("2026-10-14T06:30:00Z");
+        Instant bookingCloseAt = Instant.parse("2026-10-14T02:30:00Z");
+
+        VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-SESS-SUSP", "Vaccine"));
+        TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-SESS-SUSP", "Group"));
+
+        VaccinationCampaign suspendedCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                "CMP-SUSP-1OFF", "Suspended Campaign", null, vax, tg,
+                CAMPAIGN_START, CAMPAIGN_END,
+                Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-10-31T23:59:59Z"), CampaignStatus.SUSPENDED));
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                suspendedCampaign, center, CAMPAIGN_START, CAMPAIGN_END.plusDays(1)));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                service.createOneOffDraftSession(suspendedCampaign.getId(), center.getId(), startAt, endAt, bookingCloseAt));
+        assertTrue(ex.getMessage().contains("Cannot create one-off session for suspended campaign"));
+    }
+
+    @Test
+    void scheduleSession_whenCampaignIsSuspended_throwsIllegalArgumentException() {
+        Instant startAt = Instant.parse("2026-10-14T03:30:00Z");
+        Instant endAt = Instant.parse("2026-10-14T06:30:00Z");
+        Instant bookingCloseAt = Instant.parse("2026-10-14T02:30:00Z");
+
+        VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-SCHED-SUSP", "Vaccine"));
+        TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-SCHED-SUSP", "Group"));
+
+        VaccinationCampaign suspendedCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                "CMP-SCHED-SUSP", "Suspended Campaign", null, vax, tg,
+                CAMPAIGN_START, CAMPAIGN_END,
+                Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-10-31T23:59:59Z"), CampaignStatus.SUSPENDED));
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                suspendedCampaign, center, CAMPAIGN_START, CAMPAIGN_END.plusDays(1)));
+
+        VaccinationSession draftSession = sessionRepository.saveAndFlush(new VaccinationSession(
+                suspendedCampaign, center, startAt, endAt, bookingCloseAt, "Asia/Colombo"));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                service.scheduleSession(draftSession.getId()));
+        assertTrue(ex.getMessage().contains("Cannot schedule session for suspended campaign"));
+        assertEquals(SessionLifecycleStatus.DRAFT, sessionRepository.findById(draftSession.getId()).orElseThrow().getLifecycleStatus());
+    }
+
+    @Test
     void createOneOffDraftSession_whenCampaignIsOperationallyClosed_throwsIllegalArgumentException() {
         Instant startAt = Instant.parse("2026-10-14T03:30:00Z");
         Instant endAt = Instant.parse("2026-10-14T06:30:00Z");

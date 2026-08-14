@@ -11,6 +11,7 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
@@ -26,6 +27,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.RecurrenceGenerationResult;
 import com.se2030.vaccinationportal.campaign.service.SessionOccurrenceGenerationService;
 import com.se2030.vaccinationportal.campaign.service.SessionRecurrenceRuleService;
+import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCenterService;
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -62,6 +64,7 @@ class SessionOccurrenceGenerationConcurrencyIntegrationTests {
 
     @Autowired private SessionOccurrenceGenerationService generationService;
     @Autowired private SessionRecurrenceRuleService ruleService;
+    @Autowired private VaccinationCampaignService campaignService;
     @Autowired private VaccinationCenterService centerService;
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
     @Autowired private SessionRecurrenceRuleRepository ruleRepository;
@@ -76,6 +79,7 @@ class SessionOccurrenceGenerationConcurrencyIntegrationTests {
     @Autowired private CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository;
     @Autowired private CampaignDoseProgrammeRepository doseProgrammeRepository;
     @Autowired private CampaignLocationTargetRepository locationTargetRepository;
+    @Autowired private CampaignLifecycleEventRepository eventRepository;
 
     private static final LocalDate CAMPAIGN_START = LocalDate.of(2026, 10, 1);
     private static final LocalDate CAMPAIGN_END = LocalDate.of(2026, 10, 31);
@@ -93,6 +97,7 @@ class SessionOccurrenceGenerationConcurrencyIntegrationTests {
         questionnaireAssignmentRepository.deleteAllInBatch();
         doseProgrammeRepository.deleteAllInBatch();
         locationTargetRepository.deleteAllInBatch();
+        eventRepository.deleteAllInBatch();
         campaignRepository.deleteAllInBatch();
         centerRepository.deleteAllInBatch();
         targetGroupRepository.deleteAllInBatch();
@@ -166,6 +171,54 @@ class SessionOccurrenceGenerationConcurrencyIntegrationTests {
             // Cancellation won first: generation rejected because rule was CANCELLED
             assertTrue(outcomes.get(0).error().getMessage().contains("must be ACTIVE"));
         }
+    }
+
+    @Test
+    @Timeout(30)
+    void concurrentGenerationAndCampaignSuspension_suspensionBlocksGeneration() throws Exception {
+        VaccinationCampaign campaign = createCampaignInStatus("CONC-GEN-SUSP", CampaignStatus.PUBLISHED);
+        VaccinationCenter center = createCenter("CONC-GEN-SUSP", CenterStatus.ACTIVE);
+        setupPrerequisites(campaign, center);
+
+        SessionRecurrenceRule rule = ruleService.createRule(
+                campaign.getId(), center.getId(), Set.of(DayOfWeek.WEDNESDAY),
+                CAMPAIGN_START, CAMPAIGN_END, MORNING_START, MORNING_END, "UTC");
+
+        // Thread 1: generates occurrences
+        // Thread 2: suspends campaign
+        List<Outcome> outcomes = runConcurrently(
+                () -> generationService.generateOccurrences(rule.getId()),
+                () -> campaignService.suspendCampaign(campaign.getId(), "Safety hold for investigation", "ACTOR-TEST-001")
+        );
+
+        boolean genSuccess = outcomes.get(0).success();
+        boolean suspendSuccess = outcomes.get(1).success();
+
+        // Suspension should always succeed
+        assertTrue(suspendSuccess, "Suspension failed: " + outcomes.get(1).error());
+
+        if (genSuccess) {
+            // Generator won campaign lock first: occurrences materialized before suspension committed
+            List<VaccinationSession> sessions = sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(rule.getId());
+            assertEquals(4, sessions.size());
+        } else {
+            // Suspension won campaign lock first: generation rejected because campaign was SUSPENDED
+            assertTrue(outcomes.get(0).error().getMessage().contains("Cannot generate session occurrences for suspended campaign"));
+        }
+    }
+
+    private VaccinationCampaign createCampaignInStatus(String suffix, CampaignStatus status) {
+        VaccineType vaccineType = vaccineTypeRepository.saveAndFlush(
+                new VaccineType("VAX-" + suffix, "Vaccine " + suffix));
+        TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
+                new TargetGroup("TG-" + suffix, "Target Group " + suffix));
+
+        return campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                "CMP-" + suffix, "Campaign " + suffix, "Desc",
+                vaccineType, targetGroup,
+                CAMPAIGN_START, CAMPAIGN_END,
+                Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-10-31T23:59:59Z"),
+                status));
     }
 
     private VaccinationCampaign createCampaign(String suffix) {

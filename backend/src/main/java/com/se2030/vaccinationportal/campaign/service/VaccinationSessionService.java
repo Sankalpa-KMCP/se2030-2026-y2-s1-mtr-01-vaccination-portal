@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeType;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -97,6 +98,10 @@ public class VaccinationSessionService {
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
+        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot create one-off session for suspended campaign with ID: " + campaignId);
+        }
         if (campaign.getStatus().isOperationallyClosed()) {
             throw new IllegalArgumentException(
                     "Cannot create one-off session for operationally closed campaign with ID: " + campaignId);
@@ -169,6 +174,10 @@ public class VaccinationSessionService {
             throw new IllegalStateException("Authoritative session parent campaign changed concurrently");
         }
 
+        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot schedule session for suspended campaign with ID: " + campaignId);
+        }
         if (campaign.getStatus().isOperationallyClosed()) {
             throw new IllegalArgumentException(
                     "Cannot schedule session for operationally closed campaign with ID: " + campaignId);

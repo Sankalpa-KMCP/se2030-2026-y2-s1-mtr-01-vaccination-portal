@@ -25,6 +25,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.RecurrenceGenerationResult;
 import com.se2030.vaccinationportal.campaign.service.SessionOccurrenceGenerationService;
 import com.se2030.vaccinationportal.campaign.service.SessionRecurrenceRuleService;
+import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -558,6 +559,51 @@ class SessionOccurrenceGenerationIntegrationTests {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> generationService.generateOccurrences(rule.getId()));
         assertTrue(ex.getMessage().contains("must be ACTIVE"));
+    }
+
+    @Test
+    void generationRejectsSuspendedCampaign() {
+        VaccinationCampaign suspendedCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                "CMP-GEN-SUSP", "Suspended Gen Campaign", null,
+                vaccineType, targetGroup,
+                CAMPAIGN_START, CAMPAIGN_END,
+                Instant.parse("2026-09-01T00:00:00Z"), Instant.parse("2026-10-20T18:00:00Z"), CampaignStatus.SUSPENDED));
+
+        assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                suspendedCampaign, center, CAMPAIGN_START, CAMPAIGN_END.plusDays(1)));
+
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                suspendedCampaign, center, Set.of(DayOfWeek.WEDNESDAY),
+                CAMPAIGN_START, CAMPAIGN_END, MORNING_START, MORNING_END, "UTC"));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> generationService.generateOccurrences(rule.getId()));
+        assertTrue(ex.getMessage().contains("Cannot generate session occurrences for suspended campaign"));
+    }
+
+    @Test
+    void generationRejectsSuspendedCampaign_evenWhenAllOccurrencesAlreadyExist() {
+        // First generate on DRAFT campaign
+        SessionRecurrenceRule rule = ruleService.createRule(
+                campaign.getId(), center.getId(), Set.of(DayOfWeek.WEDNESDAY),
+                CAMPAIGN_START, CAMPAIGN_END, MORNING_START, MORNING_END, "UTC");
+
+        RecurrenceGenerationResult initial = generationService.generateOccurrences(
+                rule.getId(), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 10));
+        assertEquals(1, initial.createdCount());
+
+        // Change campaign to SUSPENDED
+        CampaignTestFixtures.forceStatus(campaign, CampaignStatus.SUSPENDED);
+        campaignRepository.saveAndFlush(campaign);
+
+        // Attempt generating occurrences again on SUSPENDED campaign - must reject fast
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> generationService.generateOccurrences(rule.getId(), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 10)));
+        assertTrue(ex.getMessage().contains("Cannot generate session occurrences for suspended campaign"));
+
+        // Existing session remains in DB intact
+        List<VaccinationSession> existing = sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(rule.getId());
+        assertEquals(1, existing.size());
     }
 
     @Test
