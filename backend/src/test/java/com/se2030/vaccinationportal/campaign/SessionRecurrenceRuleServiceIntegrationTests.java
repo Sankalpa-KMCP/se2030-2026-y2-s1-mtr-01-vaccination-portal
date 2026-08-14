@@ -436,6 +436,53 @@ class SessionRecurrenceRuleServiceIntegrationTests {
     }
 
     @Test
+    void createRule_whenCampaignIsSuspended_throwsIllegalArgumentException() {
+        VaccinationCenter center = center("SUSP-CTR", CenterStatus.ACTIVE);
+        VaccinationCampaign suspendedCampaign = campaign("SUSP-CREATE", CampaignStatus.SUSPENDED);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> create(
+                suspendedCampaign, center, Set.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5), MORNING, NOON, "UTC"));
+        assertTrue(ex.getMessage().contains("Cannot create session recurrence rule for suspended campaign"));
+    }
+
+    @Test
+    void updateFutureRule_whenCampaignIsSuspended_throwsIllegalArgumentException() {
+        VaccinationCenter center = center("UPD-SUSP-CTR", CenterStatus.ACTIVE);
+        VaccinationCampaign suspendedCampaign = campaign("UPD-SUSP-RULE", CampaignStatus.SUSPENDED);
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                suspendedCampaign, center, Set.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5), MORNING, NOON, "UTC"));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> updateToTuesday(rule));
+        assertTrue(ex.getMessage().contains("Cannot update future session recurrence rule for suspended campaign"));
+    }
+
+    @Test
+    void shortenRuleEnd_whenCampaignIsSuspended_succeeds() {
+        VaccinationCenter center = center("SHORT-SUSP-CTR", CenterStatus.ACTIVE);
+        VaccinationCampaign suspendedCampaign = campaign("SHORT-SUSP-RULE", CampaignStatus.SUSPENDED);
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                suspendedCampaign, center, Set.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5), MORNING, NOON, "UTC"));
+
+        SessionRecurrenceRule shortened = service.shortenRuleEnd(rule.getId(), LocalDate.of(2026, 9, 28));
+        assertEquals(LocalDate.of(2026, 9, 28), shortened.getEndDate());
+    }
+
+    @Test
+    void cancelRule_whenCampaignIsSuspended_succeeds() {
+        VaccinationCenter center = center("CNC-SUSP-CTR", CenterStatus.ACTIVE);
+        VaccinationCampaign suspendedCampaign = campaign("CNC-SUSP-RULE", CampaignStatus.SUSPENDED);
+        SessionRecurrenceRule rule = ruleRepository.saveAndFlush(new SessionRecurrenceRule(
+                suspendedCampaign, center, Set.of(DayOfWeek.MONDAY),
+                LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 5), MORNING, NOON, "UTC"));
+
+        SessionRecurrenceRule cancelled = service.cancelRule(rule.getId());
+        assertEquals(SessionRecurrenceRuleStatus.CANCELLED, cancelled.getStatus());
+    }
+
+    @Test
     void createRule_whenCampaignIsOperationallyClosed_throwsIllegalArgumentException() {
         VaccinationCenter center = center("CLOSED-CTR", CenterStatus.ACTIVE);
         for (CampaignStatus status : List.of(CampaignStatus.COMPLETED, CampaignStatus.CANCELLED, CampaignStatus.ARCHIVED)) {

@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRuleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
@@ -123,6 +124,10 @@ public class SessionOccurrenceGenerationService {
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
+        }
+        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot generate session occurrences for suspended campaign with ID: " + campaignId);
         }
         if (campaign.getStatus().isOperationallyClosed()) {
             throw new IllegalArgumentException(

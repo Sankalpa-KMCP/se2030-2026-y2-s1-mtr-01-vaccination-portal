@@ -66,6 +66,17 @@ public enum CampaignStatus {
     }
 
     /**
+     * Checks whether new session planning or recurrence expansion is blocked.
+     * New session planning/progression is blocked when status is SUSPENDED, COMPLETED,
+     * CANCELLED, or ARCHIVED.
+     *
+     * @return true if status is SUSPENDED, COMPLETED, CANCELLED, or ARCHIVED
+     */
+    public boolean isNewSessionPlanningBlocked() {
+        return this == SUSPENDED || isOperationallyClosed();
+    }
+
+    /**
      * Checks whether the canonical archival transition may originate from this status.
      *
      * @return true if status is COMPLETED or CANCELLED
