@@ -1,9 +1,8 @@
 # Web-Based Vaccination Portal - Recommended Full File Tree
 
-**Canonical project:** `WBVP-SE2030`  
-**Canonical version:** `3.3-AI`  
-**Aligned canonical revision:** `2026-08-08-R8`  
-**Aligned handoff family:** `2026-08-08-H9`  
+**Canonical project:** `WBVP-SE2030`
+**Canonical version:** `3.3-AI`
+**Aligned canonical revision:** `2026-08-14-R9`
 **Document role:** Recommended target/reference structure; not an instruction to pre-create every file.
 
 > The live repository is authoritative for what already exists. Before creating or moving files, inspect the repository and the relevant MF handoff. Create only the files required for the current logical slice.
@@ -18,7 +17,7 @@ se2030-2026-y2-s1-mtr-01-vaccination-portal/
 |-- LICENSE
 |-- .gitignore
 |-- .editorconfig
-|-- docker-compose.yml
+|-- compose.yaml
 |
 |-- .github/
 |   |-- ISSUE_TEMPLATE/
@@ -30,8 +29,9 @@ se2030-2026-y2-s1-mtr-01-vaccination-portal/
 |
 |-- docs/
 |   |-- Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md
-|   |-- Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx
 |   |-- Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md
+|   |-- MF02_Completion_and_Hardening_Plan.md
+|   |-- DOCUMENTATION_RELEASE_MANIFEST.md
 |   |-- handoffs/
 |   |   |-- MF01_Pre_Vaccination_Screening_and_Eligibility_Rule_Management_AI_Handoff.md
 |   |   |-- MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff.md
@@ -39,7 +39,7 @@ se2030-2026-y2-s1-mtr-01-vaccination-portal/
 |   |   |-- MF04_Vaccine_Inventory_and_Batch_Management_AI_Handoff.md
 |   |   `-- MF05_Vaccination_Administration_Draft_Records_and_Digital_Certificate_Management_AI_Handoff.md
 |   |-- assessment/
-|   |   `-- IT2030.docx
+|   |   `-- README.md                         # assessment index/notes; supplied source material is tracked separately if required
 |   |-- architecture/
 |   |   |-- system-architecture.md
 |   |   |-- frontend-architecture.md
@@ -524,7 +524,7 @@ se2030-2026-y2-s1-mtr-01-vaccination-portal/
 
 1. This document is a **target/reference tree**, not a checklist to pre-create every file.
 2. Inspect the live repository before creating or moving anything.
-3. Read the canonical Markdown and the relevant MF handoff before implementation.
+3. Read the canonical Markdown and the relevant MF handoff before implementation. The canonical Markdown is the sole normative semantic source; no parallel binary canonical artifact is required.
 4. Keep business entities inside the owning module even when other modules reference them.
 5. `VaccineType` is owned by MF-02; MF-04 must not create `Vaccine`, `VaccineType`, `VaccineRepository` or another master lifecycle.
 6. MF-05 backend code uses `administration/`; do not create a competing `vaccination/` backend package.
