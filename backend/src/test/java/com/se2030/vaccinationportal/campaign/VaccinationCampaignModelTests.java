@@ -235,4 +235,50 @@ class VaccinationCampaignModelTests {
                         || name.equals("transitionTo")
                         || name.equals("updateStatus")));
     }
+
+    @Test
+    @DisplayName("schedule transitions campaign from DRAFT to SCHEDULED")
+    void scheduleTransitionsFromDraftToScheduled() {
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                "CMP-SCHED-01",
+                "Scheduling Test Campaign",
+                "Description",
+                sampleVaccineType,
+                sampleTargetGroup,
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 12, 31),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
+                CampaignStatus.DRAFT
+        );
+
+        campaign.schedule();
+        assertEquals(CampaignStatus.SCHEDULED, campaign.getStatus());
+    }
+
+    @Test
+    @DisplayName("schedule rejects transition from non-DRAFT statuses")
+    void scheduleRejectsNonDraftStatuses() {
+        for (CampaignStatus status : CampaignStatus.values()) {
+            if (status == CampaignStatus.DRAFT) {
+                continue;
+            }
+            VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                    "CMP-SCHED-" + status.name(),
+                    "Scheduling Rejection Test",
+                    "Description",
+                    sampleVaccineType,
+                    sampleTargetGroup,
+                    LocalDate.of(2026, 9, 1),
+                    LocalDate.of(2026, 12, 31),
+                    Instant.parse("2026-08-15T08:00:00Z"),
+                    Instant.parse("2026-12-30T18:00:00Z"),
+                    status
+            );
+
+            IllegalStateException ex = assertThrows(IllegalStateException.class, campaign::schedule);
+            assertTrue(ex.getMessage().contains("Cannot schedule campaign in " + status));
+            assertTrue(ex.getMessage().contains("Only DRAFT campaigns can be scheduled"));
+        }
+    }
 }
