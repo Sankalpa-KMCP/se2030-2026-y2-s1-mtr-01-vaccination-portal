@@ -238,6 +238,19 @@ public class VaccinationCampaign {
     }
 
     /**
+     * Transitions campaign status to SCHEDULED.
+     * Allowed only from DRAFT status.
+     */
+    public void schedule() {
+        if (this.status != CampaignStatus.DRAFT) {
+            throw new IllegalStateException(
+                    "Cannot schedule campaign in " + this.status + " status. Only DRAFT campaigns can be scheduled."
+            );
+        }
+        this.status = CampaignStatus.SCHEDULED;
+    }
+
+    /**
      * Transitions campaign status to PUBLISHED.
      * Allowed only from DRAFT or SCHEDULED status.
      */

@@ -1,15 +1,20 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
+import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignmentStatus;
 import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
 import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleChangeType;
 import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleEvent;
 import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
+import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
@@ -48,6 +53,7 @@ public class VaccinationCampaignService {
     private final VaccinationSessionRepository sessionRepository;
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository;
+    private final CampaignCenterAssignmentRepository centerAssignmentRepository;
     private final QuestionnaireVersionPublicationPort publicationPort;
     private final Clock clock;
     @PersistenceContext private EntityManager entityManager;
@@ -58,6 +64,7 @@ public class VaccinationCampaignService {
             VaccinationSessionRepository sessionRepository,
             CampaignDoseProgrammeRepository doseProgrammeRepository,
             CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository,
+            CampaignCenterAssignmentRepository centerAssignmentRepository,
             @Autowired(required = false) QuestionnaireVersionPublicationPort publicationPort,
             Clock clock
     ) {
@@ -66,8 +73,110 @@ public class VaccinationCampaignService {
         this.sessionRepository = sessionRepository;
         this.doseProgrammeRepository = doseProgrammeRepository;
         this.questionnaireAssignmentRepository = questionnaireAssignmentRepository;
+        this.centerAssignmentRepository = centerAssignmentRepository;
         this.publicationPort = publicationPort;
         this.clock = clock;
+    }
+
+    /**
+     * Approves and schedules a future VaccinationCampaign (transitions status to SCHEDULED).
+     * Enforces all scheduling prerequisites under the campaign pessimistic write lock:
+     * 1. Lock campaign row with findByIdForUpdate.
+     * 2. Refresh authoritative state via entityManager.refresh.
+     * 3. Allowed status source: DRAFT -> SCHEDULED only.
+     * 4. Valid campaign date and booking window invariants (validateDateConsistency).
+     * 5. Strictly future service start date: serviceStartDate > LocalDate.now(clock).
+     * 6. Require active VaccineType.
+     * 7. Require active TargetGroup (description check is publication-only, not required here).
+     * 8. Require exactly one effective CampaignDoseProgramme at serviceStartDate.
+     * 9. Require exactly one effective CampaignQuestionnaireAssignment at serviceStartDate.
+     * 10. Require at least one relevant overlapping ACTIVE CampaignCenterAssignment whose center is in ACTIVE status.
+     *
+     * Note: OperatingHours, CenterClosure, and QuestionnaireVersion publication in MF-01 are NOT scheduling prerequisites.
+     *
+     * @param campaignId ID of the VaccinationCampaign to schedule
+     * @return Saved VaccinationCampaign in SCHEDULED status
+     */
+    public VaccinationCampaign scheduleCampaign(Long campaignId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        if (campaign.getStatus() != CampaignStatus.DRAFT) {
+            throw new IllegalStateException("Cannot schedule campaign in " + campaign.getStatus() + " status. Only DRAFT campaigns can be scheduled.");
+        }
+
+        // Validate date & booking window invariants
+        campaign.validateDateConsistency();
+
+        // Validate strictly future service start date against clock
+        LocalDate today = LocalDate.now(clock);
+        LocalDate serviceStartDate = campaign.getServiceStartDate();
+        if (serviceStartDate == null || !serviceStartDate.isAfter(today)) {
+            throw new IllegalStateException(
+                    "Campaign service start date (" + serviceStartDate + ") must be strictly in the future for scheduling approval [current date: " + today + "]"
+            );
+        }
+
+        // Require active VaccineType
+        VaccineType vaccineType = campaign.getVaccineType();
+        if (vaccineType == null || !vaccineType.isActive()) {
+            throw new IllegalStateException("Campaign requires an active VaccineType for scheduling approval");
+        }
+
+        // Require active TargetGroup
+        TargetGroup targetGroup = campaign.getTargetGroup();
+        if (targetGroup == null || !targetGroup.isActive()) {
+            throw new IllegalStateException("Campaign requires an active TargetGroup for scheduling approval");
+        }
+
+        // Require exactly one effective CampaignDoseProgramme at serviceStartDate
+        List<CampaignDoseProgramme> effectiveProgrammes = doseProgrammeRepository.findEffectiveProgrammesForDateList(campaignId, serviceStartDate);
+        if (effectiveProgrammes.isEmpty()) {
+            throw new IllegalStateException("Campaign requires exactly one effective dose programme for scheduling approval; found 0");
+        }
+        if (effectiveProgrammes.size() > 1) {
+            throw new IllegalStateException("Campaign requires exactly one effective dose programme for scheduling approval; found " + effectiveProgrammes.size());
+        }
+
+        // Require exactly one effective CampaignQuestionnaireAssignment at serviceStartDate
+        List<CampaignQuestionnaireAssignment> effectiveAssignments = questionnaireAssignmentRepository.findEffectiveAssignmentsAtList(campaignId, serviceStartDate);
+        if (effectiveAssignments.isEmpty()) {
+            throw new IllegalStateException("Campaign requires exactly one effective questionnaire assignment for scheduling approval; found 0");
+        }
+        if (effectiveAssignments.size() > 1) {
+            throw new IllegalStateException("Campaign requires exactly one effective questionnaire assignment for scheduling approval; found " + effectiveAssignments.size());
+        }
+
+        // Require relevant overlapping ACTIVE center assignments and active centers
+        LocalDate serviceEndDate = campaign.getServiceEndDate();
+        List<CampaignCenterAssignment> allAssignments = centerAssignmentRepository.findCampaignHistory(campaignId);
+        List<CampaignCenterAssignment> relevantAssignments = allAssignments.stream()
+                .filter(a -> a.getStatus() == CampaignCenterAssignmentStatus.ACTIVE)
+                .filter(a -> !a.getActiveFrom().isAfter(serviceEndDate)
+                        && (a.getActiveTo() == null || a.getActiveTo().isAfter(serviceStartDate)))
+                .toList();
+
+        if (relevantAssignments.isEmpty()) {
+            throw new IllegalStateException("Campaign requires at least one active center assignment overlapping its service period for scheduling approval; found 0");
+        }
+
+        for (CampaignCenterAssignment assignment : relevantAssignments) {
+            VaccinationCenter center = assignment.getCenter();
+            if (center == null || center.getCenterStatus() != CenterStatus.ACTIVE) {
+                throw new IllegalStateException("Campaign center assignment " + assignment.getId() + " references an INACTIVE center: " + (center != null ? center.getCode() : "null"));
+            }
+        }
+
+        campaign.schedule();
+        return campaignRepository.save(campaign);
     }
 
     /**
