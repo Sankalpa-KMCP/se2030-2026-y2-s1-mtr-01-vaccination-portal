@@ -152,12 +152,10 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
         Future<?> tx1 = executor.submit(() -> {
             transactionTemplate.executeWithoutResult(status -> {
                 try {
-                    startLatch.await();
+                    assertTrue(startLatch.await(5, TimeUnit.SECONDS), "startLatch timed out in Thread 1");
                     // Lock campaign first
                     VaccinationCampaign c = campaignRepository.findByIdForUpdate(campaignId).orElseThrow();
                     lockAcquiredLatch.countDown();
-                    // Hold lock briefly to simulate processing
-                    Thread.sleep(300);
                     campaignService.updateServiceDates(campaignId, LocalDate.of(2026, 6, 15), end);
                     shortenSuccess.set(true);
                 } catch (Exception ex) {
@@ -169,9 +167,9 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
         // Thread 2: Creates a session on 2026-06-05 (which falls outside proposed shortened date 2026-06-15)
         Future<?> tx2 = executor.submit(() -> {
             try {
-                startLatch.await();
-                // Wait until Thread 1 has acquired campaign lock or started
-                lockAcquiredLatch.await();
+                assertTrue(startLatch.await(5, TimeUnit.SECONDS), "startLatch timed out in Thread 2");
+                // Wait until Thread 1 has acquired campaign lock
+                assertTrue(lockAcquiredLatch.await(5, TimeUnit.SECONDS), "lockAcquiredLatch timed out in Thread 2");
                 transactionTemplate.executeWithoutResult(status -> {
                     Instant sessionStart = Instant.parse("2026-06-05T09:00:00Z");
                     Instant sessionEnd = Instant.parse("2026-06-05T12:00:00Z");
@@ -181,7 +179,6 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
                     s.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
                     sessionRepository.saveAndFlush(s);
                     createSuccess.set(true);
-
                 });
             } catch (Exception ex) {
                 // Exception if Thread 1 finished first and shortened campaign start to 2026-06-15
