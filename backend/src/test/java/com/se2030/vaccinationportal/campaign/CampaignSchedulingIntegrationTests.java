@@ -95,6 +95,7 @@ class CampaignSchedulingIntegrationTests {
     @BeforeEach
     void setUp() {
         testPort = (TestQuestionnairePublicationPort) publicationPort;
+        testPort.publishVersion(501L);
 
         activeVaccineType = vaccineTypeRepository.findByCode("VAX-SCHED-01")
                 .orElseGet(() -> vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-SCHED-01", "Sched Active Vaccine", "dose", true)));
@@ -149,6 +150,9 @@ class CampaignSchedulingIntegrationTests {
     }
 
     private void addQuestionnaireAssignment(VaccinationCampaign campaign, Long versionId, LocalDate activeFrom, LocalDate activeTo) {
+        if (versionId != null) {
+            testPort.publishVersion(versionId);
+        }
         questionnaireAssignmentRepository.saveAndFlush(new CampaignQuestionnaireAssignment(
                 campaign, versionId, activeFrom, activeTo
         ));
@@ -335,8 +339,8 @@ class CampaignSchedulingIntegrationTests {
     }
 
     @Test
-    @DisplayName("QuestionnaireVersion PUBLISHED status is NOT required for scheduling; publishCampaign still requires it")
-    void unpublishedQuestionnaireVersionAllowsSchedulingButBlocksPublishing() {
+    @DisplayName("scheduleCampaign rejects when assigned QuestionnaireVersion is NOT published in MF-01")
+    void unpublishedQuestionnaireVersionRejectsScheduling() {
         LocalDate today = LocalDate.now(clock);
         LocalDate start = today.plusDays(7);
         LocalDate end = start.plusDays(30);
@@ -350,20 +354,20 @@ class CampaignSchedulingIntegrationTests {
         testPort.unpublishVersion(999L);
         assertFalse(publicationPort.isPublished(999L));
 
-        // 1. Scheduling succeeds
+        // 1. Scheduling fails deterministically
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                campaignService.scheduleCampaign(campaign.getId())
+        );
+        assertTrue(ex.getMessage().contains("is not in PUBLISHED status in MF-01"));
+
+        // 2. Campaign remains in DRAFT status
+        VaccinationCampaign unchanged = campaignRepository.findById(campaign.getId()).orElseThrow();
+        assertEquals(CampaignStatus.DRAFT, unchanged.getStatus());
+
+        // 3. Once published in MF-01, scheduling succeeds
+        testPort.publishVersion(999L);
         VaccinationCampaign scheduled = campaignService.scheduleCampaign(campaign.getId());
         assertEquals(CampaignStatus.SCHEDULED, scheduled.getStatus());
-
-        // 2. Publication fails
-        IllegalStateException pubEx = assertThrows(IllegalStateException.class, () ->
-                campaignService.publishCampaign(campaign.getId())
-        );
-        assertTrue(pubEx.getMessage().contains("is not in PUBLISHED status in MF-01"));
-
-        // 3. Once published in MF-01, publication succeeds
-        testPort.publishVersion(999L);
-        VaccinationCampaign published = campaignService.publishCampaign(campaign.getId());
-        assertEquals(CampaignStatus.PUBLISHED, published.getStatus());
     }
 
     @Test

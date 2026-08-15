@@ -155,6 +155,25 @@ public class VaccinationCampaignService {
             throw new IllegalStateException("Campaign requires exactly one effective questionnaire assignment for scheduling approval; found " + effectiveAssignments.size());
         }
 
+        // Require assigned QuestionnaireVersion to be PUBLISHED in MF-01
+        CampaignQuestionnaireAssignment questionnaireAssignment = effectiveAssignments.get(0);
+        Long questionnaireVersionId = questionnaireAssignment.getQuestionnaireVersionId();
+        if (questionnaireVersionId == null) {
+            throw new IllegalStateException("Assigned questionnaire version ID is required");
+        }
+
+        if (publicationPort == null) {
+            throw new IllegalStateException(
+                    "QuestionnaireVersionPublicationPort implementation is not registered. MF-01 integration pending."
+            );
+        }
+
+        if (!publicationPort.isPublished(questionnaireVersionId)) {
+            throw new IllegalStateException(
+                    "Assigned questionnaire version " + questionnaireVersionId + " is not in PUBLISHED status in MF-01"
+            );
+        }
+
         // Require relevant overlapping ACTIVE center assignments and active centers
         LocalDate serviceEndDate = campaign.getServiceEndDate();
         List<CampaignCenterAssignment> allAssignments = centerAssignmentRepository.findCampaignHistory(campaignId);

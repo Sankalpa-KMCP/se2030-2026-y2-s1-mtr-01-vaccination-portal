@@ -32,11 +32,15 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.se2030.vaccinationportal.campaign.service.QuestionnaireVersionPublicationPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,6 +48,15 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @ActiveProfiles("test")
 class CampaignSchedulingConcurrencyIntegrationTests {
+
+    @TestConfiguration
+    static class ConcurrencySchedulingTestConfig {
+        @Bean
+        @Primary
+        public QuestionnaireVersionPublicationPort testPublicationPort() {
+            return versionId -> versionId != null && versionId > 0;
+        }
+    }
 
     @Autowired private VaccinationCampaignService campaignService;
     @Autowired private VaccinationCampaignRepository campaignRepository;
