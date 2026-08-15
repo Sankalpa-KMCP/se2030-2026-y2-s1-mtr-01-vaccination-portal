@@ -264,6 +264,19 @@ public class VaccinationCampaign {
     }
 
     /**
+     * Transitions campaign status to ACTIVE.
+     * Allowed only from PUBLISHED status.
+     */
+    public void activate() {
+        if (this.status != CampaignStatus.PUBLISHED) {
+            throw new IllegalStateException(
+                    "Cannot activate campaign in " + this.status + " status. Only PUBLISHED campaigns can be activated."
+            );
+        }
+        this.status = CampaignStatus.ACTIVE;
+    }
+
+    /**
      * Transitions campaign status to SUSPENDED.
      * Allowed only from PUBLISHED or ACTIVE status.
      */

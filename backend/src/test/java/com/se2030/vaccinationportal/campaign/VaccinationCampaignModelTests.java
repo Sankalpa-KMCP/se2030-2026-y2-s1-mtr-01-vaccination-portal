@@ -281,4 +281,50 @@ class VaccinationCampaignModelTests {
             assertTrue(ex.getMessage().contains("Only DRAFT campaigns can be scheduled"));
         }
     }
+
+    @Test
+    @DisplayName("activate transitions campaign from PUBLISHED to ACTIVE")
+    void activateTransitionsFromPublishedToActive() {
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                "CMP-ACT-01",
+                "Activation Test Campaign",
+                "Description",
+                sampleVaccineType,
+                sampleTargetGroup,
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 12, 31),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
+                CampaignStatus.PUBLISHED
+        );
+
+        campaign.activate();
+        assertEquals(CampaignStatus.ACTIVE, campaign.getStatus());
+    }
+
+    @Test
+    @DisplayName("activate rejects transition from non-PUBLISHED statuses")
+    void activateRejectsNonPublishedStatuses() {
+        for (CampaignStatus status : CampaignStatus.values()) {
+            if (status == CampaignStatus.PUBLISHED) {
+                continue;
+            }
+            VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                    "CMP-ACT-" + status.name(),
+                    "Activation Rejection Test",
+                    "Description",
+                    sampleVaccineType,
+                    sampleTargetGroup,
+                    LocalDate.of(2026, 9, 1),
+                    LocalDate.of(2026, 12, 31),
+                    Instant.parse("2026-08-15T08:00:00Z"),
+                    Instant.parse("2026-12-30T18:00:00Z"),
+                    status
+            );
+
+            IllegalStateException ex = assertThrows(IllegalStateException.class, campaign::activate);
+            assertTrue(ex.getMessage().contains("Cannot activate campaign in " + status));
+            assertTrue(ex.getMessage().contains("Only PUBLISHED campaigns can be activated"));
+        }
+    }
 }

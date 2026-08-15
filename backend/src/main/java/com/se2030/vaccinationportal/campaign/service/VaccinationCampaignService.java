@@ -302,6 +302,60 @@ public class VaccinationCampaignService {
     }
 
     /**
+     * Activates a PUBLISHED VaccinationCampaign (transitions status to ACTIVE).
+     * Enforces all activation prerequisites under the campaign pessimistic write lock:
+     * 1. Lock campaign row with findByIdForUpdate.
+     * 2. Refresh authoritative state via entityManager.refresh.
+     * 3. Allowed status source: PUBLISHED -> ACTIVE only.
+     * 4. Verify current application date (derived from Clock) satisfies:
+     *    serviceStartDate <= today <= serviceEndDate.
+     *
+     * @param campaignId ID of the VaccinationCampaign to activate
+     * @return Saved VaccinationCampaign in ACTIVE status
+     */
+    public VaccinationCampaign activateCampaign(Long campaignId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        if (campaign.getStatus() != CampaignStatus.PUBLISHED) {
+            throw new IllegalStateException(
+                    "Cannot activate campaign in " + campaign.getStatus() + " status. Only PUBLISHED campaigns can be activated."
+            );
+        }
+
+        LocalDate today = LocalDate.now(clock);
+        LocalDate serviceStartDate = campaign.getServiceStartDate();
+        LocalDate serviceEndDate = campaign.getServiceEndDate();
+
+        if (serviceStartDate == null || serviceEndDate == null) {
+            throw new IllegalStateException("Campaign service start and end dates are required for activation");
+        }
+
+        if (today.isBefore(serviceStartDate)) {
+            throw new IllegalStateException(
+                    "Campaign service start date (" + serviceStartDate + ") has not been reached [current date: " + today + "]"
+            );
+        }
+
+        if (today.isAfter(serviceEndDate)) {
+            throw new IllegalStateException(
+                    "Campaign service end date (" + serviceEndDate + ") has already passed [current date: " + today + "]"
+            );
+        }
+
+        campaign.activate();
+        return campaignRepository.save(campaign);
+    }
+
+    /**
      * Suspends a PUBLISHED or ACTIVE campaign and records the impact as an append-only lifecycle event.
      * The campaign status and event are persisted atomically under the campaign pessimistic write lock.
      *
