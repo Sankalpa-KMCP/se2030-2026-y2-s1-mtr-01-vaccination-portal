@@ -327,4 +327,96 @@ class VaccinationCampaignModelTests {
             assertTrue(ex.getMessage().contains("Only PUBLISHED campaigns can be activated"));
         }
     }
+
+    @Test
+    @DisplayName("resumeToPublished transitions campaign from SUSPENDED to PUBLISHED")
+    void resumeToPublishedTransitionsFromSuspendedToPublished() {
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                "CMP-RES-PUB-01",
+                "Resumption to Published Campaign",
+                "Description",
+                sampleVaccineType,
+                sampleTargetGroup,
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 12, 31),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
+                CampaignStatus.SUSPENDED
+        );
+
+        campaign.resumeToPublished();
+        assertEquals(CampaignStatus.PUBLISHED, campaign.getStatus());
+    }
+
+    @Test
+    @DisplayName("resumeToPublished rejects transition from non-SUSPENDED statuses")
+    void resumeToPublishedRejectsNonSuspendedStatuses() {
+        for (CampaignStatus status : CampaignStatus.values()) {
+            if (status == CampaignStatus.SUSPENDED) {
+                continue;
+            }
+            VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                    "CMP-RES-PUB-" + status.name(),
+                    "Resumption Rejection Test",
+                    "Description",
+                    sampleVaccineType,
+                    sampleTargetGroup,
+                    LocalDate.of(2026, 9, 1),
+                    LocalDate.of(2026, 12, 31),
+                    Instant.parse("2026-08-15T08:00:00Z"),
+                    Instant.parse("2026-12-30T18:00:00Z"),
+                    status
+            );
+
+            IllegalStateException ex = assertThrows(IllegalStateException.class, campaign::resumeToPublished);
+            assertTrue(ex.getMessage().contains("Cannot resume campaign in " + status));
+            assertTrue(ex.getMessage().contains("Only SUSPENDED campaigns can be resumed"));
+        }
+    }
+
+    @Test
+    @DisplayName("resumeToActive transitions campaign from SUSPENDED to ACTIVE")
+    void resumeToActiveTransitionsFromSuspendedToActive() {
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                "CMP-RES-ACT-01",
+                "Resumption to Active Campaign",
+                "Description",
+                sampleVaccineType,
+                sampleTargetGroup,
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 12, 31),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-12-30T18:00:00Z"),
+                CampaignStatus.SUSPENDED
+        );
+
+        campaign.resumeToActive();
+        assertEquals(CampaignStatus.ACTIVE, campaign.getStatus());
+    }
+
+    @Test
+    @DisplayName("resumeToActive rejects transition from non-SUSPENDED statuses")
+    void resumeToActiveRejectsNonSuspendedStatuses() {
+        for (CampaignStatus status : CampaignStatus.values()) {
+            if (status == CampaignStatus.SUSPENDED) {
+                continue;
+            }
+            VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                    "CMP-RES-ACT-" + status.name(),
+                    "Resumption Rejection Test",
+                    "Description",
+                    sampleVaccineType,
+                    sampleTargetGroup,
+                    LocalDate.of(2026, 9, 1),
+                    LocalDate.of(2026, 12, 31),
+                    Instant.parse("2026-08-15T08:00:00Z"),
+                    Instant.parse("2026-12-30T18:00:00Z"),
+                    status
+            );
+
+            IllegalStateException ex = assertThrows(IllegalStateException.class, campaign::resumeToActive);
+            assertTrue(ex.getMessage().contains("Cannot resume campaign in " + status));
+            assertTrue(ex.getMessage().contains("Only SUSPENDED campaigns can be resumed"));
+        }
+    }
 }
