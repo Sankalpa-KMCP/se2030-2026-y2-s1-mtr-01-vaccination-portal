@@ -39,6 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -144,6 +145,7 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch lockAcquiredLatch = new CountDownLatch(1);
+        CountDownLatch competingAttemptLatch = new CountDownLatch(1);
 
         AtomicBoolean shortenSuccess = new AtomicBoolean(false);
         AtomicBoolean createSuccess = new AtomicBoolean(false);
@@ -152,12 +154,12 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
         Future<?> tx1 = executor.submit(() -> {
             transactionTemplate.executeWithoutResult(status -> {
                 try {
-                    startLatch.await();
+                    assertTrue(startLatch.await(5, TimeUnit.SECONDS), "startLatch timed out in Thread 1");
                     // Lock campaign first
                     VaccinationCampaign c = campaignRepository.findByIdForUpdate(campaignId).orElseThrow();
                     lockAcquiredLatch.countDown();
-                    // Hold lock briefly to simulate processing
-                    Thread.sleep(300);
+                    // Wait while still holding the pessimistic write lock until Thread 2 has reached its competing attempt
+                    assertTrue(competingAttemptLatch.await(5, TimeUnit.SECONDS), "competingAttemptLatch timed out in Thread 1");
                     campaignService.updateServiceDates(campaignId, LocalDate.of(2026, 6, 15), end);
                     shortenSuccess.set(true);
                 } catch (Exception ex) {
@@ -169,19 +171,20 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
         // Thread 2: Creates a session on 2026-06-05 (which falls outside proposed shortened date 2026-06-15)
         Future<?> tx2 = executor.submit(() -> {
             try {
-                startLatch.await();
-                // Wait until Thread 1 has acquired campaign lock or started
-                lockAcquiredLatch.await();
+                assertTrue(startLatch.await(5, TimeUnit.SECONDS), "startLatch timed out in Thread 2");
+                // Wait until Thread 1 has acquired campaign lock
+                assertTrue(lockAcquiredLatch.await(5, TimeUnit.SECONDS), "lockAcquiredLatch timed out in Thread 2");
                 transactionTemplate.executeWithoutResult(status -> {
                     Instant sessionStart = Instant.parse("2026-06-05T09:00:00Z");
                     Instant sessionEnd = Instant.parse("2026-06-05T12:00:00Z");
+                    // Signal that Thread 2 is immediately entering the competing session creation call
+                    competingAttemptLatch.countDown();
                     VaccinationSession s = sessionService.createOneOffDraftSession(
                             campaignId, center.getId(), sessionStart, sessionEnd, sessionStart.minusSeconds(3600)
                     );
                     s.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
                     sessionRepository.saveAndFlush(s);
                     createSuccess.set(true);
-
                 });
             } catch (Exception ex) {
                 // Exception if Thread 1 finished first and shortened campaign start to 2026-06-15
@@ -193,8 +196,13 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
         tx2.get(5, TimeUnit.SECONDS);
         executor.shutdown();
 
-        // Exactly one of the two concurrent operations must succeed and one must fail
-        assertTrue(shortenSuccess.get() ^ createSuccess.get(),
-                "Exactly one concurrent operation must succeed (shortenSuccess=" + shortenSuccess.get() + ", createSuccess=" + createSuccess.get() + ")");
+        // Enforce deterministic outcome: Thread 1 acquired lock first, so date shortening succeeds and conflicting session creation fails
+        assertTrue(shortenSuccess.get(), "Campaign service date shortening must succeed");
+        assertFalse(createSuccess.get(), "Conflicting session creation outside shortened range must fail");
+
+        // Verify final persisted database state
+        VaccinationCampaign persistedCampaign = campaignRepository.findById(campaignId).orElseThrow();
+        assertEquals(LocalDate.of(2026, 6, 15), persistedCampaign.getServiceStartDate());
+        assertEquals(0, sessionRepository.count(), "No invalid session outside shortened campaign service dates should be persisted");
     }
 }
