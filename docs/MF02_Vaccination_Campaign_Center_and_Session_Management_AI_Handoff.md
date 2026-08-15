@@ -8,14 +8,14 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Last synchronized implementation checkpoint:** PR #71
-**Reviewed PR #71 source:** `422fce3768646310448c3c82efec60c654afa0c7`
-**PR #71 base:** `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
-**PR #71 merge:** `6d52449db4f29099f3a979e824a7efcae8f4ea54`
-**PR #71 merged at:** `2026-08-14T10:27:54Z`
+**Last synchronized implementation checkpoint:** PR #73
+**Reviewed PR #73 source:** `75cd1bb34a0ec6bed32e66387bfa54bca01b4b31`
+**PR #73 base:** `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
+**PR #73 merge:** `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
+**PR #73 merged at:** `2026-08-15T06:30:15Z`
+**Preceding scheduling milestone:** PR #71 (`6d52449db4f29099f3a979e824a7efcae8f4ea54`)
 **Current verified backend baseline:** **591 tests**, 0 failures, 0 errors, 0 skipped; clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
-**Previous verified baseline:** 569 tests.
-**PR #71 net-new executions:** 22.
+**PR #73 net-new executions:** 0 (behavior/assertion hardening within existing 591 suite).
 
 > This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
 
@@ -30,32 +30,40 @@ Use this order when facts conflict:
 5. `PROJECT_CONTEXT.md` — orientation summary only.
 6. `MF02_Completion_and_Hardening_Plan.md` — planned work, not evidence of implementation.
 
-Future agents must fetch live `origin/develop` before treating `6d52449db4f29099f3a979e824a7efcae8f4ea54` as the repository tip.
+Future agents must fetch live `origin/develop` before treating `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9` as the repository tip.
 
 ## 2. Current Milestone
 
 ### Milestone reached
 
-**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS PLUS CAMPAIGN SCHEDULING APPROVAL ARE INTEGRATED.**
+**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, AND QUESTIONNAIRE INVARIANT HARDENING ARE INTEGRATED.**
 
 This does **not** mean MF-02 is complete.
 
-The current checkpoint includes the campaign `DRAFT -> SCHEDULED` approval command introduced by PR #71 on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
+The current checkpoint includes campaign scheduling approval (PR #71) and defensive questionnaire publication invariant revalidation (PR #73) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
 
-### Current verified integration
+### Current verified integrations
 
-PR #71 — `feat(mf02): add campaign scheduling approval`
+1. **PR #73 — `fix(mf02): enforce published questionnaire when scheduling`**
+   - reviewed source: `75cd1bb34a0ec6bed32e66387bfa54bca01b4b31`
+   - merge: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
+   - base: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
+   - merge method: normal merge commit
+   - Backend CI: PASS
+   - Frontend CI: PASS
+   - authoritative backend baseline: **591**
+   - net-new executions: **0** (hardened invariant assertions and aligned fixtures)
 
-- reviewed source: `422fce3768646310448c3c82efec60c654afa0c7`
-- merge: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
-- base: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
-- merge method: normal merge commit
-- candidate preserved without integration-time source changes
-- Backend CI: PASS
-- Frontend CI: PASS
-- authoritative candidate/backend baseline: **591**
-- previous clean baseline: **569**
-- net-new executions: **22**
+2. **PR #71 — `feat(mf02): add campaign scheduling approval`**
+   - reviewed source: `422fce3768646310448c3c82efec60c654afa0c7`
+   - merge: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
+   - base: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
+   - merge method: normal merge commit
+   - Backend CI: PASS
+   - Frontend CI: PASS
+   - authoritative candidate/backend baseline: **591**
+   - previous clean baseline: **569**
+   - net-new executions: **22**
 
 ## 3. Implemented MF-02 Backend Scope
 
@@ -126,9 +134,10 @@ The service:
 8. requires ACTIVE `TargetGroup`;
 9. requires exactly one effective `CampaignDoseProgramme` at `serviceStartDate`;
 10. requires exactly one effective `CampaignQuestionnaireAssignment` at `serviceStartDate`;
-11. requires at least one relevant overlapping ACTIVE `CampaignCenterAssignment`;
-12. requires every relevant overlapping assignment to reference an ACTIVE center;
-13. invokes the domain `schedule()` transition only after all checks pass.
+11. requires the assigned MF-01 `QuestionnaireVersion` to be in `PUBLISHED` status via `QuestionnaireVersionPublicationPort.isPublished(...)` (hardened in PR #73);
+12. requires at least one relevant overlapping ACTIVE `CampaignCenterAssignment`;
+13. requires every relevant overlapping assignment to reference an ACTIVE center;
+14. invokes the domain `schedule()` transition only after all checks pass.
 
 The application `Clock` is `Clock.systemUTC()`, so the current-date comparison is based on the UTC civil date.
 
@@ -142,10 +151,8 @@ For scheduling approval, relevant assignments are ACTIVE assignments whose half-
 - full-period center coverage is not required;
 - OperatingHours and CenterClosure are not campaign-scheduling prerequisites.
 
-### Publication distinction
-The scheduling command does not independently call `QuestionnaireVersionPublicationPort.isPublished(...)`. Existing campaign publication still requires the linked questionnaire version to be published.
-
-See **Section 9.1 Known consistency issue** before extending this behavior.
+### Questionnaire publication invariant (PR #73 hardening)
+Under canonical rule `MF02-BR-02`, a valid questionnaire assignment must reference a published questionnaire version. PR #73 hardened `scheduleCampaign(...)` to defensively revalidate `publicationPort.isPublished(questionnaireVersionId)` under the campaign lock before status mutation, matching `publishCampaign(...)`. If un-published, scheduling fails deterministically with `IllegalStateException` and the campaign remains in `DRAFT`.
 
 ## 5. Locking and Transaction Conventions
 
@@ -237,22 +244,18 @@ Placeholder directories must not be reported as implemented features.
 
 ## 9. Known Issues / Risks to Resolve Before More Lifecycle Growth
 
-### 9.1 Campaign questionnaire-version invariant — PRIORITY
+### 9.1 Campaign questionnaire-version invariant — RESOLVED (PR #73)
 
-Canonical semantics state that MF-02 links a campaign to a **published** questionnaire version. Normal `CampaignQuestionnaireAssignmentService` creation also validates publication through `QuestionnaireVersionPublicationPort`.
+Canonical semantics state that MF-02 links a campaign to a **published** questionnaire version (`MF02-BR-02`). Normal `CampaignQuestionnaireAssignmentService` creation validates publication through `QuestionnaireVersionPublicationPort`.
 
-PR #71's scheduling command deliberately does not repeat the publication-port check, which can be reasonable if it trusts the assignment invariant. However, the test `unpublishedQuestionnaireVersionAllowsSchedulingButBlocksPublishing` constructs an unpublished assignment through test persistence and treats that bypassed state as supported scheduling input.
+Previously in PR #71, scheduling did not re-verify publication status and an integration test fixture directly persisted an unpublished assignment.
 
-This creates a domain-consistency problem between:
-- the normal assignment write invariant; and
-- the special bypassed test state.
-
-Recommended correction:
-- preserve the normal invariant that a valid assignment references a published version;
-- decide whether `scheduleCampaign` should trust that invariant or defensively re-check it;
-- do **not** keep a test that presents an invalid bypassed assignment as an officially supported state unless the canonical rule is intentionally changed.
-
-Do this before adding more campaign lifecycle transitions.
+**Resolution in PR #73:**
+- `VaccinationCampaignService.scheduleCampaign(...)` defensively revalidates `publicationPort.isPublished(questionnaireVersionId)` under the campaign lock before status mutation, matching `publishCampaign(...)`.
+- If un-published, scheduling throws `IllegalStateException` and the campaign remains `DRAFT`.
+- The contradictory test fixture was replaced with `unpublishedQuestionnaireVersionRejectsScheduling` to assert deterministic rejection.
+- Concurrency test fixtures were configured with canonically valid published questionnaire versions.
+- Module boundaries remain intact (MF-01 owns publication status; MF-02 queries `QuestionnaireVersionPublicationPort`).
 
 ### 9.2 Oversized orchestration services
 Large methods/services increase reasoning cost and future regression risk. Refactor in a dedicated behavior-preserving slice.
@@ -335,17 +338,16 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 Do **not** automatically start another lifecycle transition.
 
 Recommended order:
-1. synchronize maintained documentation to PR #71 — represented by this release package;
-2. reconcile the questionnaire-version invariant/test;
-3. perform bounded service decomposition for the two oversized orchestration services;
-4. strengthen concurrency assurance (remove fixed sleep; add focused MySQL Testcontainers);
-5. finish remaining campaign lifecycle transitions;
-6. complete MF-01/MF-03 production adapters and outbox boundary;
-7. add API/DTO/OpenAPI;
-8. add security/RBAC;
-9. add Flyway migrations;
-10. implement MF-02 frontend and frontend tests;
-11. final end-to-end / Definition-of-Done evidence.
+1. synchronize maintained documentation to PR #73 — represented by this step;
+2. perform bounded service decomposition for the two oversized orchestration services;
+3. strengthen concurrency assurance (remove fixed sleep; add focused MySQL Testcontainers);
+4. finish remaining campaign lifecycle transitions;
+5. complete MF-01/MF-03 production adapters and outbox boundary;
+6. add API/DTO/OpenAPI;
+7. add security/RBAC;
+8. add Flyway migrations;
+9. implement MF-02 frontend and frontend tests;
+10. final end-to-end / Definition-of-Done evidence.
 
 ## 14. Historical Milestone Summary
 
@@ -380,6 +382,8 @@ This compact chronology replaces stale controller transcripts. Detailed Git hist
 | #69 | SUSPENDED planning freeze |
 | #70 | Documentation synchronization after PR #69 |
 | #71 | Campaign `DRAFT -> SCHEDULED` approval |
+| #72 | Markdown-only canonical authority synchronization |
+| #73 | Campaign questionnaire publication invariant hardening |
 
 Key full merge checkpoints:
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -389,6 +393,8 @@ Key full merge checkpoints:
 - PR #69: `545075aaedda338a2c16e7d97803704b55fef951`
 - PR #70: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
 - PR #71: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
+- PR #72: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
+- PR #73: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
 
 ## 15. Status Discipline
 
