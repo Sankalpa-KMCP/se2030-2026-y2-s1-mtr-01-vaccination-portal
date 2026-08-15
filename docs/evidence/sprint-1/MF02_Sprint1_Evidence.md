@@ -7,15 +7,42 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #75
-**Latest verified implementation merge:** `cc13082ad94701475b69bc53b699d897486ff7fc`
+**Evidence synchronized through implementation:** PR #78
+**Latest verified implementation merge:** `20520c03bdd53329a7fe647a7355beed58ed552e`
 **Last updated:** 2026-08-15
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #75 — `refactor(mf02): extract series preview calculator`
+### PR #78 — `test(mf02): harden reverse-impact concurrency determinism`
+
+- reviewed source: `2e43665ff0b88027fd82b3577bf73d8357a1ba46`
+- base: `6b8bf9c765aaa577b6c29521539e42acb29f70f9`
+- merge: `20520c03bdd53329a7fe647a7355beed58ed552e`
+- merged at: `2026-08-15T15:51:34Z`
+- merge method: normal merge commit
+- reviewed candidate preserved: YES
+- Backend CI: PASS
+- Frontend CI: PASS
+- clean Maven test: PASS
+- clean Maven verify: PASS
+- total tests: **599**
+- failures: 0
+- errors: 0
+- skipped: 0
+- Surefire XML reports: 67
+- Surefire-summed executions: **599**
+- previous clean baseline: **599** (from PR #75)
+- net-new executions: **+0** (concurrency test determinism hardening of existing test method)
+- target test: PASS (`CampaignAssignmentReverseImpactConcurrencyIntegrationTests`)
+- repeated target executions: **20 / 20 PASS** (0 failures, 0 timeouts/hangs)
+- MF-02 concurrency regression: **11 suites / 30 tests PASS**
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`
+- behavior: eliminated the final `Thread.sleep(300)` timing delay in `CampaignAssignmentReverseImpactConcurrencyIntegrationTests` and replaced it with deterministic latch coordination (`startLatch`, `lockAcquiredLatch`, `competingAttemptLatch` with 5s timeout guards). Replaced ambiguous XOR check with explicit winner and database state assertions.
+- note: *Deterministic transaction ordering and serialization are proven; exact JDBC blocking timing is not directly instrumented.*
+
+### Preceding Refactor Milestone: PR #75 — `refactor(mf02): extract series preview calculator`
 
 - reviewed source: `df0852da3be62503be5dc7036cca3039cbc0c3ed`
 - base: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
@@ -79,6 +106,7 @@ The maintained baseline sequence relevant to the latest lifecycle work is:
 | PR #71 campaign scheduling approval | **591** | +22 from PR #69/current pre-PR71 baseline |
 | PR #73 questionnaire invariant hardening | **591** | +0 net-new (assertion hardening & fixture alignment) |
 | PR #75 series preview calculator decomposition | **599** | +8 from PR #73 baseline (source: `SessionSeriesPreviewCalculatorTests`) |
+| PR #78 deterministic concurrency hardening | **599** | +0 net-new (concurrency test determinism hardening) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -229,7 +257,35 @@ PR #75 delivered a behavior-preserving maintainability refactoring of the oversi
 - Maven `test`: PASS, Maven `verify`: PASS (BUILD SUCCESS).
 - Backend CI: PASS, Frontend CI: PASS.
 
-## 8. Concurrency / Transaction Evidence
+## 8. PR #78 — Reverse-Impact Concurrency Determinism Hardening Evidence
+
+### Behavior and Latch Synchronization
+PR #78 eliminated the final `Thread.sleep(300)` timing delay in `CampaignAssignmentReverseImpactConcurrencyIntegrationTests.java` and established deterministic latch coordination:
+- **`startLatch` (count: 1):** Synchronizes worker thread startup across Thread 1 and Thread 2.
+- **`lockAcquiredLatch` (count: 1):** Signaled by Task A (Thread 1) after acquiring the `PESSIMISTIC_WRITE` row lock on the campaign via `campaignRepository.findByIdForUpdate(campaignId)`.
+- **`competingAttemptLatch` (count: 1):** Signaled by Task B (Thread 2) inside its transaction immediately prior to calling `sessionService.createOneOffDraftSession(...)`.
+- **Two-way handshake:** Task A remains inside its open transaction holding the database row lock while awaiting `competingAttemptLatch`.
+- **5-second failure guards:** All latch awaits enforce 5-second failure bounds, eliminating test hangs and deadlocks.
+- **Explicit winner assertions:** Replaced ambiguous XOR outcome check with explicit assertions:
+  - `assertTrue(shortenSuccess.get(), "Campaign service date shortening must succeed");`
+  - `assertFalse(createSuccess.get(), "Conflicting session creation outside shortened range must fail");`
+  - `assertEquals(LocalDate.of(2026, 6, 15), persistedCampaign.getServiceStartDate());`
+  - `assertEquals(0, sessionRepository.count(), "No invalid session outside shortened campaign service dates should be persisted");`
+
+*Note on accepted review interpretation:* Deterministic transaction ordering and serialization are proven; exact JDBC blocking timing is not directly instrumented.
+
+### Test Impact
+- Executable tests: **599** (net-new: 0; hardening of existing test method).
+- Failures: 0, Errors: 0, Skipped: 0.
+- Surefire reports: 67 XML reports.
+- Target test: PASS (`CampaignAssignmentReverseImpactConcurrencyIntegrationTests`).
+- Repeated target runs: **20 / 20 PASS** (0 failures, 0 timeouts/hangs).
+- Concurrency regression: **11 suites / 30 tests PASS** (100%).
+- Maven `test`: PASS, Maven `verify`: PASS (BUILD SUCCESS).
+- Backend CI: PASS, Frontend CI: PASS.
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+## 9. Concurrency / Transaction Evidence
 
 Current high-risk workflows use transactional boundaries and explicit pessimistic locking where needed.
 
@@ -247,7 +303,7 @@ Separate-transaction concurrency regression tests exist for real race conditions
 ### Limitation
 Most integration/concurrency evidence runs on H2 in MySQL compatibility mode. This is structural regression evidence, not production MySQL certification. A focused MySQL Testcontainers suite remains required for production-grade confidence.
 
-## 9. Historical Milestone Chronology
+## 10. Historical Milestone Chronology
 
 This table preserves the engineering sequence without retaining stale controller transcripts.
 
@@ -288,6 +344,9 @@ This table preserves the engineering sequence without retaining stale controller
 | #73 | Campaign questionnaire publication invariant hardening |
 | #74 | Evidence synchronization after PR #73 |
 | #75 | Series preview calculator decomposition refactor |
+| #76 | Screening module (MF-01) foundation (inter-module production publication-port provider) |
+| #77 | Evidence synchronization after PR #75 |
+| #78 | Deterministic reverse-impact concurrency test hardening |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -304,30 +363,36 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #73: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
 - PR #74: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
 - PR #75: `cc13082ad94701475b69bc53b699d897486ff7fc`
+- PR #76: `56493de3f03b2909403d1fb9ff7dbfec4ad07618`
+- PR #77: `6b8bf9c765aaa577b6c29521539e42acb29f70f9`
+- PR #78: `20520c03bdd53329a7fe647a7355beed58ed552e`
 
-## 10. Carried-Forward Findings / Risks
+## 11. Carried-Forward Findings / Risks
 
 ### Domain consistency — RESOLVED (PR #73)
 Normal questionnaire assignment creation requires a published version, and PR #73 defensively hardened `scheduleCampaign(...)` to revalidate published status through `QuestionnaireVersionPublicationPort`, replacing the bypassed fixture with an active rejection test.
 
 ### Maintainability — PARTIALLY RESOLVED (PR #75)
 - `SessionSeriesChangeService` was successfully decomposed via PR #75, reducing its size from ~1,104 lines to ~694 lines.
-- `VaccinationSessionService` remains ~809 lines and is a candidate for future maintainability review.
+- `VaccinationSessionService` remains ~809 lines and is a candidate for future maintainability review if justified.
 
 ### Optional critical ports
-Production-facing adapters for questionnaire publication and MF-03 session impact are still optional-injection boundaries in the current code. Production configuration should ultimately fail fast when required adapters are absent.
+Production-facing adapters for questionnaire publication (provided by MF-01 `QuestionnaireVersionService` in PR #76) and MF-03 session impact are still optional-injection boundaries in the current code. Production configuration should ultimately fail fast when required adapters are absent.
 
-### Concurrency test quality
-At least one existing concurrency regression still uses `Thread.sleep(300)` and should be rewritten with deterministic synchronization.
+### Concurrency test quality — RESOLVED (PR #78)
+PR #78 eliminated the remaining `Thread.sleep(300)` timing delay from `CampaignAssignmentReverseImpactConcurrencyIntegrationTests.java` and established deterministic latch coordination with explicit winner/state assertions. Zero `Thread.sleep` calls remain across the backend test suite.
+
+### MySQL Testcontainers concurrency assurance — OPEN
+Current tests run on H2 in MySQL compatibility mode. Adding a small, focused MySQL Testcontainers suite for the highest-risk lock/idempotency paths remains an open assurance goal.
 
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
 
-## 11. Remaining Sprint / Function Work
+## 12. Remaining Sprint / Function Work
 
 Still not complete:
-- evaluation/decomposition of `VaccinationSessionService` maintainability
-- remaining campaign lifecycle transitions: ACTIVE, resume, completion, campaign cancellation, archival
+- design and implementation of remaining campaign lifecycle transitions: ACTIVE, resume, completion, campaign cancellation, archival
+- evaluation/decomposition of `VaccinationSessionService` maintainability only if justified
 - archival retention value (`USER_DATA_REQUIRED`)
 - DRAFT parent-campaign / child-session scheduling policy
 - MF-01 production adapter/FK
@@ -343,7 +408,7 @@ Still not complete:
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
 
-## 12. Sprint Status
+## 13. Sprint Status
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**

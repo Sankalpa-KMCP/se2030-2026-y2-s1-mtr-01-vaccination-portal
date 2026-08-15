@@ -8,14 +8,16 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Last synchronized implementation checkpoint:** PR #75
-**Reviewed PR #75 source:** `df0852da3be62503be5dc7036cca3039cbc0c3ed`
-**PR #75 base:** `b8289635054a6f15d8c611e18e86a0e7a0a64687`
-**PR #75 merge:** `cc13082ad94701475b69bc53b699d897486ff7fc`
+**Last synchronized implementation checkpoint:** PR #78
+**Reviewed PR #78 source:** `2e43665ff0b88027fd82b3577bf73d8357a1ba46`
+**PR #78 base:** `6b8bf9c765aaa577b6c29521539e42acb29f70f9`
+**PR #78 merge:** `20520c03bdd53329a7fe647a7355beed58ed552e`
+**Preceding refactor milestone:** PR #75 (`cc13082ad94701475b69bc53b699d897486ff7fc`)
 **Preceding hardening milestone:** PR #73 (`d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`)
 **Preceding scheduling milestone:** PR #71 (`6d52449db4f29099f3a979e824a7efcae8f4ea54`)
 **Current verified backend baseline:** **599 tests**, 0 failures, 0 errors, 0 skipped; clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
-**PR #75 net-new executions:** +8 (from `SessionSeriesPreviewCalculatorTests`).
+**PR #78 net-new executions:** +0 (test determinism hardening of existing test method).
+**Thread.sleep in tests:** 0 occurrences across `backend/src/test`.
 
 > This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
 
@@ -30,21 +32,34 @@ Use this order when facts conflict:
 5. `PROJECT_CONTEXT.md` — orientation summary only.
 6. `MF02_Completion_and_Hardening_Plan.md` — planned work, not evidence of implementation.
 
-Future agents must fetch live `origin/develop` before treating `cc13082ad94701475b69bc53b699d897486ff7fc` as the repository tip.
+Future agents must fetch live `origin/develop` before treating `20520c03bdd53329a7fe647a7355beed58ed552e` as the repository tip.
 
 ## 2. Current Milestone
 
 ### Milestone reached
 
-**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, QUESTIONNAIRE INVARIANT HARDENING, AND FIRST ORCHESTRATION SERVICE DECOMPOSITION ARE INTEGRATED.**
+**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, QUESTIONNAIRE INVARIANT HARDENING, FIRST ORCHESTRATION SERVICE DECOMPOSITION, AND DETERMINISTIC CONCURRENCY-TEST HARDENING ARE INTEGRATED.**
 
 This does **not** mean MF-02 is complete.
 
-The current checkpoint includes campaign scheduling approval (PR #71), defensive questionnaire publication invariant revalidation (PR #73), and the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
+The current checkpoint includes campaign scheduling approval (PR #71), defensive questionnaire publication invariant revalidation (PR #73), the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75), and the deterministic concurrency-test hardening of reverse-impact testing (PR #78) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
 
 ### Current verified integrations
 
-1. **PR #75 — `refactor(mf02): extract series preview calculator`**
+1. **PR #78 — `test(mf02): harden reverse-impact concurrency determinism`**
+   - reviewed source: `2e43665ff0b88027fd82b3577bf73d8357a1ba46`
+   - merge: `20520c03bdd53329a7fe647a7355beed58ed552e`
+   - base: `6b8bf9c765aaa577b6c29521539e42acb29f70f9`
+   - merge method: normal merge commit
+   - Backend CI: PASS
+   - Frontend CI: PASS
+   - authoritative backend baseline: **599**
+   - net-new executions: **+0** (test hardening within existing test method)
+   - behavior: eliminated the final `Thread.sleep(300)` timing delay in `CampaignAssignmentReverseImpactConcurrencyIntegrationTests` and replaced it with deterministic latch coordination (`startLatch`, `lockAcquiredLatch`, `competingAttemptLatch` with 5s timeout guards). Replaced ambiguous XOR check with explicit winner and database state assertions.
+   - note: *Deterministic transaction ordering and serialization are proven; exact JDBC blocking timing is not directly instrumented.*
+   - Thread.sleep occurrences under `backend/src/test`: **0**
+
+2. **PR #75 — `refactor(mf02): extract series preview calculator`**
    - reviewed source: `df0852da3be62503be5dc7036cca3039cbc0c3ed`
    - merge: `cc13082ad94701475b69bc53b699d897486ff7fc`
    - base: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
@@ -55,7 +70,7 @@ The current checkpoint includes campaign scheduling approval (PR #71), defensive
    - net-new executions: **+8** (from `SessionSeriesPreviewCalculatorTests`)
    - behavior: behavior-preserving maintainability extraction of recurrence diffing, occurrence classification, DST conversion, and SHA-256 fingerprint token generation from `SessionSeriesChangeService` into `SessionSeriesPreviewCalculator`.
 
-2. **PR #73 — `fix(mf02): enforce published questionnaire when scheduling`**
+3. **PR #73 — `fix(mf02): enforce published questionnaire when scheduling`**
    - reviewed source: `75cd1bb34a0ec6bed32e66387bfa54bca01b4b31`
    - merge: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
    - base: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
@@ -65,7 +80,7 @@ The current checkpoint includes campaign scheduling approval (PR #71), defensive
    - authoritative backend baseline: **591**
    - net-new executions: **0** (hardened invariant assertions and aligned fixtures)
 
-3. **PR #71 — `feat(mf02): add campaign scheduling approval`**
+4. **PR #71 — `feat(mf02): add campaign scheduling approval`**
    - reviewed source: `422fce3768646310448c3c82efec60c654afa0c7`
    - merge: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
    - base: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
@@ -204,6 +219,7 @@ Do not add pessimistic locks merely for style. Add them only for a real invarian
 - PR #71: **591**
 - PR #73: **591**
 - PR #75: **599** (+8 from `SessionSeriesPreviewCalculatorTests`)
+- PR #78: **599** (+0 net-new; test determinism hardening)
 
 Do not resurrect 566 or 575 as authoritative current evidence.
 
@@ -235,7 +251,7 @@ PR #75 successfully performed the first behavior-preserving extraction:
 - `SessionSeriesPreviewCalculator` has 0 JPA repositories, 0 `EntityManager` references, and 0 transaction annotations. It is repository-free and transaction-free, but conditionally calls `SessionImpactReader` on demand to preserve lazy impact evaluation.
 
 Remaining bounded maintainability targets:
-1. Evaluation/focused decomposition of `VaccinationSessionService` (~809 lines)
+1. Evaluation/focused decomposition of `VaccinationSessionService` (~809 lines) if future evidence justifies it
 2. Duplicated preview/impact/fingerprint/event-construction helpers across session services
 
 Refactoring must remain behavior-preserving and separated from new lifecycle implementation.
@@ -256,7 +272,7 @@ The following are not complete in the uploaded repository snapshot:
 - frontend automated tests
 - production MF-03 impact adapter
 - reliable transactional outbox delivery
-- final MF-01 production adapter/FK integration
+- final MF-01 production adapter/FK integration (note: PR #76 introduced the production bean `QuestionnaireVersionService` implementing `QuestionnaireVersionPublicationPort`, providing the publication-port bean)
 
 Placeholder directories must not be reported as implemented features.
 
@@ -277,20 +293,22 @@ Previously in PR #71, scheduling did not re-verify publication status and an int
 
 ### 9.2 Oversized orchestration services — PARTIALLY RESOLVED (PR #75)
 - `SessionSeriesChangeService` was successfully decomposed via PR #75, reducing its size from ~1,104 lines to ~694 lines by extracting `SessionSeriesPreviewCalculator`.
-- `VaccinationSessionService` remains ~809 lines and is a candidate for future maintainability review.
+- `VaccinationSessionService` remains ~809 lines and is a candidate for future maintainability review if justified.
 
 ### 9.3 Optional critical integration ports
 The snapshot uses optional injection for:
-- `QuestionnaireVersionPublicationPort`
-- `SessionImpactReader`
+- `QuestionnaireVersionPublicationPort` (production implementation provided by MF-01 `QuestionnaireVersionService` in PR #76)
+- `SessionImpactReader` (MF-03 port; production adapter still pending)
 
 Development/test flexibility is useful, but production-required integrations should ultimately fail fast through explicit production configuration/adapters.
 
-### 9.4 Timing-based concurrency test
-`CampaignAssignmentReverseImpactConcurrencyIntegrationTests` still contains `Thread.sleep(300)`. Replace this with deterministic synchronization.
+### 9.4 Timing-based concurrency test — RESOLVED (PR #78)
+PR #78 eliminated the remaining `Thread.sleep(300)` timing delay in `CampaignAssignmentReverseImpactConcurrencyIntegrationTests.java` and replaced it with deterministic latch coordination (`startLatch`, `lockAcquiredLatch`, `competingAttemptLatch` with 5s failure timeout guards) and explicit winner/state assertions. Zero `Thread.sleep` calls remain under `backend/src/test`.
 
-### 9.5 H2-only database concurrency assurance
-Keep H2 for fast regression coverage, but add a focused MySQL Testcontainers suite for the highest-risk lock/idempotency paths.
+*Note:* Deterministic transaction ordering and serialization are proven; exact JDBC blocking timing is not directly instrumented.
+
+### 9.5 H2-only database concurrency assurance — OPEN
+While timing sleeps have been eliminated, tests currently run on H2 in MySQL compatibility mode. Adding a focused MySQL Testcontainers suite for the highest-risk lock/idempotency paths remains an open assurance goal.
 
 ### 9.6 Append-only audit limitation
 Lifecycle/change repositories inherit normal repository delete operations. Current append-only behavior is a domain/API convention rather than deletion-proof database enforcement.
@@ -354,14 +372,14 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 
 ## 13. Immediate Engineering Order
 
-Do **not** automatically start another lifecycle transition.
+Do **not** automatically start another lifecycle transition without proper requirements alignment.
 
 Recommended order:
-1. synchronize maintained documentation to PR #75 — represented by this step;
-2. evaluate/decompose `VaccinationSessionService` maintainability;
-3. strengthen concurrency assurance (remove fixed sleep; add focused MySQL Testcontainers);
-4. finish remaining campaign lifecycle transitions;
-5. complete MF-01/MF-03 production adapters and outbox boundary;
+1. synchronize maintained documentation to PR #78 — represented by this step;
+2. design and implement remaining campaign lifecycle transitions (ACTIVE, resume, completion, cancellation);
+3. evaluate/decompose `VaccinationSessionService` maintainability only if justified;
+4. add production-equivalent MySQL Testcontainers concurrency assurance;
+5. complete MF-03 production impact adapter and outbox boundary;
 6. add API/DTO/OpenAPI;
 7. add security/RBAC;
 8. add Flyway migrations;
@@ -405,6 +423,8 @@ This compact chronology replaces stale controller transcripts. Detailed Git hist
 | #73 | Campaign questionnaire publication invariant hardening |
 | #74 | Evidence synchronization after PR #73 |
 | #75 | Series preview calculator decomposition refactor |
+| #77 | Evidence synchronization after PR #75 |
+| #78 | Deterministic reverse-impact concurrency test hardening |
 
 Key full merge checkpoints:
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -418,6 +438,8 @@ Key full merge checkpoints:
 - PR #73: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
 - PR #74: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
 - PR #75: `cc13082ad94701475b69bc53b699d897486ff7fc`
+- PR #77: `6b8bf9c765aaa577b6c29521539e42acb29f70f9`
+- PR #78: `20520c03bdd53329a7fe647a7355beed58ed552e`
 
 ## 15. Status Discipline
 
