@@ -155,6 +155,13 @@ public class CampaignLifecycleEvent {
                     "SUSPENDED lifecycle events require PUBLISHED or ACTIVE as the previous status and SUSPENDED as the new status"
             );
         }
+        if (changeType == CampaignLifecycleChangeType.RESUMED
+                && (previousStatus != CampaignStatus.SUSPENDED
+                || (newStatus != CampaignStatus.PUBLISHED && newStatus != CampaignStatus.ACTIVE))) {
+            throw new IllegalArgumentException(
+                    "RESUMED lifecycle events require SUSPENDED as the previous status and PUBLISHED or ACTIVE as the new status"
+            );
+        }
     }
 
     @PrePersist

@@ -289,6 +289,32 @@ public class VaccinationCampaign {
         this.status = CampaignStatus.SUSPENDED;
     }
 
+    /**
+     * Transitions campaign status to PUBLISHED upon resumption before service start.
+     * Allowed only from SUSPENDED status.
+     */
+    public void resumeToPublished() {
+        if (this.status != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot resume campaign in " + this.status + " status. Only SUSPENDED campaigns can be resumed."
+            );
+        }
+        this.status = CampaignStatus.PUBLISHED;
+    }
+
+    /**
+     * Transitions campaign status to ACTIVE upon resumption during service period.
+     * Allowed only from SUSPENDED status.
+     */
+    public void resumeToActive() {
+        if (this.status != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot resume campaign in " + this.status + " status. Only SUSPENDED campaigns can be resumed."
+            );
+        }
+        this.status = CampaignStatus.ACTIVE;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }

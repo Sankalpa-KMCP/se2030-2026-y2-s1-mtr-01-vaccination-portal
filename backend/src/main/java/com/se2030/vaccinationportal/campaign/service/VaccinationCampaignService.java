@@ -395,6 +395,81 @@ public class VaccinationCampaignService {
         return campaign;
     }
 
+    /**
+     * Resumes a SUSPENDED VaccinationCampaign to a target status derived from the application date.
+     * Date-driven target resolution:
+     * - today < serviceStartDate -> PUBLISHED (Resume before service start)
+     * - serviceStartDate <= today <= serviceEndDate -> ACTIVE (Resume during service period)
+     * - today > serviceEndDate -> throws IllegalStateException (service end date has passed)
+     *
+     * Enforces all resumption prerequisites under the campaign pessimistic write lock:
+     * 1. Validate mandatory reason and actor ID inputs.
+     * 2. Lock campaign row with findByIdForUpdate.
+     * 3. Refresh authoritative state via entityManager.refresh.
+     * 4. Verify authoritative status is SUSPENDED.
+     * 5. Resolve target status based on current date derived from Clock.
+     * 6. Mutate campaign status and record an append-only CampaignLifecycleEvent with changeType RESUMED.
+     *
+     * @param campaignId ID of the VaccinationCampaign to resume
+     * @param reason mandatory operational reason
+     * @param actorId mandatory opaque identifier of the trusted actor
+     * @return managed campaign in PUBLISHED or ACTIVE status
+     */
+    public VaccinationCampaign resumeCampaign(Long campaignId, String reason, String actorId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        String validatedReason = CampaignLifecycleEvent.validateReason(reason);
+        String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        if (campaign.getStatus() != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot resume campaign in " + campaign.getStatus() + " status. Only SUSPENDED campaigns can be resumed."
+            );
+        }
+
+        LocalDate today = LocalDate.now(clock);
+        LocalDate serviceStartDate = campaign.getServiceStartDate();
+        LocalDate serviceEndDate = campaign.getServiceEndDate();
+
+        if (serviceStartDate == null || serviceEndDate == null) {
+            throw new IllegalStateException("Campaign service start and end dates are required for resumption");
+        }
+
+        if (today.isAfter(serviceEndDate)) {
+            throw new IllegalStateException(
+                    "Campaign service end date (" + serviceEndDate + ") has already passed [current date: " + today + "]"
+            );
+        }
+
+        if (today.isBefore(serviceStartDate)) {
+            campaign.resumeToPublished();
+        } else {
+            campaign.resumeToActive();
+        }
+
+        VaccinationCampaign savedCampaign = campaignRepository.save(campaign);
+
+        CampaignLifecycleEvent event = new CampaignLifecycleEvent(
+                savedCampaign,
+                CampaignLifecycleChangeType.RESUMED,
+                CampaignStatus.SUSPENDED,
+                savedCampaign.getStatus(),
+                validatedReason,
+                validatedActorId,
+                clock.instant()
+        );
+        campaignLifecycleEventRepository.save(event);
+
+        return savedCampaign;
+    }
 
     public VaccinationCampaign createCampaign(
             String code,

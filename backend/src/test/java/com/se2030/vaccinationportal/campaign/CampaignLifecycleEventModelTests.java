@@ -114,6 +114,53 @@ class CampaignLifecycleEventModelTests {
     }
 
     @Test
+    void resumedEventAcceptsValidStatusPairs() {
+        assertAll(
+                () -> {
+                    CampaignLifecycleEvent toPublished = new CampaignLifecycleEvent(
+                            campaign, CampaignLifecycleChangeType.RESUMED,
+                            CampaignStatus.SUSPENDED, CampaignStatus.PUBLISHED,
+                            "Hold lifted before service start", "admin-1", CREATED_AT
+                    );
+                    assertEquals(CampaignLifecycleChangeType.RESUMED, toPublished.getChangeType());
+                    assertEquals(CampaignStatus.SUSPENDED, toPublished.getPreviousStatus());
+                    assertEquals(CampaignStatus.PUBLISHED, toPublished.getNewStatus());
+                },
+                () -> {
+                    CampaignLifecycleEvent toActive = new CampaignLifecycleEvent(
+                            campaign, CampaignLifecycleChangeType.RESUMED,
+                            CampaignStatus.SUSPENDED, CampaignStatus.ACTIVE,
+                            "Hold lifted during service period", "admin-1", CREATED_AT
+                    );
+                    assertEquals(CampaignLifecycleChangeType.RESUMED, toActive.getChangeType());
+                    assertEquals(CampaignStatus.SUSPENDED, toActive.getPreviousStatus());
+                    assertEquals(CampaignStatus.ACTIVE, toActive.getNewStatus());
+                }
+        );
+    }
+
+    @Test
+    void resumedEventRejectsInconsistentStatusPairs() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.RESUMED,
+                                CampaignStatus.PUBLISHED, CampaignStatus.ACTIVE, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.RESUMED,
+                                CampaignStatus.ACTIVE, CampaignStatus.PUBLISHED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.RESUMED,
+                                CampaignStatus.SUSPENDED, CampaignStatus.COMPLETED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.RESUMED,
+                                CampaignStatus.SUSPENDED, CampaignStatus.CANCELLED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.RESUMED,
+                                CampaignStatus.DRAFT, CampaignStatus.PUBLISHED, "reason", "actor", CREATED_AT))
+        );
+    }
+
+    @Test
     void eventExposesNoBroadPublicSetters() {
         boolean hasPublicSetter = Arrays.stream(CampaignLifecycleEvent.class.getMethods())
                 .anyMatch(method -> Modifier.isPublic(method.getModifiers()) && method.getName().startsWith("set"));
