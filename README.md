@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-The Web-Based Vaccination Portal supports vaccination-program operations for citizens, healthcare personnel, administrators, and authorized external integrations. The exact scope of the supported operations is defined by the canonical project documents.
+The Web-Based Vaccination Portal supports vaccination-program operations for citizens, healthcare personnel, administrators, and authorized external integrations. The exact scope of the supported operations is defined by the canonical project specification.
 
 ## Five Major Functions
 
@@ -19,15 +19,14 @@ Frontend and backend application foundations initialized. Business modules (MF-0
 ## Canonical Documentation
 
 - [AI Canonical Project Specification](docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md)
-- [Master Project Document](docs/Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx)
 
-The Markdown canonical document is the authoritative AI-readable project source and defines the project baseline, business rules, data model, and technical decisions.
+The Markdown canonical document is the sole authoritative project source of truth (version 3.3-AI, revision 2026-08-14-R9) and defines the project baseline, business rules, data model, and technical decisions.
 
-Contributors must review the canonical documents before making functional or architectural changes.
+Contributors must review the canonical document before making functional or architectural changes.
 
 ## Repository Structure
 
-- `docs/` — Canonical project documents (AI-readable Markdown source of truth and the human-readable master document)
+- `docs/` — Canonical project documentation (AI-readable Markdown source of truth, module handoffs, and sprint evidence)
 - `frontend/` — Frontend application source (React, Vite, Bootstrap 5)
 - `backend/` — Backend application, REST APIs, and integrations (Java 21, Spring Boot, Maven, MySQL)
 - `database/` — Database migrations, seed data, and design diagrams
