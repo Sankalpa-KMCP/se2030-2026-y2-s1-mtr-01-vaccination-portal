@@ -7,15 +7,40 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #78
-**Latest verified implementation merge:** `20520c03bdd53329a7fe647a7355beed58ed552e`
+**Evidence synchronized through implementation:** PR #80
+**Latest verified implementation merge:** `852802ff0d533fdb013c64b4b10de395efd40557`
 **Last updated:** 2026-08-15
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #78 — `test(mf02): harden reverse-impact concurrency determinism`
+### PR #80 — `feat(mf02): add campaign activation lifecycle transition`
+
+- reviewed source: `fdf6f84938326968347cac2c01d3db6ea72938c4`
+- base: `3d21d38777eff40104b46a11773ceeded6d8dece`
+- merge: `852802ff0d533fdb013c64b4b10de395efd40557`
+- merged at: `2026-08-15T18:20:13Z`
+- merge method: normal merge commit
+- reviewed candidate preserved: YES
+- Backend CI: PASS
+- Frontend CI: PASS
+- clean Maven test: PASS
+- clean Maven verify: PASS
+- total tests: **616**
+- failures: 0
+- errors: 0
+- skipped: 0
+- Surefire XML reports: 69
+- Surefire-summed executions: **616**
+- previous clean baseline: **599** (from PR #78 / PR #79)
+- net-new executions: **+17** (+2 `VaccinationCampaignModelTests`, +14 `CampaignActivationIntegrationTests`, +1 `CampaignActivationConcurrencyIntegrationTests`)
+- focused lifecycle regression: **70 / 70 PASS** (0 failures, 0 errors, 0 skipped)
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`
+- behavior: implements canonical `PUBLISHED -> ACTIVE` campaign activation per Canonical R9 Appendix E.5 under campaign pessimistic write lock (`findByIdForUpdate`) and post-lock `entityManager.refresh`. Requires UTC application Clock date to satisfy inclusive service interval `serviceStartDate <= today <= serviceEndDate`. Rejects all non-PUBLISHED statuses and out-of-boundary dates while preserving persisted state. Serializes concurrent activation requests deterministically without predetermining worker winner identity.
+- actor note: *Canonical identifies System or Campaign Officer as authorized actors; enforcement remains an API/security-layer responsibility outside this domain/service implementation.*
+
+### Preceding Test-Hardening Milestone: PR #78 — `test(mf02): harden reverse-impact concurrency determinism`
 
 - reviewed source: `2e43665ff0b88027fd82b3577bf73d8357a1ba46`
 - base: `6b8bf9c765aaa577b6c29521539e42acb29f70f9`
@@ -107,6 +132,7 @@ The maintained baseline sequence relevant to the latest lifecycle work is:
 | PR #73 questionnaire invariant hardening | **591** | +0 net-new (assertion hardening & fixture alignment) |
 | PR #75 series preview calculator decomposition | **599** | +8 from PR #73 baseline (source: `SessionSeriesPreviewCalculatorTests`) |
 | PR #78 deterministic concurrency hardening | **599** | +0 net-new (concurrency test determinism hardening) |
+| PR #80 campaign activation (PUBLISHED -> ACTIVE) | **616** | +17 from PR #78/PR #79 baseline (+2 model, +14 integration, +1 concurrency) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -179,6 +205,7 @@ Implemented and integrated:
 - terminal-state session-planning guard
 - SUSPENDED planning freeze
 - DRAFT -> SCHEDULED approval
+- PUBLISHED -> ACTIVE campaign activation
 
 ## 5. PR #71 — Campaign `DRAFT -> SCHEDULED` Evidence
 
@@ -285,7 +312,27 @@ PR #78 eliminated the final `Thread.sleep(300)` timing delay in `CampaignAssignm
 - Backend CI: PASS, Frontend CI: PASS.
 - Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
 
-## 9. Concurrency / Transaction Evidence
+## 9. PR #80 — Campaign Activation (PUBLISHED -> ACTIVE) Evidence
+
+### Behavior and Contract
+PR #80 implements authoritative campaign activation according to Canonical R9 Appendix E.5:
+- **Domain method:** `VaccinationCampaign.activate()` transitions status from `PUBLISHED` to `ACTIVE`; all other source statuses fail with `IllegalStateException`.
+- **Service method:** `VaccinationCampaignService.activateCampaign(Long campaignId)` acquires campaign pessimistic write lock (`findByIdForUpdate`), refreshes authoritative state (`entityManager.refresh`), validates source status `PUBLISHED`, derives `today` from injected UTC `Clock`, and validates the inclusive service date interval `serviceStartDate <= today <= serviceEndDate`.
+- **State integrity:** Failed activation attempts leave the database state unmutated in `PUBLISHED`.
+- **Concurrency serialization:** Concurrent activation requests are serialized via row locking. Exactly one contender transitions `PUBLISHED -> ACTIVE`, while competing contenders observe `ACTIVE` and fail with `IllegalStateException: Cannot activate campaign in ACTIVE status`. Final persisted status is `ACTIVE`. Winner identity is not predetermined.
+- **Child sessions / dependencies:** Zero child session mutations and zero new cross-module dependencies.
+- **Actor boundary:** *Canonical identifies System or Campaign Officer as authorized actors; enforcement remains an API/security-layer responsibility outside this domain/service implementation.*
+
+### Test Impact
+- Executable tests: **616** (+17 net-new tests: +2 `VaccinationCampaignModelTests`, +14 `CampaignActivationIntegrationTests`, +1 `CampaignActivationConcurrencyIntegrationTests`).
+- Failures: 0, Errors: 0, Skipped: 0.
+- Surefire reports: **69 XML reports** (67 prior + 2 new test classes).
+- Focused lifecycle regression: **70 / 70 PASS** (0 failures, 0 errors, 0 skipped).
+- Maven `test`: PASS, Maven `verify`: PASS (BUILD SUCCESS).
+- Backend CI: PASS, Frontend CI: PASS.
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+## 10. Concurrency / Transaction Evidence
 
 Current high-risk workflows use transactional boundaries and explicit pessimistic locking where needed.
 
@@ -297,13 +344,14 @@ Representative established lock orders:
 - center transfer: Campaign -> Center(min) -> Center(max) -> Session
 - series confirmation: Campaign -> Center -> Rule -> Sessions sorted by ID
 - campaign scheduling: Campaign
+- campaign activation: Campaign
 
 Separate-transaction concurrency regression tests exist for real race conditions.
 
 ### Limitation
 Most integration/concurrency evidence runs on H2 in MySQL compatibility mode. This is structural regression evidence, not production MySQL certification. A focused MySQL Testcontainers suite remains required for production-grade confidence.
 
-## 10. Historical Milestone Chronology
+## 11. Historical Milestone Chronology
 
 This table preserves the engineering sequence without retaining stale controller transcripts.
 
@@ -347,6 +395,8 @@ This table preserves the engineering sequence without retaining stale controller
 | #76 | Screening module (MF-01) foundation (inter-module production publication-port provider) |
 | #77 | Evidence synchronization after PR #75 |
 | #78 | Deterministic reverse-impact concurrency test hardening |
+| #79 | Evidence synchronization after PR #78 |
+| #80 | Campaign `PUBLISHED -> ACTIVE` activation |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -366,8 +416,10 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #76: `56493de3f03b2909403d1fb9ff7dbfec4ad07618`
 - PR #77: `6b8bf9c765aaa577b6c29521539e42acb29f70f9`
 - PR #78: `20520c03bdd53329a7fe647a7355beed58ed552e`
+- PR #79: `3d21d38777eff40104b46a11773ceeded6d8dece`
+- PR #80: `852802ff0d533fdb013c64b4b10de395efd40557`
 
-## 11. Carried-Forward Findings / Risks
+## 12. Carried-Forward Findings / Risks
 
 ### Domain consistency — RESOLVED (PR #73)
 Normal questionnaire assignment creation requires a published version, and PR #73 defensively hardened `scheduleCampaign(...)` to revalidate published status through `QuestionnaireVersionPublicationPort`, replacing the bypassed fixture with an active rejection test.
@@ -388,10 +440,10 @@ Current tests run on H2 in MySQL compatibility mode. Adding a small, focused MyS
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
 
-## 12. Remaining Sprint / Function Work
+## 13. Remaining Sprint / Function Work
 
 Still not complete:
-- design and implementation of remaining campaign lifecycle transitions: ACTIVE, resume, completion, campaign cancellation, archival
+- design and implementation of remaining campaign lifecycle transitions: resumption `SUSPENDED -> PUBLISHED / ACTIVE`, completion, campaign cancellation, archival
 - evaluation/decomposition of `VaccinationSessionService` maintainability only if justified
 - archival retention value (`USER_DATA_REQUIRED`)
 - DRAFT parent-campaign / child-session scheduling policy
@@ -408,7 +460,7 @@ Still not complete:
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
 
-## 13. Sprint Status
+## 14. Sprint Status
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
@@ -417,7 +469,7 @@ Current status remains:
 
 Do not infer completion from the size of the backend test suite.
 
-## 13. Evidence Maintenance Rules
+## 15. Evidence Maintenance Rules
 
 1. Canonical Markdown is the sole semantic authority.
 2. Live Git/code/tests control implementation truth.
