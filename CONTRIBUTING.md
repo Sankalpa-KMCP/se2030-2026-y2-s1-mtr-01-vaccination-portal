@@ -4,7 +4,7 @@ Thank you for contributing to the Web-Based Vaccination Portal.
 
 ## Contribution Principles
 
-- Follow the latest canonical project documents
+- Follow the latest canonical project specification
 - Keep changes limited to the assigned issue
 - Do not combine unrelated features in one pull request
 - Update tests and documentation when relevant
@@ -111,7 +111,7 @@ Pull requests must pass all automated GitHub Actions CI checks (`Frontend CI` an
 
 Resolve conflicts using:
 
-1. Latest canonical project documents
+1. Latest canonical project specification
 2. Approved GitHub issues and architectural decisions
 3. Team discussion
 4. Team-leader coordination when necessary
