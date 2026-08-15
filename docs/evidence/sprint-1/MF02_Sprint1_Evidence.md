@@ -7,20 +7,20 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #71
-**Latest verified implementation merge:** `6d52449db4f29099f3a979e824a7efcae8f4ea54`
-**Last updated:** 2026-08-14
+**Evidence synchronized through implementation:** PR #73
+**Latest verified implementation merge:** `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
+**Last updated:** 2026-08-15
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-PR #71 — `feat(mf02): add campaign scheduling approval`
+### PR #73 — `fix(mf02): enforce published questionnaire when scheduling`
 
-- reviewed source: `422fce3768646310448c3c82efec60c654afa0c7`
-- base: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
-- merge: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
-- merged at: `2026-08-14T10:27:54Z`
+- reviewed source: `75cd1bb34a0ec6bed32e66387bfa54bca01b4b31`
+- base: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
+- merge: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
+- merged at: `2026-08-15T06:30:15Z`
 - merge method: normal merge commit
 - reviewed candidate preserved: YES
 - Backend CI: PASS
@@ -33,8 +33,16 @@ PR #71 — `feat(mf02): add campaign scheduling approval`
 - skipped: 0
 - Surefire XML reports: 66
 - Surefire-summed executions: **591**
-- previous clean baseline: **569**
-- net-new executions: **22**
+- previous clean baseline: **591** (from PR #71)
+- net-new executions: **0** (behavior/assertion hardening within existing 591 suite)
+
+### Preceding Feature Milestone: PR #71 — `feat(mf02): add campaign scheduling approval`
+
+- reviewed source: `422fce3768646310448c3c82efec60c654afa0c7`
+- base: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
+- merge: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
+- merged at: `2026-08-14T10:27:54Z`
+- total tests: **591** (+22 from PR #69 clean baseline of 569)
 
 ## 2. Test-Baseline Reconciliation
 
@@ -47,6 +55,7 @@ The maintained baseline sequence relevant to the latest lifecycle work is:
 | PR #67 terminal planning guard | 560 | clean-build reconciled; earlier 566 reporting superseded |
 | PR #69 SUSPENDED planning freeze | 569 | +9 from clean PR #67 baseline |
 | PR #71 campaign scheduling approval | **591** | +22 from PR #69/current pre-PR71 baseline |
+| PR #73 questionnaire invariant hardening | **591** | +0 net-new (assertion hardening & fixture alignment) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -149,9 +158,7 @@ A campaign can be scheduled only when:
 Non-overlapping assignments do not block. Full-period coverage, OperatingHours, CenterClosure, recurrence rules, and concrete sessions are not prerequisites for campaign scheduling approval.
 
 ### Publication boundary
-The scheduling command does not independently require the linked questionnaire version publication-port check. Existing `publishCampaign(...)` still performs the publication requirement.
-
-A follow-up domain-consistency review is required because normal CampaignQuestionnaireAssignment creation already enforces a published questionnaire version; see the maintained handoff/plan.
+In PR #71, the scheduling command did not independently require the linked questionnaire version publication-port check, relying on assignment creation validation. This was subsequently hardened in PR #73 to defensively revalidate publication status at scheduling time.
 
 ### Tests added
 PR #71 adds 22 executions covering:
@@ -161,14 +168,29 @@ PR #71 adds 22 executions covering:
 - inactive vaccine type / target group
 - missing/ambiguous dose programme
 - missing questionnaire assignment
-- scheduling/publication questionnaire boundary
 - zero/cancelled/non-overlapping center assignments
 - inclusive/half-open overlap behavior
 - inactive/mixed centers
 - non-overlapping inactive center not blocking
 - concurrent scheduling serialization
 
-## 6. Concurrency / Transaction Evidence
+## 6. PR #73 — Campaign Questionnaire Invariant Hardening Evidence
+
+### Invariant and Behavior
+PR #73 defensively enforces the canonical invariant (`MF02-BR-02`, Section 11 Data Model) that an effective `CampaignQuestionnaireAssignment` must reference a `PUBLISHED` MF-01 `QuestionnaireVersion` at the moment `scheduleCampaign(...)` is evaluated.
+
+- Revalidates `QuestionnaireVersionPublicationPort.isPublished(questionnaireVersionId)` under the pessimistic campaign lock before status mutation.
+- Throws `IllegalStateException` on un-published questionnaire versions.
+- Preserves campaign status in `DRAFT` upon validation failure.
+- Aligned `CampaignSchedulingIntegrationTests.unpublishedQuestionnaireVersionRejectsScheduling` to assert deterministic rejection and state preservation.
+- Configured `CampaignSchedulingConcurrencyIntegrationTests` fixture with a valid published questionnaire port.
+
+### Test Impact
+- Executable tests: **591** (net-new: 0; transformed contradictory test into invariant rejection test).
+- Failures: 0, Errors: 0, Skipped: 0.
+- Maven `test`: PASS, Maven `verify`: PASS.
+
+## 7. Concurrency / Transaction Evidence
 
 Current high-risk workflows use transactional boundaries and explicit pessimistic locking where needed.
 
@@ -186,7 +208,7 @@ Separate-transaction concurrency regression tests exist for real race conditions
 ### Limitation
 Most integration/concurrency evidence runs on H2 in MySQL compatibility mode. This is structural regression evidence, not production MySQL certification. A focused MySQL Testcontainers suite remains required for production-grade confidence.
 
-## 7. Historical Milestone Chronology
+## 8. Historical Milestone Chronology
 
 This table preserves the engineering sequence without retaining stale controller transcripts.
 
@@ -223,6 +245,8 @@ This table preserves the engineering sequence without retaining stale controller
 | #69 | SUSPENDED new-planning freeze |
 | #70 | SUSPENDED planning-freeze documentation synchronization |
 | #71 | Campaign DRAFT -> SCHEDULED approval |
+| #72 | Markdown-only canonical authority synchronization |
+| #73 | Campaign questionnaire publication invariant hardening |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -235,11 +259,13 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #69: `545075aaedda338a2c16e7d97803704b55fef951`
 - PR #70: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
 - PR #71: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
+- PR #72: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
+- PR #73: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
 
-## 8. Carried-Forward Findings / Risks
+## 9. Carried-Forward Findings / Risks
 
-### Domain consistency
-Normal questionnaire assignment creation requires a published version, while one PR #71 test models an unpublished assignment through direct persistence and treats it as schedulable. Reconcile this before more lifecycle growth.
+### Domain consistency — RESOLVED (PR #73)
+Normal questionnaire assignment creation requires a published version, and PR #73 defensively hardened `scheduleCampaign(...)` to revalidate published status through `QuestionnaireVersionPublicationPort`, replacing the bypassed fixture with an active rejection test.
 
 ### Maintainability
 Verified current snapshot:
