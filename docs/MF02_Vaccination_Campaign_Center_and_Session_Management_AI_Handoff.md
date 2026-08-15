@@ -8,14 +8,14 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Last synchronized implementation checkpoint:** PR #73
-**Reviewed PR #73 source:** `75cd1bb34a0ec6bed32e66387bfa54bca01b4b31`
-**PR #73 base:** `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
-**PR #73 merge:** `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
-**PR #73 merged at:** `2026-08-15T06:30:15Z`
+**Last synchronized implementation checkpoint:** PR #75
+**Reviewed PR #75 source:** `df0852da3be62503be5dc7036cca3039cbc0c3ed`
+**PR #75 base:** `b8289635054a6f15d8c611e18e86a0e7a0a64687`
+**PR #75 merge:** `cc13082ad94701475b69bc53b699d897486ff7fc`
+**Preceding hardening milestone:** PR #73 (`d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`)
 **Preceding scheduling milestone:** PR #71 (`6d52449db4f29099f3a979e824a7efcae8f4ea54`)
-**Current verified backend baseline:** **591 tests**, 0 failures, 0 errors, 0 skipped; clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
-**PR #73 net-new executions:** 0 (behavior/assertion hardening within existing 591 suite).
+**Current verified backend baseline:** **599 tests**, 0 failures, 0 errors, 0 skipped; clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
+**PR #75 net-new executions:** +8 (from `SessionSeriesPreviewCalculatorTests`).
 
 > This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
 
@@ -30,21 +30,32 @@ Use this order when facts conflict:
 5. `PROJECT_CONTEXT.md` — orientation summary only.
 6. `MF02_Completion_and_Hardening_Plan.md` — planned work, not evidence of implementation.
 
-Future agents must fetch live `origin/develop` before treating `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9` as the repository tip.
+Future agents must fetch live `origin/develop` before treating `cc13082ad94701475b69bc53b699d897486ff7fc` as the repository tip.
 
 ## 2. Current Milestone
 
 ### Milestone reached
 
-**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, AND QUESTIONNAIRE INVARIANT HARDENING ARE INTEGRATED.**
+**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, QUESTIONNAIRE INVARIANT HARDENING, AND FIRST ORCHESTRATION SERVICE DECOMPOSITION ARE INTEGRATED.**
 
 This does **not** mean MF-02 is complete.
 
-The current checkpoint includes campaign scheduling approval (PR #71) and defensive questionnaire publication invariant revalidation (PR #73) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
+The current checkpoint includes campaign scheduling approval (PR #71), defensive questionnaire publication invariant revalidation (PR #73), and the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
 
 ### Current verified integrations
 
-1. **PR #73 — `fix(mf02): enforce published questionnaire when scheduling`**
+1. **PR #75 — `refactor(mf02): extract series preview calculator`**
+   - reviewed source: `df0852da3be62503be5dc7036cca3039cbc0c3ed`
+   - merge: `cc13082ad94701475b69bc53b699d897486ff7fc`
+   - base: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
+   - merge method: normal merge commit
+   - Backend CI: PASS
+   - Frontend CI: PASS
+   - authoritative backend baseline: **599**
+   - net-new executions: **+8** (from `SessionSeriesPreviewCalculatorTests`)
+   - behavior: behavior-preserving maintainability extraction of recurrence diffing, occurrence classification, DST conversion, and SHA-256 fingerprint token generation from `SessionSeriesChangeService` into `SessionSeriesPreviewCalculator`.
+
+2. **PR #73 — `fix(mf02): enforce published questionnaire when scheduling`**
    - reviewed source: `75cd1bb34a0ec6bed32e66387bfa54bca01b4b31`
    - merge: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
    - base: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
@@ -54,7 +65,7 @@ The current checkpoint includes campaign scheduling approval (PR #71) and defens
    - authoritative backend baseline: **591**
    - net-new executions: **0** (hardened invariant assertions and aligned fixtures)
 
-2. **PR #71 — `feat(mf02): add campaign scheduling approval`**
+3. **PR #71 — `feat(mf02): add campaign scheduling approval`**
    - reviewed source: `422fce3768646310448c3c82efec60c654afa0c7`
    - merge: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
    - base: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
@@ -175,23 +186,24 @@ Do not add pessimistic locks merely for style. Add them only for a real invarian
 ## 6. Current Test / Verification State
 
 ### Authoritative current backend baseline
-**591 tests**
+**599 tests**
 
 - failures: 0
 - errors: 0
 - skipped: 0
 - clean Maven test: PASS
 - clean Maven verify: PASS
-- Surefire reports at PR #71 candidate: 66 XML files
-- Surefire-summed executions: 591
+- Surefire reports at PR #75 candidate: 67 XML files
+- Surefire-summed executions: 599
 - Backend CI: PASS
 - Frontend CI: PASS
 
-### Baseline correction history
-A prior non-clean/reporting value of 566 was superseded by clean-build reconciliation:
+### Baseline reconciliation history
 - PR #67 backend code checkpoint: **560**
 - PR #69: **569**
 - PR #71: **591**
+- PR #73: **591**
+- PR #75: **599** (+8 from `SessionSeriesPreviewCalculatorTests`)
 
 Do not resurrect 566 or 575 as authoritative current evidence.
 
@@ -202,25 +214,31 @@ Current integration/concurrency tests predominantly use H2 in MySQL compatibilit
 
 The current repository is not broadly obsolete. The dominant issue is maintainability from feature accumulation.
 
-Verified sizes in the uploaded clean repository snapshot:
+Verified sizes after PR #75 decomposition:
 
-- `SessionSeriesChangeService.java`: ~1,103 lines
+- `SessionSeriesChangeService.java`: ~694 lines (reduced from ~1,104 lines)
+- `SessionSeriesPreviewCalculator.java`: ~454 lines (new calculation collaborator)
 - `VaccinationSessionService.java`: ~809 lines
 - `VaccinationCampaignService.java`: ~428 lines
 - `OperatingHoursService.java`: ~409 lines
 
-Current MF-02 production Java files under the campaign module: 63.
-Current MF-02 test Java files in the flat campaign test package: 65.
+Current MF-02 production Java files under the campaign module: 64.
+Current MF-02 test Java files in the flat campaign test package: 66.
 
 ### Architectural verdict
 Keep the current **layered modular monolith**. Do not perform a wholesale architecture rewrite.
 
-Recommended bounded refactoring targets:
-1. `SessionSeriesChangeService`
-2. `VaccinationSessionService`
-3. duplicated preview/impact/fingerprint/event-construction logic
+### Decomposition of `SessionSeriesChangeService` (PR #75)
+PR #75 successfully performed the first behavior-preserving extraction:
+- `SessionSeriesChangeService` retains all `@Transactional` boundaries, 5 Spring Data JPA repositories, `EntityManager`, hierarchical locking (`Campaign -> Center -> Rule -> Sessions ASC`), post-lock `refresh(...)`, override-history resolution, stale-token comparison, mutations, and audit persistence.
+- `SessionSeriesPreviewCalculator` owns recurrence diffing, occurrence classification (`RETAINED`, `REMOVED`, `NEW`, `INELIGIBLE`, `PRESERVED_EXCEPTION`), DST conversion, deterministic SHA-256 series preview token generation, candidate schedule validation delegation, and conditional `SessionImpactReader` evaluation.
+- `SessionSeriesPreviewCalculator` has 0 JPA repositories, 0 `EntityManager` references, and 0 transaction annotations. It is repository-free and transaction-free, but conditionally calls `SessionImpactReader` on demand to preserve lazy impact evaluation.
 
-Refactoring must be behavior-preserving and separated from new lifecycle implementation.
+Remaining bounded maintainability targets:
+1. Evaluation/focused decomposition of `VaccinationSessionService` (~809 lines)
+2. Duplicated preview/impact/fingerprint/event-construction helpers across session services
+
+Refactoring must remain behavior-preserving and separated from new lifecycle implementation.
 
 ## 8. Production-Layer Gaps
 
@@ -257,8 +275,9 @@ Previously in PR #71, scheduling did not re-verify publication status and an int
 - Concurrency test fixtures were configured with canonically valid published questionnaire versions.
 - Module boundaries remain intact (MF-01 owns publication status; MF-02 queries `QuestionnaireVersionPublicationPort`).
 
-### 9.2 Oversized orchestration services
-Large methods/services increase reasoning cost and future regression risk. Refactor in a dedicated behavior-preserving slice.
+### 9.2 Oversized orchestration services — PARTIALLY RESOLVED (PR #75)
+- `SessionSeriesChangeService` was successfully decomposed via PR #75, reducing its size from ~1,104 lines to ~694 lines by extracting `SessionSeriesPreviewCalculator`.
+- `VaccinationSessionService` remains ~809 lines and is a candidate for future maintainability review.
 
 ### 9.3 Optional critical integration ports
 The snapshot uses optional injection for:
@@ -338,8 +357,8 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 Do **not** automatically start another lifecycle transition.
 
 Recommended order:
-1. synchronize maintained documentation to PR #73 — represented by this step;
-2. perform bounded service decomposition for the two oversized orchestration services;
+1. synchronize maintained documentation to PR #75 — represented by this step;
+2. evaluate/decompose `VaccinationSessionService` maintainability;
 3. strengthen concurrency assurance (remove fixed sleep; add focused MySQL Testcontainers);
 4. finish remaining campaign lifecycle transitions;
 5. complete MF-01/MF-03 production adapters and outbox boundary;
@@ -384,6 +403,8 @@ This compact chronology replaces stale controller transcripts. Detailed Git hist
 | #71 | Campaign `DRAFT -> SCHEDULED` approval |
 | #72 | Markdown-only canonical authority synchronization |
 | #73 | Campaign questionnaire publication invariant hardening |
+| #74 | Evidence synchronization after PR #73 |
+| #75 | Series preview calculator decomposition refactor |
 
 Key full merge checkpoints:
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -395,6 +416,8 @@ Key full merge checkpoints:
 - PR #71: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
 - PR #72: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
 - PR #73: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
+- PR #74: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
+- PR #75: `cc13082ad94701475b69bc53b699d897486ff7fc`
 
 ## 15. Status Discipline
 
@@ -411,13 +434,13 @@ Current status remains:
 - Sprint 1: **IN PROGRESS**
 - MF-02: **IN PROGRESS**
 - US-13: **IN PROGRESS**
-- current verified backend baseline: **591**
+- current verified backend baseline: **599**
 
 ## 16. Startup Procedure for the Next AI Session
 
 1. Read canonical Markdown `3.3-AI / 2026-08-14-R9`.
 2. Fetch live `origin/develop`.
-3. Verify whether `6d52449db4f29099f3a979e824a7efcae8f4ea54` remains an ancestor/current checkpoint.
+3. Verify whether `cc13082ad94701475b69bc53b699d897486ff7fc` remains an ancestor/current checkpoint.
 4. Run/inspect current backend tests before changing behavior.
 5. Read this handoff and Sprint evidence.
 6. Review `MF02_Completion_and_Hardening_Plan.md`.

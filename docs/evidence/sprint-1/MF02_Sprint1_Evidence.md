@@ -7,15 +7,37 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #73
-**Latest verified implementation merge:** `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
+**Evidence synchronized through implementation:** PR #75
+**Latest verified implementation merge:** `cc13082ad94701475b69bc53b699d897486ff7fc`
 **Last updated:** 2026-08-15
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #73 — `fix(mf02): enforce published questionnaire when scheduling`
+### PR #75 — `refactor(mf02): extract series preview calculator`
+
+- reviewed source: `df0852da3be62503be5dc7036cca3039cbc0c3ed`
+- base: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
+- merge: `cc13082ad94701475b69bc53b699d897486ff7fc`
+- merged at: `2026-08-15T08:30:41Z`
+- merge method: normal merge commit
+- reviewed candidate preserved: YES
+- Backend CI: PASS
+- Frontend CI: PASS
+- clean Maven test: PASS
+- clean Maven verify: PASS
+- total tests: **599**
+- failures: 0
+- errors: 0
+- skipped: 0
+- Surefire XML reports: 67
+- Surefire-summed executions: **599**
+- previous clean baseline: **591** (from PR #71 / PR #73)
+- net-new executions: **+8** (from `SessionSeriesPreviewCalculatorTests`)
+- behavior: behavior-preserving maintainability extraction of recurrence diffing, occurrence classification, DST conversion, and SHA-256 fingerprint token generation from `SessionSeriesChangeService` into `SessionSeriesPreviewCalculator`.
+
+### Preceding Hardening Milestone: PR #73 — `fix(mf02): enforce published questionnaire when scheduling`
 
 - reviewed source: `75cd1bb34a0ec6bed32e66387bfa54bca01b4b31`
 - base: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
@@ -56,6 +78,7 @@ The maintained baseline sequence relevant to the latest lifecycle work is:
 | PR #69 SUSPENDED planning freeze | 569 | +9 from clean PR #67 baseline |
 | PR #71 campaign scheduling approval | **591** | +22 from PR #69/current pre-PR71 baseline |
 | PR #73 questionnaire invariant hardening | **591** | +0 net-new (assertion hardening & fixture alignment) |
+| PR #75 series preview calculator decomposition | **599** | +8 from PR #73 baseline (source: `SessionSeriesPreviewCalculatorTests`) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -190,7 +213,23 @@ PR #73 defensively enforces the canonical invariant (`MF02-BR-02`, Section 11 Da
 - Failures: 0, Errors: 0, Skipped: 0.
 - Maven `test`: PASS, Maven `verify`: PASS.
 
-## 7. Concurrency / Transaction Evidence
+## 7. PR #75 — Series Preview Calculator Extraction Refactor Evidence
+
+### Behavior and Decomposition
+PR #75 delivered a behavior-preserving maintainability refactoring of the oversized `SessionSeriesChangeService` (~1,104 lines -> ~694 lines) by extracting deterministic series preview calculation and SHA-256 fingerprint token generation into `SessionSeriesPreviewCalculator` (~454 lines).
+
+- **`SessionSeriesChangeService` retains:** All `@Transactional` boundaries, 5 Spring Data JPA repositories, `EntityManager`, hierarchical pessimistic locking (`Campaign -> Center -> Rule -> Sessions ASC`), post-lock `refresh(...)`, override-history resolution via `findOverriddenSessionIds`, stale-preview verification, mutations, and audit persistence.
+- **`SessionSeriesPreviewCalculator` owns:** Recurrence diffing, occurrence classification (`RETAINED`, `REMOVED`, `NEW`, `INELIGIBLE`, `PRESERVED_EXCEPTION`), DST conversion, deterministic SHA-256 series preview token generation, schedule validation delegation, and conditional `SessionImpactReader` evaluation.
+- **Calculator properties:** 0 JPA repositories, 0 `EntityManager` references, 0 `@Transactional` annotations. It is repository-free and transaction-free, while conditionally calling `SessionImpactReader` on demand to preserve lazy impact evaluation semantics (`testMissingImpactReaderAllowedWhenScheduledRetainedOccurrencesUnchanged`).
+
+### Test Impact
+- Executable tests: **599** (+8 net-new tests from `SessionSeriesPreviewCalculatorTests`).
+- Failures: 0, Errors: 0, Skipped: 0.
+- Surefire reports: 67 XML reports.
+- Maven `test`: PASS, Maven `verify`: PASS (BUILD SUCCESS).
+- Backend CI: PASS, Frontend CI: PASS.
+
+## 8. Concurrency / Transaction Evidence
 
 Current high-risk workflows use transactional boundaries and explicit pessimistic locking where needed.
 
@@ -208,7 +247,7 @@ Separate-transaction concurrency regression tests exist for real race conditions
 ### Limitation
 Most integration/concurrency evidence runs on H2 in MySQL compatibility mode. This is structural regression evidence, not production MySQL certification. A focused MySQL Testcontainers suite remains required for production-grade confidence.
 
-## 8. Historical Milestone Chronology
+## 9. Historical Milestone Chronology
 
 This table preserves the engineering sequence without retaining stale controller transcripts.
 
@@ -247,6 +286,8 @@ This table preserves the engineering sequence without retaining stale controller
 | #71 | Campaign DRAFT -> SCHEDULED approval |
 | #72 | Markdown-only canonical authority synchronization |
 | #73 | Campaign questionnaire publication invariant hardening |
+| #74 | Evidence synchronization after PR #73 |
+| #75 | Series preview calculator decomposition refactor |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -261,18 +302,17 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #71: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
 - PR #72: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
 - PR #73: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
+- PR #74: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
+- PR #75: `cc13082ad94701475b69bc53b699d897486ff7fc`
 
-## 9. Carried-Forward Findings / Risks
+## 10. Carried-Forward Findings / Risks
 
 ### Domain consistency — RESOLVED (PR #73)
 Normal questionnaire assignment creation requires a published version, and PR #73 defensively hardened `scheduleCampaign(...)` to revalidate published status through `QuestionnaireVersionPublicationPort`, replacing the bypassed fixture with an active rejection test.
 
-### Maintainability
-Verified current snapshot:
-- `SessionSeriesChangeService`: ~1,103 lines
-- `VaccinationSessionService`: ~809 lines
-
-Refactor separately from feature work.
+### Maintainability — PARTIALLY RESOLVED (PR #75)
+- `SessionSeriesChangeService` was successfully decomposed via PR #75, reducing its size from ~1,104 lines to ~694 lines.
+- `VaccinationSessionService` remains ~809 lines and is a candidate for future maintainability review.
 
 ### Optional critical ports
 Production-facing adapters for questionnaire publication and MF-03 session impact are still optional-injection boundaries in the current code. Production configuration should ultimately fail fast when required adapters are absent.
@@ -283,9 +323,10 @@ At least one existing concurrency regression still uses `Thread.sleep(300)` and 
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
 
-## 9. Remaining Sprint / Function Work
+## 11. Remaining Sprint / Function Work
 
 Still not complete:
+- evaluation/decomposition of `VaccinationSessionService` maintainability
 - remaining campaign lifecycle transitions: ACTIVE, resume, completion, campaign cancellation, archival
 - archival retention value (`USER_DATA_REQUIRED`)
 - DRAFT parent-campaign / child-session scheduling policy
@@ -302,7 +343,7 @@ Still not complete:
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
 
-## 10. Sprint Status
+## 12. Sprint Status
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
@@ -311,7 +352,7 @@ Current status remains:
 
 Do not infer completion from the size of the backend test suite.
 
-## 11. Evidence Maintenance Rules
+## 13. Evidence Maintenance Rules
 
 1. Canonical Markdown is the sole semantic authority.
 2. Live Git/code/tests control implementation truth.
