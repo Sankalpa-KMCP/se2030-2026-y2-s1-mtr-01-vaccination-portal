@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
@@ -168,6 +169,22 @@ public class VaccinationCenterService {
     }
 
     /**
+     * Retrieves an authoritative vaccination center by ID or throws {@link ResourceNotFoundException}.
+     *
+     * @param id Center entity ID
+     * @return VaccinationCenter entity
+     * @throws ResourceNotFoundException if center is not found
+     */
+    @Transactional(readOnly = true)
+    public VaccinationCenter getRequiredCenterById(Long id) {
+        if (id == null) {
+            throw new ResourceNotFoundException("Vaccination center ID is required");
+        }
+        return centerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + id));
+    }
+
+    /**
      * Retrieves a vaccination center by its unique business code.
      *
      * @param code Center business code
@@ -201,11 +218,30 @@ public class VaccinationCenterService {
         return centerRepository.findByCenterStatus(CenterStatus.ACTIVE);
     }
 
+    /**
+     * Retrieves vaccination centers, optionally filtered by status, ordered deterministically by code ascending.
+     *
+     * @param status Optional CenterStatus filter
+     * @return List of matching vaccination centers
+     */
+    @Transactional(readOnly = true)
+    public List<VaccinationCenter> getCenters(CenterStatus status) {
+        if (status == null) {
+            return centerRepository.findAllByOrderByCodeAsc();
+        }
+        return centerRepository.findByCenterStatusOrderByCodeAsc(status);
+    }
+
     private VaccinationCenter findAuthoritativeCenter(Long id) {
+        if (id == null) {
+            throw new ResourceNotFoundException("Vaccination center ID is required");
+        }
         VaccinationCenter center = centerRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Vaccination center not found with ID: " + id));
-        entityManager.refresh(center);
+        if (entityManager != null) {
+            entityManager.refresh(center);
+        }
         return center;
     }
 }

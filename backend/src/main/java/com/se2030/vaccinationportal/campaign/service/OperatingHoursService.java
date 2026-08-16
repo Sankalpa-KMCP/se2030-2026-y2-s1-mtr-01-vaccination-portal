@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.OperatingHours;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
@@ -73,11 +74,11 @@ public class OperatingHoursService {
                                                LocalDate effectiveFrom,
                                                LocalDate effectiveTo) {
         if (centerId == null) {
-            throw new IllegalArgumentException("Center ID is required");
+            throw new ResourceNotFoundException("Center ID is required");
         }
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
         if (entityManager != null) {
             entityManager.refresh(center);
         }
@@ -100,6 +101,42 @@ public class OperatingHoursService {
     }
 
     /**
+     * Updates an existing OperatingHours schedule record with parent ownership validation.
+     *
+     * @param centerId      Parent VaccinationCenter ID
+     * @param id            OperatingHours ID
+     * @param dayOfWeek     Updated day of week
+     * @param opening       Updated opening time
+     * @param closing       Updated closing time
+     * @param effectiveFrom Updated effective from date
+     * @param effectiveTo   Updated effective to date (nullable)
+     * @return Updated OperatingHours entity
+     */
+    public OperatingHours updateOperatingHours(Long centerId,
+                                               Long id,
+                                               DayOfWeek dayOfWeek,
+                                               LocalTime opening,
+                                               LocalTime closing,
+                                               LocalDate effectiveFrom,
+                                               LocalDate effectiveTo) {
+        if (centerId == null) {
+            throw new ResourceNotFoundException("Center ID is required");
+        }
+        if (id == null) {
+            throw new ResourceNotFoundException("Operating hours ID is required");
+        }
+
+        Long actualCenterId = operatingHoursRepository.findCenterIdById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Operating hours not found with ID: " + id));
+
+        if (!centerId.equals(actualCenterId)) {
+            throw new ResourceNotFoundException("Operating hours not found with ID: " + id + " for center ID: " + centerId);
+        }
+
+        return updateOperatingHours(id, dayOfWeek, opening, closing, effectiveFrom, effectiveTo);
+    }
+
+    /**
      * Updates an existing OperatingHours schedule record.
      * Center ownership is immutable; schedule attributes (dayOfWeek, times, effective dates) are editable.
      * Locks the parent center prior to loading authoritative target state to eliminate stale mutation windows.
@@ -119,20 +156,20 @@ public class OperatingHoursService {
                                                LocalDate effectiveFrom,
                                                LocalDate effectiveTo) {
         if (id == null) {
-            throw new IllegalArgumentException("Operating hours ID is required");
+            throw new ResourceNotFoundException("Operating hours ID is required");
         }
 
         Long centerId = operatingHoursRepository.findCenterIdById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Operating hours not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Operating hours not found with ID: " + id));
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
         if (entityManager != null) {
             entityManager.refresh(center);
         }
 
         OperatingHours target = operatingHoursRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Operating hours not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Operating hours not found with ID: " + id));
 
         OperatingHours.validateParameters(target.getCenter(), dayOfWeek, opening, closing, effectiveFrom, effectiveTo);
 
@@ -154,6 +191,32 @@ public class OperatingHoursService {
     }
 
     /**
+     * Ends or shortens the effective period of an existing OperatingHours schedule record with parent ownership validation.
+     *
+     * @param centerId Parent VaccinationCenter ID
+     * @param id       OperatingHours ID
+     * @param endDate  New effective end date (inclusive)
+     * @return Updated OperatingHours entity
+     */
+    public OperatingHours endDateOperatingHours(Long centerId, Long id, LocalDate endDate) {
+        if (centerId == null) {
+            throw new ResourceNotFoundException("Center ID is required");
+        }
+        if (id == null) {
+            throw new ResourceNotFoundException("Operating hours ID is required");
+        }
+
+        Long actualCenterId = operatingHoursRepository.findCenterIdById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Operating hours not found with ID: " + id));
+
+        if (!centerId.equals(actualCenterId)) {
+            throw new ResourceNotFoundException("Operating hours not found with ID: " + id + " for center ID: " + centerId);
+        }
+
+        return endDateOperatingHours(id, endDate);
+    }
+
+    /**
      * Ends or shortens the effective period of an existing OperatingHours schedule record.
      * This is strictly a deactivation/shortening operation, never an extension.
      * Locks the parent center prior to mutating the target entity.
@@ -164,23 +227,23 @@ public class OperatingHoursService {
      */
     public OperatingHours endDateOperatingHours(Long id, LocalDate endDate) {
         if (id == null) {
-            throw new IllegalArgumentException("Operating hours ID is required");
+            throw new ResourceNotFoundException("Operating hours ID is required");
         }
         if (endDate == null) {
             throw new IllegalArgumentException("End date is required");
         }
 
         Long centerId = operatingHoursRepository.findCenterIdById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Operating hours not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Operating hours not found with ID: " + id));
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
         if (entityManager != null) {
             entityManager.refresh(center);
         }
 
         OperatingHours target = operatingHoursRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Operating hours not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Operating hours not found with ID: " + id));
 
         if (endDate.isBefore(target.getEffectiveFrom())) {
             throw new IllegalArgumentException("End date (" + endDate + ") cannot be before effective from date (" + target.getEffectiveFrom() + ")");
@@ -213,7 +276,7 @@ public class OperatingHoursService {
     @Transactional(readOnly = true)
     public Optional<OperatingHours> getOperatingHoursById(Long id) {
         if (id == null) {
-            throw new IllegalArgumentException("Operating hours ID is required");
+            throw new ResourceNotFoundException("Operating hours ID is required");
         }
         return operatingHoursRepository.findById(id);
     }
@@ -227,11 +290,15 @@ public class OperatingHoursService {
      *
      * @param centerId ID of the VaccinationCenter
      * @return Deterministically ordered list of operating hours
+     * @throws ResourceNotFoundException if parent center does not exist
      */
     @Transactional(readOnly = true)
     public List<OperatingHours> getOperatingHoursByCenter(Long centerId) {
         if (centerId == null) {
-            throw new IllegalArgumentException("Center ID is required");
+            throw new ResourceNotFoundException("Center ID is required");
+        }
+        if (!centerRepository.existsById(centerId)) {
+            throw new ResourceNotFoundException("Vaccination center not found with ID: " + centerId);
         }
         List<OperatingHours> list = operatingHoursRepository.findByCenterId(centerId);
         list.sort(Comparator.comparingInt((OperatingHours oh) -> oh.getDayOfWeek().getValue())
