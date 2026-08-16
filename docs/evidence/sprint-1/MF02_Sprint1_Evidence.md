@@ -7,15 +7,39 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #82
-**Latest verified implementation merge:** `5dd7034df64951f061dc27c5596d17a3cb440061`
+**Evidence synchronized through implementation:** PR #84
+**Latest verified implementation merge:** `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
 **Last updated:** 2026-08-16
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #82 — `feat(mf02): add campaign resumption lifecycle transition`
+### PR #84 — `test(mf02): add MySQL concurrency assurance`
+
+- reviewed source: `ded72c17d8bb4aaf222d6e2a96b44fa93208e880` (corrective commit for assertion mismatch from initial candidate `3343817c964ba6fd837a4b609a6bdbb63037fd51`)
+- base: `633e6a94585a9549718e16b038ae27e6646347f0`
+- merge: `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
+- merged at: `2026-08-16T07:55:53Z`
+- merge method: normal merge commit (two parents: `633e6a94585a9549718e16b038ae27e6646347f0` and `ded72c17d8bb4aaf222d6e2a96b44fa93208e880`)
+- reviewed candidate preserved: YES
+- Backend CI: PASS (standard H2 verify + dedicated Testcontainers MySQL verify)
+- Frontend CI: PASS
+- production code changed: **0**
+- functional H2 test executions: **645** (71 XML reports; 0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **3** (2 XML reports; 0 failures, 0 errors, 0 skipped)
+- logical combined executions: **648**
+- previous clean baseline: **645** (from PR #82 / PR #83)
+- net-new executions: **+0 H2**, **+3 MySQL Testcontainers** (+2 `CampaignLifecycleMySqlConcurrencyIntegrationTests`, +1 `CampaignReverseImpactMySqlConcurrencyIntegrationTests`)
+- container environment: pinned `mysql:8.4.3` image, MySQL 8.4.3 InnoDB, `REPEATABLE_READ` transaction isolation, MySQL Connector/J driver, singleton container via `AbstractMySqlTestContainersIntegrationTest`, dynamic datasource via `@DynamicPropertySource`, runtime product assertion via `assertConnectedToRealMySql()`.
+- CI execution: dual-step verification in `.github/workflows/backend-ci.yml` invoking `./mvnw verify` (H2 default) then `./mvnw verify -Pmysql-concurrency` with tag `@Tag("mysql-testcontainers")`.
+- validated locking topologies:
+  - **Topology A (Single-Row Command Race Serialization):** Verified duplicate-command race serialization on MySQL InnoDB for campaign resumption (`simultaneousResumptionSerializesToOneTransitionOnMySql`) and activation (`simultaneousActivationSerializesToOneTransitionOnMySql`). Exactly 1 worker transitions state; competing worker receives `IllegalStateException` and observes post-lock entity state; audit event and final status are strictly validated.
+  - **Topology B (Parent/Child Reverse-Impact Serialization):** Verified cross-entity lock contention on MySQL InnoDB (`concurrentSessionCreationAndCampaignDateShorteningSerializeOnMySql`). Campaign `PESSIMISTIC_WRITE` lock held during service date shortening blocks competing session creation attempt; date shortening succeeds, conflicting session creation fails validation, 0 invalid sessions persist in MySQL.
+- exact assurance claim: *Representative single-row lifecycle and parent/child reverse-impact pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.*
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+### Preceding Feature Milestone: PR #82 — `feat(mf02): add campaign resumption lifecycle transition`
 
 - reviewed source: `cec16fcb99ae7064ee0804ea2f1cd4578aeb89e4`
 - base: `ff3d832745708e5d563c63059820e1e157767a60`
@@ -160,6 +184,7 @@ The maintained baseline sequence relevant to the latest lifecycle work is:
 | PR #78 deterministic concurrency hardening | **599** | +0 net-new (concurrency test determinism hardening) |
 | PR #80 campaign activation (PUBLISHED -> ACTIVE) | **616** | +17 from PR #78/PR #79 baseline (+2 model, +14 integration, +1 concurrency) |
 | PR #82 campaign resumption (SUSPENDED -> PUBLISHED / ACTIVE) | **645** | +29 from PR #80/PR #81 baseline (+4 model, +2 event model, +22 integration, +1 concurrency) |
+| PR #84 representative MySQL concurrency assurance | **645 functional H2 + 3 MySQL** | +0 H2, +3 MySQL Testcontainers assurance (**648 logical executions**) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -234,6 +259,7 @@ Implemented and integrated:
 - DRAFT -> SCHEDULED approval
 - PUBLISHED -> ACTIVE campaign activation
 - SUSPENDED -> PUBLISHED / ACTIVE campaign resumption
+- representative MySQL/Testcontainers concurrency assurance (single-row command locking + parent/child reverse-impact locking)
 
 ## 5. PR #71 — Campaign `DRAFT -> SCHEDULED` Evidence
 
@@ -409,8 +435,10 @@ Representative established lock orders:
 
 Separate-transaction concurrency regression tests exist for real race conditions.
 
-### Limitation
-Most integration/concurrency evidence runs on H2 in MySQL compatibility mode. This is structural regression evidence, not production MySQL certification. A focused MySQL Testcontainers suite remains required for production-grade confidence.
+### Test Database Architecture and Concurrency Assurance
+- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (645 tests, 71 XML reports). This provides fast structural and domain validation.
+- **Representative Production-Equivalent MySQL Assurance (PR #84):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`) and parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
+- **Scope Boundary:** *Representative single-row lifecycle and parent/child reverse-impact pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.*
 
 ## 12. Historical Milestone Chronology
 
@@ -460,6 +488,8 @@ This table preserves the engineering sequence without retaining stale controller
 | #80 | Campaign `PUBLISHED -> ACTIVE` activation |
 | #81 | Evidence synchronization after PR #80 |
 | #82 | Campaign `SUSPENDED -> PUBLISHED / ACTIVE` resumption |
+| #83 | Evidence synchronization after PR #82 |
+| #84 | Representative MySQL/Testcontainers concurrency assurance |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -483,6 +513,8 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #80: `852802ff0d533fdb013c64b4b10de395efd40557`
 - PR #81: `ff3d832745708e5d563c63059820e1e157767a60`
 - PR #82: `5dd7034df64951f061dc27c5596d17a3cb440061`
+- PR #83: `633e6a94585a9549718e16b038ae27e6646347f0`
+- PR #84: `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
 
 ## 13. Carried-Forward Findings / Risks
 
@@ -499,8 +531,12 @@ Production-facing adapters for questionnaire publication (provided by MF-01 `Que
 ### Concurrency test quality — RESOLVED (PR #78)
 PR #78 eliminated the remaining `Thread.sleep(300)` timing delay from `CampaignAssignmentReverseImpactConcurrencyIntegrationTests.java` and established deterministic latch coordination with explicit winner/state assertions. Zero `Thread.sleep` calls remain across the backend test suite.
 
-### MySQL Testcontainers concurrency assurance — OPEN
-Current tests run on H2 in MySQL compatibility mode. Adding a small, focused MySQL Testcontainers suite for the highest-risk lock/idempotency paths remains an open assurance goal.
+### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84)
+PR #84 closed the representative database locking assurance gap by introducing containerized MySQL 8.4.3 InnoDB integration tests via Testcontainers:
+- Validated single-row duplicate-command race serialization against MySQL InnoDB for campaign resumption and activation (`CampaignLifecycleMySqlConcurrencyIntegrationTests`).
+- Validated parent/child reverse-impact pessimistic-locking serialization against MySQL InnoDB for campaign service-date shortening versus concurrent conflicting session creation (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
+- Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step.
+- *Scope boundary:* Representative single-row lifecycle and parent/child reverse-impact pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.
 
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
@@ -520,7 +556,7 @@ Still not complete:
 - Spring Security/RBAC
 - OpenAPI
 - Flyway migrations
-- production MySQL concurrency assurance
+- representative production MySQL concurrency assurance (RESOLVED in PR #84; broad production database certification deferred)
 - MF-02 frontend
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
