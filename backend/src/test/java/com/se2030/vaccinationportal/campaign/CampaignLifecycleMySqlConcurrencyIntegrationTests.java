@@ -112,10 +112,10 @@ class CampaignLifecycleMySqlConcurrencyIntegrationTests extends AbstractMySqlTes
         assertEquals(1, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
         Outcome rejected = outcomes.stream().filter(outcome -> !outcome.success()).findFirst().orElseThrow();
         assertInstanceOf(IllegalStateException.class, rejected.error(), outcomes.toString());
-        assertEquals(
-                "Cannot activate campaign in ACTIVE status",
-                rejected.error().getMessage(),
-                "Expected rejection message indicating campaign was already transitioned to ACTIVE by competing worker"
+        assertTrue(
+                rejected.error().getMessage().contains("Cannot activate campaign in ACTIVE status")
+                        && rejected.error().getMessage().contains("Only PUBLISHED campaigns can be activated"),
+                "Expected rejection message indicating campaign was already transitioned to ACTIVE by competing worker: " + rejected.error().getMessage()
         );
 
         VaccinationCampaign finalCampaign = campaignRepository.findById(campaignId).orElseThrow();
