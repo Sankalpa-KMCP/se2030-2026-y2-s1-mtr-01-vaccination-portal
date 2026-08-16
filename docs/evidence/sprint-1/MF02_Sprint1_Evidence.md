@@ -7,15 +7,54 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #84
-**Latest verified implementation merge:** `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
+**Evidence synchronized through implementation:** PR #86
+**Latest verified implementation merge:** `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
 **Last updated:** 2026-08-16
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #84 — `test(mf02): add MySQL concurrency assurance`
+### PR #86 — `feat(mf02): add campaign management REST API`
+
+- reviewed source: `0fab4afa983252e927dda01278193a584ad9a0d8` (corrective commit resolving missing-campaign 404 lifecycle contract from initial candidate `fef02226ed180a3dc2a9b3195dbd7b598c230e80`)
+- base: `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`
+- merge: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
+- merged at: `2026-08-16T10:46:45Z`
+- merge method: normal merge commit (two parents: `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28` and `0fab4afa983252e927dda01278193a584ad9a0d8`)
+- reviewed candidate preserved: YES
+- Backend CI: PASS (standard H2 verify + dedicated Testcontainers MySQL verify)
+- Frontend CI: PASS
+- production code changed: 14 files (13 new, 1 modified)
+- test code changed: 3 files (3 new)
+- total files: 17
+- functional H2 test executions: **680** (76 XML reports; 0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **3** (2 XML reports; 0 failures, 0 errors, 0 skipped)
+- logical combined executions: **683**
+- previous clean baseline: **645 functional H2 + 3 MySQL** (from PR #84)
+- net-new executions: **+35 H2 tests** (+23 `CampaignControllerTests`, +4 `CampaignDtoMapperTests`, +8 `VaccinationCampaignServiceQueryTests`)
+- endpoints integrated under `/api/v1/campaigns` (9):
+  1. `POST /api/v1/campaigns` (Create campaign; 201 Created)
+  2. `GET /api/v1/campaigns/{id}` (Get campaign details; 200 OK)
+  3. `GET /api/v1/campaigns` (List campaigns with optional `status` filter; 200 OK)
+  4. `GET /api/v1/campaigns/{id}/lifecycle-events` (Get chronological lifecycle audit history; 200 OK)
+  5. `POST /api/v1/campaigns/{id}/schedule` (Transition DRAFT -> SCHEDULED; 200 OK)
+  6. `POST /api/v1/campaigns/{id}/publish` (Transition DRAFT/SCHEDULED -> PUBLISHED; 200 OK)
+  7. `POST /api/v1/campaigns/{id}/activate` (Transition PUBLISHED -> ACTIVE; 200 OK)
+  8. `POST /api/v1/campaigns/{id}/suspend` (Transition to SUSPENDED with mandatory reason and actorId; 200 OK)
+  9. `POST /api/v1/campaigns/{id}/resume` (Resume to PUBLISHED or ACTIVE with mandatory reason and actorId; 200 OK)
+- architecture: strict transport adapter pattern (`CampaignController` invokes `VaccinationCampaignService`; 0 repository dependencies in controller; 0 controller transactions; service layer owns `@Transactional` persistence/locking; pure `CampaignDtoMapper` handles DTO conversion; `@RestControllerAdvice` `GlobalCampaignExceptionHandler` provides structured RFC-aligned `ApiErrorResponse`).
+- error & exception taxonomy:
+  - 400 Bad Request: `@Valid` payload validation failure, parameter type mismatch, malformed JSON, general `IllegalArgumentException`
+  - 404 Not Found: `ResourceNotFoundException` (missing campaign ID, missing `VaccineType`, missing `TargetGroup`)
+  - 409 Conflict: `IllegalStateException` (invalid lifecycle state transition or business invariant conflict)
+  - 500 Internal Server Error: unexpected unhandled server exception
+- actorId audit boundary: *`actorId` in suspend/resume requests is caller-supplied audit metadata recorded on `CampaignLifecycleEvent`; it is NOT authenticated authorization identity. Spring Security / RBAC enforcement is deferred to a dedicated security milestone.*
+- locking preservation: *PR #86 preserved 100% of underlying `findByIdForUpdate` pessimistic locking, post-lock `entityManager.refresh`, and transactional state-machine invariants.*
+- note: *The exact reviewed candidate passed CI before zero-drift merge; no additional local post-merge rerun was performed.*
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+### Preceding Milestone: PR #84 — `test(mf02): add MySQL concurrency assurance`
 
 - reviewed source: `ded72c17d8bb4aaf222d6e2a96b44fa93208e880` (corrective commit for assertion mismatch from initial candidate `3343817c964ba6fd837a4b609a6bdbb63037fd51`)
 - base: `633e6a94585a9549718e16b038ae27e6646347f0`
@@ -185,6 +224,7 @@ The maintained baseline sequence relevant to the latest lifecycle work is:
 | PR #80 campaign activation (PUBLISHED -> ACTIVE) | **616** | +17 from PR #78/PR #79 baseline (+2 model, +14 integration, +1 concurrency) |
 | PR #82 campaign resumption (SUSPENDED -> PUBLISHED / ACTIVE) | **645** | +29 from PR #80/PR #81 baseline (+4 model, +2 event model, +22 integration, +1 concurrency) |
 | PR #84 representative MySQL concurrency assurance | **645 functional H2 + 3 MySQL** | +0 H2, +3 MySQL Testcontainers assurance (**648 logical executions**) |
+| PR #86 campaign management REST API (9 endpoints) | **680 functional H2 + 3 MySQL** | +35 H2 (+23 controller, +4 mapper, +8 service query), +3 MySQL Testcontainers assurance (**683 logical executions**) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -260,6 +300,15 @@ Implemented and integrated:
 - PUBLISHED -> ACTIVE campaign activation
 - SUSPENDED -> PUBLISHED / ACTIVE campaign resumption
 - representative MySQL/Testcontainers concurrency assurance (single-row command locking + parent/child reverse-impact locking)
+
+### Campaign REST API (Milestone 1)
+Implemented and integrated under `/api/v1/campaigns` (PR #86):
+- 9 REST endpoints: `createCampaign`, `getCampaignById`, `getCampaigns` (status filter), `getCampaignLifecycleEvents`, `scheduleCampaign`, `publishCampaign`, `activateCampaign`, `suspendCampaign`, `resumeCampaign`
+- Strict DTO request/response contracts and pure `CampaignDtoMapper`
+- `@RestControllerAdvice` (`GlobalCampaignExceptionHandler`) with structured `ApiErrorResponse`
+- Typed `ResourceNotFoundException -> 404` error mapping across all resource lookup and lifecycle endpoints
+- Preservation of underlying `@Transactional` boundaries, `findByIdForUpdate` pessimistic locking, and `entityManager.refresh`
+- Unauthenticated caller-supplied audit metadata semantics for `actorId`
 
 ## 5. PR #71 — Campaign `DRAFT -> SCHEDULED` Evidence
 
@@ -490,6 +539,8 @@ This table preserves the engineering sequence without retaining stale controller
 | #82 | Campaign `SUSPENDED -> PUBLISHED / ACTIVE` resumption |
 | #83 | Evidence synchronization after PR #82 |
 | #84 | Representative MySQL/Testcontainers concurrency assurance |
+| #85 | Evidence synchronization after PR #84 |
+| #86 | Campaign Management REST API vertical slice (9 endpoints) |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -515,6 +566,8 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #82: `5dd7034df64951f061dc27c5596d17a3cb440061`
 - PR #83: `633e6a94585a9549718e16b038ae27e6646347f0`
 - PR #84: `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
+- PR #85: `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`
+- PR #86: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
 
 ## 13. Carried-Forward Findings / Risks
 
@@ -551,8 +604,9 @@ Still not complete:
 - MF-01 production adapter/FK
 - MF-03 production impact adapter
 - transactional outbox
-- REST controllers/DTO/mappers
-- `/api/v1` alignment
+- Center & Session REST controllers/DTOs/mappers (Campaign REST API completed in PR #86)
+- Campaign date update REST API
+- `/api/v1` alignment for center/session resources
 - Spring Security/RBAC
 - OpenAPI
 - Flyway migrations
@@ -567,6 +621,7 @@ Current status remains:
 - Sprint 1: **IN PROGRESS**
 - MF-02: **IN PROGRESS**
 - US-13: **IN PROGRESS**
+- Campaign Management REST API Milestone 1: **COMPLETE**
 
 Do not infer completion from the size of the backend test suite.
 
