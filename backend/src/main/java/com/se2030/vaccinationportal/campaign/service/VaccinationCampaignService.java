@@ -14,12 +14,15 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
@@ -54,6 +57,8 @@ public class VaccinationCampaignService {
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository;
     private final CampaignCenterAssignmentRepository centerAssignmentRepository;
+    private final VaccineTypeRepository vaccineTypeRepository;
+    private final TargetGroupRepository targetGroupRepository;
     private final QuestionnaireVersionPublicationPort publicationPort;
     private final Clock clock;
     @PersistenceContext private EntityManager entityManager;
@@ -65,6 +70,8 @@ public class VaccinationCampaignService {
             CampaignDoseProgrammeRepository doseProgrammeRepository,
             CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository,
             CampaignCenterAssignmentRepository centerAssignmentRepository,
+            VaccineTypeRepository vaccineTypeRepository,
+            TargetGroupRepository targetGroupRepository,
             @Autowired(required = false) QuestionnaireVersionPublicationPort publicationPort,
             Clock clock
     ) {
@@ -74,6 +81,8 @@ public class VaccinationCampaignService {
         this.doseProgrammeRepository = doseProgrammeRepository;
         this.questionnaireAssignmentRepository = questionnaireAssignmentRepository;
         this.centerAssignmentRepository = centerAssignmentRepository;
+        this.vaccineTypeRepository = vaccineTypeRepository;
+        this.targetGroupRepository = targetGroupRepository;
         this.publicationPort = publicationPort;
         this.clock = clock;
     }
@@ -502,6 +511,45 @@ public class VaccinationCampaignService {
         return campaignRepository.save(campaign);
     }
 
+    /**
+     * Creates and saves a new VaccinationCampaign resolving VaccineType and TargetGroup by ID.
+     */
+    public VaccinationCampaign createCampaign(
+            String code,
+            String name,
+            String description,
+            Long vaccineTypeId,
+            Long targetGroupId,
+            LocalDate serviceStartDate,
+            LocalDate serviceEndDate,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt
+    ) {
+        if (vaccineTypeId == null) {
+            throw new IllegalArgumentException("Vaccine type ID is required");
+        }
+        if (targetGroupId == null) {
+            throw new IllegalArgumentException("Target group ID is required");
+        }
+
+        VaccineType vaccineType = vaccineTypeRepository.findById(vaccineTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException("VaccineType not found with ID: " + vaccineTypeId));
+        TargetGroup targetGroup = targetGroupRepository.findById(targetGroupId)
+                .orElseThrow(() -> new ResourceNotFoundException("TargetGroup not found with ID: " + targetGroupId));
+
+        return createCampaign(
+                code,
+                name,
+                description,
+                vaccineType,
+                targetGroup,
+                serviceStartDate,
+                serviceEndDate,
+                bookingOpenAt,
+                bookingCloseAt
+        );
+    }
+
     public VaccinationCampaign updateServiceDates(
             Long campaignId,
             LocalDate serviceStartDate,
@@ -539,6 +587,34 @@ public class VaccinationCampaignService {
             return Optional.empty();
         }
         return campaignRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public VaccinationCampaign getRequiredCampaignById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        return campaignRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<VaccinationCampaign> getCampaigns(CampaignStatus status) {
+        if (status != null) {
+            return campaignRepository.findByStatus(status);
+        }
+        return campaignRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CampaignLifecycleEvent> getCampaignLifecycleEvents(Long campaignId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        if (!campaignRepository.existsById(campaignId)) {
+            throw new ResourceNotFoundException("Campaign not found with ID: " + campaignId);
+        }
+        return campaignLifecycleEventRepository.findByCampaignIdOrderByCreatedAtAscIdAsc(campaignId);
     }
 
     @Transactional(readOnly = true)
