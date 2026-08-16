@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CenterClosure;
 import com.se2030.vaccinationportal.campaign.model.CenterClosureStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -47,7 +48,9 @@ public class CenterClosureService {
     }
 
     public CenterClosure createClosure(Long centerId, Instant startAt, Instant endAt, String reason) {
-        requireId(centerId, "Center ID is required");
+        if (centerId == null) {
+            throw new ResourceNotFoundException("Center ID is required");
+        }
         CenterClosure.validateCandidate(startAt, endAt, reason);
 
         VaccinationCenter center = lockCenter(centerId);
@@ -59,14 +62,45 @@ public class CenterClosureService {
 
     @Transactional(readOnly = true)
     public Optional<CenterClosure> getClosureById(Long id) {
-        requireId(id, "Center closure ID is required");
+        if (id == null) {
+            throw new ResourceNotFoundException("Center closure ID is required");
+        }
         return closureRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
     public List<CenterClosure> getClosuresForCenter(Long centerId) {
-        requireId(centerId, "Center ID is required");
+        if (centerId == null) {
+            throw new ResourceNotFoundException("Center ID is required");
+        }
+        if (!centerRepository.existsById(centerId)) {
+            throw new ResourceNotFoundException("Vaccination center not found with ID: " + centerId);
+        }
         return closureRepository.findByCenterIdOrderByStartAtAscEndAtAscIdAsc(centerId);
+    }
+
+    public CenterClosure updateFutureClosure(
+            Long centerId,
+            Long id,
+            Instant startAt,
+            Instant endAt,
+            String reason
+    ) {
+        if (centerId == null) {
+            throw new ResourceNotFoundException("Center ID is required");
+        }
+        if (id == null) {
+            throw new ResourceNotFoundException("Center closure ID is required");
+        }
+
+        Long actualCenterId = closureRepository.findCenterIdById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Center closure not found with ID: " + id));
+
+        if (!centerId.equals(actualCenterId)) {
+            throw new ResourceNotFoundException("Center closure not found with ID: " + id + " for center ID: " + centerId);
+        }
+
+        return updateFutureClosure(id, startAt, endAt, reason);
     }
 
     public CenterClosure updateFutureClosure(
@@ -75,7 +109,9 @@ public class CenterClosureService {
             Instant endAt,
             String reason
     ) {
-        requireId(id, "Center closure ID is required");
+        if (id == null) {
+            throw new ResourceNotFoundException("Center closure ID is required");
+        }
         CenterClosure.validateCandidate(startAt, endAt, reason);
 
         Long centerId = findCenterId(id);
@@ -98,8 +134,28 @@ public class CenterClosureService {
         return closureRepository.save(target);
     }
 
+    public CenterClosure cancelFutureClosure(Long centerId, Long id) {
+        if (centerId == null) {
+            throw new ResourceNotFoundException("Center ID is required");
+        }
+        if (id == null) {
+            throw new ResourceNotFoundException("Center closure ID is required");
+        }
+
+        Long actualCenterId = closureRepository.findCenterIdById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Center closure not found with ID: " + id));
+
+        if (!centerId.equals(actualCenterId)) {
+            throw new ResourceNotFoundException("Center closure not found with ID: " + id + " for center ID: " + centerId);
+        }
+
+        return cancelFutureClosure(id);
+    }
+
     public CenterClosure cancelFutureClosure(Long id) {
-        requireId(id, "Center closure ID is required");
+        if (id == null) {
+            throw new ResourceNotFoundException("Center closure ID is required");
+        }
 
         Long centerId = findCenterId(id);
         lockCenter(centerId);
@@ -130,13 +186,13 @@ public class CenterClosureService {
 
     private Long findCenterId(Long closureId) {
         return closureRepository.findCenterIdById(closureId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Center closure not found with ID: " + closureId));
     }
 
     private VaccinationCenter lockCenter(Long centerId) {
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Vaccination center not found with ID: " + centerId));
         if (entityManager != null) {
             entityManager.refresh(center);
@@ -146,7 +202,7 @@ public class CenterClosureService {
 
     private CenterClosure findClosure(Long closureId) {
         return closureRepository.findById(closureId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Center closure not found with ID: " + closureId));
     }
 

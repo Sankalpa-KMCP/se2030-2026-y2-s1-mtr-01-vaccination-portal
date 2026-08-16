@@ -53,6 +53,14 @@ public interface VaccinationCenterRepository extends JpaRepository<VaccinationCe
     List<VaccinationCenter> findByCenterStatus(CenterStatus centerStatus);
 
     /**
+     * Finds all vaccination centers matching a specific operational status ordered by code ascending.
+     *
+     * @param centerStatus {@link CenterStatus} enum (ACTIVE or INACTIVE)
+     * @return List of matching centers ordered by code ascending
+     */
+    List<VaccinationCenter> findByCenterStatusOrderByCodeAsc(CenterStatus centerStatus);
+
+    /**
      * Finds all vaccination centers ordered alphabetically by code.
      *
      * @return List of all centers ordered by code ascending

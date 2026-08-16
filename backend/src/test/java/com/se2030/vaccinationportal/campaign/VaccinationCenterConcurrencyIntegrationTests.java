@@ -2,7 +2,11 @@ package com.se2030.vaccinationportal.campaign;
 
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCenterService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -32,11 +36,19 @@ class VaccinationCenterConcurrencyIntegrationTests {
 
     @Autowired private VaccinationCenterService service;
     @Autowired private VaccinationCenterRepository centerRepository;
+    @Autowired private CampaignCenterAssignmentRepository assignmentRepository;
+    @Autowired private OperatingHoursRepository operatingHoursRepository;
+    @Autowired private CenterClosureRepository closureRepository;
+    @Autowired private VaccinationSessionRepository sessionRepository;
     @Autowired private PlatformTransactionManager transactionManager;
     @PersistenceContext private EntityManager entityManager;
 
     @BeforeEach
     void clearPersistedState() {
+        sessionRepository.deleteAllInBatch();
+        closureRepository.deleteAllInBatch();
+        operatingHoursRepository.deleteAllInBatch();
+        assignmentRepository.deleteAllInBatch();
         centerRepository.deleteAllInBatch();
     }
 
