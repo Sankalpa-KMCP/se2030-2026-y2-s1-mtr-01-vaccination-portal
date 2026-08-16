@@ -396,4 +396,80 @@ class CampaignControllerTests {
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.message", containsString("Malformed JSON")));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/campaigns/{id}/schedule returns 404 when campaign does not exist")
+    void scheduleCampaignNotFound() throws Exception {
+        when(campaignService.scheduleCampaign(999L))
+                .thenThrow(new ResourceNotFoundException("Campaign not found with ID: 999"));
+
+        mockMvc.perform(post("/api/v1/campaigns/999/schedule"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.message", containsString("Campaign not found with ID: 999")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/campaigns/{id}/publish returns 404 when campaign does not exist")
+    void publishCampaignNotFound() throws Exception {
+        when(campaignService.publishCampaign(999L))
+                .thenThrow(new ResourceNotFoundException("Campaign not found with ID: 999"));
+
+        mockMvc.perform(post("/api/v1/campaigns/999/publish"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.message", containsString("Campaign not found with ID: 999")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/campaigns/{id}/activate returns 404 when campaign does not exist")
+    void activateCampaignNotFound() throws Exception {
+        when(campaignService.activateCampaign(999L))
+                .thenThrow(new ResourceNotFoundException("Campaign not found with ID: 999"));
+
+        mockMvc.perform(post("/api/v1/campaigns/999/activate"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.message", containsString("Campaign not found with ID: 999")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/campaigns/{id}/suspend returns 404 when campaign does not exist")
+    void suspendCampaignNotFound() throws Exception {
+        String payload = """
+                {
+                    "reason": "Adverse weather",
+                    "actorId": "OFFICER-01"
+                }
+                """;
+        when(campaignService.suspendCampaign(eq(999L), any(), any()))
+                .thenThrow(new ResourceNotFoundException("Campaign not found with ID: 999"));
+
+        mockMvc.perform(post("/api/v1/campaigns/999/suspend")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.message", containsString("Campaign not found with ID: 999")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/campaigns/{id}/resume returns 404 when campaign does not exist")
+    void resumeCampaignNotFound() throws Exception {
+        String payload = """
+                {
+                    "reason": "Weather cleared",
+                    "actorId": "OFFICER-01"
+                }
+                """;
+        when(campaignService.resumeCampaign(eq(999L), any(), any()))
+                .thenThrow(new ResourceNotFoundException("Campaign not found with ID: 999"));
+
+        mockMvc.perform(post("/api/v1/campaigns/999/resume")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.message", containsString("Campaign not found with ID: 999")));
+    }
 }

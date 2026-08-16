@@ -186,4 +186,28 @@ class VaccinationCampaignServiceQueryTests {
                 campaignService.getCampaignLifecycleEvents(999999L)
         );
     }
+
+    @Test
+    @DisplayName("Lifecycle methods throw ResourceNotFoundException when campaign ID does not exist")
+    void lifecycleMethodsMissingCampaignThrowsResourceNotFoundException() {
+        assertThrows(ResourceNotFoundException.class, () ->
+                campaignService.scheduleCampaign(999999L)
+        );
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                campaignService.publishCampaign(999999L)
+        );
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                campaignService.activateCampaign(999999L)
+        );
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                campaignService.suspendCampaign(999999L, "Operational pause", "OFFICER-01")
+        );
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                campaignService.resumeCampaign(999999L, "Operations resumed", "OFFICER-01")
+        );
+    }
 }

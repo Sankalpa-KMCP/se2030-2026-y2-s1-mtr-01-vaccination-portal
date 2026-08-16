@@ -112,7 +112,7 @@ public class VaccinationCampaignService {
         }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         if (entityManager != null) {
             entityManager.refresh(campaign);
@@ -231,7 +231,7 @@ public class VaccinationCampaignService {
         }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         if (entityManager != null) {
             entityManager.refresh(campaign);
@@ -328,7 +328,7 @@ public class VaccinationCampaignService {
         }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         if (entityManager != null) {
             entityManager.refresh(campaign);
@@ -381,7 +381,7 @@ public class VaccinationCampaignService {
         String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         if (entityManager != null) {
             entityManager.refresh(campaign);
@@ -432,7 +432,7 @@ public class VaccinationCampaignService {
         String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         if (entityManager != null) {
             entityManager.refresh(campaign);
