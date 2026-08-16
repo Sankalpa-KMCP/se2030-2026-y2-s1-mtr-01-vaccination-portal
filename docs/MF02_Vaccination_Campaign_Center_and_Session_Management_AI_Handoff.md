@@ -8,16 +8,18 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Last synchronized implementation checkpoint:** PR #80
-**Reviewed PR #80 source:** `fdf6f84938326968347cac2c01d3db6ea72938c4`
-**PR #80 base:** `3d21d38777eff40104b46a11773ceeded6d8dece`
-**PR #80 merge:** `852802ff0d533fdb013c64b4b10de395efd40557`
+**Last synchronized implementation checkpoint:** PR #82
+**Reviewed PR #82 source:** `cec16fcb99ae7064ee0804ea2f1cd4578aeb89e4`
+**PR #82 base:** `ff3d832745708e5d563c63059820e1e157767a60`
+**PR #82 merge:** `5dd7034df64951f061dc27c5596d17a3cb440061`
+**Preceding activation milestone:** PR #80 (`fdf6f84938326968347cac2c01d3db6ea72938c4` / merge `852802ff0d533fdb013c64b4b10de395efd40557`)
+**Preceding documentation synchronization milestone:** PR #81 (`7200790d4cdad0af5600317b0476870c48fd0df0` / merge `ff3d832745708e5d563c63059820e1e157767a60`)
 **Preceding test-hardening milestone:** PR #78 (`2e43665ff0b88027fd82b3577bf73d8357a1ba46`)
 **Preceding refactor milestone:** PR #75 (`cc13082ad94701475b69bc53b699d897486ff7fc`)
 **Preceding hardening milestone:** PR #73 (`d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`)
 **Preceding scheduling milestone:** PR #71 (`6d52449db4f29099f3a979e824a7efcae8f4ea54`)
-**Current verified backend baseline:** **616 tests**, 0 failures, 0 errors, 0 skipped; clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
-**PR #80 net-new executions:** +17 (+2 model tests, +14 activation integration tests, +1 activation concurrency test).
+**Current verified backend baseline:** **645 tests**, 0 failures, 0 errors, 0 skipped; clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
+**PR #82 net-new executions:** +29 (+4 `VaccinationCampaignModelTests`, +2 `CampaignLifecycleEventModelTests`, +22 `CampaignResumptionIntegrationTests`, +1 `CampaignResumptionConcurrencyIntegrationTests`).
 **Thread.sleep in tests:** 0 occurrences across `backend/src/test`.
 
 > This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
@@ -33,21 +35,35 @@ Use this order when facts conflict:
 5. `PROJECT_CONTEXT.md` — orientation summary only.
 6. `MF02_Completion_and_Hardening_Plan.md` — planned work, not evidence of implementation.
 
-Future agents must fetch live `origin/develop` before treating `852802ff0d533fdb013c64b4b10de395efd40557` as the repository tip.
+Future agents must fetch live `origin/develop` before treating `5dd7034df64951f061dc27c5596d17a3cb440061` as the repository tip.
 
 ## 2. Current Milestone
 
 ### Milestone reached
 
-**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, QUESTIONNAIRE INVARIANT HARDENING, FIRST ORCHESTRATION SERVICE DECOMPOSITION, DETERMINISTIC CONCURRENCY-TEST HARDENING, AND CAMPAIGN ACTIVATION (PUBLISHED -> ACTIVE) ARE INTEGRATED.**
+**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, QUESTIONNAIRE INVARIANT HARDENING, FIRST ORCHESTRATION SERVICE DECOMPOSITION, DETERMINISTIC CONCURRENCY-TEST HARDENING, CAMPAIGN ACTIVATION (PUBLISHED -> ACTIVE), AND CAMPAIGN RESUMPTION (SUSPENDED -> PUBLISHED / ACTIVE) ARE INTEGRATED.**
 
 This does **not** mean MF-02 is complete.
 
-The current checkpoint includes campaign scheduling approval (PR #71), defensive questionnaire publication invariant revalidation (PR #73), the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75), deterministic reverse-impact concurrency test hardening (PR #78), and authoritative campaign activation `PUBLISHED -> ACTIVE` (PR #80) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
+The current checkpoint includes campaign scheduling approval (PR #71), defensive questionnaire publication invariant revalidation (PR #73), the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75), deterministic reverse-impact concurrency test hardening (PR #78), authoritative campaign activation `PUBLISHED -> ACTIVE` (PR #80), and authoritative campaign resumption `SUSPENDED -> PUBLISHED / ACTIVE` (PR #82) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
 
 ### Current verified integrations
 
-1. **PR #80 — `feat(mf02): add campaign activation lifecycle transition`**
+1. **PR #82 — `feat(mf02): add campaign resumption lifecycle transition`**
+   - reviewed source: `cec16fcb99ae7064ee0804ea2f1cd4578aeb89e4`
+   - merge: `5dd7034df64951f061dc27c5596d17a3cb440061`
+   - base: `ff3d832745708e5d563c63059820e1e157767a60`
+   - merge method: normal merge commit
+   - Backend CI: PASS
+   - Frontend CI: PASS
+   - authoritative backend baseline: **645**
+   - net-new executions: **+29** (+4 `VaccinationCampaignModelTests`, +2 `CampaignLifecycleEventModelTests`, +22 `CampaignResumptionIntegrationTests`, +1 `CampaignResumptionConcurrencyIntegrationTests`)
+   - behavior: implements canonical `SUSPENDED -> PUBLISHED` (when `today < serviceStartDate`) and `SUSPENDED -> ACTIVE` (when `serviceStartDate <= today <= serviceEndDate`) campaign resumption per Canonical R9 Appendix E.5 under campaign pessimistic write lock (`findByIdForUpdate`) and post-lock `entityManager.refresh`. Date decisions derived from injected application `Clock`. Requires mandatory non-blank reason (max 500 chars) and actor ID; atomically records append-only `CampaignLifecycleEvent` with change type `RESUMED`. Fails deterministically with `IllegalStateException` when `today > serviceEndDate` without mutating campaign state or creating events. Serializes concurrent resumption requests deterministically without predetermining worker winner identity.
+   - actor note: *Canonical identifies Campaign Officer / Administrator as authorized actors; enforcement remains an API/security-layer responsibility outside this domain/service change.*
+   - atomicity note: *Campaign state update and lifecycle event persistence are atomic within a single Spring `@Transactional` service boundary.*
+   - Thread.sleep occurrences under `backend/src/test`: **0**
+
+2. **PR #80 — `feat(mf02): add campaign activation lifecycle transition`**
    - reviewed source: `fdf6f84938326968347cac2c01d3db6ea72938c4`
    - merge: `852802ff0d533fdb013c64b4b10de395efd40557`
    - base: `3d21d38777eff40104b46a11773ceeded6d8dece`
@@ -123,6 +139,8 @@ The repository contains substantial implemented MF-02 backend behavior:
 - `DRAFT/SCHEDULED -> PUBLISHED`
 - `PUBLISHED -> ACTIVE`
 - `PUBLISHED/ACTIVE -> SUSPENDED`
+- `SUSPENDED -> PUBLISHED`
+- `SUSPENDED -> ACTIVE`
 
 ### Center planning
 - `VaccinationCenter`
@@ -231,6 +249,41 @@ The service:
 - Child session decoupling: campaign activation does not modify child session statuses or bookings.
 - Actor boundary: *Canonical identifies System or Campaign Officer as authorized actors; enforcement remains an API/security-layer responsibility outside this domain/service implementation.*
 
+### 4.3 Campaign `SUSPENDED -> PUBLISHED / ACTIVE` Resumption Contract — PR #82
+
+PR #82 implements authoritative campaign resumption according to Canonical R9 Appendix E.5.
+
+#### Source and target
+- source: `SUSPENDED` only
+- target: derived from authoritative application date:
+  - `PUBLISHED` when `today < serviceStartDate` ("Resume before service start")
+  - `ACTIVE` when `serviceStartDate <= today <= serviceEndDate` ("Resume during service period")
+
+#### Authoritative service command
+`VaccinationCampaignService.resumeCampaign(Long campaignId, String reason, String actorId)`
+
+The service:
+1. validates input parameters: `reason` must be non-null and non-blank (max 500 characters); `actorId` must be non-null and non-blank (max 64 characters);
+2. acquires Campaign pessimistic write lock via `campaignRepository.findByIdForUpdate(campaignId)`;
+3. refreshes authoritative entity state via `entityManager.refresh(campaign)`;
+4. requires authoritative source status `SUSPENDED` (rejects all 7 other statuses with `IllegalStateException`);
+5. derives `today` from injected application `Clock` (`LocalDate.now(clock)`);
+6. verifies service dates and evaluates date-driven target:
+   - `today.isAfter(serviceEndDate)`: rejected with `IllegalStateException` ("Campaign service end date has already passed"), leaving campaign state unchanged in `SUSPENDED` and generating zero lifecycle events;
+   - `today.isBefore(serviceStartDate)`: invokes domain transition `campaign.resumeToPublished()`;
+   - `serviceStartDate <= today <= serviceEndDate`: invokes domain transition `campaign.resumeToActive()`;
+7. persists updated campaign state via `campaignRepository.save(campaign)`;
+8. creates and persists append-only `CampaignLifecycleEvent` with `changeType == RESUMED`, `previousStatus == SUSPENDED`, `newStatus`, `reason`, `actorId`, and `createdAt` from `clock.instant()`;
+9. returns the managed `VaccinationCampaign` entity.
+
+#### Integrity, Concurrency, and Atomicity
+- Non-idempotent: subsequent resumption attempts against a resumed campaign throw `IllegalStateException` because the status is no longer `SUSPENDED`.
+- Transactional atomicity: campaign status update and `CampaignLifecycleEvent` persistence are executed within the same Spring `@Transactional` service boundary. If event creation or persistence fails, the entire transaction rolls back.
+- Persistence safety: failed resumption attempts leave database state uncorrupted in `SUSPENDED` with zero `CampaignLifecycleEvent` records created.
+- Concurrency serialization: simultaneous resumption attempts race for the row lock; exactly one contender transitions the status and persists a `RESUMED` event, while competing contenders observe the non-`SUSPENDED` state and fail with `IllegalStateException`. Final persisted status matches the date-derived target; exactly one `RESUMED` event persists. Winner identity is not predetermined.
+- Child session decoupling: campaign resumption does not modify child session statuses or bookings.
+- Actor boundary: *Canonical identifies Campaign Officer / Administrator as authorized actors. Actor ID is captured as audit data; authorization enforcement remains an API/security-layer responsibility outside this domain/service change.*
+
 ## 5. Locking and Transaction Conventions
 
 Preserve established parent-first ordering and authoritative post-lock refresh.
@@ -245,6 +298,7 @@ Common lock paths include:
 - series confirmation: Campaign -> Center -> Rule -> affected Sessions by ascending ID
 - campaign scheduling: Campaign
 - campaign activation: Campaign
+- campaign resumption: Campaign
 
 Critical write services are transactional. Read-only preview operations use read-only transactions where appropriate.
 
@@ -253,15 +307,15 @@ Do not add pessimistic locks merely for style. Add them only for a real invarian
 ## 6. Current Test / Verification State
 
 ### Authoritative current backend baseline
-**616 tests**
+**645 tests**
 
 - failures: 0
 - errors: 0
 - skipped: 0
 - clean Maven test: PASS
 - clean Maven verify: PASS
-- Surefire reports at PR #80 candidate: 69 XML files
-- Surefire-summed executions: 616
+- Surefire reports at PR #82 candidate: 71 XML files
+- Surefire-summed executions: 645
 - Backend CI: PASS
 - Frontend CI: PASS
 
@@ -273,8 +327,9 @@ Do not add pessimistic locks merely for style. Add them only for a real invarian
 - PR #75: **599** (+8 from `SessionSeriesPreviewCalculatorTests`)
 - PR #78: **599** (+0 net-new; test determinism hardening)
 - PR #80: **616** (+17 net-new: +2 model tests, +14 activation integration tests, +1 activation concurrency test)
+- PR #82: **645** (+29 net-new: +4 model tests, +2 lifecycle-event model tests, +22 resumption integration tests, +1 resumption concurrency test)
 
-Do not resurrect 566, 575, or 599 as authoritative current evidence (599 is a historical baseline).
+Do not resurrect 566, 575, 599, or 616 as authoritative current evidence (599 and 616 are historical baselines).
 
 ### Test architecture
 Current integration/concurrency tests predominantly use H2 in MySQL compatibility mode. This provides structural regression evidence but does **not** certify production MySQL lock/deadlock semantics.
@@ -396,20 +451,20 @@ Still unresolved or unimplemented:
 ### `PUBLISHED -> ACTIVE` — RESOLVED (PR #80)
 Authoritative campaign activation implemented per Canonical R9 Appendix E.5 under campaign row lock (`findByIdForUpdate`), `entityManager.refresh`, and UTC Clock inclusive date validation (`serviceStartDate <= today <= serviceEndDate`).
 
-### `SUSPENDED -> PUBLISHED / ACTIVE`
-Need blocking-condition-clearance semantics and target-state/time rule.
+### `SUSPENDED -> PUBLISHED / ACTIVE` — RESOLVED (PR #82)
+Authoritative campaign resumption implemented per Canonical R9 Appendix E.5 under campaign row lock (`findByIdForUpdate`), `entityManager.refresh`, mandatory reason/actor audit parameters, transactional `CampaignLifecycleEvent` (change type `RESUMED`), and UTC Clock date-driven target resolution (`today < serviceStartDate` -> `PUBLISHED`; `serviceStartDate <= today <= serviceEndDate` -> `ACTIVE`; `today > serviceEndDate` -> `IllegalStateException`).
 
 ### `-> COMPLETED`
-Need an operational definition of “service work closed.”
+Status: `SPECIFICATION_PARTIAL`. Needs an authoritative operational algorithm for "service work closed" before implementation.
 
 ### `-> CANCELLED`
-Need reason, dependency/impact policy, truthful MF-03 impact integration, and no silent appointment mutation.
+Status: `MF03_BLOCKED`. Requires reason, dependency/impact policy, truthful MF-03 impact integration, and no silent appointment mutation (production `SessionImpactReader` adapter remains absent).
 
 ### `COMPLETED/CANCELLED -> ARCHIVED`
-Retention duration/policy remains `USER_DATA_REQUIRED`.
+Status: `USER_DATA_REQUIRED`. Retention duration/policy remains missing and requires authoritative user/domain specification.
 
 ### DRAFT campaign / child session scheduling
-The separate policy question of whether a child DRAFT session may become SCHEDULED while its parent Campaign remains DRAFT is still unresolved unless later live repository evidence shows otherwise.
+Status: `IMPLEMENTATION_DEFINED / unresolved policy`. The separate policy question of whether a child DRAFT session may become SCHEDULED while its parent Campaign remains DRAFT is still unresolved in canonical specification.
 
 ## 12. MF-02 Ownership Boundaries
 
@@ -428,8 +483,8 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 Do **not** automatically start another lifecycle transition without proper requirements alignment.
 
 Recommended order:
-1. synchronize maintained documentation to PR #80 — represented by this step;
-2. design and implement remaining campaign lifecycle transitions (resumption `SUSPENDED -> PUBLISHED / ACTIVE`, completion, cancellation);
+1. synchronize maintained documentation to PR #82 — represented by this step;
+2. analyze and resolve remaining campaign lifecycle gaps (completion algorithm, cancellation impact integration, archive retention policy);
 3. evaluate/decompose `VaccinationSessionService` maintainability only if justified;
 4. add production-equivalent MySQL Testcontainers concurrency assurance;
 5. complete MF-03 production impact adapter and outbox boundary;
@@ -480,6 +535,8 @@ This compact chronology replaces stale controller transcripts. Detailed Git hist
 | #78 | Deterministic reverse-impact concurrency test hardening |
 | #79 | Evidence synchronization after PR #78 |
 | #80 | Campaign `PUBLISHED -> ACTIVE` activation |
+| #81 | Evidence synchronization after PR #80 |
+| #82 | Campaign `SUSPENDED -> PUBLISHED / ACTIVE` resumption |
 
 Key full merge checkpoints:
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -497,6 +554,8 @@ Key full merge checkpoints:
 - PR #78: `20520c03bdd53329a7fe647a7355beed58ed552e`
 - PR #79: `3d21d38777eff40104b46a11773ceeded6d8dece`
 - PR #80: `852802ff0d533fdb013c64b4b10de395efd40557`
+- PR #81: `ff3d832745708e5d563c63059820e1e157767a60`
+- PR #82: `5dd7034df64951f061dc27c5596d17a3cb440061`
 
 ## 15. Status Discipline
 
@@ -506,20 +565,20 @@ Never claim:
 - US-13 complete;
 - production API/security/migrations/frontend complete;
 - MySQL concurrency certified;
-- 566, 575, or 599 as the current backend baseline.
+- 566, 575, 599, or 616 as the current backend baseline.
 
 Current status remains:
 
 - Sprint 1: **IN PROGRESS**
 - MF-02: **IN PROGRESS**
 - US-13: **IN PROGRESS**
-- current verified backend baseline: **616**
+- current verified backend baseline: **645**
 
 ## 16. Startup Procedure for the Next AI Session
 
 1. Read canonical Markdown `3.3-AI / 2026-08-14-R9`.
 2. Fetch live `origin/develop`.
-3. Verify whether `852802ff0d533fdb013c64b4b10de395efd40557` remains an ancestor/current checkpoint.
+3. Verify whether `5dd7034df64951f061dc27c5596d17a3cb440061` remains an ancestor/current checkpoint.
 4. Run/inspect current backend tests before changing behavior.
 5. Read this handoff and Sprint evidence.
 6. Review `MF02_Completion_and_Hardening_Plan.md`.
