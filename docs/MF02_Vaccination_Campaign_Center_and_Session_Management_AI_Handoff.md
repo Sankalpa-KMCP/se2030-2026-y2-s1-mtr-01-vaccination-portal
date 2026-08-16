@@ -8,18 +8,17 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Last synchronized implementation checkpoint:** PR #82
-**Reviewed PR #82 source:** `cec16fcb99ae7064ee0804ea2f1cd4578aeb89e4`
-**PR #82 base:** `ff3d832745708e5d563c63059820e1e157767a60`
-**PR #82 merge:** `5dd7034df64951f061dc27c5596d17a3cb440061`
-**Preceding activation milestone:** PR #80 (`fdf6f84938326968347cac2c01d3db6ea72938c4` / merge `852802ff0d533fdb013c64b4b10de395efd40557`)
+**Last synchronized implementation checkpoint:** PR #84
+**Reviewed PR #84 source:** `ded72c17d8bb4aaf222d6e2a96b44fa93208e880` (original candidate: `3343817c964ba6fd837a4b609a6bdbb63037fd51`)
+**PR #84 base:** `633e6a94585a9549718e16b038ae27e6646347f0`
+**PR #84 merge:** `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
+**Preceding documentation synchronization milestone:** PR #83 (`5753f03855800f24e176b91d4efefab34177b472` / merge `633e6a94585a9549718e16b038ae27e6646347f0`)
+**Preceding resumption milestone:** PR #82 (`cec16fcb99ae7064ee0804ea2f1cd4578aeb89e4` / merge `5dd7034df64951f061dc27c5596d17a3cb440061`)
 **Preceding documentation synchronization milestone:** PR #81 (`7200790d4cdad0af5600317b0476870c48fd0df0` / merge `ff3d832745708e5d563c63059820e1e157767a60`)
+**Preceding activation milestone:** PR #80 (`fdf6f84938326968347cac2c01d3db6ea72938c4` / merge `852802ff0d533fdb013c64b4b10de395efd40557`)
 **Preceding test-hardening milestone:** PR #78 (`2e43665ff0b88027fd82b3577bf73d8357a1ba46`)
-**Preceding refactor milestone:** PR #75 (`cc13082ad94701475b69bc53b699d897486ff7fc`)
-**Preceding hardening milestone:** PR #73 (`d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`)
-**Preceding scheduling milestone:** PR #71 (`6d52449db4f29099f3a979e824a7efcae8f4ea54`)
-**Current verified backend baseline:** **645 tests**, 0 failures, 0 errors, 0 skipped; clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
-**PR #82 net-new executions:** +29 (+4 `VaccinationCampaignModelTests`, +2 `CampaignLifecycleEventModelTests`, +22 `CampaignResumptionIntegrationTests`, +1 `CampaignResumptionConcurrencyIntegrationTests`).
+**Current verified backend baseline:** **645 functional H2 tests** (71 XML reports) plus **3 MySQL/Testcontainers assurance tests** (2 XML reports); producing **648 logical executions** across the two validation paths. Clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
+**PR #84 net-new executions:** +0 H2, +3 MySQL Testcontainers (`CampaignLifecycleMySqlConcurrencyIntegrationTests` [2], `CampaignReverseImpactMySqlConcurrencyIntegrationTests` [1]).
 **Thread.sleep in tests:** 0 occurrences across `backend/src/test`.
 
 > This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
@@ -35,21 +34,40 @@ Use this order when facts conflict:
 5. `PROJECT_CONTEXT.md` — orientation summary only.
 6. `MF02_Completion_and_Hardening_Plan.md` — planned work, not evidence of implementation.
 
-Future agents must fetch live `origin/develop` before treating `5dd7034df64951f061dc27c5596d17a3cb440061` as the repository tip.
+Future agents must fetch live `origin/develop` before treating `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a` as the repository tip.
 
 ## 2. Current Milestone
 
 ### Milestone reached
 
-**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, QUESTIONNAIRE INVARIANT HARDENING, FIRST ORCHESTRATION SERVICE DECOMPOSITION, DETERMINISTIC CONCURRENCY-TEST HARDENING, CAMPAIGN ACTIVATION (PUBLISHED -> ACTIVE), AND CAMPAIGN RESUMPTION (SUSPENDED -> PUBLISHED / ACTIVE) ARE INTEGRATED.**
+**MF-02 CORE BACKEND PLANNING / SESSION-CHANGE FOUNDATIONS, CAMPAIGN SCHEDULING APPROVAL, QUESTIONNAIRE INVARIANT HARDENING, FIRST ORCHESTRATION SERVICE DECOMPOSITION, DETERMINISTIC CONCURRENCY-TEST HARDENING, CAMPAIGN ACTIVATION (PUBLISHED -> ACTIVE), CAMPAIGN RESUMPTION (SUSPENDED -> PUBLISHED / ACTIVE), AND REPRESENTATIVE MYSQL/TESTCONTAINERS CONCURRENCY ASSURANCE ARE INTEGRATED.**
 
 This does **not** mean MF-02 is complete.
 
-The current checkpoint includes campaign scheduling approval (PR #71), defensive questionnaire publication invariant revalidation (PR #73), the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75), deterministic reverse-impact concurrency test hardening (PR #78), authoritative campaign activation `PUBLISHED -> ACTIVE` (PR #80), and authoritative campaign resumption `SUSPENDED -> PUBLISHED / ACTIVE` (PR #82) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
+The current checkpoint includes campaign scheduling approval (PR #71), defensive questionnaire publication invariant revalidation (PR #73), the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75), deterministic reverse-impact concurrency test hardening (PR #78), authoritative campaign activation `PUBLISHED -> ACTIVE` (PR #80), authoritative campaign resumption `SUSPENDED -> PUBLISHED / ACTIVE` (PR #82), and representative production-equivalent MySQL/Testcontainers concurrency assurance (PR #84) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
 
 ### Current verified integrations
 
-1. **PR #82 — `feat(mf02): add campaign resumption lifecycle transition`**
+1. **PR #84 — `test(mf02): add MySQL concurrency assurance`**
+   - reviewed source: `ded72c17d8bb4aaf222d6e2a96b44fa93208e880` (corrective commit resolving assertion message mismatch from original candidate `3343817c964ba6fd837a4b609a6bdbb63037fd51`)
+   - merge: `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
+   - base: `633e6a94585a9549718e16b038ae27e6646347f0`
+   - merge method: normal merge commit (two parents: `633e6a9` and `ded72c1`)
+   - Backend CI: PASS
+   - Frontend CI: PASS
+   - production code changed: 0
+   - functional H2 baseline: **645 tests** across 71 Surefire XML reports (0 failures, 0 errors, 0 skipped)
+   - MySQL/Testcontainers assurance executions: **3 tests** across 2 MySQL-specific XML reports (0 failures, 0 errors, 0 skipped)
+   - logical combined coverage: **648 executions** across the two validation paths
+   - test infrastructure & container: Testcontainers 1.20.4 (`junit-jupiter`, `mysql` test scope), shared static singleton container (`AbstractMySqlTestContainersIntegrationTest`), dynamic property injection via `@DynamicPropertySource`, runtime product assertion via `assertConnectedToRealMySql()`. Pinned test image: `mysql:8.4.3`.
+   - CI workflow: dual verification in `.github/workflows/backend-ci.yml` running standard `./mvnw verify` (H2 suite) followed by `./mvnw verify -Pmysql-concurrency` (MySQL assurance suite).
+   - validated topologies:
+     - **Topology A (Single-Row Command Locking):** Verified duplicate-command race serialization against MySQL InnoDB for campaign resumption (`simultaneousResumptionSerializesToOneTransitionOnMySql`) and activation (`simultaneousActivationSerializesToOneTransitionOnMySql`). Exactly 1 contender succeeds, competing contender observes post-lock entity state and receives `IllegalStateException`; audit event and final status are strictly validated.
+     - **Topology B (Parent/Child Reverse-Impact Locking):** Verified cross-entity lock contention against MySQL InnoDB (`concurrentSessionCreationAndCampaignDateShorteningSerializeOnMySql`). Campaign `PESSIMISTIC_WRITE` lock held during service date shortening blocks competing session creation attempt; date shortening succeeds, conflicting session creation fails validation, 0 invalid sessions persist in MySQL.
+   - note: *Representative single-row lifecycle and parent/child reverse-impact pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.*
+   - Thread.sleep occurrences under `backend/src/test`: **0**
+
+2. **PR #82 — `feat(mf02): add campaign resumption lifecycle transition`**
    - reviewed source: `cec16fcb99ae7064ee0804ea2f1cd4578aeb89e4`
    - merge: `5dd7034df64951f061dc27c5596d17a3cb440061`
    - base: `ff3d832745708e5d563c63059820e1e157767a60`
@@ -307,16 +325,17 @@ Do not add pessimistic locks merely for style. Add them only for a real invarian
 ## 6. Current Test / Verification State
 
 ### Authoritative current backend baseline
-**645 tests**
+**645 functional H2 tests** (71 XML reports) plus **3 MySQL/Testcontainers assurance tests** (2 XML reports); producing **648 logical executions** across the two validation paths.
 
 - failures: 0
 - errors: 0
 - skipped: 0
-- clean Maven test: PASS
-- clean Maven verify: PASS
-- Surefire reports at PR #82 candidate: 71 XML files
-- Surefire-summed executions: 645
-- Backend CI: PASS
+- clean Maven test (H2 default): PASS (645 executions)
+- clean Maven verify (H2 default): PASS (645 executions)
+- clean Maven verify (`-Pmysql-concurrency` profile): PASS (3 executions)
+- Surefire reports at PR #84 candidate: 71 H2 XML files + 2 MySQL XML files
+- Surefire-summed executions: 645 (H2) / 3 (MySQL)
+- Backend CI: PASS (H2 step + MySQL Testcontainers step)
 - Frontend CI: PASS
 
 ### Baseline reconciliation history
@@ -328,11 +347,19 @@ Do not add pessimistic locks merely for style. Add them only for a real invarian
 - PR #78: **599** (+0 net-new; test determinism hardening)
 - PR #80: **616** (+17 net-new: +2 model tests, +14 activation integration tests, +1 activation concurrency test)
 - PR #82: **645** (+29 net-new: +4 model tests, +2 lifecycle-event model tests, +22 resumption integration tests, +1 resumption concurrency test)
+- PR #84: **645 functional H2** + **3 MySQL assurance** (**648 logical executions**; +0 H2, +3 MySQL Testcontainers concurrency tests)
 
-Do not resurrect 566, 575, 599, or 616 as authoritative current evidence (599 and 616 are historical baselines).
+Do not resurrect 566, 575, 599, or 616 as authoritative current evidence (599 and 616 are historical baselines). Do not report 648 as the functional backend baseline (648 represents logical combined coverage across the two separate verification paths).
 
 ### Test architecture
-Current integration/concurrency tests predominantly use H2 in MySQL compatibility mode. This provides structural regression evidence but does **not** certify production MySQL lock/deadlock semantics.
+The default backend test suite continues to run against in-memory H2 in MySQL compatibility mode, verifying all 645 domain, service, and integration tests rapidly.
+
+PR #84 introduced a dedicated, production-equivalent MySQL concurrency assurance suite:
+- Pinned container image: `mysql:8.4.3`
+- Database: MySQL 8.4.3 InnoDB with `REPEATABLE_READ` isolation and MySQL Connector/J driver
+- Container lifecycle: Singleton container managed via `AbstractMySqlTestContainersIntegrationTest` with dynamic Spring datasource configuration (`@DynamicPropertySource`)
+- Tagging & execution: Test classes are tagged `@Tag("mysql-testcontainers")`, excluded from standard Surefire test runs, and executed in CI via Maven profile `mysql-concurrency` (`-Pmysql-concurrency`)
+- Scope: Validates representative locking topologies (single-row lifecycle duplicate-command race serialization and cross-entity parent/child reverse-impact locking) against real MySQL/InnoDB.
 
 ## 7. Architecture / Maintainability Audit — Current Repository Snapshot
 
@@ -347,7 +374,7 @@ Verified sizes after PR #75 decomposition:
 - `OperatingHoursService.java`: ~409 lines
 
 Current MF-02 production Java files under the campaign module: 64.
-Current MF-02 test Java files in the flat campaign test package: 66.
+Current MF-02 test Java files in the flat campaign test package: 68.
 
 ### Architectural verdict
 Keep the current **layered modular monolith**. Do not perform a wholesale architecture rewrite.
@@ -375,7 +402,7 @@ The following are not complete in the uploaded repository snapshot:
 - Spring Security/RBAC/authentication enforcement
 - OpenAPI
 - Flyway business migrations
-- production MySQL Testcontainers assurance
+- representative production MySQL Testcontainers assurance (RESOLVED in PR #84; broad production database certification deferred)
 - MF-02 frontend business screens
 - frontend automated tests
 - production MF-03 impact adapter
@@ -415,8 +442,12 @@ PR #78 eliminated the remaining `Thread.sleep(300)` timing delay in `CampaignAss
 
 *Note:* Deterministic transaction ordering and serialization are proven; exact JDBC blocking timing is not directly instrumented.
 
-### 9.5 H2-only database concurrency assurance — OPEN
-While timing sleeps have been eliminated, tests currently run on H2 in MySQL compatibility mode. Adding a focused MySQL Testcontainers suite for the highest-risk lock/idempotency paths remains an open assurance goal.
+### 9.5 Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84)
+PR #84 closed the representative database locking assurance gap by introducing containerized MySQL 8.4.3 InnoDB integration tests via Testcontainers:
+- Validated single-row duplicate-command race serialization against MySQL InnoDB for campaign resumption and activation (`CampaignLifecycleMySqlConcurrencyIntegrationTests`).
+- Validated parent/child reverse-impact pessimistic-locking serialization against MySQL InnoDB for campaign service-date shortening versus concurrent conflicting session creation (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
+- Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step.
+- *Scope boundary:* Representative single-row lifecycle and parent/child reverse-impact pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.
 
 ### 9.6 Append-only audit limitation
 Lifecycle/change repositories inherit normal repository delete operations. Current append-only behavior is a domain/API convention rather than deletion-proof database enforcement.
@@ -483,16 +514,15 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 Do **not** automatically start another lifecycle transition without proper requirements alignment.
 
 Recommended order:
-1. synchronize maintained documentation to PR #82 — represented by this step;
+1. synchronize maintained documentation to PR #84 — represented by this step;
 2. analyze and resolve remaining campaign lifecycle gaps (completion algorithm, cancellation impact integration, archive retention policy);
 3. evaluate/decompose `VaccinationSessionService` maintainability only if justified;
-4. add production-equivalent MySQL Testcontainers concurrency assurance;
-5. complete MF-03 production impact adapter and outbox boundary;
-6. add API/DTO/OpenAPI;
-7. add security/RBAC;
-8. add Flyway migrations;
-9. implement MF-02 frontend and frontend tests;
-10. final end-to-end / Definition-of-Done evidence.
+4. complete MF-03 production impact adapter and outbox boundary;
+5. add API/DTO/OpenAPI;
+6. add security/RBAC;
+7. add Flyway migrations;
+8. implement MF-02 frontend and frontend tests;
+9. final end-to-end / Definition-of-Done evidence.
 
 ## 14. Historical Milestone Summary
 
@@ -537,6 +567,8 @@ This compact chronology replaces stale controller transcripts. Detailed Git hist
 | #80 | Campaign `PUBLISHED -> ACTIVE` activation |
 | #81 | Evidence synchronization after PR #80 |
 | #82 | Campaign `SUSPENDED -> PUBLISHED / ACTIVE` resumption |
+| #83 | Evidence synchronization after PR #82 |
+| #84 | Representative MySQL/Testcontainers concurrency assurance |
 
 Key full merge checkpoints:
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -556,6 +588,8 @@ Key full merge checkpoints:
 - PR #80: `852802ff0d533fdb013c64b4b10de395efd40557`
 - PR #81: `ff3d832745708e5d563c63059820e1e157767a60`
 - PR #82: `5dd7034df64951f061dc27c5596d17a3cb440061`
+- PR #83: `633e6a94585a9549718e16b038ae27e6646347f0`
+- PR #84: `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
 
 ## 15. Status Discipline
 
@@ -564,21 +598,21 @@ Never claim:
 - Sprint 1 complete;
 - US-13 complete;
 - production API/security/migrations/frontend complete;
-- MySQL concurrency certified;
-- 566, 575, 599, or 616 as the current backend baseline.
+- MySQL concurrency fully certified across all endpoints;
+- 566, 575, 599, or 616 as the current backend baseline, or 648 as the functional H2 baseline (648 is logical combined coverage: 645 H2 + 3 MySQL assurance).
 
 Current status remains:
 
 - Sprint 1: **IN PROGRESS**
 - MF-02: **IN PROGRESS**
 - US-13: **IN PROGRESS**
-- current verified backend baseline: **645**
+- current verified backend baseline: **645 functional H2 tests (plus 3 MySQL assurance tests; 648 logical executions)**
 
 ## 16. Startup Procedure for the Next AI Session
 
 1. Read canonical Markdown `3.3-AI / 2026-08-14-R9`.
 2. Fetch live `origin/develop`.
-3. Verify whether `5dd7034df64951f061dc27c5596d17a3cb440061` remains an ancestor/current checkpoint.
+3. Verify whether `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a` remains an ancestor/current checkpoint.
 4. Run/inspect current backend tests before changing behavior.
 5. Read this handoff and Sprint evidence.
 6. Review `MF02_Completion_and_Hardening_Plan.md`.
