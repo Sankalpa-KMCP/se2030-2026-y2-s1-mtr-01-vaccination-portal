@@ -7,15 +7,64 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #86
-**Latest verified implementation merge:** `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
+**Evidence synchronized through implementation:** PR #88
+**Latest verified implementation merge:** `faf455ff6f07d096258e7cd977765e6e9e25b10f`
 **Last updated:** 2026-08-16
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #86 — `feat(mf02): add campaign management REST API`
+### PR #88 — `feat(mf02): add vaccination center management REST API`
+
+- reviewed source: `263c26bc9d9a7b51bd81e28d326a90b004c548f0`
+- base: `37574bb02e157971c3ca2250d4953834cfe6d132`
+- merge: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
+- merged at: `2026-08-16T16:46:40Z`
+- merge method: normal merge commit (two parents: `37574bb02e157971c3ca2250d4953834cfe6d132` and `263c26bc9d9a7b51bd81e28d326a90b004c548f0`)
+- reviewed candidate preserved: YES
+- Backend CI: PASS (724 H2 verify + 3 Testcontainers MySQL verify)
+- Frontend CI: PASS
+- production code changed: 17 files (13 new, 4 modified)
+- test code changed: 4 files (3 new, 1 modified fixture fix)
+- total files: 21
+- functional H2 test executions: **724** (77 XML reports; 0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **3** (2 XML reports; 0 failures, 0 errors, 0 skipped)
+- logical combined executions: **727**
+- previous clean baseline: **680 functional H2 + 3 MySQL** (from PR #86)
+- net-new executions: **+44 H2 tests** (+33 `CenterControllerTests`, +4 `CenterDtoMapperTests`, +7 `VaccinationCenterServiceQueryTests`)
+- endpoints integrated under `/api/v1/centers` (14):
+  - Center Master & Status (6):
+    1. `POST /api/v1/centers` (Create center; 201 Created)
+    2. `GET /api/v1/centers/{id}` (Get center details; 200 OK)
+    3. `GET /api/v1/centers` (List centers with optional `status` filter, ordered by `code` ASC; 200 OK)
+    4. `PUT /api/v1/centers/{id}` (Update center details; 200 OK)
+    5. `POST /api/v1/centers/{id}/activate` (Activate center; 200 OK)
+    6. `POST /api/v1/centers/{id}/deactivate` (Deactivate center with reverse-impact check; 200 OK)
+  - Operating Hours (4):
+    7. `POST /api/v1/centers/{id}/operating-hours` (Add operating hours; 201 Created)
+    8. `GET /api/v1/centers/{id}/operating-hours` (List operating hours for center; 200 OK)
+    9. `PUT /api/v1/centers/{centerId}/operating-hours/{hoursId}` (Update operating hours; 200 OK)
+    10. `POST /api/v1/centers/{centerId}/operating-hours/{hoursId}/end-date` (End-date operating hours; 200 OK)
+  - Center Closures (4):
+    11. `POST /api/v1/centers/{id}/closures` (Add center closure; 201 Created)
+    12. `GET /api/v1/centers/{id}/closures` (List closures for center; 200 OK)
+    13. `PUT /api/v1/centers/{centerId}/closures/{closureId}` (Update future closure; 200 OK)
+    14. `POST /api/v1/centers/{centerId}/closures/{closureId}/cancel` (Cancel future closure; 200 OK)
+- architecture: strict transport adapter pattern (`CenterController` invokes domain services `VaccinationCenterService`, `OperatingHoursService`, and `CenterClosureService`; 0 repository dependencies in controller; 0 controller transactions; service layer owns `@Transactional` persistence/locking; pure `CenterDtoMapper` handles DTO conversion; existing `@RestControllerAdvice` `GlobalCampaignExceptionHandler` provides structured RFC-aligned `ApiErrorResponse`).
+- nested parent-child ownership integrity: nested child mutations (`/centers/{centerId}/operating-hours/{hoursId}`, `/centers/{centerId}/closures/{closureId}`) validate both parent center and child IDs; mismatch throws `ResourceNotFoundException` -> 404 Not Found, preventing cross-center mutation.
+- error & exception taxonomy:
+  - 400 Bad Request: `@Valid` payload validation failure, parameter type mismatch, malformed JSON, general `IllegalArgumentException` (including normal duplicate center code detected by service precheck)
+  - 404 Not Found: `ResourceNotFoundException` (missing Center, OperatingHours, CenterClosure, or nested parent-child mismatch)
+  - 409 Conflict: `IllegalStateException` (business invariant conflict, active shift/session collision)
+  - 500 Internal Server Error: unexpected unhandled server exception
+- duplicate center code note: *Normal duplicate center code is rejected with 400 Bad Request via service precheck. Concurrent duplicate code race is protected by database unique constraint backstop (`CONCURRENT_RACE_DB_BACKSTOP_UNSPECIALIZED`).*
+- locking preservation: *PR #88 preserved 100% of underlying `findByIdForUpdate` pessimistic locking, post-lock `entityManager.refresh`, and transactional reverse-impact check invariants.*
+- test fixture cleanup note: *`VaccinationCenterConcurrencyIntegrationTests` fixture cleanup was adjusted to delete dependent child entities before centers to avoid foreign key cleanup constraints in H2 (`JUSTIFIED_TEST_FIX`; 0 assertion/concurrency proof changes).*
+- note: *The exact reviewed candidate passed CI before zero-drift merge; no additional local post-merge rerun was performed.*
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+### Preceding Milestone: PR #86 — `feat(mf02): add campaign management REST API`
 
 - reviewed source: `0fab4afa983252e927dda01278193a584ad9a0d8` (corrective commit resolving missing-campaign 404 lifecycle contract from initial candidate `fef02226ed180a3dc2a9b3195dbd7b598c230e80`)
 - base: `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`
@@ -203,13 +252,9 @@
 
 - reviewed source: `422fce3768646310448c3c82efec60c654afa0c7`
 - base: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
-- merge: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
-- merged at: `2026-08-14T10:27:54Z`
 - total tests: **591** (+22 from PR #69 clean baseline of 569)
 
 ## 2. Test-Baseline Reconciliation
-
-The maintained baseline sequence relevant to the latest lifecycle work is:
 
 | Checkpoint | Authoritative executable tests | Notes |
 |---|---:|---|
@@ -225,6 +270,7 @@ The maintained baseline sequence relevant to the latest lifecycle work is:
 | PR #82 campaign resumption (SUSPENDED -> PUBLISHED / ACTIVE) | **645** | +29 from PR #80/PR #81 baseline (+4 model, +2 event model, +22 integration, +1 concurrency) |
 | PR #84 representative MySQL concurrency assurance | **645 functional H2 + 3 MySQL** | +0 H2, +3 MySQL Testcontainers assurance (**648 logical executions**) |
 | PR #86 campaign management REST API (9 endpoints) | **680 functional H2 + 3 MySQL** | +35 H2 (+23 controller, +4 mapper, +8 service query), +3 MySQL Testcontainers assurance (**683 logical executions**) |
+| PR #88 vaccination center management REST API (14 endpoints) | **724 functional H2 + 3 MySQL** | +44 H2 (+33 controller, +4 mapper, +7 service query), +3 MySQL Testcontainers assurance (**727 logical executions**) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -310,6 +356,19 @@ Implemented and integrated under `/api/v1/campaigns` (PR #86):
 - Preservation of underlying `@Transactional` boundaries, `findByIdForUpdate` pessimistic locking, and `entityManager.refresh`
 - Unauthenticated caller-supplied audit metadata semantics for `actorId`
 
+### Center REST API (Milestone 2)
+Implemented and integrated under `/api/v1/centers` (PR #88):
+- 14 REST endpoints:
+  - Center Master & Status (6): `POST /api/v1/centers`, `GET /api/v1/centers/{id}`, `GET /api/v1/centers` (status filter, ordered by `code` ASC), `PUT /api/v1/centers/{id}`, `POST /api/v1/centers/{id}/activate`, `POST /api/v1/centers/{id}/deactivate`
+  - Operating Hours (4): `POST /api/v1/centers/{id}/operating-hours`, `GET /api/v1/centers/{id}/operating-hours`, `PUT /api/v1/centers/{centerId}/operating-hours/{hoursId}`, `POST /api/v1/centers/{centerId}/operating-hours/{hoursId}/end-date`
+  - Center Closures (4): `POST /api/v1/centers/{id}/closures`, `GET /api/v1/centers/{id}/closures`, `PUT /api/v1/centers/{centerId}/closures/{closureId}`, `POST /api/v1/centers/{centerId}/closures/{closureId}/cancel`
+- Strict DTO request/response contracts and pure `CenterDtoMapper`
+- Reused `@RestControllerAdvice` (`GlobalCampaignExceptionHandler`) with structured `ApiErrorResponse`
+- Typed `ResourceNotFoundException -> 404` error mapping for missing entities and nested parent-child ownership mismatches
+- Strict parent-child ownership verification on all child mutations (`/centers/{centerId}/operating-hours/{hoursId}`, `/centers/{centerId}/closures/{closureId}`)
+- Preservation of underlying `@Transactional` boundaries, parent `findByIdForUpdate` pessimistic locking, and `entityManager.refresh`
+- Service precheck rejection of normal duplicate center code (400 Bad Request); DB unique constraint backstop for concurrent duplicate race
+
 ## 5. PR #71 — Campaign `DRAFT -> SCHEDULED` Evidence
 
 ### Behavior
@@ -378,7 +437,7 @@ PR #75 delivered a behavior-preserving maintainability refactoring of the oversi
 
 - **`SessionSeriesChangeService` retains:** All `@Transactional` boundaries, 5 Spring Data JPA repositories, `EntityManager`, hierarchical pessimistic locking (`Campaign -> Center -> Rule -> Sessions ASC`), post-lock `refresh(...)`, override-history resolution via `findOverriddenSessionIds`, stale-preview verification, mutations, and audit persistence.
 - **`SessionSeriesPreviewCalculator` owns:** Recurrence diffing, occurrence classification (`RETAINED`, `REMOVED`, `NEW`, `INELIGIBLE`, `PRESERVED_EXCEPTION`), DST conversion, deterministic SHA-256 series preview token generation, schedule validation delegation, and conditional `SessionImpactReader` evaluation.
-- **Calculator properties:** 0 JPA repositories, 0 `EntityManager` references, 0 `@Transactional` annotations. It is repository-free and transaction-free, while conditionally calling `SessionImpactReader` on demand to preserve lazy impact evaluation semantics (`testMissingImpactReaderAllowedWhenScheduledRetainedOccurrencesUnchanged`).
+- **Calculator properties:** 0 JPA repositories, 0 `EntityManager` references, 0 `@Transactional` annotations. It is repository-free and transaction-free, while conditionally calls `SessionImpactReader` on demand to preserve lazy impact evaluation semantics (`testMissingImpactReaderAllowedWhenScheduledRetainedOccurrencesUnchanged`).
 
 ### Test Impact
 - Executable tests: **599** (+8 net-new tests from `SessionSeriesPreviewCalculatorTests`).
@@ -485,7 +544,7 @@ Representative established lock orders:
 Separate-transaction concurrency regression tests exist for real race conditions.
 
 ### Test Database Architecture and Concurrency Assurance
-- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (645 tests, 71 XML reports). This provides fast structural and domain validation.
+- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (724 tests, 77 XML reports). This provides fast structural and domain validation.
 - **Representative Production-Equivalent MySQL Assurance (PR #84):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`) and parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
 - **Scope Boundary:** *Representative single-row lifecycle and parent/child reverse-impact pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.*
 
@@ -541,6 +600,8 @@ This table preserves the engineering sequence without retaining stale controller
 | #84 | Representative MySQL/Testcontainers concurrency assurance |
 | #85 | Evidence synchronization after PR #84 |
 | #86 | Campaign Management REST API vertical slice (9 endpoints) |
+| #87 | Evidence synchronization after PR #86 |
+| #88 | Vaccination Center Management REST API vertical slice (14 endpoints) |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -568,6 +629,8 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #84: `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
 - PR #85: `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`
 - PR #86: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
+- PR #87: `37574bb02e157971c3ca2250d4953834cfe6d132`
+- PR #88: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
 
 ## 13. Carried-Forward Findings / Risks
 
@@ -604,9 +667,9 @@ Still not complete:
 - MF-01 production adapter/FK
 - MF-03 production impact adapter
 - transactional outbox
-- Center & Session REST controllers/DTOs/mappers (Campaign REST API completed in PR #86)
+- Session REST controllers/DTOs/mappers (Campaign REST API completed in PR #86, Center REST API completed in PR #88)
 - Campaign date update REST API
-- `/api/v1` alignment for center/session resources
+- `/api/v1` alignment for session resources
 - Spring Security/RBAC
 - OpenAPI
 - Flyway migrations
@@ -622,6 +685,7 @@ Current status remains:
 - MF-02: **IN PROGRESS**
 - US-13: **IN PROGRESS**
 - Campaign Management REST API Milestone 1: **COMPLETE**
+- Vaccination Center Management REST API Milestone 2: **COMPLETE**
 
 Do not infer completion from the size of the backend test suite.
 
