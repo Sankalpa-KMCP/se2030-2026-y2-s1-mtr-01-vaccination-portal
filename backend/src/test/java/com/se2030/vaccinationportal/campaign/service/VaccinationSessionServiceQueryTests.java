@@ -307,4 +307,95 @@ class VaccinationSessionServiceQueryTests {
         assertThrows(ResourceNotFoundException.class, () -> sessionService.startSession(999999L));
         assertThrows(ResourceNotFoundException.class, () -> sessionService.completeSession(999999L));
     }
+
+    // ==========================================
+    // Session Change Events Query Tests (Task 44)
+    // ==========================================
+
+    @Test
+    @DisplayName("getSessionChangeEvents returns empty list for existing session with no changes")
+    void getSessionChangeEventsEmpty() {
+        List<com.se2030.vaccinationportal.campaign.model.SessionChangeEvent> events =
+                sessionService.getSessionChangeEvents(session1.getId());
+        assertNotNull(events);
+        assertTrue(events.isEmpty());
+    }
+
+    @Test
+    @DisplayName("getSessionChangeEvents throws ResourceNotFoundException when session does not exist")
+    void getSessionChangeEventsMissingSession() {
+        assertThrows(ResourceNotFoundException.class, () -> sessionService.getSessionChangeEvents(999999L));
+        assertThrows(IllegalArgumentException.class, () -> sessionService.getSessionChangeEvents(null));
+    }
+
+    @Test
+    @DisplayName("getSessionChangeEvents returns events ordered deterministically by createdAt ASC, id ASC")
+    void getSessionChangeEventsOrdered() {
+        Instant newStartAt = Instant.parse("2026-10-14T04:30:00Z");
+        Instant newEndAt = Instant.parse("2026-10-14T07:30:00Z");
+        Instant newBookingCloseAt = Instant.parse("2026-10-14T03:30:00Z");
+
+        SessionChangePreview preview = sessionService.previewReschedule(
+                session1.getId(), newStartAt, newEndAt, newBookingCloseAt
+        );
+
+        sessionService.confirmReschedule(
+                session1.getId(),
+                newStartAt,
+                newEndAt,
+                newBookingCloseAt,
+                preview.previewToken(),
+                "First adjustment",
+                "officer-1"
+        );
+
+        SessionChangePreview preview2 = sessionService.previewCancellation(session1.getId());
+        sessionService.confirmCancellation(
+                session1.getId(),
+                preview2.previewToken(),
+                "Final cancellation",
+                "officer-2"
+        );
+
+        List<com.se2030.vaccinationportal.campaign.model.SessionChangeEvent> events =
+                sessionService.getSessionChangeEvents(session1.getId());
+        assertEquals(2, events.size());
+        assertEquals(com.se2030.vaccinationportal.campaign.model.SessionChangeType.RESCHEDULED, events.get(0).getChangeType());
+        assertEquals("First adjustment", events.get(0).getReason());
+        assertEquals(com.se2030.vaccinationportal.campaign.model.SessionChangeType.CANCELLED, events.get(1).getChangeType());
+        assertEquals("Final cancellation", events.get(1).getReason());
+        assertTrue(events.get(0).getCreatedAt().compareTo(events.get(1).getCreatedAt()) <= 0);
+    }
+
+    // ==========================================
+    // Typed Missing Exception Tests for Change Operations (Task 45)
+    // ==========================================
+
+    @Test
+    @DisplayName("Change-control operations throw ResourceNotFoundException for missing session or target center")
+    void changeControlOperationsMissingResourceThrowsResourceNotFoundException() {
+        Instant start = Instant.parse("2026-10-14T04:30:00Z");
+        Instant end = Instant.parse("2026-10-14T07:30:00Z");
+        Instant close = Instant.parse("2026-10-14T03:30:00Z");
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                sessionService.previewCancellation(999999L));
+        assertThrows(ResourceNotFoundException.class, () ->
+                sessionService.confirmCancellation(999999L, "token", "reason", "actor"));
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                sessionService.previewReschedule(999999L, start, end, close));
+        assertThrows(ResourceNotFoundException.class, () ->
+                sessionService.confirmReschedule(999999L, start, end, close, "token", "reason", "actor"));
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                sessionService.previewCenterTransfer(999999L, center2.getId(), start, end, close));
+        assertThrows(ResourceNotFoundException.class, () ->
+                sessionService.previewCenterTransfer(session1.getId(), 999999L, start, end, close));
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                sessionService.confirmCenterTransfer(999999L, center2.getId(), start, end, close, "token", "reason", "actor"));
+        assertThrows(ResourceNotFoundException.class, () ->
+                sessionService.confirmCenterTransfer(session1.getId(), 999999L, start, end, close, "token", "reason", "actor"));
+    }
 }

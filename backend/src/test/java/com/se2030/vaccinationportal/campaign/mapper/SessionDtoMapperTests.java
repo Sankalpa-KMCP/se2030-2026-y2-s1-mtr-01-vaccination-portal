@@ -7,13 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.se2030.vaccinationportal.campaign.dto.response.SessionResponse;
+import com.se2030.vaccinationportal.campaign.dto.response.SessionScheduleSnapshotResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionSummaryResponse;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
+import com.se2030.vaccinationportal.campaign.model.SessionScheduleSnapshot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
@@ -188,5 +191,166 @@ class SessionDtoMapperTests {
         assertEquals("Asia/Colombo", summary.scheduleTimezone());
         assertEquals(SessionLifecycleStatus.SCHEDULED, summary.lifecycleStatus());
         assertTrue(summary.generated());
+    }
+
+    @Test
+    @DisplayName("Maps SessionScheduleSnapshot to SessionScheduleSnapshotResponse correctly and handles null safely")
+    void mapsSessionScheduleSnapshot() {
+        assertNull(SessionDtoMapper.toSnapshotResponse(null));
+
+        SessionScheduleSnapshot snapshot = new SessionScheduleSnapshot(
+                200L,
+                "Asia/Colombo",
+                Instant.parse("2026-10-15T09:00:00Z"),
+                Instant.parse("2026-10-15T12:00:00Z"),
+                Instant.parse("2026-10-15T08:00:00Z"),
+                SessionLifecycleStatus.DRAFT
+        );
+
+        SessionScheduleSnapshotResponse response = SessionDtoMapper.toSnapshotResponse(snapshot);
+        assertNotNull(response);
+        assertEquals(200L, response.centerId());
+        assertEquals("Asia/Colombo", response.scheduleTimezone());
+        assertEquals(Instant.parse("2026-10-15T09:00:00Z"), response.startAt());
+        assertEquals(Instant.parse("2026-10-15T12:00:00Z"), response.endAt());
+        assertEquals(Instant.parse("2026-10-15T08:00:00Z"), response.bookingCloseAt());
+        assertEquals(SessionLifecycleStatus.DRAFT, response.lifecycleStatus());
+    }
+
+    @Test
+    @DisplayName("Maps SessionChangePreview to SessionChangePreviewResponse correctly and handles null safely")
+    void mapsSessionChangePreview() {
+        assertNull(SessionDtoMapper.toPreviewResponse(null));
+
+        SessionScheduleSnapshot oldSnapshot = new SessionScheduleSnapshot(
+                200L,
+                "Asia/Colombo",
+                Instant.parse("2026-10-15T09:00:00Z"),
+                Instant.parse("2026-10-15T12:00:00Z"),
+                Instant.parse("2026-10-15T08:00:00Z"),
+                SessionLifecycleStatus.DRAFT
+        );
+
+        SessionScheduleSnapshot newSnapshot = new SessionScheduleSnapshot(
+                201L,
+                "Asia/Colombo",
+                Instant.parse("2026-10-16T10:00:00Z"),
+                Instant.parse("2026-10-16T13:00:00Z"),
+                Instant.parse("2026-10-16T09:00:00Z"),
+                SessionLifecycleStatus.DRAFT
+        );
+
+        SessionChangePreview preview = new SessionChangePreview(
+                500L,
+                com.se2030.vaccinationportal.campaign.model.SessionChangeType.CENTER_TRANSFERRED,
+                oldSnapshot,
+                newSnapshot,
+                5,
+                2,
+                "preview-token-xyz"
+        );
+
+        com.se2030.vaccinationportal.campaign.dto.response.SessionChangePreviewResponse response =
+                SessionDtoMapper.toPreviewResponse(preview);
+
+        assertNotNull(response);
+        assertEquals(500L, response.sessionId());
+        assertEquals(com.se2030.vaccinationportal.campaign.model.SessionChangeType.CENTER_TRANSFERRED, response.changeType());
+        assertNotNull(response.oldSnapshot());
+        assertEquals(200L, response.oldSnapshot().centerId());
+        assertNotNull(response.newSnapshot());
+        assertEquals(201L, response.newSnapshot().centerId());
+        assertEquals(5, response.affectedAppointmentCount());
+        assertEquals(2, response.affectedWaitlistCount());
+        assertEquals("preview-token-xyz", response.previewToken());
+    }
+
+    @Test
+    @DisplayName("Maps SessionChangeEvent to SessionChangeEventResponse correctly including cancellation snapshot")
+    void mapsSessionChangeEvent() {
+        assertNull(SessionDtoMapper.toChangeEventResponse(null));
+
+        VaccinationCampaign campaign = new VaccinationCampaign(
+                "CMP-2026-01",
+                "Campaign 1",
+                "Desc",
+                null,
+                null,
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 11, 30),
+                Instant.parse("2026-08-15T08:00:00Z"),
+                Instant.parse("2026-11-29T18:00:00Z")
+        );
+        ReflectionTestUtils.setField(campaign, "id", 100L);
+
+        VaccinationCenter center = new VaccinationCenter(
+                "CTR-COLOMBO-01",
+                "Colombo Clinic",
+                "123 Main St",
+                "+94 11 2345678",
+                CenterStatus.ACTIVE,
+                150,
+                50,
+                "Asia/Colombo"
+        );
+        ReflectionTestUtils.setField(center, "id", 200L);
+
+        VaccinationSession session = new VaccinationSession(
+                campaign,
+                center,
+                Instant.parse("2026-10-15T09:00:00Z"),
+                Instant.parse("2026-10-15T12:00:00Z"),
+                Instant.parse("2026-10-15T08:00:00Z"),
+                "Asia/Colombo"
+        );
+        ReflectionTestUtils.setField(session, "id", 500L);
+
+        SessionScheduleSnapshot oldSnapshot = new SessionScheduleSnapshot(
+                200L,
+                "Asia/Colombo",
+                Instant.parse("2026-10-15T09:00:00Z"),
+                Instant.parse("2026-10-15T12:00:00Z"),
+                Instant.parse("2026-10-15T08:00:00Z"),
+                SessionLifecycleStatus.DRAFT
+        );
+
+        SessionScheduleSnapshot newCancelledSnapshot = new SessionScheduleSnapshot(
+                200L,
+                "Asia/Colombo",
+                Instant.parse("2026-10-15T09:00:00Z"),
+                Instant.parse("2026-10-15T12:00:00Z"),
+                Instant.parse("2026-10-15T08:00:00Z"),
+                SessionLifecycleStatus.CANCELLED
+        );
+
+        com.se2030.vaccinationportal.campaign.model.SessionChangeEvent event =
+                new com.se2030.vaccinationportal.campaign.model.SessionChangeEvent(
+                        session,
+                        com.se2030.vaccinationportal.campaign.model.SessionChangeType.CANCELLED,
+                        oldSnapshot,
+                        newCancelledSnapshot,
+                        "Severe cyclone alert",
+                        12,
+                        3,
+                        "officer-42"
+                );
+        ReflectionTestUtils.setField(event, "id", 9001L);
+        Instant createdAt = Instant.parse("2026-08-10T12:00:00Z");
+        ReflectionTestUtils.setField(event, "createdAt", createdAt);
+
+        com.se2030.vaccinationportal.campaign.dto.response.SessionChangeEventResponse response =
+                SessionDtoMapper.toChangeEventResponse(event);
+
+        assertNotNull(response);
+        assertEquals(9001L, response.id());
+        assertEquals(500L, response.sessionId());
+        assertEquals(com.se2030.vaccinationportal.campaign.model.SessionChangeType.CANCELLED, response.changeType());
+        assertEquals(SessionLifecycleStatus.DRAFT, response.oldSnapshot().lifecycleStatus());
+        assertEquals(SessionLifecycleStatus.CANCELLED, response.newSnapshot().lifecycleStatus());
+        assertEquals("Severe cyclone alert", response.reason());
+        assertEquals(12, response.affectedAppointmentCount());
+        assertEquals(3, response.affectedWaitlistCount());
+        assertEquals("officer-42", response.actorId());
+        assertEquals(createdAt, response.createdAt());
     }
 }
