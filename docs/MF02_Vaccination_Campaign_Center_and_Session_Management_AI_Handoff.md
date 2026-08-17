@@ -8,10 +8,12 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Last synchronized implementation checkpoint:** PR #88
-**Reviewed PR #88 source:** `263c26bc9d9a7b51bd81e28d326a90b004c548f0`
-**PR #88 base:** `37574bb02e157971c3ca2250d4953834cfe6d132`
-**PR #88 merge:** `faf455ff6f07d096258e7cd977765e6e9e25b10f`
+**Last synchronized implementation checkpoint:** PR #90
+**Reviewed PR #90 source:** `3324ab4b2a84960dea946c531115b5aee829ad61`
+**PR #90 base:** `4eaa8cd31c04aedf23f3887f25de27ec924165b8`
+**PR #90 merge:** `9cc7a606260e24e243090f70f5e957b0544bfa3b`
+**Preceding documentation synchronization milestone:** PR #89 (`77c9fbeb75e268cadf519fcb1fa297822712f7bb` / merge `4eaa8cd31c04aedf23f3887f25de27ec924165b8`)
+**Preceding center REST milestone:** PR #88 (`263c26bc9d9a7b51bd81e28d326a90b004c548f0` / merge `faf455ff6f07d096258e7cd977765e6e9e25b10f`)
 **Preceding documentation synchronization milestone:** PR #87 (`9371e0e14f07670175674b79ec98978096136158` / merge `37574bb02e157971c3ca2250d4953834cfe6d132`)
 **Preceding campaign REST milestone:** PR #86 (`0fab4afa983252e927dda01278193a584ad9a0d8` / merge `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`)
 **Preceding documentation synchronization milestone:** PR #85 (`ac860a9d271daa2ecf4211571e44a93a2f2622f4` / merge `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`)
@@ -21,8 +23,8 @@
 **Preceding documentation synchronization milestone:** PR #81 (`7200790d4cdad0af5600317b0476870c48fd0df0` / merge `ff3d832745708e5d563c63059820e1e157767a60`)
 **Preceding activation milestone:** PR #80 (`fdf6f84938326968347cac2c01d3db6ea72938c4` / merge `852802ff0d533fdb013c64b4b10de395efd40557`)
 **Preceding test-hardening milestone:** PR #78 (`2e43665ff0b88027fd82b3577bf73d8357a1ba46`)
-**Current verified backend baseline:** **724 functional H2 tests** (77 XML reports) plus **3 MySQL/Testcontainers assurance tests** (2 XML reports); producing **727 logical executions** across the two validation paths. Clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
-**PR #88 net-new executions:** +44 H2 tests (+33 `CenterControllerTests`, +4 `CenterDtoMapperTests`, +7 `VaccinationCenterServiceQueryTests`).
+**Current verified backend baseline:** **763 functional H2 tests** (80 XML reports) plus **3 MySQL/Testcontainers assurance tests** (2 XML reports); producing **766 logical executions** across the two validation paths. Clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS.
+**PR #90 net-new executions:** +39 H2 tests (+23 `SessionControllerTests`, +3 `SessionDtoMapperTests`, +13 `VaccinationSessionServiceQueryTests`).
 **Thread.sleep in tests:** 0 occurrences across `backend/src/test`.
 
 > This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
@@ -38,21 +40,50 @@ Use this order when facts conflict:
 5. `PROJECT_CONTEXT.md` — orientation summary only.
 6. `MF02_Completion_and_Hardening_Plan.md` — planned work, not evidence of implementation.
 
-Future agents must fetch live `origin/develop` before treating `faf455ff6f07d096258e7cd977765e6e9e25b10f` as the repository tip.
+Future agents must fetch live `origin/develop` before treating `9cc7a606260e24e243090f70f5e957b0544bfa3b` as the repository tip.
 
 ## 2. Current Milestone
 
 ### Milestone reached
 
-**MF-02 VACCINATION CENTER MANAGEMENT REST API VERTICAL SLICE (14 ENDPOINTS), CAMPAIGN MANAGEMENT REST API (9 ENDPOINTS), MYSQL/TESTCONTAINERS CONCURRENCY ASSURANCE, CAMPAIGN RESUMPTION, CAMPAIGN ACTIVATION, SCHEDULING APPROVAL, AND SESSION-CHANGE FOUNDATIONS ARE INTEGRATED.**
+**MF-02 VACCINATION SESSION CORE REST API VERTICAL SLICE (6 ENDPOINTS), VACCINATION CENTER MANAGEMENT REST API (14 ENDPOINTS), CAMPAIGN MANAGEMENT REST API (9 ENDPOINTS), MYSQL/TESTCONTAINERS CONCURRENCY ASSURANCE, CAMPAIGN RESUMPTION, CAMPAIGN ACTIVATION, SCHEDULING APPROVAL, AND SESSION-CHANGE FOUNDATIONS ARE INTEGRATED.**
 
 This does **not** mean MF-02 is complete.
 
-The current checkpoint includes the Vaccination Center Management REST API vertical slice (PR #88), the Campaign Management REST API vertical slice (PR #86), representative production-equivalent MySQL/Testcontainers concurrency assurance (PR #84), authoritative campaign resumption `SUSPENDED -> PUBLISHED / ACTIVE` (PR #82), authoritative campaign activation `PUBLISHED -> ACTIVE` (PR #80), deterministic reverse-impact concurrency test hardening (PR #78), the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75), defensive questionnaire publication invariant revalidation (PR #73), and campaign scheduling approval (PR #71) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
+The current checkpoint includes the Vaccination Session Core REST API vertical slice (PR #90), the Vaccination Center Management REST API vertical slice (PR #88), the Campaign Management REST API vertical slice (PR #86), representative production-equivalent MySQL/Testcontainers concurrency assurance (PR #84), authoritative campaign resumption `SUSPENDED -> PUBLISHED / ACTIVE` (PR #82), authoritative campaign activation `PUBLISHED -> ACTIVE` (PR #80), deterministic reverse-impact concurrency test hardening (PR #78), the behavior-preserving extraction of `SessionSeriesPreviewCalculator` from `SessionSeriesChangeService` (PR #75), defensive questionnaire publication invariant revalidation (PR #73), and campaign scheduling approval (PR #71) on top of the already integrated campaign, center, recurrence, session, reverse-impact, publication, suspension, terminal-planning, and SUSPENDED-planning foundations.
 
 ### Current verified integrations
 
-1. **PR #88 — `feat(mf02): add vaccination center management REST API`**
+1. **PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`**
+   - reviewed source: `3324ab4b2a84960dea946c531115b5aee829ad61`
+   - merge: `9cc7a606260e24e243090f70f5e957b0544bfa3b`
+   - base: `4eaa8cd31c04aedf23f3887f25de27ec924165b8`
+   - merge method: normal merge commit (two parents: `4eaa8cd31c04aedf23f3887f25de27ec924165b8` and `3324ab4b2a84960dea946c531115b5aee829ad61`)
+   - Backend CI: PASS (763 H2 executions, 0 failures, 0 errors, 0 skipped; 3 MySQL Testcontainers executions, 0 failures, 0 errors, 0 skipped)
+   - Frontend CI: PASS
+   - authoritative backend baseline: **763 functional H2 tests** across 80 Surefire XML reports + **3 MySQL assurance tests** (766 logical executions across the two validation paths)
+   - net-new executions: **+39 H2 tests** (+23 `SessionControllerTests`, +3 `SessionDtoMapperTests`, +13 `VaccinationSessionServiceQueryTests`)
+   - scope: 10 files (7 production [5 new, 2 modified], 3 test [3 new, 0 modified existing])
+   - integrated endpoints under `/api/v1/sessions` (6):
+     1. `POST /api/v1/sessions` (Create one-off DRAFT session; 201 Created)
+     2. `GET /api/v1/sessions/{id}` (Get session details; 200 OK)
+     3. `GET /api/v1/sessions` (List sessions with optional `campaignId`, `centerId`, `status` filters, logical AND semantics, ordered by `startAt` ASC, `id` ASC; 200 OK)
+     4. `POST /api/v1/sessions/{id}/schedule` (Transition DRAFT -> SCHEDULED; 200 OK)
+     5. `POST /api/v1/sessions/{id}/start` (Transition SCHEDULED -> IN_PROGRESS; 200 OK)
+     6. `POST /api/v1/sessions/{id}/complete` (Transition IN_PROGRESS -> COMPLETED; 200 OK)
+   - architecture: strict transport adapter pattern (`SessionController` invokes domain service `VaccinationSessionService`; 0 repository dependencies in controller; 0 controller transactions; service layer owns `@Transactional` persistence/locking; pure `SessionDtoMapper` handles DTO conversion; existing `@RestControllerAdvice` `GlobalCampaignExceptionHandler` provides structured RFC-aligned `ApiErrorResponse`).
+   - transport timestamps & timezone: transport uses `Instant startAt`, `Instant endAt`, `Instant bookingCloseAt`. Center entity remains authoritative for scheduling timezone; response includes `scheduleTimezone`. No client-supplied timezone field in `CreateSessionRequest`.
+   - error & exception taxonomy:
+     - 400 Bad Request: `@Valid` payload validation failure, parameter type mismatch, malformed JSON, general `IllegalArgumentException`
+     - 404 Not Found: `ResourceNotFoundException` (missing campaign on creation, missing center on creation, missing session on GET / schedule / start / complete)
+     - 409 Conflict: `IllegalStateException` (invalid lifecycle state transition or business invariant conflict)
+     - 500 Internal Server Error: unexpected unhandled server exception
+   - query implementation: database-side filtering via `findWithFilters` with optional `campaignId`, `centerId`, `status` using logical `AND` semantics and deterministic `ORDER BY s.startAt ASC, s.id ASC`. Returns 200 `[]` when empty (unpaged).
+   - locking & validation preservation: PR #90 preserved and exposed existing authoritative locking (`findByIdForUpdate` with post-lock `entityManager.refresh` for creation [Campaign -> Center], schedule [Campaign -> Session], start [Session], complete [Session]) and existing service validation (operating hours, closures, intervals, campaign status).
+   - note: *The exact reviewed candidate passed CI before zero-drift merge; no additional local post-merge rerun was performed.*
+   - Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+2. **PR #88 — `feat(mf02): add vaccination center management REST API`**
    - reviewed source: `263c26bc9d9a7b51bd81e28d326a90b004c548f0`
    - merge: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
    - base: `37574bb02e157971c3ca2250d4953834cfe6d132`
@@ -399,16 +430,16 @@ Do not add pessimistic locks merely for style. Add them only for a real invarian
 ## 6. Current Test / Verification State
 
 ### Authoritative current backend baseline
-**724 functional H2 tests** (77 XML reports) plus **3 MySQL/Testcontainers assurance tests** (2 XML reports); producing **727 logical executions** across the two validation paths.
+**763 functional H2 tests** (80 XML reports) plus **3 MySQL/Testcontainers assurance tests** (2 XML reports); producing **766 logical executions** across the two validation paths.
 
 - failures: 0
 - errors: 0
 - skipped: 0
-- clean Maven test (H2 default): PASS (724 executions)
-- clean Maven verify (H2 default): PASS (724 executions)
+- clean Maven test (H2 default): PASS (763 executions)
+- clean Maven verify (H2 default): PASS (763 executions)
 - clean Maven verify (`-Pmysql-concurrency` profile): PASS (3 executions)
-- Surefire reports at PR #88 candidate: 77 H2 XML files + 2 MySQL XML files
-- Surefire-summed executions: 724 (H2) / 3 (MySQL)
+- Surefire reports at PR #90 candidate: 80 H2 XML files + 2 MySQL XML files
+- Surefire-summed executions: 763 (H2) / 3 (MySQL)
 - Backend CI: PASS (H2 step + MySQL Testcontainers step)
 - Frontend CI: PASS
 
@@ -424,11 +455,12 @@ Do not add pessimistic locks merely for style. Add them only for a real invarian
 - PR #84: **645 functional H2** + **3 MySQL assurance** (**648 logical executions**; +0 H2, +3 MySQL Testcontainers concurrency tests)
 - PR #86: **680 functional H2** + **3 MySQL assurance** (**683 logical executions**; +35 H2 [+23 `CampaignControllerTests`, +4 `CampaignDtoMapperTests`, +8 `VaccinationCampaignServiceQueryTests`])
 - PR #88: **724 functional H2** + **3 MySQL assurance** (**727 logical executions**; +44 H2 [+33 `CenterControllerTests`, +4 `CenterDtoMapperTests`, +7 `VaccinationCenterServiceQueryTests`])
+- PR #90: **763 functional H2** + **3 MySQL assurance** (**766 logical executions**; +39 H2 [+23 `SessionControllerTests`, +3 `SessionDtoMapperTests`, +13 `VaccinationSessionServiceQueryTests`])
 
-Do not resurrect 566, 575, 599, 616, 645, or 680 as authoritative current evidence (they are historical baselines). Do not report 727 as the functional backend baseline (727 represents logical combined coverage across the two separate verification paths).
+Do not resurrect 566, 575, 599, 616, 645, 680, or 724 as authoritative current evidence (they are historical baselines). Do not report 766 as the functional backend baseline (766 represents logical combined coverage across the two separate verification paths).
 
 ### Test architecture
-The default backend test suite continues to run against in-memory H2 in MySQL compatibility mode, verifying all 724 domain, service, and integration tests rapidly.
+The default backend test suite continues to run against in-memory H2 in MySQL compatibility mode, verifying all 763 domain, service, and integration tests rapidly.
 
 PR #84 introduced a dedicated, production-equivalent MySQL concurrency assurance suite:
 - Pinned container image: `mysql:8.4.3`
@@ -441,20 +473,22 @@ PR #84 introduced a dedicated, production-equivalent MySQL concurrency assurance
 
 The current repository is not broadly obsolete. The dominant issue is maintainability from feature accumulation.
 
-Verified sizes after PR #75 decomposition:
+Verified sizes after PR #75 decomposition and PR #90 REST slice:
 
 - `SessionSeriesChangeService.java`: ~694 lines (reduced from ~1,104 lines)
 - `SessionSeriesPreviewCalculator.java`: ~454 lines (new calculation collaborator)
-- `VaccinationSessionService.java`: ~809 lines
+- `VaccinationSessionService.java`: ~824 lines
 - `VaccinationCampaignService.java`: ~428 lines
 - `OperatingHoursService.java`: ~488 lines
 - `CenterClosureService.java`: ~424 lines
 - `VaccinationCenterService.java`: ~245 lines
 - `CenterController.java`: ~228 lines
 - `CampaignController.java`: ~184 lines
+- `SessionController.java`: ~85 lines
+- `SessionDtoMapper.java`: ~58 lines
 
-Current MF-02 production Java files under the campaign module: 90 (including controller, DTO, and mapper packages).
-Current MF-02 test Java files in the campaign test package: 78.
+Current MF-02 production Java files under the campaign module: 95 (including controller, DTO, and mapper packages).
+Current MF-02 test Java files in the campaign test package: 81.
 
 ### Architectural verdict
 Keep the current **layered modular monolith**. Do not perform a wholesale architecture rewrite.
@@ -466,7 +500,7 @@ PR #75 successfully performed the first behavior-preserving extraction:
 - `SessionSeriesPreviewCalculator` has 0 JPA repositories, 0 `EntityManager` references, and 0 transaction annotations. It is repository-free and transaction-free, but conditionally calls `SessionImpactReader` on demand to preserve lazy impact evaluation.
 
 Remaining bounded maintainability targets:
-1. Evaluation/focused decomposition of `VaccinationSessionService` (~809 lines) if future evidence justifies it
+1. Evaluation/focused decomposition of `VaccinationSessionService` (~824 lines) if future evidence justifies it
 2. Duplicated preview/impact/fingerprint/event-construction helpers across session services
 
 Refactoring must remain behavior-preserving and separated from new lifecycle implementation.
@@ -477,7 +511,9 @@ The following are not complete in the uploaded repository snapshot:
 
 - MF-02 Campaign REST API (9 endpoints) — **RESOLVED in PR #86**
 - MF-02 VaccinationCenter REST API (14 endpoints) — **RESOLVED in PR #88**
-- VaccinationSession REST controllers/DTOs/mappers (pending)
+- MF-02 VaccinationSession Core REST API (6 endpoints) — **RESOLVED in PR #90**
+- VaccinationSession Change Control REST API (cancellation, reschedule, transfer, preview/confirm, change-event history) — (pending)
+- VaccinationSession Recurrence / Series REST API (recurrence rule REST, occurrence generation, series preview/confirm, series cancellation) — (pending)
 - Campaign date update REST API (pending)
 - Blocked lifecycle endpoints (`complete`, `cancel`, `archive`) (pending specification/integration)
 - Spring Security/RBAC/authentication enforcement (pending)
@@ -595,16 +631,17 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 Do **not** automatically start another lifecycle transition without proper requirements alignment.
 
 Recommended order:
-1. synchronize maintained documentation to PR #88 — represented by this step;
-2. design and discovery for Vaccination Session Management REST API vertical slice;
-3. implement Session Management REST API;
-4. analyze and resolve remaining campaign lifecycle gaps (completion algorithm, cancellation impact integration, archive retention policy);
-5. evaluate/decompose `VaccinationSessionService` maintainability only if justified;
-6. complete MF-03 production impact adapter and outbox boundary;
-7. add security/RBAC;
-8. add Flyway migrations;
-9. implement MF-02 frontend and frontend tests;
-10. final end-to-end / Definition-of-Done evidence.
+1. synchronize maintained documentation to PR #90 — represented by this step;
+2. design and discovery for Vaccination Session Change Control REST API vertical slice (cancellation preview/confirm, reschedule preview/confirm, center transfer preview/confirm, change-event audit history);
+3. implement Session Change Control REST API;
+4. design and implement Vaccination Session Recurrence / Series REST API;
+5. analyze and resolve remaining campaign lifecycle gaps (completion algorithm, cancellation impact integration, archive retention policy);
+6. evaluate/decompose `VaccinationSessionService` maintainability only if justified;
+7. complete MF-03 production impact adapter and outbox boundary;
+8. add security/RBAC;
+9. add Flyway migrations;
+10. implement MF-02 frontend and frontend tests;
+11. final end-to-end / Definition-of-Done evidence.
 
 ## 14. Historical Milestone Summary
 
@@ -655,6 +692,8 @@ This compact chronology replaces stale controller transcripts. Detailed Git hist
 | #86 | Campaign Management REST API vertical slice (9 endpoints) |
 | #87 | Documentation synchronization after PR #86 |
 | #88 | Vaccination Center Management REST API vertical slice (14 endpoints) |
+| #89 | Documentation synchronization after PR #88 |
+| #90 | Vaccination Session Core REST API vertical slice (6 endpoints) |
 
 Key full merge checkpoints:
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -680,6 +719,8 @@ Key full merge checkpoints:
 - PR #86: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
 - PR #87: `37574bb02e157971c3ca2250d4953834cfe6d132`
 - PR #88: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
+- PR #89: `4eaa8cd31c04aedf23f3887f25de27ec924165b8`
+- PR #90: `9cc7a606260e24e243090f70f5e957b0544bfa3b`
 
 ## 15. Status Discipline
 
@@ -687,9 +728,9 @@ Never claim:
 - MF-02 complete;
 - Sprint 1 complete;
 - US-13 complete;
-- production API/security/migrations/frontend complete (Campaign REST API and Center REST API are integrated; session REST API, security, Flyway, and frontend remain pending);
+- production API/security/migrations/frontend complete (Campaign REST API, Center REST API, and Session Core REST API are integrated; Session Change Control REST API, Recurrence/Series REST API, security, Flyway, and frontend remain pending);
 - MySQL concurrency fully certified across all endpoints;
-- 566, 575, 599, 616, 645, or 680 as the current backend baseline, or 727 as the functional H2 baseline (727 is logical combined coverage: 724 H2 + 3 MySQL assurance).
+- 566, 575, 599, 616, 645, 680, or 724 as the current backend baseline, or 766 as the functional H2 baseline (766 is logical combined coverage: 763 H2 + 3 MySQL assurance).
 
 Current status remains:
 
@@ -698,13 +739,14 @@ Current status remains:
 - US-13: **IN PROGRESS**
 - Campaign Management REST API Milestone 1: **COMPLETE**
 - Vaccination Center Management REST API Milestone 2: **COMPLETE**
-- current verified backend baseline: **724 functional H2 tests (plus 3 MySQL assurance tests; 727 logical executions)**
+- Vaccination Session Core REST API Milestone 3: **COMPLETE**
+- current verified backend baseline: **763 functional H2 tests (plus 3 MySQL assurance tests; 766 logical executions)**
 
 ## 16. Startup Procedure for the Next AI Session
 
 1. Read canonical Markdown `3.3-AI / 2026-08-14-R9`.
 2. Fetch live `origin/develop`.
-3. Verify whether `faf455ff6f07d096258e7cd977765e6e9e25b10f` remains an ancestor/current checkpoint.
+3. Verify whether `9cc7a606260e24e243090f70f5e957b0544bfa3b` remains an ancestor/current checkpoint.
 4. Run/inspect current backend tests before changing behavior.
 5. Read this handoff and Sprint evidence.
 6. Review `MF02_Completion_and_Hardening_Plan.md`.
