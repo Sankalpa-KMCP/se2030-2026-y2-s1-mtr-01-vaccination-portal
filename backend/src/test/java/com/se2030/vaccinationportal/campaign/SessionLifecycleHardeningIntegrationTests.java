@@ -86,12 +86,19 @@ class SessionLifecycleHardeningIntegrationTests {
         }
     }
 
-    private VaccinationSession createDraftSession() {
-        LocalDate tomorrow = LocalDate.now().plusDays(2);
-        Instant start = tomorrow.atTime(9, 0).toInstant(java.time.ZoneOffset.UTC);
-        Instant end = tomorrow.atTime(12, 0).toInstant(java.time.ZoneOffset.UTC);
+    private VaccinationSession createDraftSession(LocalDate date) {
+        Instant start = date.atTime(9, 0).toInstant(java.time.ZoneOffset.UTC);
+        Instant end = date.atTime(12, 0).toInstant(java.time.ZoneOffset.UTC);
         Instant close = start.minusSeconds(3600);
         return sessionService.createOneOffDraftSession(campaign.getId(), center.getId(), start, end, close);
+    }
+
+    private VaccinationSession createDraftSession() {
+        return createDraftSession(LocalDate.now().plusDays(2));
+    }
+
+    private VaccinationSession createReadyToStartDraftSession() {
+        return createDraftSession(LocalDate.now().minusDays(1));
     }
 
     @Test
@@ -105,9 +112,9 @@ class SessionLifecycleHardeningIntegrationTests {
     }
 
     @Test
-    @DisplayName("Allowed transition: SCHEDULED -> IN_PROGRESS")
+    @DisplayName("Allowed transition: SCHEDULED -> IN_PROGRESS when startAt reached")
     void scheduledToInProgress_allowed() {
-        VaccinationSession session = createDraftSession();
+        VaccinationSession session = createReadyToStartDraftSession();
         sessionService.scheduleSession(session.getId());
 
         VaccinationSession inProgress = sessionService.startSession(session.getId());
@@ -115,9 +122,22 @@ class SessionLifecycleHardeningIntegrationTests {
     }
 
     @Test
+    @DisplayName("Rejected transition: SCHEDULED -> IN_PROGRESS before startAt")
+    void scheduledToInProgress_beforeStartAt_rejected() {
+        VaccinationSession session = createDraftSession();
+        sessionService.scheduleSession(session.getId());
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> sessionService.startSession(session.getId())
+        );
+        assertTrue(ex.getMessage().contains("Cannot start vaccination session before scheduled start time"));
+    }
+
+    @Test
     @DisplayName("Allowed transition: IN_PROGRESS -> COMPLETED")
     void inProgressToCompleted_allowed() {
-        VaccinationSession session = createDraftSession();
+        VaccinationSession session = createReadyToStartDraftSession();
         sessionService.scheduleSession(session.getId());
         sessionService.startSession(session.getId());
 
@@ -204,7 +224,7 @@ class SessionLifecycleHardeningIntegrationTests {
     @DisplayName("Lifecycle-only progression creates no SessionChangeEvent audit records")
     void lifecycleOnlyProgressionCreatesNoSessionChangeEvent() {
         long initialEvents = eventRepository.count();
-        VaccinationSession session = createDraftSession();
+        VaccinationSession session = createReadyToStartDraftSession();
 
         sessionService.scheduleSession(session.getId());
         assertEquals(initialEvents, eventRepository.count());

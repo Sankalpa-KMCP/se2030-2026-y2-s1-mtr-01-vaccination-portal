@@ -79,6 +79,8 @@ public class SessionSeriesPreviewCalculator {
                             ") does not match center scheduling timezone (" + center.getTimezone() + ")");
         }
 
+        SessionRecurrenceRule.validateDateHorizon(proposedDefinition.getStartDate(), proposedDefinition.getEndDate());
+
         RecurrenceRuleDefinitionSnapshot currentDefinition = RecurrenceRuleDefinitionSnapshot.from(rule);
 
         ZoneId zoneId = ZoneId.of(center.getTimezone());

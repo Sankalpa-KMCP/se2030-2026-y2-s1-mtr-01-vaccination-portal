@@ -19,6 +19,7 @@ import jakarta.persistence.PersistenceContext;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +43,7 @@ public class VaccinationSessionService {
     private final SessionChangeEventRepository sessionChangeEventRepository;
     private final VaccinationSessionValidator validator;
     private final SessionImpactReader sessionImpactReader;
+    private final Clock clock;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -52,7 +54,8 @@ public class VaccinationSessionService {
             VaccinationCenterRepository centerRepository,
             SessionChangeEventRepository sessionChangeEventRepository,
             VaccinationSessionValidator validator,
-            @Autowired(required = false) SessionImpactReader sessionImpactReader
+            @Autowired(required = false) SessionImpactReader sessionImpactReader,
+            Clock clock
     ) {
         this.sessionRepository = sessionRepository;
         this.campaignRepository = campaignRepository;
@@ -60,6 +63,18 @@ public class VaccinationSessionService {
         this.sessionChangeEventRepository = sessionChangeEventRepository;
         this.validator = validator;
         this.sessionImpactReader = sessionImpactReader;
+        this.clock = clock != null ? clock : Clock.systemUTC();
+    }
+
+    public VaccinationSessionService(
+            VaccinationSessionRepository sessionRepository,
+            VaccinationCampaignRepository campaignRepository,
+            VaccinationCenterRepository centerRepository,
+            SessionChangeEventRepository sessionChangeEventRepository,
+            VaccinationSessionValidator validator,
+            SessionImpactReader sessionImpactReader
+    ) {
+        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, sessionImpactReader, Clock.systemUTC());
     }
 
     public VaccinationSessionService(
@@ -69,7 +84,7 @@ public class VaccinationSessionService {
             SessionChangeEventRepository sessionChangeEventRepository,
             VaccinationSessionValidator validator
     ) {
-        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, null);
+        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, null, Clock.systemUTC());
     }
 
     /**
@@ -226,6 +241,11 @@ public class VaccinationSessionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
+        }
+        Instant now = clock.instant();
+        if (now.isBefore(session.getStartAt())) {
+            throw new IllegalStateException(
+                    "Cannot start vaccination session before scheduled start time: " + session.getStartAt());
         }
         session.start();
         return sessionRepository.save(session);

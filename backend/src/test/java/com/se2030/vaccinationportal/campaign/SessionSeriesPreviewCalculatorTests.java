@@ -371,6 +371,21 @@ class SessionSeriesPreviewCalculatorTests {
                 .hasMessageContaining("does not match center scheduling timezone");
     }
 
+    @Test
+    @DisplayName("Proposed definition exceeding 366-day calendar horizon throws IllegalArgumentException")
+    void testHorizonExceededRejection() {
+        assertThatThrownBy(() -> new RecurrenceRuleDefinitionSnapshot(
+                EnumSet.of(DayOfWeek.MONDAY),
+                LocalDate.of(2028, 1, 1),
+                LocalDate.of(2029, 1, 1), // 367 inclusive days
+                LocalTime.of(9, 0),
+                LocalTime.of(12, 0),
+                "Asia/Colombo"
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must not exceed 366 calendar days");
+    }
+
     private static void setId(Object entity, Long id) throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);

@@ -46,6 +46,8 @@ import java.util.UUID;
 )
 public class SessionRecurrenceRule {
 
+    public static final int MAX_RECURRENCE_HORIZON_DAYS = 366;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -195,6 +197,23 @@ public class SessionRecurrenceRule {
                 && weekdays.contains(date.getDayOfWeek());
     }
 
+    public static void validateDateHorizon(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null) {
+            throw new IllegalArgumentException("Recurrence start date is required");
+        }
+        if (endDate == null) {
+            throw new IllegalArgumentException("Recurrence end date is required");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("Recurrence end date cannot be before start date");
+        }
+        long inclusiveSpan = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (inclusiveSpan > MAX_RECURRENCE_HORIZON_DAYS) {
+            throw new IllegalArgumentException(
+                    "Recurrence date range must not exceed " + MAX_RECURRENCE_HORIZON_DAYS + " calendar days");
+        }
+    }
+
     private static Set<DayOfWeek> copyAndValidateDefinition(
             Set<DayOfWeek> weekdays,
             LocalDate startDate,
@@ -212,15 +231,7 @@ public class SessionRecurrenceRule {
         if (weekdays.stream().anyMatch(Objects::isNull)) {
             throw new IllegalArgumentException("Recurrence weekdays cannot contain null");
         }
-        if (startDate == null) {
-            throw new IllegalArgumentException("Recurrence start date is required");
-        }
-        if (endDate == null) {
-            throw new IllegalArgumentException("Recurrence end date is required");
-        }
-        if (endDate.isBefore(startDate)) {
-            throw new IllegalArgumentException("Recurrence end date cannot be before start date");
-        }
+        validateDateHorizon(startDate, endDate);
         if (startTime == null) {
             throw new IllegalArgumentException("Recurrence start time is required");
         }

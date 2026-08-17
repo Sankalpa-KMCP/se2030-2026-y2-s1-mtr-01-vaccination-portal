@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRuleStatus;
@@ -64,7 +65,7 @@ public class SessionRecurrenceRuleService {
                 weekdays, startDate, endDate, startTime, endTime, timezone);
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
@@ -79,7 +80,7 @@ public class SessionRecurrenceRuleService {
         }
 
         VaccinationCenter center = centerRepository.findById(centerId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Vaccination center not found with ID: " + centerId));
 
         return ruleRepository.save(new SessionRecurrenceRule(
@@ -141,11 +142,11 @@ public class SessionRecurrenceRuleService {
                 weekdays, startDate, endDate, startTime, endTime, timezone);
 
         SessionRecurrenceRule unlockedTarget = ruleRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + id));
         Long campaignId = unlockedTarget.getCampaign().getId();
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
@@ -218,7 +219,7 @@ public class SessionRecurrenceRuleService {
 
     private SessionRecurrenceRule findAuthoritativeRule(Long id) {
         SessionRecurrenceRule rule = ruleRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Session recurrence rule not found with ID: " + id));
         entityManager.refresh(rule);
         return rule;

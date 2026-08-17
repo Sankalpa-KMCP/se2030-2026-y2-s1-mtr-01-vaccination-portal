@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.RecurrenceRuleDefinitionSnapshot;
 import com.se2030.vaccinationportal.campaign.model.SeriesOccurrenceCategory;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
@@ -186,7 +187,7 @@ public class SessionSeriesChangeService {
 
         // Step 1: Discover authoritative recurrence rule and parent entities
         SessionRecurrenceRule rule = ruleRepository.findById(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + ruleId));
 
         if (rule.getStatus() != SessionRecurrenceRuleStatus.ACTIVE) {
             throw new IllegalArgumentException("Session recurrence rule must be ACTIVE to preview changes");
@@ -214,7 +215,7 @@ public class SessionSeriesChangeService {
         requireId(ruleId, "Session recurrence rule ID is required");
 
         SessionRecurrenceRule rule = ruleRepository.findById(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + ruleId));
 
         if (rule.getStatus() != SessionRecurrenceRuleStatus.ACTIVE) {
             throw new IllegalArgumentException("Session recurrence rule must be ACTIVE to preview cancellation");
@@ -274,20 +275,20 @@ public class SessionSeriesChangeService {
 
         // Step 1: Discover unlocked rule to obtain campaign and center IDs
         SessionRecurrenceRule unlockedRule = ruleRepository.findById(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + ruleId));
 
         Long campaignId = unlockedRule.getCampaign().getId();
         Long centerId = unlockedRule.getCenter().getId();
 
         // Step 2: Acquire deterministic write locks in lock order: campaign -> center -> rule -> sessions (by ID ASC)
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination campaign not found with ID: " + campaignId));
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
 
         SessionRecurrenceRule rule = ruleRepository.findByIdForUpdate(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + ruleId));
 
         if (rule.getStatus() != SessionRecurrenceRuleStatus.ACTIVE) {
             throw new IllegalArgumentException("Session recurrence rule must be ACTIVE to confirm cancellation");
@@ -315,7 +316,7 @@ public class SessionSeriesChangeService {
         List<VaccinationSession> lockedSessions = new ArrayList<>();
         for (Long sid : sessionIdsToLock) {
             VaccinationSession s = sessionRepository.findByIdForUpdate(sid)
-                    .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sid));
+                    .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sid));
             if (entityManager != null) {
                 entityManager.refresh(s);
             }
@@ -477,20 +478,20 @@ public class SessionSeriesChangeService {
 
         // Step 1: Discover unlocked rule to obtain campaign and center IDs
         SessionRecurrenceRule unlockedRule = ruleRepository.findById(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + ruleId));
 
         Long campaignId = unlockedRule.getCampaign().getId();
         Long centerId = unlockedRule.getCenter().getId();
 
         // Step 2: Acquire deterministic write locks in lock order: campaign -> center -> rule -> sessions (by ID ASC)
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination campaign not found with ID: " + campaignId));
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
 
         SessionRecurrenceRule rule = ruleRepository.findByIdForUpdate(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + ruleId));
 
         if (rule.getStatus() != SessionRecurrenceRuleStatus.ACTIVE) {
             throw new IllegalArgumentException("Session recurrence rule must be ACTIVE to confirm changes");
@@ -513,7 +514,7 @@ public class SessionSeriesChangeService {
         List<VaccinationSession> lockedSessions = new ArrayList<>();
         for (Long sid : sessionIdsToLock) {
             VaccinationSession s = sessionRepository.findByIdForUpdate(sid)
-                    .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sid));
+                    .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sid));
             if (entityManager != null) {
                 entityManager.refresh(s);
             }

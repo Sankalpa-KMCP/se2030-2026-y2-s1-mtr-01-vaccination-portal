@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -212,6 +213,24 @@ class SessionRecurrenceRuleModelTests {
                 () -> assertFalse(publicMethods.contains("equals")),
                 () -> assertFalse(publicMethods.contains("hashCode"))
         );
+    }
+
+    @Test
+    void recurrenceHorizonLimitEnforcesMax366Days() {
+        assertEquals(366, SessionRecurrenceRule.MAX_RECURRENCE_HORIZON_DAYS);
+
+        // Exactly 366 inclusive days (e.g., leap year span 2028-01-01 to 2028-12-31)
+        LocalDate leapStart = LocalDate.of(2028, 1, 1);
+        LocalDate leapEnd = LocalDate.of(2028, 12, 31);
+        assertDoesNotThrow(() -> rule(Set.of(DayOfWeek.MONDAY), leapStart, leapEnd, "UTC"));
+
+        // 367 inclusive days (e.g., 2028-01-01 to 2029-01-01)
+        LocalDate overHorizonEnd = LocalDate.of(2029, 1, 1);
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> rule(Set.of(DayOfWeek.MONDAY), leapStart, overHorizonEnd, "UTC")
+        );
+        assertTrue(ex.getMessage().contains("must not exceed 366 calendar days"));
     }
 
     private SessionRecurrenceRule rule(

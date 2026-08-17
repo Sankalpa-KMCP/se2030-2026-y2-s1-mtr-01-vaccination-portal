@@ -564,9 +564,9 @@ public class VaccinationCampaignService {
         if (serviceEndDate == null) {
             throw new IllegalArgumentException("Service end date is required");
         }
-        if (serviceStartDate.isAfter(serviceEndDate)) {
-            throw new IllegalArgumentException("Service start date (" + serviceStartDate +
-                    ") cannot be after service end date (" + serviceEndDate + ")");
+        if (!serviceEndDate.isAfter(serviceStartDate)) {
+            throw new IllegalArgumentException("Campaign service end date (" + serviceEndDate +
+                    ") must be after service start date (" + serviceStartDate + ")");
         }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
