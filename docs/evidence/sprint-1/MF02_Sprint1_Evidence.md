@@ -7,15 +7,52 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #88
-**Latest verified implementation merge:** `faf455ff6f07d096258e7cd977765e6e9e25b10f`
-**Last updated:** 2026-08-16
+**Evidence synchronized through implementation:** PR #90
+**Latest verified implementation merge:** `9cc7a606260e24e243090f70f5e957b0544bfa3b`
+**Last updated:** 2026-08-17
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #88 — `feat(mf02): add vaccination center management REST API`
+### PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`
+
+- reviewed source: `3324ab4b2a84960dea946c531115b5aee829ad61`
+- base: `4eaa8cd31c04aedf23f3887f25de27ec924165b8`
+- merge: `9cc7a606260e24e243090f70f5e957b0544bfa3b`
+- merged at: `2026-08-17T08:36:32Z`
+- merge method: normal merge commit (two parents: `4eaa8cd31c04aedf23f3887f25de27ec924165b8` and `3324ab4b2a84960dea946c531115b5aee829ad61`)
+- reviewed candidate preserved: YES
+- Backend CI: PASS (763 H2 verify + 3 Testcontainers MySQL verify)
+- Frontend CI: PASS
+- production code changed: 7 files (5 new, 2 modified)
+- test code changed: 3 files (3 new, 0 modified existing)
+- total files: 10
+- functional H2 test executions: **763** (80 XML reports; 0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **3** (2 XML reports; 0 failures, 0 errors, 0 skipped)
+- logical combined executions: **766**
+- previous clean baseline: **724 functional H2 + 3 MySQL** (from PR #88 / PR #89)
+- net-new executions: **+39 H2 tests** (+23 `SessionControllerTests`, +3 `SessionDtoMapperTests`, +13 `VaccinationSessionServiceQueryTests`)
+- endpoints integrated under `/api/v1/sessions` (6):
+  1. `POST /api/v1/sessions` (Create one-off DRAFT session; 201 Created)
+  2. `GET /api/v1/sessions/{id}` (Get session details; 200 OK)
+  3. `GET /api/v1/sessions` (List sessions with optional `campaignId`, `centerId`, `status` filters, logical AND semantics, ordered by `startAt` ASC, `id` ASC; 200 OK)
+  4. `POST /api/v1/sessions/{id}/schedule` (Transition DRAFT -> SCHEDULED; 200 OK)
+  5. `POST /api/v1/sessions/{id}/start` (Transition SCHEDULED -> IN_PROGRESS; 200 OK)
+  6. `POST /api/v1/sessions/{id}/complete` (Transition IN_PROGRESS -> COMPLETED; 200 OK)
+- architecture: strict transport adapter pattern (`SessionController` invokes domain service `VaccinationSessionService`; 0 repository dependencies in controller; 0 controller transactions; service layer owns `@Transactional` persistence/locking; pure `SessionDtoMapper` handles DTO conversion; existing `@RestControllerAdvice` `GlobalCampaignExceptionHandler` provides structured RFC-aligned `ApiErrorResponse`).
+- transport timestamps & timezone: transport uses `Instant startAt`, `Instant endAt`, `Instant bookingCloseAt`. Center entity remains authoritative for scheduling timezone; response includes `scheduleTimezone`. No client-supplied timezone field in `CreateSessionRequest`.
+- error & exception taxonomy:
+  - 400 Bad Request: `@Valid` payload validation failure, parameter type mismatch, malformed JSON, general `IllegalArgumentException`
+  - 404 Not Found: `ResourceNotFoundException` (missing campaign on creation, missing center on creation, missing session on GET / schedule / start / complete)
+  - 409 Conflict: `IllegalStateException` (invalid lifecycle state transition or business invariant conflict)
+  - 500 Internal Server Error: unexpected unhandled server exception
+- query implementation: database-side filtering via `findWithFilters` with optional `campaignId`, `centerId`, `status` using logical `AND` semantics and deterministic `ORDER BY s.startAt ASC, s.id ASC`. Returns 200 `[]` when empty (unpaged).
+- locking & validation preservation: PR #90 preserved and exposed existing authoritative locking (`findByIdForUpdate` with post-lock `entityManager.refresh` for creation [Campaign -> Center], schedule [Campaign -> Session], start [Session], complete [Session]) and existing service validation (operating hours, closures, intervals, campaign status).
+- note: *The exact reviewed candidate passed CI before zero-drift merge; no additional local post-merge rerun was performed.*
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+### Preceding Milestone: PR #88 — `feat(mf02): add vaccination center management REST API`
 
 - reviewed source: `263c26bc9d9a7b51bd81e28d326a90b004c548f0`
 - base: `37574bb02e157971c3ca2250d4953834cfe6d132`
@@ -271,6 +308,7 @@
 | PR #84 representative MySQL concurrency assurance | **645 functional H2 + 3 MySQL** | +0 H2, +3 MySQL Testcontainers assurance (**648 logical executions**) |
 | PR #86 campaign management REST API (9 endpoints) | **680 functional H2 + 3 MySQL** | +35 H2 (+23 controller, +4 mapper, +8 service query), +3 MySQL Testcontainers assurance (**683 logical executions**) |
 | PR #88 vaccination center management REST API (14 endpoints) | **724 functional H2 + 3 MySQL** | +44 H2 (+33 controller, +4 mapper, +7 service query), +3 MySQL Testcontainers assurance (**727 logical executions**) |
+| PR #90 vaccination session core REST API (6 endpoints) | **763 functional H2 + 3 MySQL** | +39 H2 (+23 controller, +3 mapper, +13 service query), +3 MySQL Testcontainers assurance (**766 logical executions**) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -368,6 +406,16 @@ Implemented and integrated under `/api/v1/centers` (PR #88):
 - Strict parent-child ownership verification on all child mutations (`/centers/{centerId}/operating-hours/{hoursId}`, `/centers/{centerId}/closures/{closureId}`)
 - Preservation of underlying `@Transactional` boundaries, parent `findByIdForUpdate` pessimistic locking, and `entityManager.refresh`
 - Service precheck rejection of normal duplicate center code (400 Bad Request); DB unique constraint backstop for concurrent duplicate race
+
+### Session Core REST API (Milestone 3)
+Implemented and integrated under `/api/v1/sessions` (PR #90):
+- 6 REST endpoints: `createSession`, `getSessionById`, `getSessions` (optional `campaignId`, `centerId`, `status` filters), `scheduleSession`, `startSession`, `completeSession`
+- Strict DTO request/response contracts (`CreateSessionRequest`, `SessionResponse`, `SessionSummaryResponse`) and pure `SessionDtoMapper`
+- Reused `@RestControllerAdvice` (`GlobalCampaignExceptionHandler`) with structured `ApiErrorResponse`
+- Typed `ResourceNotFoundException -> 404` error mapping across missing campaign/center on creation and missing session on GET/lifecycle transitions
+- Database-side filtering with optional parameters, logical `AND` semantics, and deterministic `ORDER BY startAt ASC, id ASC`
+- Preservation of underlying `@Transactional` boundaries, `findByIdForUpdate` pessimistic locking, `entityManager.refresh`, and domain schedule validation
+- Transport timestamps modeled as `Instant` with Center entity retaining timezone authority and exposing `scheduleTimezone` in response
 
 ## 5. PR #71 — Campaign `DRAFT -> SCHEDULED` Evidence
 
@@ -544,7 +592,7 @@ Representative established lock orders:
 Separate-transaction concurrency regression tests exist for real race conditions.
 
 ### Test Database Architecture and Concurrency Assurance
-- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (724 tests, 77 XML reports). This provides fast structural and domain validation.
+- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (763 tests, 80 XML reports). This provides fast structural and domain validation.
 - **Representative Production-Equivalent MySQL Assurance (PR #84):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`) and parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
 - **Scope Boundary:** *Representative single-row lifecycle and parent/child reverse-impact pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.*
 
@@ -602,6 +650,8 @@ This table preserves the engineering sequence without retaining stale controller
 | #86 | Campaign Management REST API vertical slice (9 endpoints) |
 | #87 | Evidence synchronization after PR #86 |
 | #88 | Vaccination Center Management REST API vertical slice (14 endpoints) |
+| #89 | Documentation synchronization after PR #88 |
+| #90 | Vaccination Session Core REST API vertical slice (6 endpoints) |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -631,6 +681,8 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #86: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
 - PR #87: `37574bb02e157971c3ca2250d4953834cfe6d132`
 - PR #88: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
+- PR #89: `4eaa8cd31c04aedf23f3887f25de27ec924165b8`
+- PR #90: `9cc7a606260e24e243090f70f5e957b0544bfa3b`
 
 ## 13. Carried-Forward Findings / Risks
 
@@ -639,7 +691,7 @@ Normal questionnaire assignment creation requires a published version, and PR #7
 
 ### Maintainability — PARTIALLY RESOLVED (PR #75)
 - `SessionSeriesChangeService` was successfully decomposed via PR #75, reducing its size from ~1,104 lines to ~694 lines.
-- `VaccinationSessionService` remains ~809 lines and is a candidate for future maintainability review if justified.
+- `VaccinationSessionService` remains ~824 lines and is a candidate for future maintainability review if justified.
 
 ### Optional critical ports
 Production-facing adapters for questionnaire publication (provided by MF-01 `QuestionnaireVersionService` in PR #76) and MF-03 session impact are still optional-injection boundaries in the current code. Production configuration should ultimately fail fast when required adapters are absent.
@@ -661,15 +713,15 @@ Lifecycle/change event repositories inherit normal delete APIs, so “append-onl
 
 Still not complete:
 - design and implementation of remaining campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`USER_DATA_REQUIRED`)
+- design and implementation of Vaccination Session Change Control REST API (cancellation, reschedule, transfer, preview/confirm, change-event history)
+- design and implementation of Vaccination Session Recurrence / Series REST API (recurrence rule REST, occurrence generation, series preview/confirm, series cancellation)
 - evaluation/decomposition of `VaccinationSessionService` maintainability only if justified
 - archival retention value (`USER_DATA_REQUIRED`)
 - DRAFT parent-campaign / child-session scheduling policy (`IMPLEMENTATION_DEFINED / unresolved policy`)
 - MF-01 production adapter/FK
 - MF-03 production impact adapter
 - transactional outbox
-- Session REST controllers/DTOs/mappers (Campaign REST API completed in PR #86, Center REST API completed in PR #88)
 - Campaign date update REST API
-- `/api/v1` alignment for session resources
 - Spring Security/RBAC
 - OpenAPI
 - Flyway migrations
@@ -686,6 +738,9 @@ Current status remains:
 - US-13: **IN PROGRESS**
 - Campaign Management REST API Milestone 1: **COMPLETE**
 - Vaccination Center Management REST API Milestone 2: **COMPLETE**
+- Vaccination Session Core REST API Milestone 3: **COMPLETE**
+- Vaccination Session Change Control REST API: **PENDING**
+- Vaccination Session Recurrence / Series REST API: **PENDING**
 
 Do not infer completion from the size of the backend test suite.
 
