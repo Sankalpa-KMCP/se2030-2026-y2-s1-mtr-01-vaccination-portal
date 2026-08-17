@@ -7,15 +7,58 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #90
-**Latest verified implementation merge:** `9cc7a606260e24e243090f70f5e957b0544bfa3b`
+**Evidence synchronized through implementation:** PR #92
+**Latest verified implementation merge:** `6ff63bdd04f34d3bd334d011fdf55dee8010a140`
 **Last updated:** 2026-08-17
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`
+### PR #92 — `feat(mf02): add session change control REST API`
+
+- reviewed source: `ccf5c3d58035d35e56d316207848d58388446547`
+- base: `1531ad9f89e3dc75b174cc3deb3a2204e2712a52`
+- merge: `6ff63bdd04f34d3bd334d011fdf55dee8010a140`
+- merged at: `2026-08-17T14:19:17Z`
+- merge method: normal merge commit (two parents: `1531ad9f89e3dc75b174cc3deb3a2204e2712a52` and `ccf5c3d58035d35e56d316207848d58388446547`)
+- reviewed candidate preserved: YES
+- Backend CI: PASS (790 H2 verify + 3 Testcontainers MySQL verify)
+- Frontend CI: PASS
+- production code changed: 11 files (8 new, 3 modified)
+- test code changed: 3 files (1 new, 2 modified)
+- total files: 14 (+1318 / -14 lines)
+- functional H2 test executions: **790** (81 XML reports; 0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **3** (2 XML reports; 0 failures, 0 errors, 0 skipped)
+- logical combined executions: **793** (across separate validation paths)
+- previous clean baseline: **763 functional H2 + 3 MySQL** (from PR #90 / PR #91)
+- net-new executions: **+27 H2 tests** (+20 `SessionControllerChangeTests`, +3 `SessionDtoMapperTests`, +4 `VaccinationSessionServiceQueryTests`)
+- focused regression executions: **84 / 84 PASS** (23 `SessionControllerTests` + 20 `SessionControllerChangeTests` + 6 `SessionDtoMapperTests` + 17 `VaccinationSessionServiceQueryTests` + 18 `VaccinationSessionChangeIntegrationTests`)
+- endpoints integrated under `/api/v1/sessions` (7):
+  1. `POST /api/v1/sessions/{id}/cancellation-preview` (Preview cancellation; 200 OK)
+  2. `POST /api/v1/sessions/{id}/cancel` (Confirm cancellation; 200 OK)
+  3. `POST /api/v1/sessions/{id}/reschedule-preview` (Preview same-center reschedule; 200 OK)
+  4. `POST /api/v1/sessions/{id}/reschedule` (Confirm same-center reschedule; 200 OK)
+  5. `POST /api/v1/sessions/{id}/transfer-preview` (Preview center transfer; 200 OK)
+  6. `POST /api/v1/sessions/{id}/transfer` (Confirm center transfer; 200 OK)
+  7. `GET /api/v1/sessions/{id}/change-events` (List chronological change-event audit history; 200 OK)
+- architecture: strict transport adapter pattern (`SessionController` invokes domain service `VaccinationSessionService`; 0 repository dependencies in controller; 0 controller transactions; service layer owns `@Transactional` persistence/locking; pure `SessionDtoMapper` handles DTO conversion; existing `@RestControllerAdvice` `GlobalCampaignExceptionHandler` provides structured RFC-aligned `ApiErrorResponse`).
+- runtime constraint & external adapter status: `SessionImpactReader` production adapter is **MISSING** (owned by MF-03). DRAFT session changes operate fully with 0/0 impact without the adapter. SCHEDULED impact-aware changes safely require the adapter and fail fast with `IllegalStateException` -> `HTTP 409 Conflict`. Milestone is qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
+- preview token contract: client receives opaque String token generated from deterministic SHA-256 fingerprint; confirm endpoint acquires locks, refreshes entity state, revalidates domain invariants, recomputes token, and verifies equality; stale or tampered token returns `IllegalStateException` -> `HTTP 409 Conflict`.
+- timezone contract: Center entity remains authoritative for scheduling timezone; transfer confirmation updates `scheduleTimezone` to the target center's timezone; no client timezone override permitted.
+- audit metadata: `reason` (required, non-blank, max 500 chars), `actorId` (required, non-blank, max 64 chars; classified as `CALLER_SUPPLIED_UNAUTHENTICATED_AUDIT_METADATA`).
+- history semantics: `GET /api/v1/sessions/{id}/change-events` returns 404 for nonexistent session; 200 `[]` for existing session with no events; ordered by `createdAt ASC, id ASC`.
+- error & exception taxonomy:
+  - 400 Bad Request: `@Valid` payload validation failure, parameter type mismatch, malformed JSON, general `IllegalArgumentException` (including invalid lifecycle status for change operations: `CANCELLED`, `IN_PROGRESS`, `COMPLETED`)
+  - 404 Not Found: `ResourceNotFoundException` (missing session on preview/confirm/history, missing target center on transfer preview/confirm)
+  - 409 Conflict: `IllegalStateException` (stale/invalid preview token, concurrent state conflict, or missing `SessionImpactReader` for SCHEDULED changes)
+  - 500 Internal Server Error: unexpected unhandled server exception
+- locking & validation preservation: PR #92 preserved and exposed existing authoritative locking (cancellation: `Campaign -> Center -> Session`; reschedule: `Campaign -> Center -> Session`; transfer: `Campaign -> min(c1,c2) -> max(c1,c2) -> Session`) under `findByIdForUpdate` with post-lock `entityManager.refresh` and transactional reverse-impact check invariants.
+- audit atomicity: session mutation and `SessionChangeEvent` persistence occur within the same service `@Transactional` boundary; preview operations are `@Transactional(readOnly = true)` with zero side effects.
+- note: *The exact reviewed candidate passed CI before zero-drift merge; no additional local post-merge rerun was performed.*
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+### Preceding Milestone: PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`
 
 - reviewed source: `3324ab4b2a84960dea946c531115b5aee829ad61`
 - base: `4eaa8cd31c04aedf23f3887f25de27ec924165b8`
@@ -309,6 +352,7 @@
 | PR #86 campaign management REST API (9 endpoints) | **680 functional H2 + 3 MySQL** | +35 H2 (+23 controller, +4 mapper, +8 service query), +3 MySQL Testcontainers assurance (**683 logical executions**) |
 | PR #88 vaccination center management REST API (14 endpoints) | **724 functional H2 + 3 MySQL** | +44 H2 (+33 controller, +4 mapper, +7 service query), +3 MySQL Testcontainers assurance (**727 logical executions**) |
 | PR #90 vaccination session core REST API (6 endpoints) | **763 functional H2 + 3 MySQL** | +39 H2 (+23 controller, +3 mapper, +13 service query), +3 MySQL Testcontainers assurance (**766 logical executions**) |
+| PR #92 vaccination session change control REST API (7 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) | **790 functional H2 + 3 MySQL** | +27 H2 (+20 controller, +3 mapper, +4 service query), +3 MySQL Testcontainers assurance (**793 logical executions across separate validation paths**) |
 
 The value **575** was a non-authoritative arithmetic result derived from the superseded 566 figure and must not be used as verified evidence.
 
@@ -592,7 +636,7 @@ Representative established lock orders:
 Separate-transaction concurrency regression tests exist for real race conditions.
 
 ### Test Database Architecture and Concurrency Assurance
-- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (763 tests, 80 XML reports). This provides fast structural and domain validation.
+- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (790 tests, 81 XML reports). This provides fast structural and domain validation.
 - **Representative Production-Equivalent MySQL Assurance (PR #84):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`) and parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
 - **Scope Boundary:** *Representative single-row lifecycle and parent/child reverse-impact pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.*
 
@@ -652,6 +696,8 @@ This table preserves the engineering sequence without retaining stale controller
 | #88 | Vaccination Center Management REST API vertical slice (14 endpoints) |
 | #89 | Documentation synchronization after PR #88 |
 | #90 | Vaccination Session Core REST API vertical slice (6 endpoints) |
+| #91 | Documentation synchronization after PR #90 |
+| #92 | Vaccination Session Change Control REST API vertical slice (7 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -683,6 +729,8 @@ This table preserves the engineering sequence without retaining stale controller
 - PR #88: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
 - PR #89: `4eaa8cd31c04aedf23f3887f25de27ec924165b8`
 - PR #90: `9cc7a606260e24e243090f70f5e957b0544bfa3b`
+- PR #91: `1531ad9f89e3dc75b174cc3deb3a2204e2712a52`
+- PR #92: `6ff63bdd04f34d3bd334d011fdf55dee8010a140`
 
 ## 13. Carried-Forward Findings / Risks
 
@@ -713,7 +761,6 @@ Lifecycle/change event repositories inherit normal delete APIs, so “append-onl
 
 Still not complete:
 - design and implementation of remaining campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`USER_DATA_REQUIRED`)
-- design and implementation of Vaccination Session Change Control REST API (cancellation, reschedule, transfer, preview/confirm, change-event history)
 - design and implementation of Vaccination Session Recurrence / Series REST API (recurrence rule REST, occurrence generation, series preview/confirm, series cancellation)
 - evaluation/decomposition of `VaccinationSessionService` maintainability only if justified
 - archival retention value (`USER_DATA_REQUIRED`)
@@ -739,7 +786,7 @@ Current status remains:
 - Campaign Management REST API Milestone 1: **COMPLETE**
 - Vaccination Center Management REST API Milestone 2: **COMPLETE**
 - Vaccination Session Core REST API Milestone 3: **COMPLETE**
-- Vaccination Session Change Control REST API: **PENDING**
+- Vaccination Session Change Control REST API Milestone 4: **COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT**
 - Vaccination Session Recurrence / Series REST API: **PENDING**
 
 Do not infer completion from the size of the backend test suite.
