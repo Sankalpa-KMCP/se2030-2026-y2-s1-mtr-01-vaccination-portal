@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeType;
@@ -94,7 +95,7 @@ public class VaccinationSessionService {
         requireId(centerId, "Center ID is required");
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
@@ -108,7 +109,7 @@ public class VaccinationSessionService {
         }
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
         if (entityManager != null) {
             entityManager.refresh(center);
         }
@@ -134,6 +135,20 @@ public class VaccinationSessionService {
     }
 
     @Transactional(readOnly = true)
+    public VaccinationSession getRequiredSessionById(Long id) {
+        if (id == null) {
+            throw new ResourceNotFoundException("Session ID is required");
+        }
+        return sessionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<VaccinationSession> getSessions(Long campaignId, Long centerId, SessionLifecycleStatus status) {
+        return sessionRepository.findWithFilters(campaignId, centerId, status);
+    }
+
+    @Transactional(readOnly = true)
     public List<VaccinationSession> getSessionsForCampaign(Long campaignId) {
         requireId(campaignId, "Campaign ID is required");
         return sessionRepository.findByCampaignId(campaignId);
@@ -155,17 +170,17 @@ public class VaccinationSessionService {
     public VaccinationSession scheduleSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
         VaccinationSession unlockedSession = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         Long campaignId = unlockedSession.getCampaign().getId();
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
 
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
@@ -197,7 +212,7 @@ public class VaccinationSessionService {
     public VaccinationSession startSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
@@ -215,7 +230,7 @@ public class VaccinationSessionService {
     public VaccinationSession completeSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
