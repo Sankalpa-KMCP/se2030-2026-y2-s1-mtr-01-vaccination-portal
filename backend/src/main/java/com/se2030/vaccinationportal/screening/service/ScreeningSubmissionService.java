@@ -58,8 +58,9 @@ public class ScreeningSubmissionService {
         if (submissionId == null) {
             throw new IllegalArgumentException("Submission ID cannot be null");
         }
-        return submissionRepository.findById(submissionId)
+        ScreeningSubmission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Screening submission not found with ID: " + submissionId));
+        return initializeResponseRelations(submission);
     }
 
     @Transactional(readOnly = true)
@@ -67,7 +68,9 @@ public class ScreeningSubmissionService {
         if (citizenId == null) {
             throw new IllegalArgumentException("Citizen ID cannot be null");
         }
-        return submissionRepository.findByCitizenIdOrderByCreatedAtDesc(citizenId);
+        List<ScreeningSubmission> submissions = submissionRepository.findByCitizenIdOrderByCreatedAtDesc(citizenId);
+        submissions.forEach(this::initializeResponseRelations);
+        return submissions;
     }
 
     @Transactional(readOnly = true)
@@ -75,7 +78,8 @@ public class ScreeningSubmissionService {
         if (citizenId == null || campaignId == null) {
             throw new IllegalArgumentException("Citizen ID and Campaign ID are required");
         }
-        return submissionRepository.findActiveSubmission(citizenId, campaignId, ACTIVE_SUBMISSION_STATUSES);
+        return submissionRepository.findActiveSubmission(citizenId, campaignId, ACTIVE_SUBMISSION_STATUSES)
+                .map(this::initializeResponseRelations);
     }
 
     /**
@@ -152,6 +156,7 @@ public class ScreeningSubmissionService {
                     .orElseThrow(() -> new IllegalArgumentException("Question not found with ID: " + entry.getKey()));
 
             ScreeningAnswer answer = new ScreeningAnswer(savedSubmission, question, entry.getValue().trim());
+            savedSubmission.addAnswer(answer);
             persistedAnswers.add(answerRepository.save(answer));
         }
 
@@ -159,6 +164,11 @@ public class ScreeningSubmissionService {
         PreliminaryScreeningService.RuleEvaluationResult eval = preliminaryScreeningService.evaluateAnswers(versionId, persistedAnswers);
         savedSubmission.setPreliminaryResult(eval.overallResult());
 
-        return submissionRepository.save(savedSubmission);
+        return initializeResponseRelations(submissionRepository.save(savedSubmission));
+    }
+
+    private ScreeningSubmission initializeResponseRelations(ScreeningSubmission submission) {
+        submission.getAnswers().size();
+        return submission;
     }
 }

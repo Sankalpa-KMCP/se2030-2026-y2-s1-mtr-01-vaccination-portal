@@ -57,13 +57,16 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
         if (versionId == null) {
             throw new IllegalArgumentException("Version ID cannot be null");
         }
-        return versionRepository.findById(versionId)
+        QuestionnaireVersion version = versionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalArgumentException("Questionnaire version not found with ID: " + versionId));
+        return initializeResponseRelations(version);
     }
 
     @Transactional(readOnly = true)
     public List<QuestionnaireVersion> getVersionsForQuestionnaire(Long questionnaireId) {
-        return versionRepository.findByQuestionnaireIdOrderByVersionNumberDesc(questionnaireId);
+        List<QuestionnaireVersion> versions = versionRepository.findByQuestionnaireIdOrderByVersionNumberDesc(questionnaireId);
+        versions.forEach(this::initializeResponseRelations);
+        return versions;
     }
 
     public QuestionnaireVersion createDraftVersion(Long questionnaireId) {
@@ -174,5 +177,11 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
         }
 
         versionRepository.delete(version);
+    }
+
+    private QuestionnaireVersion initializeResponseRelations(QuestionnaireVersion version) {
+        version.getItems().size();
+        version.getRules().size();
+        return version;
     }
 }

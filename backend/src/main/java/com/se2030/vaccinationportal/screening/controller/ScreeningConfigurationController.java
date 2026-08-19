@@ -4,6 +4,11 @@ import com.se2030.vaccinationportal.screening.dto.AddAnswerOptionRequest;
 import com.se2030.vaccinationportal.screening.dto.CreateQuestionRequest;
 import com.se2030.vaccinationportal.screening.dto.CreateQuestionnaireRequest;
 import com.se2030.vaccinationportal.screening.dto.UpdateQuestionRequest;
+import com.se2030.vaccinationportal.screening.dto.response.AnswerOptionResponse;
+import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireResponse;
+import com.se2030.vaccinationportal.screening.dto.response.ScreeningQuestionResponse;
+import com.se2030.vaccinationportal.screening.mapper.QuestionnaireMapper;
+import com.se2030.vaccinationportal.screening.mapper.ScreeningQuestionMapper;
 import com.se2030.vaccinationportal.screening.model.AnswerOption;
 import com.se2030.vaccinationportal.screening.model.Questionnaire;
 import com.se2030.vaccinationportal.screening.model.ScreeningQuestion;
@@ -27,9 +32,17 @@ import java.util.List;
 public class ScreeningConfigurationController {
 
     private final ScreeningConfigurationService configurationService;
+    private final ScreeningQuestionMapper questionMapper;
+    private final QuestionnaireMapper questionnaireMapper;
 
-    public ScreeningConfigurationController(ScreeningConfigurationService configurationService) {
+    public ScreeningConfigurationController(
+            ScreeningConfigurationService configurationService,
+            ScreeningQuestionMapper questionMapper,
+            QuestionnaireMapper questionnaireMapper
+    ) {
         this.configurationService = configurationService;
+        this.questionMapper = questionMapper;
+        this.questionnaireMapper = questionnaireMapper;
     }
 
     // ==========================================
@@ -38,24 +51,24 @@ public class ScreeningConfigurationController {
 
     @GetMapping("/questions")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER"})
-    public ResponseEntity<List<ScreeningQuestion>> listQuestions(
+    public ResponseEntity<List<ScreeningQuestionResponse>> listQuestions(
             @RequestParam(name = "activeOnly", defaultValue = "false") boolean activeOnly
     ) {
         List<ScreeningQuestion> questions = activeOnly
                 ? configurationService.getActiveQuestions()
                 : configurationService.getAllQuestions();
-        return ResponseEntity.ok(questions);
+        return ResponseEntity.ok(questionMapper.toQuestionResponses(questions));
     }
 
     @GetMapping("/questions/{id}")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER"})
-    public ResponseEntity<ScreeningQuestion> getQuestionById(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(configurationService.getQuestionById(id));
+    public ResponseEntity<ScreeningQuestionResponse> getQuestionById(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(questionMapper.toResponse(configurationService.getQuestionById(id)));
     }
 
     @PostMapping("/questions")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<ScreeningQuestion> createQuestion(@Valid @RequestBody CreateQuestionRequest request) {
+    public ResponseEntity<ScreeningQuestionResponse> createQuestion(@Valid @RequestBody CreateQuestionRequest request) {
         ScreeningQuestion created = configurationService.createQuestion(
                 request.code(),
                 request.text(),
@@ -63,12 +76,12 @@ public class ScreeningConfigurationController {
                 request.questionType(),
                 request.defaultRequired()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(questionMapper.toResponse(created));
     }
 
     @PutMapping("/questions/{id}")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<ScreeningQuestion> updateQuestion(
+    public ResponseEntity<ScreeningQuestionResponse> updateQuestion(
             @PathVariable("id") Long id,
             @Valid @RequestBody UpdateQuestionRequest request
     ) {
@@ -79,7 +92,7 @@ public class ScreeningConfigurationController {
                 request.defaultRequired(),
                 request.active()
         );
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(questionMapper.toResponse(updated));
     }
 
     @DeleteMapping("/questions/{id}")
@@ -95,13 +108,13 @@ public class ScreeningConfigurationController {
 
     @GetMapping("/questions/{id}/options")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER", "CITIZEN"})
-    public ResponseEntity<List<AnswerOption>> getOptionsForQuestion(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(configurationService.getOptionsForQuestion(id));
+    public ResponseEntity<List<AnswerOptionResponse>> getOptionsForQuestion(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(questionMapper.toOptionResponses(configurationService.getOptionsForQuestion(id)));
     }
 
     @PostMapping("/questions/{id}/options")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<AnswerOption> addAnswerOption(
+    public ResponseEntity<AnswerOptionResponse> addAnswerOption(
             @PathVariable("id") Long id,
             @Valid @RequestBody AddAnswerOptionRequest request
     ) {
@@ -112,7 +125,7 @@ public class ScreeningConfigurationController {
                 request.typedValue(),
                 request.displayOrder()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(option);
+        return ResponseEntity.status(HttpStatus.CREATED).body(questionMapper.toResponse(option));
     }
 
     @DeleteMapping("/options/{optionId}")
@@ -128,24 +141,24 @@ public class ScreeningConfigurationController {
 
     @GetMapping("/questionnaires")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER"})
-    public ResponseEntity<List<Questionnaire>> listQuestionnaires() {
-        return ResponseEntity.ok(configurationService.getAllQuestionnaires());
+    public ResponseEntity<List<QuestionnaireResponse>> listQuestionnaires() {
+        return ResponseEntity.ok(questionnaireMapper.toResponses(configurationService.getAllQuestionnaires()));
     }
 
     @GetMapping("/questionnaires/{id}")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER"})
-    public ResponseEntity<Questionnaire> getQuestionnaireById(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(configurationService.getQuestionnaireById(id));
+    public ResponseEntity<QuestionnaireResponse> getQuestionnaireById(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(questionnaireMapper.toResponse(configurationService.getQuestionnaireById(id)));
     }
 
     @PostMapping("/questionnaires")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<Questionnaire> createQuestionnaire(@Valid @RequestBody CreateQuestionnaireRequest request) {
+    public ResponseEntity<QuestionnaireResponse> createQuestionnaire(@Valid @RequestBody CreateQuestionnaireRequest request) {
         Questionnaire questionnaire = configurationService.createQuestionnaire(
                 request.code(),
                 request.name(),
                 request.description()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(questionnaire);
+        return ResponseEntity.status(HttpStatus.CREATED).body(questionnaireMapper.toResponse(questionnaire));
     }
 }

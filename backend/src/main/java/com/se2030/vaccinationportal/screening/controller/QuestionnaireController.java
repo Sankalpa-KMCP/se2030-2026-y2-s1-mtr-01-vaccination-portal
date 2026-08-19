@@ -2,6 +2,10 @@ package com.se2030.vaccinationportal.screening.controller;
 
 import com.se2030.vaccinationportal.screening.dto.AddEligibilityRuleRequest;
 import com.se2030.vaccinationportal.screening.dto.AddQuestionItemRequest;
+import com.se2030.vaccinationportal.screening.dto.response.EligibilityRuleResponse;
+import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireItemResponse;
+import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireVersionResponse;
+import com.se2030.vaccinationportal.screening.mapper.QuestionnaireVersionMapper;
 import com.se2030.vaccinationportal.screening.model.EligibilityRule;
 import com.se2030.vaccinationportal.screening.model.QuestionnaireItem;
 import com.se2030.vaccinationportal.screening.model.QuestionnaireVersion;
@@ -25,37 +29,42 @@ import java.util.List;
 public class QuestionnaireController {
 
     private final QuestionnaireVersionService versionService;
+    private final QuestionnaireVersionMapper versionMapper;
 
-    public QuestionnaireController(QuestionnaireVersionService versionService) {
+    public QuestionnaireController(
+            QuestionnaireVersionService versionService,
+            QuestionnaireVersionMapper versionMapper
+    ) {
         this.versionService = versionService;
+        this.versionMapper = versionMapper;
     }
 
     @GetMapping("/questionnaires/{questionnaireId}/versions")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER"})
-    public ResponseEntity<List<QuestionnaireVersion>> getVersionsForQuestionnaire(
+    public ResponseEntity<List<QuestionnaireVersionResponse>> getVersionsForQuestionnaire(
             @PathVariable("questionnaireId") Long questionnaireId
     ) {
-        return ResponseEntity.ok(versionService.getVersionsForQuestionnaire(questionnaireId));
+        return ResponseEntity.ok(versionMapper.toResponses(versionService.getVersionsForQuestionnaire(questionnaireId)));
     }
 
     @GetMapping("/questionnaire-versions/{versionId}")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER", "CITIZEN"})
-    public ResponseEntity<QuestionnaireVersion> getVersionById(@PathVariable("versionId") Long versionId) {
-        return ResponseEntity.ok(versionService.getVersionById(versionId));
+    public ResponseEntity<QuestionnaireVersionResponse> getVersionById(@PathVariable("versionId") Long versionId) {
+        return ResponseEntity.ok(versionMapper.toResponse(versionService.getVersionById(versionId)));
     }
 
     @PostMapping("/questionnaires/{questionnaireId}/versions")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<QuestionnaireVersion> createDraftVersion(
+    public ResponseEntity<QuestionnaireVersionResponse> createDraftVersion(
             @PathVariable("questionnaireId") Long questionnaireId
     ) {
         QuestionnaireVersion draft = versionService.createDraftVersion(questionnaireId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(draft);
+        return ResponseEntity.status(HttpStatus.CREATED).body(versionMapper.toResponse(draft));
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/items")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<QuestionnaireItem> addQuestionItem(
+    public ResponseEntity<QuestionnaireItemResponse> addQuestionItem(
             @PathVariable("versionId") Long versionId,
             @Valid @RequestBody AddQuestionItemRequest request
     ) {
@@ -65,12 +74,12 @@ public class QuestionnaireController {
                 request.displayOrder(),
                 request.requiredOverride()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(item);
+        return ResponseEntity.status(HttpStatus.CREATED).body(versionMapper.toResponse(item));
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/rules")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<EligibilityRule> addEligibilityRule(
+    public ResponseEntity<EligibilityRuleResponse> addEligibilityRule(
             @PathVariable("versionId") Long versionId,
             @Valid @RequestBody AddEligibilityRuleRequest request
     ) {
@@ -83,21 +92,21 @@ public class QuestionnaireController {
                 request.priority(),
                 request.message()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(rule);
+        return ResponseEntity.status(HttpStatus.CREATED).body(versionMapper.toResponse(rule));
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/publish")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<QuestionnaireVersion> publishVersion(@PathVariable("versionId") Long versionId) {
+    public ResponseEntity<QuestionnaireVersionResponse> publishVersion(@PathVariable("versionId") Long versionId) {
         QuestionnaireVersion published = versionService.publishVersion(versionId);
-        return ResponseEntity.ok(published);
+        return ResponseEntity.ok(versionMapper.toResponse(published));
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/retire")
     @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<QuestionnaireVersion> retireVersion(@PathVariable("versionId") Long versionId) {
+    public ResponseEntity<QuestionnaireVersionResponse> retireVersion(@PathVariable("versionId") Long versionId) {
         QuestionnaireVersion retired = versionService.retireVersion(versionId);
-        return ResponseEntity.ok(retired);
+        return ResponseEntity.ok(versionMapper.toResponse(retired));
     }
 
     @DeleteMapping("/questionnaire-versions/{versionId}")

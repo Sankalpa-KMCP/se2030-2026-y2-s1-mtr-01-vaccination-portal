@@ -38,10 +38,14 @@ public class EligibilityReviewService {
 
     @Transactional(readOnly = true)
     public List<ScreeningSubmission> getReviewQueue(Long campaignId) {
+        List<ScreeningSubmission> submissions;
         if (campaignId != null) {
-            return submissionRepository.findByCampaignIdAndStatus(campaignId, ScreeningSubmissionStatus.PENDING_REVIEW);
+            submissions = submissionRepository.findByCampaignIdAndStatus(campaignId, ScreeningSubmissionStatus.PENDING_REVIEW);
+        } else {
+            submissions = submissionRepository.findByStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
         }
-        return submissionRepository.findByStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
+        submissions.forEach(this::initializeSubmissionResponseRelations);
+        return submissions;
     }
 
     @Transactional(readOnly = true)
@@ -164,7 +168,7 @@ public class EligibilityReviewService {
         }
 
         submission.setStatus(ScreeningSubmissionStatus.CORRECTIONS_REQUIRED);
-        return submissionRepository.save(submission);
+        return initializeSubmissionResponseRelations(submissionRepository.save(submission));
     }
 
     /**
@@ -209,5 +213,10 @@ public class EligibilityReviewService {
         assessment.setRescreeningReason(reason.trim());
 
         return assessmentRepository.save(assessment);
+    }
+
+    private ScreeningSubmission initializeSubmissionResponseRelations(ScreeningSubmission submission) {
+        submission.getAnswers().size();
+        return submission;
     }
 }

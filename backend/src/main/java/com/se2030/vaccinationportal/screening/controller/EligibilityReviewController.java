@@ -4,6 +4,10 @@ import com.se2030.vaccinationportal.screening.dto.AuthorizeRescreeningRequest;
 import com.se2030.vaccinationportal.screening.dto.EligibilityDecisionRequest;
 import com.se2030.vaccinationportal.screening.dto.RequestCorrectionsRequest;
 import com.se2030.vaccinationportal.screening.dto.RevokeAssessmentRequest;
+import com.se2030.vaccinationportal.screening.dto.response.EligibilityAssessmentResponse;
+import com.se2030.vaccinationportal.screening.dto.response.ScreeningSubmissionResponse;
+import com.se2030.vaccinationportal.screening.mapper.EligibilityAssessmentMapper;
+import com.se2030.vaccinationportal.screening.mapper.ScreeningSubmissionMapper;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
@@ -30,35 +34,44 @@ import java.util.Map;
 public class EligibilityReviewController {
 
     private final EligibilityReviewService reviewService;
+    private final EligibilityAssessmentMapper assessmentMapper;
+    private final ScreeningSubmissionMapper submissionMapper;
 
-    public EligibilityReviewController(EligibilityReviewService reviewService) {
+    public EligibilityReviewController(
+            EligibilityReviewService reviewService,
+            EligibilityAssessmentMapper assessmentMapper,
+            ScreeningSubmissionMapper submissionMapper
+    ) {
         this.reviewService = reviewService;
+        this.assessmentMapper = assessmentMapper;
+        this.submissionMapper = submissionMapper;
     }
 
     @GetMapping("/assessments/queue")
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<List<ScreeningSubmission>> getReviewQueue(
+    public ResponseEntity<List<ScreeningSubmissionResponse>> getReviewQueue(
             @RequestParam(name = "campaignId", required = false) Long campaignId
     ) {
-        return ResponseEntity.ok(reviewService.getReviewQueue(campaignId));
+        return ResponseEntity.ok(submissionMapper.toResponses(reviewService.getReviewQueue(campaignId)));
     }
 
     @GetMapping("/assessments/submissions/{submissionId}")
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR", "CITIZEN"})
-    public ResponseEntity<EligibilityAssessment> getAssessmentBySubmissionId(
+    public ResponseEntity<EligibilityAssessmentResponse> getAssessmentBySubmissionId(
             @PathVariable("submissionId") Long submissionId
     ) {
         return reviewService.getAssessmentBySubmissionId(submissionId)
+                .map(assessmentMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.noContent().build());
     }
 
     @GetMapping("/citizens/{citizenId}/assessments")
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR", "CITIZEN"})
-    public ResponseEntity<List<EligibilityAssessment>> getAssessmentsForCitizen(
+    public ResponseEntity<List<EligibilityAssessmentResponse>> getAssessmentsForCitizen(
             @PathVariable("citizenId") Long citizenId
     ) {
-        return ResponseEntity.ok(reviewService.getAssessmentsForCitizen(citizenId));
+        return ResponseEntity.ok(assessmentMapper.toResponses(reviewService.getAssessmentsForCitizen(citizenId)));
     }
 
     @GetMapping("/citizens/{citizenId}/campaigns/{campaignId}/eligibility")
@@ -77,7 +90,7 @@ public class EligibilityReviewController {
 
     @PostMapping("/assessments/submissions/{submissionId}/decision")
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<EligibilityAssessment> recordDecision(
+    public ResponseEntity<EligibilityAssessmentResponse> recordDecision(
             @PathVariable("submissionId") Long submissionId,
             @Valid @RequestBody EligibilityDecisionRequest request
     ) {
@@ -89,22 +102,22 @@ public class EligibilityReviewController {
                 request.clinicalNotes(),
                 request.validUntil()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(assessment);
+        return ResponseEntity.status(HttpStatus.CREATED).body(assessmentMapper.toResponse(assessment));
     }
 
     @PostMapping("/assessments/submissions/{submissionId}/corrections")
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<ScreeningSubmission> requestCorrections(
+    public ResponseEntity<ScreeningSubmissionResponse> requestCorrections(
             @PathVariable("submissionId") Long submissionId,
             @Valid @RequestBody RequestCorrectionsRequest request
     ) {
         ScreeningSubmission submission = reviewService.requestCorrections(submissionId, request.instructions());
-        return ResponseEntity.ok(submission);
+        return ResponseEntity.ok(submissionMapper.toResponse(submission));
     }
 
     @PostMapping("/assessments/{assessmentId}/revoke")
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<EligibilityAssessment> revokeAssessment(
+    public ResponseEntity<EligibilityAssessmentResponse> revokeAssessment(
             @PathVariable("assessmentId") Long assessmentId,
             @Valid @RequestBody RevokeAssessmentRequest request
     ) {
@@ -113,12 +126,12 @@ public class EligibilityReviewController {
                 request.reviewerId(),
                 request.revocationReason()
         );
-        return ResponseEntity.ok(assessment);
+        return ResponseEntity.ok(assessmentMapper.toResponse(assessment));
     }
 
     @PostMapping("/assessments/{assessmentId}/rescreening")
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
-    public ResponseEntity<EligibilityAssessment> authorizeRescreening(
+    public ResponseEntity<EligibilityAssessmentResponse> authorizeRescreening(
             @PathVariable("assessmentId") Long assessmentId,
             @Valid @RequestBody AuthorizeRescreeningRequest request
     ) {
@@ -127,6 +140,6 @@ public class EligibilityReviewController {
                 request.authorizedByReviewerId(),
                 request.reason()
         );
-        return ResponseEntity.ok(assessment);
+        return ResponseEntity.ok(assessmentMapper.toResponse(assessment));
     }
 }
