@@ -154,6 +154,23 @@ public class Appointment {
         this.cancelledAt = cancelledAt;
     }
 
+    /**
+     * Cancels this appointment and sets the cancellation timestamp.
+     *
+     * @param cancelledAt Timestamp of cancellation
+     */
+    public void cancel(Instant cancelledAt) {
+        this.status = AppointmentStatus.CANCELLED;
+        this.cancelledAt = (cancelledAt != null) ? cancelledAt : Instant.now();
+    }
+
+    /**
+     * Completes this appointment.
+     */
+    public void complete() {
+        this.status = AppointmentStatus.COMPLETED;
+    }
+
     @Override
     public String toString() {
         return "Appointment{" +

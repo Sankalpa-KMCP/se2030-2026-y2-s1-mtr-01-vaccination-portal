@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.appointment.service;
 
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
+import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,9 +14,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TestSlotCapacityPortDouble implements SlotCapacityPort {
 
     private final ConcurrentMap<Long, AtomicInteger> slotCapacityMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Instant> slotStartTimeMap = new ConcurrentHashMap<>();
+    private boolean simulateReleaseFailure = false;
 
     public void setAvailableCapacity(Long slotId, int capacity) {
         slotCapacityMap.put(slotId, new AtomicInteger(capacity));
+    }
+
+    public void setSlotStartTime(Long slotId, Instant startTime) {
+        slotStartTimeMap.put(slotId, startTime);
+    }
+
+    public void setSimulateReleaseFailure(boolean simulateReleaseFailure) {
+        this.simulateReleaseFailure = simulateReleaseFailure;
     }
 
     @Override
@@ -40,5 +51,23 @@ public class TestSlotCapacityPortDouble implements SlotCapacityPort {
                 return SlotReservationResult.SUCCESS;
             }
         }
+    }
+
+    @Override
+    public boolean releaseCapacity(Long slotId) {
+        if (simulateReleaseFailure) {
+            return false;
+        }
+        AtomicInteger remaining = slotCapacityMap.get(slotId);
+        if (remaining == null) {
+            return false;
+        }
+        remaining.incrementAndGet();
+        return true;
+    }
+
+    @Override
+    public Instant getSlotStartTime(Long slotId) {
+        return slotStartTimeMap.get(slotId);
     }
 }
