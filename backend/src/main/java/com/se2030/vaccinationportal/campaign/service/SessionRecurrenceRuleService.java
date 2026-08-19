@@ -94,11 +94,23 @@ public class SessionRecurrenceRuleService {
     }
 
     @Transactional(readOnly = true)
+    public SessionRecurrenceRule getRequiredRuleById(Long id) {
+        requireId(id, "Session recurrence rule ID is required");
+        return ruleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
     public Optional<SessionRecurrenceRule> getRuleByGenerationKey(String generationKey) {
         if (generationKey == null || generationKey.isBlank()) {
             throw new IllegalArgumentException("Session recurrence generation key is required");
         }
         return ruleRepository.findByGenerationKey(generationKey.trim());
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionRecurrenceRule> getRules(Long campaignId, Long centerId, SessionRecurrenceRuleStatus status) {
+        return ruleRepository.findWithFilters(campaignId, centerId, status);
     }
 
     @Transactional(readOnly = true)
