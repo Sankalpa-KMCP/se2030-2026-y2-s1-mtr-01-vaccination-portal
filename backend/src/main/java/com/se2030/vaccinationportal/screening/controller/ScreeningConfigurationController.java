@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.screening.dto.AddAnswerOptionRequest;
 import com.se2030.vaccinationportal.screening.dto.CreateQuestionRequest;
 import com.se2030.vaccinationportal.screening.dto.CreateQuestionnaireRequest;
 import com.se2030.vaccinationportal.screening.dto.UpdateQuestionRequest;
+import com.se2030.vaccinationportal.screening.dto.UpdateAnswerOptionRequest;
 import com.se2030.vaccinationportal.screening.dto.response.AnswerOptionResponse;
 import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireResponse;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningQuestionResponse;
@@ -126,6 +127,28 @@ public class ScreeningConfigurationController {
                 request.displayOrder()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(questionMapper.toResponse(option));
+    }
+
+    @GetMapping("/options/{optionId}")
+    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER", "CITIZEN"})
+    public ResponseEntity<AnswerOptionResponse> getAnswerOptionById(@PathVariable("optionId") Long optionId) {
+        return ResponseEntity.ok(questionMapper.toResponse(configurationService.getAnswerOptionById(optionId)));
+    }
+
+    @PutMapping("/options/{optionId}")
+    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    public ResponseEntity<AnswerOptionResponse> updateAnswerOption(
+            @PathVariable("optionId") Long optionId,
+            @Valid @RequestBody UpdateAnswerOptionRequest request
+    ) {
+        AnswerOption option = configurationService.updateAnswerOption(
+                optionId,
+                request.code(),
+                request.label(),
+                request.typedValue(),
+                request.displayOrder()
+        );
+        return ResponseEntity.ok(questionMapper.toResponse(option));
     }
 
     @DeleteMapping("/options/{optionId}")

@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.screening.controller;
 
 import com.se2030.vaccinationportal.screening.dto.AddEligibilityRuleRequest;
 import com.se2030.vaccinationportal.screening.dto.AddQuestionItemRequest;
+import com.se2030.vaccinationportal.screening.dto.UpdateEligibilityRuleRequest;
 import com.se2030.vaccinationportal.screening.dto.response.EligibilityRuleResponse;
 import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireItemResponse;
 import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireVersionResponse;
@@ -93,6 +94,45 @@ public class QuestionnaireController {
                 request.message()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(versionMapper.toResponse(rule));
+    }
+
+    @GetMapping("/questionnaire-versions/{versionId}/rules")
+    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER", "CITIZEN"})
+    public ResponseEntity<List<EligibilityRuleResponse>> getEligibilityRulesForVersion(
+            @PathVariable("versionId") Long versionId
+    ) {
+        return ResponseEntity.ok(versionMapper.toRuleResponses(versionService.getEligibilityRulesForVersion(versionId)));
+    }
+
+    @GetMapping("/rules/{ruleId}")
+    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER", "CITIZEN"})
+    public ResponseEntity<EligibilityRuleResponse> getEligibilityRuleById(@PathVariable("ruleId") Long ruleId) {
+        return ResponseEntity.ok(versionMapper.toResponse(versionService.getEligibilityRuleById(ruleId)));
+    }
+
+    @PutMapping("/rules/{ruleId}")
+    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    public ResponseEntity<EligibilityRuleResponse> updateEligibilityRule(
+            @PathVariable("ruleId") Long ruleId,
+            @Valid @RequestBody UpdateEligibilityRuleRequest request
+    ) {
+        EligibilityRule rule = versionService.updateEligibilityRule(
+                ruleId,
+                request.ruleCode(),
+                request.ruleName(),
+                request.conditionExpression(),
+                request.preliminaryResult(),
+                request.priority(),
+                request.message()
+        );
+        return ResponseEntity.ok(versionMapper.toResponse(rule));
+    }
+
+    @DeleteMapping("/rules/{ruleId}")
+    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    public ResponseEntity<Void> deleteEligibilityRule(@PathVariable("ruleId") Long ruleId) {
+        versionService.deleteEligibilityRule(ruleId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/publish")

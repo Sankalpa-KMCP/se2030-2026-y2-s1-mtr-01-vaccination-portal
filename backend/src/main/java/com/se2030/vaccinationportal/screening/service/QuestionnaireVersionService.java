@@ -137,6 +137,72 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
         return ruleRepository.save(rule);
     }
 
+    @Transactional(readOnly = true)
+    public List<EligibilityRule> getEligibilityRulesForVersion(Long versionId) {
+        if (versionId == null) {
+            throw new IllegalArgumentException("Version ID cannot be null");
+        }
+        if (!versionRepository.existsById(versionId)) {
+            throw new IllegalArgumentException("Questionnaire version not found with ID: " + versionId);
+        }
+        return ruleRepository.findByQuestionnaireVersionIdOrderByPriorityAsc(versionId);
+    }
+
+    @Transactional(readOnly = true)
+    public EligibilityRule getEligibilityRuleById(Long ruleId) {
+        if (ruleId == null) {
+            throw new IllegalArgumentException("Eligibility rule ID cannot be null");
+        }
+        return ruleRepository.findById(ruleId)
+                .orElseThrow(() -> new IllegalArgumentException("Eligibility rule not found with ID: " + ruleId));
+    }
+
+    public EligibilityRule updateEligibilityRule(
+            Long ruleId,
+            String ruleCode,
+            String ruleName,
+            String conditionExpression,
+            PreliminaryScreeningResult preliminaryResult,
+            int priority,
+            String message
+    ) {
+        EligibilityRule rule = getEligibilityRuleById(ruleId);
+        if (ruleCode == null || ruleCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Rule code is required");
+        }
+        if (ruleName == null || ruleName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Rule name is required");
+        }
+        if (conditionExpression == null || conditionExpression.trim().isEmpty()) {
+            throw new IllegalArgumentException("Condition expression is required");
+        }
+        if (preliminaryResult == null) {
+            throw new IllegalArgumentException("Preliminary result is required");
+        }
+        if (message == null || message.trim().isEmpty()) {
+            throw new IllegalArgumentException("Rule message is required");
+        }
+
+        String normalizedCode = ruleCode.trim();
+        Long versionId = rule.getQuestionnaireVersion().getId();
+        if (!rule.getRuleCode().equals(normalizedCode)
+                && ruleRepository.existsByQuestionnaireVersionIdAndRuleCode(versionId, normalizedCode)) {
+            throw new IllegalStateException("Rule code '" + normalizedCode + "' already exists in this version");
+        }
+
+        rule.setRuleCode(normalizedCode);
+        rule.setRuleName(ruleName.trim());
+        rule.setConditionExpression(conditionExpression.trim());
+        rule.setPreliminaryResult(preliminaryResult);
+        rule.setPriority(priority);
+        rule.setMessage(message.trim());
+        return ruleRepository.save(rule);
+    }
+
+    public void deleteEligibilityRule(Long ruleId) {
+        ruleRepository.delete(getEligibilityRuleById(ruleId));
+    }
+
     public QuestionnaireVersion publishVersion(Long versionId) {
         QuestionnaireVersion version = getVersionById(versionId);
 
