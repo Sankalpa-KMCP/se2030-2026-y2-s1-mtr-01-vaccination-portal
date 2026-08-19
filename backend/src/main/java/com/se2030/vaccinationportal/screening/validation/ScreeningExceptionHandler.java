@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.screening.validation;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +19,25 @@ import java.util.Map;
  */
 @RestControllerAdvice(basePackages = "com.se2030.vaccinationportal.screening")
 public class ScreeningExceptionHandler {
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableRequest(HttpMessageNotReadableException ex) {
+        Throwable cause = ex;
+        while (cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        String causeMessage = cause.getMessage();
+        String message = causeMessage != null && causeMessage.contains("Duplicate answer submitted")
+                ? causeMessage.lines().findFirst().orElse("Duplicate screening answer submitted")
+                : "Malformed screening request payload";
+
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Error",
+                message
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {

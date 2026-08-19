@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.screening.model.*;
 import com.se2030.vaccinationportal.screening.repository.*;
+import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,7 @@ public class ScreeningSubmissionService {
     private final QuestionnaireVersionRepository versionRepository;
     private final QuestionnaireItemRepository itemRepository;
     private final ConsentNoticeVersionRepository consentNoticeVersionRepository;
-    private final ScreeningQuestionRepository questionRepository;
+    private final ScreeningAnswerValidator answerValidator;
     private final PreliminaryScreeningService preliminaryScreeningService;
 
     public ScreeningSubmissionService(
@@ -41,7 +42,7 @@ public class ScreeningSubmissionService {
             QuestionnaireVersionRepository versionRepository,
             QuestionnaireItemRepository itemRepository,
             ConsentNoticeVersionRepository consentNoticeVersionRepository,
-            ScreeningQuestionRepository questionRepository,
+            ScreeningAnswerValidator answerValidator,
             PreliminaryScreeningService preliminaryScreeningService
     ) {
         this.submissionRepository = submissionRepository;
@@ -49,7 +50,7 @@ public class ScreeningSubmissionService {
         this.versionRepository = versionRepository;
         this.itemRepository = itemRepository;
         this.consentNoticeVersionRepository = consentNoticeVersionRepository;
-        this.questionRepository = questionRepository;
+        this.answerValidator = answerValidator;
         this.preliminaryScreeningService = preliminaryScreeningService;
     }
 
@@ -127,20 +128,10 @@ public class ScreeningSubmissionService {
             throw new IllegalStateException("The accepted consent notice version is retired. Please accept the latest active notice.");
         }
 
-        // 4. Validate Required Questionnaire Items
+        // 4. Validate all answers before persisting any submission data
         List<QuestionnaireItem> items = itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(versionId);
-        for (QuestionnaireItem item : items) {
-            boolean isRequired = item.getRequiredOverride() != null
-                    ? item.getRequiredOverride()
-                    : item.getQuestion().isDefaultRequired();
-
-            if (isRequired) {
-                String ans = answerMap.get(item.getQuestion().getId());
-                if (ans == null || ans.trim().isEmpty()) {
-                    throw new IllegalArgumentException("Answer required for question: " + item.getQuestion().getText());
-                }
-            }
-        }
+        List<ScreeningAnswerValidator.ValidatedAnswer> validatedAnswers =
+                answerValidator.validateAndNormalize(versionId, items, answerMap);
 
         // 5. Create Submission Entity
         Instant now = Instant.now();
@@ -151,11 +142,12 @@ public class ScreeningSubmissionService {
 
         // 6. Persist Answers
         List<ScreeningAnswer> persistedAnswers = new ArrayList<>();
-        for (Map.Entry<Long, String> entry : answerMap.entrySet()) {
-            ScreeningQuestion question = questionRepository.findById(entry.getKey())
-                    .orElseThrow(() -> new IllegalArgumentException("Question not found with ID: " + entry.getKey()));
-
-            ScreeningAnswer answer = new ScreeningAnswer(savedSubmission, question, entry.getValue().trim());
+        for (ScreeningAnswerValidator.ValidatedAnswer validatedAnswer : validatedAnswers) {
+            ScreeningAnswer answer = new ScreeningAnswer(
+                    savedSubmission,
+                    validatedAnswer.question(),
+                    validatedAnswer.typedAnswer()
+            );
             savedSubmission.addAnswer(answer);
             persistedAnswers.add(answerRepository.save(answer));
         }

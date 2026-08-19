@@ -1,7 +1,10 @@
 package com.se2030.vaccinationportal.screening.dto;
 
+import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerMapDeserializer;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import tools.jackson.databind.annotation.JsonDeserialize;
+
 import java.util.Map;
 
 public record ScreeningSubmissionRequest(
@@ -18,5 +21,6 @@ public record ScreeningSubmissionRequest(
         Long consentNoticeVersionId,
 
         @NotEmpty(message = "Screening answers are required")
+        @JsonDeserialize(using = ScreeningAnswerMapDeserializer.class)
         Map<Long, String> answers
 ) {}
