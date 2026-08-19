@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterClosure;
@@ -166,7 +167,7 @@ class SessionSeriesCancellationIntegrationTests {
                 .hasMessageContaining("Session recurrence rule ID is required");
 
         assertThatThrownBy(() -> seriesChangeService.previewSeriesCancellation(999999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Session recurrence rule not found with ID: 999999");
 
         SessionRecurrenceRule rule = createAndMaterializeRule(

@@ -343,4 +343,21 @@ class CampaignReverseImpactIntegrationTests {
                 campaignService.updateServiceDates(campaignA.getId(), today.plusDays(10), end)
         );
     }
+
+    @Test
+    @DisplayName("updateServiceDates rejects equal start and end dates with IllegalArgumentException")
+    void updateServiceDates_equalStartAndEndDate_throwsIllegalArgumentException() {
+        LocalDate today = LocalDate.now(clock);
+        LocalDate start = today.minusDays(10);
+        LocalDate end = today.plusDays(60);
+        VaccinationCampaign campaign = createCampaign("CMP-REV-09", start, end);
+        createAssignment(campaign, start, end);
+
+        LocalDate equalDate = today.plusDays(20);
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> campaignService.updateServiceDates(campaign.getId(), equalDate, equalDate)
+        );
+        assertTrue(ex.getMessage().contains("must be after service start date"));
+    }
 }

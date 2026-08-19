@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterClosure;
@@ -651,5 +652,25 @@ class SessionOccurrenceGenerationIntegrationTests {
         // Existing session remains in DB intact
         List<VaccinationSession> existing = sessionRepository.findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(rule.getId());
         assertEquals(1, existing.size());
+    }
+
+    @Test
+    void generationRejectsMissingRule_throwsResourceNotFoundException() {
+        assertThrows(ResourceNotFoundException.class, () -> generationService.generateOccurrences(999999L));
+    }
+
+    @Test
+    void generationRejectsExceededHorizon_throwsIllegalArgumentException() {
+        SessionRecurrenceRule rule = ruleService.createRule(
+                campaign.getId(), center.getId(), Set.of(DayOfWeek.WEDNESDAY),
+                CAMPAIGN_START, CAMPAIGN_END, MORNING_START, MORNING_END, "UTC");
+
+        LocalDate distantStart = LocalDate.of(2028, 1, 1);
+        LocalDate overHorizonEnd = LocalDate.of(2029, 1, 1); // 367 days
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> generationService.generateOccurrences(rule.getId(), distantStart, overHorizonEnd)
+        );
+        assertTrue(ex.getMessage().contains("must not exceed 366 calendar days"));
     }
 }

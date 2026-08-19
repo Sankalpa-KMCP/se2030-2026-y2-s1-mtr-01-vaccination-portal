@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRuleStatus;
@@ -96,15 +97,7 @@ public class SessionOccurrenceGenerationService {
             LocalDate requestedEndDate
     ) {
         requireId(ruleId, "Session recurrence rule ID is required");
-        if (requestedStartDate == null) {
-            throw new IllegalArgumentException("Requested start date is required");
-        }
-        if (requestedEndDate == null) {
-            throw new IllegalArgumentException("Requested end date is required");
-        }
-        if (requestedEndDate.isBefore(requestedStartDate)) {
-            throw new IllegalArgumentException("Requested start date must be on or before requested end date");
-        }
+        SessionRecurrenceRule.validateDateHorizon(requestedStartDate, requestedEndDate);
         return generateOccurrencesInternal(ruleId, requestedStartDate, requestedEndDate);
     }
 
@@ -115,13 +108,13 @@ public class SessionOccurrenceGenerationService {
     ) {
         // Step 1: Discover routing identifiers via non-locking read
         SessionRecurrenceRule routingRule = ruleRepository.findById(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + ruleId));
         Long campaignId = routingRule.getCampaign().getId();
         Long centerId = routingRule.getCenter().getId();
 
         // Step 2: Acquire pessimistic write lock on campaign and refresh
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
@@ -136,14 +129,14 @@ public class SessionOccurrenceGenerationService {
 
         // Step 3: Acquire pessimistic write lock on center and refresh
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
         if (entityManager != null) {
             entityManager.refresh(center);
         }
 
         // Step 4: Acquire pessimistic write lock on recurrence rule and refresh
         SessionRecurrenceRule rule = ruleRepository.findByIdForUpdate(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Session recurrence rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + ruleId));
         if (entityManager != null) {
             entityManager.refresh(rule);
         }
@@ -180,6 +173,8 @@ public class SessionOccurrenceGenerationService {
         if (effectiveStart.isAfter(effectiveEnd)) {
             return new RecurrenceGenerationResult(0, 0, List.of());
         }
+
+        SessionRecurrenceRule.validateDateHorizon(effectiveStart, effectiveEnd);
 
         // Step 9: Enumerate candidate recurrence dates in ascending order
         Set<DayOfWeek> weekdays = rule.getWeekdays();

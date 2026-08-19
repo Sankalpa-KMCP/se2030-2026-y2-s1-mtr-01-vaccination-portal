@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -96,10 +97,10 @@ class SessionRecurrenceRuleServiceIntegrationTests {
         VaccinationCampaign campaign = campaign("INVALID", CampaignStatus.DRAFT);
         VaccinationCenter center = center("INVALID", CenterStatus.ACTIVE);
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> service.createRule(999_999L, center.getId(), Set.of(DayOfWeek.MONDAY),
                         LocalDate.of(2026, 9, 21), LocalDate.of(2026, 9, 21), MORNING, NOON, "UTC"));
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> service.createRule(campaign.getId(), 999_999L, Set.of(DayOfWeek.MONDAY),
                         LocalDate.of(2026, 9, 21), LocalDate.of(2026, 9, 21), MORNING, NOON, "UTC"));
         assertThrows(IllegalArgumentException.class,
@@ -512,6 +513,17 @@ class SessionRecurrenceRuleServiceIntegrationTests {
         service.updateFutureRule(rule.getId(), Set.of(DayOfWeek.TUESDAY),
                 LocalDate.of(2026, 9, 22), LocalDate.of(2026, 10, 6),
                 MORNING, NOON, "UTC");
+    }
+
+    @Test
+    void missingRuleId_throwsResourceNotFoundException() {
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.updateFutureRule(999_999L, Set.of(DayOfWeek.MONDAY),
+                        LocalDate.of(2026, 9, 21), LocalDate.of(2026, 9, 21), MORNING, NOON, "UTC"));
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.shortenRuleEnd(999_999L, LocalDate.of(2026, 9, 21)));
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.cancelRule(999_999L));
     }
 
     private void updateToThursday(SessionRecurrenceRule rule, String timezone, LocalDate startDate) {

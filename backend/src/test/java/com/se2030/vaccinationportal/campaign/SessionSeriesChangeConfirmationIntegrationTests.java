@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterClosure;
@@ -508,5 +509,17 @@ class SessionSeriesChangeConfirmationIntegrationTests {
         // Rule must remain untouched in DB
         SessionRecurrenceRule untouchedRule = ruleRepository.findById(rule.getId()).orElseThrow();
         assertThat(untouchedRule.getStartDate()).isEqualTo(startDate);
+    }
+
+    @Test
+    @DisplayName("confirmSeriesChange with non-existent ruleId throws ResourceNotFoundException")
+    void confirmSeriesChange_missingRuleId_throwsResourceNotFoundException() {
+        RecurrenceRuleDefinitionSnapshot proposedDef = new RecurrenceRuleDefinitionSnapshot(
+                EnumSet.of(DayOfWeek.MONDAY), CAMPAIGN_START, CAMPAIGN_END, LocalTime.of(9, 0), LocalTime.of(12, 0), TIMEZONE);
+
+        assertThatThrownBy(() -> seriesChangeService.confirmSeriesChange(
+                999999L, proposedDef, "valid-token", "Testing missing rule", "admin-1"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Session recurrence rule not found with ID: 999999");
     }
 }
