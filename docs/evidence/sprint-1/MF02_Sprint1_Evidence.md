@@ -7,15 +7,60 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #97
-**Latest verified implementation merge:** `e83e54bff1f2c682fbdb6d760856bde993faf162`
+**Evidence synchronized through implementation:** PR #100
+**Latest verified implementation merge:** `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`
 **Last updated:** 2026-08-19
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #97 — `fix(mf02): harden pre-recurrence correctness and safety`
+### PR #100 — `feat(mf02): implement recurrence rule and series rest api`
+
+- reviewed source: `f5c385ae7d43a17e60a2ee7647fe96f7cfa0446c`
+- candidate development base: `8f58ae232323daa456aaafcffa7ee2384795b226`
+- actual merge Parent 1: `8f58ae232323daa456aaafcffa7ee2384795b226`
+- actual merge Parent 2: `f5c385ae7d43a17e60a2ee7647fe96f7cfa0446c`
+- merge: `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`
+- merged at: `2026-08-19T12:20:35Z`
+- merge method: normal merge commit (two parents: `8f58ae232323daa456aaafcffa7ee2384795b226` and `f5c385ae7d43a17e60a2ee7647fe96f7cfa0446c`)
+- reviewed candidate preserved: YES
+- integration drift: 0
+- Backend CI: PASS (926 H2 verify in combined merge context + 4 Testcontainers MySQL verify)
+- Frontend CI: PASS
+- production code changed: 16 files (14 new, 2 modified)
+- test code changed: 3 files (3 new, 0 modified existing)
+- total files: 19 (+1987 / -0 lines)
+- functional H2 test executions: **926 candidate-local / 926 combined merge-context** (98 locally verified XML reports; 0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **4** (across 3 classes on `mysql:8.4.3`; 0 failures, 0 errors, 0 skipped)
+- logical combined executions: **930 candidate / 930 combined merge-context** (across separate validation paths)
+- immediate parent baseline: **882 functional H2** (from base `8f58ae232323daa456aaafcffa7ee2384795b226`; 835 PR #97 base + 47 unrelated tests landed on develop: 5 MF-01 + 42 MF-03)
+- net-new candidate executions: **+44 H2 tests** (+24 `RecurrenceRuleControllerTests`, +8 `RecurrenceRuleDtoMapperTests`, +12 `SessionRecurrenceRuleServiceQueryTests`)
+- focused recurrence/REST regression executions: **139 / 139 PASS** ($44 \text{ new} + 95 \text{ existing recurrence/series regression}$)
+- endpoints integrated under `/api/v1/recurrence-rules` (9):
+  1. `POST /api/v1/recurrence-rules` (Create recurrence rule; 201 Created + `Location: /api/v1/recurrence-rules/{id}`)
+  2. `GET /api/v1/recurrence-rules/{id}` (Get recurrence rule by ID; 200 OK)
+  3. `GET /api/v1/recurrence-rules` (List rules with optional `campaignId`, `centerId`, `status` filters, logical AND semantics, ordered by `startDate` ASC, `startTime` ASC, `id` ASC; 200 OK)
+  4. `PUT /api/v1/recurrence-rules/{id}` (Full replacement of mutable future recurrence definition before occurrences exist; 200 OK)
+  5. `POST /api/v1/recurrence-rules/{id}/generate` (Idempotent occurrence generation for full rule span or optional window; 200 OK)
+  6. `POST /api/v1/recurrence-rules/{id}/change-preview` (Preview series-wide change against proposed snapshot; 200 OK)
+  7. `POST /api/v1/recurrence-rules/{id}/change` (Confirm series-wide change with preview token, reason, actorId; 200 OK)
+  8. `POST /api/v1/recurrence-rules/{id}/cancellation-preview` (Preview full series cancellation impact; 200 OK)
+  9. `POST /api/v1/recurrence-rules/{id}/cancel` (Confirm full series cancellation with preview token, reason, actorId; 200 OK)
+- architecture: strict transport adapter pattern (`RecurrenceRuleController` invokes domain services `SessionRecurrenceRuleService`, `SessionOccurrenceGenerationService`, `SessionSeriesChangeService`; 0 repository dependencies in controller; 0 controller transactions; pure `RecurrenceRuleDtoMapper` handles DTO transformations and reuses `SessionDtoMapper`; existing `@RestControllerAdvice` `GlobalCampaignExceptionHandler` provides structured RFC-aligned `ApiErrorResponse`).
+- cancellation semantics: low-level `SessionRecurrenceRuleService.cancelRule()` remains strictly **INTERNAL** (not exposed via REST). Public recurrence cancellation uses the impact-aware series preview/confirmation workflow (`/cancellation-preview` -> `/cancel` invoking `confirmSeriesCancellation`).
+- audit routes: no rule-level audit route was added; individual session change events remain queryable via existing `GET /api/v1/sessions/{id}/change-events`.
+- runtime constraint & external adapter status: `SessionImpactReader` production adapter is **MISSING** (owned by MF-03). DRAFT recurrence/series operations operate fully with 0/0 impact without the adapter. SCHEDULED impact-aware series operations safely require the adapter and fail fast with `IllegalStateException` -> `HTTP 409 Conflict`. Milestone is qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
+- DTO immutability: existing `SessionSummaryResponse` and `SessionResponse` were reused completely unchanged (0 diff). `occurrenceKey` and `generationKey` are exposed strictly as read-only transport outputs.
+- error & exception taxonomy:
+  - 400 Bad Request: `@Valid` payload validation failure, parameter type mismatch, malformed JSON, general `IllegalArgumentException` (including recurrence horizon > 366 days, invalid weekdays, inverted date/time intervals)
+  - 404 Not Found: `ResourceNotFoundException` (missing recurrence rule, campaign, or center)
+  - 409 Conflict: `IllegalStateException` (stale/invalid preview token, concurrent state conflict, or missing `SessionImpactReader` for SCHEDULED changes)
+  - 500 Internal Server Error: unexpected unhandled server exception
+- locking & validation preservation: PR #100 preserved existing authoritative locking (`Campaign -> Center -> Rule` for generation; `Campaign -> Center -> Rule -> Sessions sorted by ID ASC` for series changes) with post-lock entity refresh and transactional integrity.
+- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+
+### Preceding Milestone: PR #97 — `fix(mf02): harden pre-recurrence correctness and safety`
 
 - reviewed source: `ff60fb065bba498a8da05f41c1d3e1e56791c3c6`
 - candidate development base: `1b90e2ee4567502a5d90d72af28eda4998f554b7`
@@ -37,13 +82,7 @@
 - net-new executions: **+9 H2 tests** (+1 Session lifecycle early-start rejection, +1 recurrence-rule horizon model test, +1 series-preview horizon rejection, +2 occurrence-generation tests, +1 Campaign equal-date validation, +1 recurrence-rule missing-resource test, +1 series-change preview missing-rule test, +1 series-change confirmation missing-rule test) + **1 MySQL Testcontainers concurrency test** (`SessionSeriesMySqlConcurrencyIntegrationTests`)
 - focused remediation regression executions: **143 / 143 PASS**
 - endpoints integrated: 0 new REST endpoints (prerequisite correctness and safety remediation)
-- remediation details:
-  - **F-01 (Early Session Start Prevention):** `VaccinationSessionService.startSession` enforces `!now.isBefore(session.getStartAt())` using injected application `Clock`. Early start attempts throw `IllegalStateException` -> HTTP 409 Conflict. Locking and post-lock entity refresh precede the authoritative time decision. No canonical early-start override exists.
-  - **F-02 (Recurrence Expansion Safety Horizon):** Implementation-defined safety limit `MAX_RECURRENCE_HORIZON_DAYS = 366` calendar days (inclusive: `ChronoUnit.DAYS.between(startDate, endDate) + 1 <= 366`). Enforced in `SessionRecurrenceRule`, `SessionSeriesPreviewCalculator`, and `SessionOccurrenceGenerationService` before occurrence expansion. Exceeding 366 days throws `IllegalArgumentException` -> HTTP 400 Bad Request. (Explicitly implementation-defined; Canonical R9 specifies no numeric calendar bound).
-  - **F-03 (Campaign Service-Date Consistency):** Aligned `VaccinationCampaignService` with canonical rule `MF02-BR-01` and entity validation (`serviceEndDate.isAfter(serviceStartDate)`). Rejects `endDate <= startDate` with `IllegalArgumentException` -> HTTP 400 Bad Request.
-  - **F-04 (Recurrence/Series Missing-Resource HTTP Normalization):** Direct missing persistent recurrence/series resources (`SessionRecurrenceRule`, `VaccinationCampaign`, `VaccinationCenter`, `VaccinationSession`) in `SessionRecurrenceRuleService` and `SessionSeriesChangeService` throw `ResourceNotFoundException` -> HTTP 404 Not Found. Clear distinction preserved: malformed definitions throw `IllegalArgumentException` (400), stale tokens/concurrent conflicts throw `IllegalStateException` (409).
-  - **Session Series MySQL Concurrency Assurance:** New test class `SessionSeriesMySqlConcurrencyIntegrationTests` validates concurrent `confirmSeriesChange` vs `generateOccurrences` against real MySQL 8.4.3 InnoDB container with zero deadlocks, strictly unique occurrence keys, and serialized outcomes. Execution time ~0.562 s.
-- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+- remediation details: F-01 (Early session start prevention), F-02 (366-day recurrence safety horizon), F-03 (Campaign service-date consistency), F-04 (Recurrence/series missing-resource HTTP 404 normalization), MySQL series concurrency assurance (`SessionSeriesMySqlConcurrencyIntegrationTests`).
 
 ### Preceding Milestone: PR #92 — `feat(mf02): add session change control REST API`
 
@@ -64,28 +103,7 @@
 - previous clean baseline: **763 functional H2 + 3 MySQL** (from PR #90 / PR #91)
 - net-new executions: **+27 H2 tests** (+20 `SessionControllerChangeTests`, +3 `SessionDtoMapperTests`, +4 `VaccinationSessionServiceQueryTests`)
 - focused regression executions: **84 / 84 PASS** (23 `SessionControllerTests` + 20 `SessionControllerChangeTests` + 6 `SessionDtoMapperTests` + 17 `VaccinationSessionServiceQueryTests` + 18 `VaccinationSessionChangeIntegrationTests`)
-- endpoints integrated under `/api/v1/sessions` (7):
-  1. `POST /api/v1/sessions/{id}/cancellation-preview` (Preview cancellation; 200 OK)
-  2. `POST /api/v1/sessions/{id}/cancel` (Confirm cancellation; 200 OK)
-  3. `POST /api/v1/sessions/{id}/reschedule-preview` (Preview same-center reschedule; 200 OK)
-  4. `POST /api/v1/sessions/{id}/reschedule` (Confirm same-center reschedule; 200 OK)
-  5. `POST /api/v1/sessions/{id}/transfer-preview` (Preview center transfer; 200 OK)
-  6. `POST /api/v1/sessions/{id}/transfer` (Confirm center transfer; 200 OK)
-  7. `GET /api/v1/sessions/{id}/change-events` (List chronological change-event audit history; 200 OK)
-- architecture: strict transport adapter pattern (`SessionController` invokes domain service `VaccinationSessionService`; 0 repository dependencies in controller; 0 controller transactions; service layer owns `@Transactional` persistence/locking; pure `SessionDtoMapper` handles DTO conversion; existing `@RestControllerAdvice` `GlobalCampaignExceptionHandler` provides structured RFC-aligned `ApiErrorResponse`).
-- runtime constraint & external adapter status: `SessionImpactReader` production adapter is **MISSING** (owned by MF-03). DRAFT session changes operate fully with 0/0 impact without the adapter. SCHEDULED impact-aware changes safely require the adapter and fail fast with `IllegalStateException` -> `HTTP 409 Conflict`. Milestone is qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
-- preview token contract: client receives opaque String token generated from deterministic SHA-256 fingerprint; confirm endpoint acquires locks, refreshes entity state, revalidates domain invariants, recomputes token, and verifies equality; stale or tampered token returns `IllegalStateException` -> `HTTP 409 Conflict`.
-- timezone contract: Center entity remains authoritative for scheduling timezone; transfer confirmation updates `scheduleTimezone` to the target center's timezone; no client timezone override permitted.
-- audit metadata: `reason` (required, non-blank, max 500 chars), `actorId` (required, non-blank, max 64 chars; classified as `CALLER_SUPPLIED_UNAUTHENTICATED_AUDIT_METADATA`).
-- history semantics: `GET /api/v1/sessions/{id}/change-events` returns 404 for nonexistent session; 200 `[]` for existing session with no events; ordered by `createdAt ASC, id ASC`.
-- error & exception taxonomy:
-  - 400 Bad Request: `@Valid` payload validation failure, parameter type mismatch, malformed JSON, general `IllegalArgumentException` (including invalid lifecycle status for change operations: `CANCELLED`, `IN_PROGRESS`, `COMPLETED`)
-  - 404 Not Found: `ResourceNotFoundException` (missing session on preview/confirm/history, missing target center on transfer preview/confirm)
-  - 409 Conflict: `IllegalStateException` (stale/invalid preview token, concurrent state conflict, or missing `SessionImpactReader` for SCHEDULED changes)
-  - 500 Internal Server Error: unexpected unhandled server exception
-- locking & validation preservation: PR #92 preserved and exposed existing authoritative locking (cancellation: `Campaign -> Center -> Session`; reschedule: `Campaign -> Center -> Session`; transfer: `Campaign -> min(c1,c2) -> max(c1,c2) -> Session`) under `findByIdForUpdate` with post-lock `entityManager.refresh` and transactional reverse-impact check invariants.
-- audit atomicity: session mutation and `SessionChangeEvent` persistence occur within the same service `@Transactional` boundary; preview operations are `@Transactional(readOnly = true)` with zero side effects.
-- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+- endpoints integrated under `/api/v1/sessions` (7): `cancellation-preview`, `cancel`, `reschedule-preview`, `reschedule`, `transfer-preview`, `transfer`, `change-events`. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
 
 ### Preceding Milestone: PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`
 
@@ -105,14 +123,7 @@
 - logical combined executions: **766**
 - previous clean baseline: **724 functional H2 + 3 MySQL** (from PR #88 / PR #89)
 - net-new executions: **+39 H2 tests** (+23 `SessionControllerTests`, +3 `SessionDtoMapperTests`, +13 `VaccinationSessionServiceQueryTests`)
-- endpoints integrated under `/api/v1/sessions` (6):
-  1. `POST /api/v1/sessions` (Create one-off DRAFT session; 201 Created)
-  2. `GET /api/v1/sessions/{id}` (Get session details; 200 OK)
-  3. `GET /api/v1/sessions` (List sessions with optional `campaignId`, `centerId`, `status` filters, logical AND semantics, ordered by `startAt` ASC, `id` ASC; 200 OK)
-  4. `POST /api/v1/sessions/{id}/schedule` (Transition DRAFT -> SCHEDULED; 200 OK)
-  5. `POST /api/v1/sessions/{id}/start` (Transition SCHEDULED -> IN_PROGRESS; 200 OK)
-  6. `POST /api/v1/sessions/{id}/complete` (Transition IN_PROGRESS -> COMPLETED; 200 OK)
-- Thread.sleep audit: **0** occurrences remain under `backend/src/test`.
+- endpoints integrated under `/api/v1/sessions` (6): `createSession`, `getSessionById`, `getSessions`, `scheduleSession`, `startSession`, `completeSession`.
 
 ### Preceding Milestone: PR #88 — `feat(mf02): add vaccination center management REST API`
 
@@ -124,9 +135,6 @@
 - reviewed candidate preserved: YES
 - Backend CI: PASS (724 H2 verify + 3 Testcontainers MySQL verify)
 - Frontend CI: PASS
-- production code changed: 17 files (13 new, 4 modified)
-- test code changed: 4 files (3 new, 1 modified fixture fix)
-- total files: 21
 - functional H2 test executions: **724** (77 XML reports; 0 failures, 0 errors, 0 skipped)
 - MySQL Testcontainers assurance test executions: **3** (2 XML reports; 0 failures, 0 errors, 0 skipped)
 - logical combined executions: **727**
@@ -174,6 +182,7 @@
 | PR #90 vaccination session core REST API (6 endpoints) | **763 functional H2 + 3 MySQL** | +39 H2 (+23 controller, +3 mapper, +13 service query), +3 MySQL Testcontainers assurance (**766 logical executions**) |
 | PR #92 vaccination session change control REST API (7 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) | **790 functional H2 + 3 MySQL** | +27 H2 (+20 controller, +3 mapper, +4 service query), +3 MySQL Testcontainers assurance (**793 logical executions across separate validation paths**) |
 | PR #97 pre-recurrence correctness/safety remediation | **799 functional H2 (835 combined PR context) + 4 MySQL** | +9 MF-02 H2 (+1 session start, +1 rule model, +1 series preview, +2 occurrence gen, +1 campaign date, +1 rule service, +2 series service), +1 MySQL Testcontainers assurance (**803 logical candidate executions / 839 logical combined merge executions**) |
+| PR #100 recurrence and series REST API (9 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) | **926 functional H2 + 4 MySQL** | +44 MF-02 H2 (+24 controller, +8 mapper, +12 service query), +4 MySQL Testcontainers assurance (**930 logical executions**; 882 immediate parent baseline + 44 candidate net-new) |
 
 The value **575** was a non-authoritative arithmetic result derived from a superseded figure and must not be used as verified evidence.
 
@@ -183,7 +192,7 @@ The value **575** was a non-authoritative arithmetic result derived from a super
 Build the MF-02 backend foundations required to create, validate, schedule, and safely change campaigns, centers, recurrence definitions, and concrete vaccination sessions without violating configuration history or silently mutating MF-03 appointment/waitlist data.
 
 ### Current outcome
-The Sprint has delivered substantial backend foundations, REST APIs, and lifecycle/change-control behavior, but Sprint 1 remains open because production-layer and remaining lifecycle/integration work is incomplete.
+The Sprint has delivered substantial backend foundations, REST APIs (45 endpoints across campaigns, centers, sessions, and recurrence rules), and lifecycle/change-control behavior, but Sprint 1 remains open because production-layer and remaining lifecycle/integration work is incomplete.
 
 ## 4. Completed MF-02 Evidence
 
@@ -257,6 +266,9 @@ Implemented and integrated under `/api/v1/sessions` (PR #90): 6 REST endpoints.
 ### Session Change Control REST API (Milestone 4)
 Implemented and integrated under `/api/v1/sessions` (PR #92): 7 REST endpoints (`COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`).
 
+### Recurrence and Series REST API (Milestone 5)
+Implemented and integrated under `/api/v1/recurrence-rules` (PR #100): 9 REST endpoints (`COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`).
+
 ## 5. PR #71 — Campaign `DRAFT -> SCHEDULED` Evidence
 Details preserved: DRAFT only -> SCHEDULED under campaign pessimistic write lock, full validation of prerequisites.
 
@@ -279,33 +291,42 @@ Details preserved: Authoritative campaign resumption per Canonical R9 Appendix E
 Details preserved: Containerized MySQL 8.4.3 InnoDB integration tests via Testcontainers under profile `-Pmysql-concurrency`.
 
 ## 12. PR #97 — Pre-Recurrence Correctness and Safety Remediation Evidence
+Details preserved: F-01 (Early session start prevention), F-02 (366-day recurrence safety horizon), F-03 (Campaign service date consistency), F-04 (Missing resource HTTP 404 normalization), MySQL series concurrency assurance (`SessionSeriesMySqlConcurrencyIntegrationTests`).
 
-### Behavior and Hardening Contracts
-PR #97 integrates the prerequisite correctness and safety remediations identified during whole-function engineering review:
+## 13. PR #100 — Vaccination Session Recurrence / Series REST API Evidence
 
-- **F-01 (Early Session Start Prevention):**
-  In `VaccinationSessionService.startSession`, the transition from `SCHEDULED` to `IN_PROGRESS` validates that current time is not before `session.getStartAt()`, evaluated against the injected application `Clock` (`now = clock.instant()`). If `now.isBefore(session.getStartAt())`, the service throws `IllegalStateException` ("Cannot start session before scheduled start time: ...") resulting in HTTP 409 Conflict. Session pessimistic locking and entity refresh are executed before the time check. No canonical early-start override was implemented.
+### Behavior and Implementation Contracts
+PR #100 implements and integrates the final Prompt 115 frozen REST API design for Vaccination Session Recurrence / Series Management under `/api/v1/recurrence-rules`:
 
-- **F-02 (Recurrence Expansion Safety Horizon):**
-  An implementation-defined safety limit `MAX_RECURRENCE_HORIZON_DAYS = 366` calendar days is enforced across recurrence rule creation/update (`SessionRecurrenceRule`), series preview calculation (`SessionSeriesPreviewCalculator`), and occurrence generation (`SessionOccurrenceGenerationService`). The inclusive span formula `ChronoUnit.DAYS.between(startDate, endDate) + 1` must not exceed 366. Exceeding definitions throw `IllegalArgumentException` ("Recurrence date range must not exceed 366 calendar days") resulting in HTTP 400 Bad Request. (Note: This is an explicit implementation safety guard; Canonical R9 specifies no numeric bound).
+- **Route Surface (9 endpoints):**
+  1. `POST /api/v1/recurrence-rules` (201 Created + `Location: /api/v1/recurrence-rules/{id}`)
+  2. `GET /api/v1/recurrence-rules/{id}` (200 OK, returns 404 for missing rule)
+  3. `GET /api/v1/recurrence-rules` (200 OK, optional filters: `campaignId`, `centerId`, `status`, deterministic ordering: `startDate ASC, startTime ASC, id ASC`)
+  4. `PUT /api/v1/recurrence-rules/{id}` (200 OK, full replacement of mutable future definition before occurrences exist)
+  5. `POST /api/v1/recurrence-rules/{id}/generate` (200 OK, supports full rule span or optional requested window bounds)
+  6. `POST /api/v1/recurrence-rules/{id}/change-preview` (200 OK, returns proposed diff and SHA-256 preview token)
+  7. `POST /api/v1/recurrence-rules/{id}/change` (200 OK, confirms series-wide change with preview token, reason, actorId)
+  8. `POST /api/v1/recurrence-rules/{id}/cancellation-preview` (200 OK, no body, calculates impact across future occurrences)
+  9. `POST /api/v1/recurrence-rules/{id}/cancel` (200 OK, confirms full series cancellation with preview token, reason, actorId)
 
-- **F-03 (Campaign Service-Date Consistency):**
-  In `VaccinationCampaignService`, campaign service date validation was aligned with canonical rule `MF02-BR-01` and entity validation by requiring `serviceEndDate.isAfter(serviceStartDate)`. Equal or inverted dates throw `IllegalArgumentException` resulting in HTTP 400 Bad Request.
+- **Cancellation Guard:**
+  Low-level `SessionRecurrenceRuleService.cancelRule()` remains strictly **INTERNAL** and is not exposed as a public endpoint. Public recurrence cancellation invokes `SessionSeriesChangeService.confirmSeriesCancellation(...)`, enforcing preview token validation, impact calculation, reason/actor audit recording, and atomic session state updates.
 
-- **F-04 (Recurrence/Series Missing-Resource HTTP Normalization):**
-  Direct missing persistent recurrence/series resources (`SessionRecurrenceRule`, `VaccinationCampaign`, `VaccinationCenter`, `VaccinationSession`) in `SessionRecurrenceRuleService` and `SessionSeriesChangeService` throw `ResourceNotFoundException` resulting in HTTP 404 Not Found. Distinct from malformed definitions (`IllegalArgumentException` -> 400) and stale tokens/concurrent conflicts (`IllegalStateException` -> 409).
+- **DTO and Identifier Rules:**
+  Existing `SessionSummaryResponse` and `SessionResponse` DTOs remain completely unchanged (0 diff). `occurrenceKey` and `generationKey` are exposed strictly as read-only transport outputs.
 
-- **Session Series MySQL Concurrency Assurance:**
-  New test class `SessionSeriesMySqlConcurrencyIntegrationTests` validates concurrent `confirmSeriesChange` vs `generateOccurrences` against real MySQL 8.4.3 InnoDB container with zero deadlocks and strictly unique occurrence keys. Execution time ~0.562 s.
+- **Runtime Constraint:**
+  `SessionImpactReader` production adapter is **MISSING** (owned by MF-03). DRAFT recurrence/series operations function completely with 0/0 impact without the adapter. SCHEDULED impact-aware series operations safely require the adapter and fail fast with `IllegalStateException` -> `HTTP 409 Conflict`.
 
 ### Test Impact
-- **Candidate H2 baseline:** **799 / 799 PASS** (81 XML reports; +9 MF-02 net-new tests over 790 base).
-- **Combined PR #97 Backend CI:** **835 / 835 PASS** (incorporating +36 intervening MF-01 screening tests from develop).
-- **MySQL CI:** **4 / 4 PASS** across 3 classes on `mysql:8.4.3`.
-- **Focused remediation regression:** **143 / 143 PASS**.
+- **Immediate parent baseline:** **882 functional H2 tests** (at `8f58ae232323daa456aaafcffa7ee2384795b226`).
+- **Candidate-local functional H2 baseline:** **926 / 926 PASS** across 98 locally verified XML reports (+44 net-new tests: 24 controller, 8 mapper, 12 query).
+- **Combined PR #100 Backend CI:** **926 / 926 PASS** (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
+- **Focused recurrence/REST regression:** **139 / 139 PASS** ($44 \text{ new} + 95 \text{ existing recurrence/series regression}$).
+- **MySQL CI:** **4 / 4 PASS** across 3 classes on `mysql:8.4.3` (`SessionSeriesMySqlConcurrencyIntegrationTests` PASS).
 - **Frontend CI:** PASS.
 
-## 13. Concurrency / Transaction Evidence
+## 14. Concurrency / Transaction Evidence
 
 Current high-risk workflows use transactional boundaries and explicit pessimistic locking where needed.
 
@@ -321,11 +342,11 @@ Representative established lock orders:
 - campaign resumption: Campaign
 
 ### Test Database Architecture and Concurrency Assurance
-- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (799 candidate tests / 835 combined PR context, 81 locally verified XML reports).
+- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (926 tests, 98 locally verified XML reports).
 - **Representative Production-Equivalent MySQL Assurance (PR #84 & PR #97):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`), parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`), and series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`).
 - **Scope Boundary:** *Representative single-row lifecycle, parent/child reverse-impact, and series concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.*
 
-## 14. Historical Milestone Chronology
+## 15. Historical Milestone Chronology
 
 | PR | Scope |
 |---|---|
@@ -383,6 +404,8 @@ Representative established lock orders:
 | #92 | Vaccination Session Change Control REST API vertical slice (7 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) |
 | #93 | Documentation synchronization after PR #92 |
 | #97 | Pre-Recurrence Correctness and Safety Remediation (F-01, F-02, F-03, F-04, MySQL assurance) |
+| #98 | Documentation synchronization after PR #97 |
+| #100 | Vaccination Session Recurrence / Series REST API Milestone 5 (9 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -418,14 +441,19 @@ Representative established lock orders:
 - PR #92: `6ff63bdd04f34d3bd334d011fdf55dee8010a140`
 - PR #93: `1b90e2ee4567502a5d90d72af28eda4998f554b7`
 - PR #97: `e83e54bff1f2c682fbdb6d760856bde993faf162`
+- PR #98: `6be1c7f78328c58c02b274db774936d951ef9fc0`
+- PR #100: `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`
 
-## 15. Carried-Forward Findings / Risks
+## 16. Carried-Forward Findings / Risks
 
 ### Domain consistency — RESOLVED (PR #73)
 Normal questionnaire assignment creation requires a published version, and PR #73 defensively hardened `scheduleCampaign(...)` to revalidate published status through `QuestionnaireVersionPublicationPort`.
 
 ### Pre-Recurrence Correctness and Safety Remediation — RESOLVED (PR #97)
 Prerequisite engineering review findings resolved: early session start rejection (F-01), 366-day recurrence safety horizon (F-02), campaign service date consistency (F-03), missing-resource HTTP 404 normalization (F-04), and MySQL series concurrency assurance.
+
+### Recurrence and Series REST API Milestone 5 — RESOLVED (PR #100)
+Exposed 9 public REST routes under `/api/v1/recurrence-rules` matching Prompt 115 frozen design. Preserved `cancelRule()` as internal only, while exposing impact-aware preview/confirm series cancellation. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
 
 ### Maintainability — PARTIALLY RESOLVED (PR #75)
 - `SessionSeriesChangeService` was successfully decomposed via PR #75, reducing its size from ~1,104 lines to ~694 lines.
@@ -448,11 +476,9 @@ PR #84 and PR #97 established real MySQL 8.4.3 InnoDB integration tests via Test
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
 
-## 16. Remaining Sprint / Function Work
+## 17. Remaining Sprint / Function Work
 
 Still not complete:
-- design and discovery for Vaccination Session Recurrence / Series REST API (recurrence rule REST, occurrence generation, series preview/confirm, series cancellation)
-- implement Vaccination Session Recurrence / Series REST API
 - design and implementation of remaining campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`USER_DATA_REQUIRED`)
 - evaluation/decomposition of `VaccinationSessionService` maintainability only if justified (`DEFER`)
 - archival retention value (`USER_DATA_REQUIRED`)
@@ -469,7 +495,7 @@ Still not complete:
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
 
-## 17. Sprint Status
+## 18. Sprint Status
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
@@ -480,11 +506,12 @@ Current status remains:
 - Vaccination Session Core REST API Milestone 3: **COMPLETE**
 - Vaccination Session Change Control REST API Milestone 4: **COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT**
 - Pre-Recurrence Correctness and Safety Remediation: **COMPLETE**
-- Vaccination Session Recurrence / Series REST API: **PENDING**
+- Vaccination Session Recurrence / Series REST API Milestone 5: **COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT**
+- current verified backend baseline: **926 functional H2 tests plus 4 MySQL Testcontainers assurance tests** across separate validation paths.
 
 Do not infer completion from the size of the backend test suite.
 
-## 18. Evidence Maintenance Rules
+## 19. Evidence Maintenance Rules
 
 1. Canonical Markdown is the sole semantic authority.
 2. Live Git/code/tests control implementation truth.
