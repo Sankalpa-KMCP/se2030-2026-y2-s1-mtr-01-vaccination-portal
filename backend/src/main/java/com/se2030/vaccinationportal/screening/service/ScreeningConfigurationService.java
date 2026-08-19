@@ -117,7 +117,17 @@ public class ScreeningConfigurationService {
 
     @Transactional(readOnly = true)
     public List<AnswerOption> getOptionsForQuestion(Long questionId) {
+        getQuestionById(questionId);
         return answerOptionRepository.findByQuestionIdOrderByDisplayOrderAsc(questionId);
+    }
+
+    @Transactional(readOnly = true)
+    public AnswerOption getAnswerOptionById(Long optionId) {
+        if (optionId == null) {
+            throw new IllegalArgumentException("Answer option ID cannot be null");
+        }
+        return answerOptionRepository.findById(optionId)
+                .orElseThrow(() -> new IllegalArgumentException("Answer option not found with ID: " + optionId));
     }
 
     public AnswerOption addAnswerOption(Long questionId, String code, String label, String typedValue, int displayOrder) {
@@ -143,9 +153,40 @@ public class ScreeningConfigurationService {
         return answerOptionRepository.save(option);
     }
 
+    public AnswerOption updateAnswerOption(
+            Long optionId,
+            String code,
+            String label,
+            String typedValue,
+            int displayOrder
+    ) {
+        AnswerOption option = getAnswerOptionById(optionId);
+        if (code == null || code.trim().isEmpty()) {
+            throw new IllegalArgumentException("Option code is required");
+        }
+        if (label == null || label.trim().isEmpty()) {
+            throw new IllegalArgumentException("Option label is required");
+        }
+        if (typedValue == null || typedValue.trim().isEmpty()) {
+            throw new IllegalArgumentException("Option typed value is required");
+        }
+
+        String normalizedCode = code.trim();
+        Long questionId = option.getQuestion().getId();
+        if (!option.getCode().equals(normalizedCode)
+                && answerOptionRepository.existsByQuestionIdAndCode(questionId, normalizedCode)) {
+            throw new IllegalStateException("Option code '" + normalizedCode + "' already exists for this question");
+        }
+
+        option.setCode(normalizedCode);
+        option.setLabel(label.trim());
+        option.setTypedValue(typedValue.trim());
+        option.setDisplayOrder(displayOrder);
+        return answerOptionRepository.save(option);
+    }
+
     public void removeAnswerOption(Long optionId) {
-        AnswerOption option = answerOptionRepository.findById(optionId)
-                .orElseThrow(() -> new IllegalArgumentException("Answer option not found with ID: " + optionId));
+        AnswerOption option = getAnswerOptionById(optionId);
 
         if (questionRepository.isReferencedInScreeningAnswers(option.getQuestion().getId())) {
             throw new IllegalStateException("Cannot delete option: question has historical screening answers");

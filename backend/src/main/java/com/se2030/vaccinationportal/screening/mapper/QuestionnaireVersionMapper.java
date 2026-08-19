@@ -56,4 +56,8 @@ public class QuestionnaireVersionMapper {
                 rule.getCreatedAt()
         );
     }
+
+    public List<EligibilityRuleResponse> toRuleResponses(List<EligibilityRule> rules) {
+        return rules.stream().map(this::toResponse).toList();
+    }
 }
