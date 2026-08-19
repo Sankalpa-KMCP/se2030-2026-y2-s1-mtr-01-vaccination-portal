@@ -55,7 +55,8 @@ class QuestionnaireVersionServiceEligibilityRuleTests {
                 versionRepository,
                 itemRepository,
                 ruleRepository,
-                questionRepository
+                questionRepository,
+                new QuestionnaireMutabilityValidator(questionRepository)
         );
 
         Questionnaire questionnaire = new Questionnaire("PRE_VAX", "Pre-vaccination", "Screening questionnaire");

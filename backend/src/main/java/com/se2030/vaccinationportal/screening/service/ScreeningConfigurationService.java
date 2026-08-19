@@ -24,15 +24,18 @@ public class ScreeningConfigurationService {
     private final ScreeningQuestionRepository questionRepository;
     private final AnswerOptionRepository answerOptionRepository;
     private final QuestionnaireRepository questionnaireRepository;
+    private final QuestionnaireMutabilityValidator mutabilityValidator;
 
     public ScreeningConfigurationService(
             ScreeningQuestionRepository questionRepository,
             AnswerOptionRepository answerOptionRepository,
-            QuestionnaireRepository questionnaireRepository
+            QuestionnaireRepository questionnaireRepository,
+            QuestionnaireMutabilityValidator mutabilityValidator
     ) {
         this.questionRepository = questionRepository;
         this.answerOptionRepository = answerOptionRepository;
         this.questionnaireRepository = questionnaireRepository;
+        this.mutabilityValidator = mutabilityValidator;
     }
 
     // ==========================================
@@ -88,6 +91,7 @@ public class ScreeningConfigurationService {
 
     public ScreeningQuestion updateQuestion(Long id, String text, String description, boolean defaultRequired, boolean active) {
         ScreeningQuestion question = getQuestionById(id);
+        mutabilityValidator.assertQuestionCanBeUpdated(id);
         if (text == null || text.trim().isEmpty()) {
             throw new IllegalArgumentException("Question text is required");
         }
@@ -100,14 +104,7 @@ public class ScreeningConfigurationService {
 
     public void deleteQuestion(Long id) {
         ScreeningQuestion question = getQuestionById(id);
-
-        if (questionRepository.isReferencedInQuestionnaireVersion(id)) {
-            throw new IllegalStateException("Cannot delete question: referenced in existing questionnaire versions. Deactivate it instead.");
-        }
-        if (questionRepository.isReferencedInScreeningAnswers(id)) {
-            throw new IllegalStateException("Cannot delete question: referenced in existing screening submissions. Deactivate it instead.");
-        }
-
+        mutabilityValidator.assertQuestionCanBeDeleted(id);
         questionRepository.delete(question);
     }
 
@@ -132,6 +129,7 @@ public class ScreeningConfigurationService {
 
     public AnswerOption addAnswerOption(Long questionId, String code, String label, String typedValue, int displayOrder) {
         ScreeningQuestion question = getQuestionById(questionId);
+        mutabilityValidator.assertAnswerOptionsCanBeModified(questionId);
 
         if (question.getQuestionType() != QuestionType.SINGLE_CHOICE && question.getQuestionType() != QuestionType.MULTI_CHOICE) {
             throw new IllegalStateException("Answer options can only be added to SINGLE_CHOICE or MULTI_CHOICE questions");
@@ -161,6 +159,7 @@ public class ScreeningConfigurationService {
             int displayOrder
     ) {
         AnswerOption option = getAnswerOptionById(optionId);
+        mutabilityValidator.assertAnswerOptionsCanBeModified(option.getQuestion().getId());
         if (code == null || code.trim().isEmpty()) {
             throw new IllegalArgumentException("Option code is required");
         }
@@ -187,11 +186,7 @@ public class ScreeningConfigurationService {
 
     public void removeAnswerOption(Long optionId) {
         AnswerOption option = getAnswerOptionById(optionId);
-
-        if (questionRepository.isReferencedInScreeningAnswers(option.getQuestion().getId())) {
-            throw new IllegalStateException("Cannot delete option: question has historical screening answers");
-        }
-
+        mutabilityValidator.assertAnswerOptionsCanBeModified(option.getQuestion().getId());
         answerOptionRepository.delete(option);
     }
 

@@ -43,7 +43,8 @@ class ScreeningConfigurationServiceAnswerOptionTests {
         service = new ScreeningConfigurationService(
                 questionRepository,
                 answerOptionRepository,
-                questionnaireRepository
+                questionnaireRepository,
+                new QuestionnaireMutabilityValidator(questionRepository)
         );
 
         question = new ScreeningQuestion("ALLERGY", "Do you have allergies?", QuestionType.SINGLE_CHOICE, true, true);

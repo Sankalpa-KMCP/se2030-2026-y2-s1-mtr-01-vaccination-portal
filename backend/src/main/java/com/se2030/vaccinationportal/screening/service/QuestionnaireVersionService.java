@@ -28,19 +28,22 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
     private final QuestionnaireItemRepository itemRepository;
     private final EligibilityRuleRepository ruleRepository;
     private final ScreeningQuestionRepository questionRepository;
+    private final QuestionnaireMutabilityValidator mutabilityValidator;
 
     public QuestionnaireVersionService(
             QuestionnaireRepository questionnaireRepository,
             QuestionnaireVersionRepository versionRepository,
             QuestionnaireItemRepository itemRepository,
             EligibilityRuleRepository ruleRepository,
-            ScreeningQuestionRepository questionRepository
+            ScreeningQuestionRepository questionRepository,
+            QuestionnaireMutabilityValidator mutabilityValidator
     ) {
         this.questionnaireRepository = questionnaireRepository;
         this.versionRepository = versionRepository;
         this.itemRepository = itemRepository;
         this.ruleRepository = ruleRepository;
         this.questionRepository = questionRepository;
+        this.mutabilityValidator = mutabilityValidator;
     }
 
     @Override
@@ -83,10 +86,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
 
     public QuestionnaireItem addQuestionItem(Long versionId, Long questionId, int displayOrder, Boolean requiredOverride) {
         QuestionnaireVersion version = getVersionById(versionId);
-
-        if (version.getStatus() != QuestionnaireVersionStatus.DRAFT) {
-            throw new IllegalStateException("Cannot modify questionnaire version in " + version.getStatus() + " status");
-        }
+        mutabilityValidator.assertVersionIsDraft(version);
 
         ScreeningQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new IllegalArgumentException("Question not found with ID: " + questionId));
@@ -110,10 +110,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
     public EligibilityRule addEligibilityRule(Long versionId, String ruleCode, String ruleName, String conditionExpression,
                                              PreliminaryScreeningResult preliminaryResult, int priority, String message) {
         QuestionnaireVersion version = getVersionById(versionId);
-
-        if (version.getStatus() != QuestionnaireVersionStatus.DRAFT) {
-            throw new IllegalStateException("Cannot add rules to questionnaire version in " + version.getStatus() + " status");
-        }
+        mutabilityValidator.assertVersionIsDraft(version);
 
         if (ruleCode == null || ruleCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Rule code is required");
@@ -167,6 +164,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
             String message
     ) {
         EligibilityRule rule = getEligibilityRuleById(ruleId);
+        mutabilityValidator.assertVersionIsDraft(rule.getQuestionnaireVersion());
         if (ruleCode == null || ruleCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Rule code is required");
         }
@@ -200,7 +198,9 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
     }
 
     public void deleteEligibilityRule(Long ruleId) {
-        ruleRepository.delete(getEligibilityRuleById(ruleId));
+        EligibilityRule rule = getEligibilityRuleById(ruleId);
+        mutabilityValidator.assertVersionIsDraft(rule.getQuestionnaireVersion());
+        ruleRepository.delete(rule);
     }
 
     public QuestionnaireVersion publishVersion(Long versionId) {
@@ -234,10 +234,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
 
     public void deleteDraftVersion(Long versionId) {
         QuestionnaireVersion version = getVersionById(versionId);
-
-        if (version.getStatus() != QuestionnaireVersionStatus.DRAFT) {
-            throw new IllegalStateException("Published or Retired questionnaire versions cannot be deleted");
-        }
+        mutabilityValidator.assertVersionIsDraft(version);
         if (versionRepository.hasSubmissions(versionId)) {
             throw new IllegalStateException("Cannot delete version with associated screening submissions");
         }
