@@ -20,6 +20,8 @@ import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -50,6 +52,7 @@ class SessionLifecycleHardeningIntegrationTests {
     @Autowired private OperatingHoursRepository hoursRepository;
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
+    @PersistenceContext private EntityManager entityManager;
 
     private VaccinationCampaign campaign;
     private VaccinationCenter center;
@@ -101,21 +104,58 @@ class SessionLifecycleHardeningIntegrationTests {
         return createDraftSession(LocalDate.now().minusDays(1));
     }
 
+    private VaccinationSession persistAsScheduledFixture(VaccinationSession session) {
+        session.schedule();
+        return sessionRepository.saveAndFlush(session);
+    }
+
     @Test
-    @DisplayName("Allowed transition: DRAFT -> SCHEDULED")
-    void draftToScheduled_allowed() {
+    @DisplayName("Operational readiness guard rejects DRAFT -> SCHEDULED and preserves DRAFT state")
+    void draftToScheduled_rejectedUntilOperationalReadinessCanBeValidated() {
         VaccinationSession session = createDraftSession();
+        Long sessionId = session.getId();
+        sessionRepository.flush();
+        entityManager.clear();
+        long initialEvents = eventRepository.count();
         assertEquals(SessionLifecycleStatus.DRAFT, session.getLifecycleStatus());
 
-        VaccinationSession scheduled = sessionService.scheduleSession(session.getId());
-        assertEquals(SessionLifecycleStatus.SCHEDULED, scheduled.getLifecycleStatus());
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> sessionService.scheduleSession(sessionId)
+        );
+        assertEquals(
+                "Session scheduling is unavailable until operational resource and capacity readiness can be validated",
+                ex.getMessage()
+        );
+
+        entityManager.clear();
+        VaccinationSession reloaded = sessionRepository.findById(sessionId).orElseThrow();
+        assertEquals(SessionLifecycleStatus.DRAFT, reloaded.getLifecycleStatus());
+        assertEquals(initialEvents, eventRepository.count());
+    }
+
+    @Test
+    @DisplayName("Existing non-DRAFT scheduling conflict remains unchanged before operational guard")
+    void scheduledToScheduled_retainsExistingConflictBehavior() {
+        VaccinationSession session = persistAsScheduledFixture(createDraftSession());
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> sessionService.scheduleSession(session.getId())
+        );
+        assertEquals("Session is already in SCHEDULED lifecycle status", ex.getMessage());
+
+        entityManager.clear();
+        assertEquals(
+                SessionLifecycleStatus.SCHEDULED,
+                sessionRepository.findById(session.getId()).orElseThrow().getLifecycleStatus()
+        );
     }
 
     @Test
     @DisplayName("Allowed transition: SCHEDULED -> IN_PROGRESS when startAt reached")
     void scheduledToInProgress_allowed() {
-        VaccinationSession session = createReadyToStartDraftSession();
-        sessionService.scheduleSession(session.getId());
+        VaccinationSession session = persistAsScheduledFixture(createReadyToStartDraftSession());
 
         VaccinationSession inProgress = sessionService.startSession(session.getId());
         assertEquals(SessionLifecycleStatus.IN_PROGRESS, inProgress.getLifecycleStatus());
@@ -124,8 +164,7 @@ class SessionLifecycleHardeningIntegrationTests {
     @Test
     @DisplayName("Rejected transition: SCHEDULED -> IN_PROGRESS before startAt")
     void scheduledToInProgress_beforeStartAt_rejected() {
-        VaccinationSession session = createDraftSession();
-        sessionService.scheduleSession(session.getId());
+        VaccinationSession session = persistAsScheduledFixture(createDraftSession());
 
         IllegalStateException ex = assertThrows(
                 IllegalStateException.class,
@@ -137,8 +176,7 @@ class SessionLifecycleHardeningIntegrationTests {
     @Test
     @DisplayName("Allowed transition: IN_PROGRESS -> COMPLETED")
     void inProgressToCompleted_allowed() {
-        VaccinationSession session = createReadyToStartDraftSession();
-        sessionService.scheduleSession(session.getId());
+        VaccinationSession session = persistAsScheduledFixture(createReadyToStartDraftSession());
         sessionService.startSession(session.getId());
 
         VaccinationSession completed = sessionService.completeSession(session.getId());
@@ -224,9 +262,8 @@ class SessionLifecycleHardeningIntegrationTests {
     @DisplayName("Lifecycle-only progression creates no SessionChangeEvent audit records")
     void lifecycleOnlyProgressionCreatesNoSessionChangeEvent() {
         long initialEvents = eventRepository.count();
-        VaccinationSession session = createReadyToStartDraftSession();
+        VaccinationSession session = persistAsScheduledFixture(createReadyToStartDraftSession());
 
-        sessionService.scheduleSession(session.getId());
         assertEquals(initialEvents, eventRepository.count());
 
         sessionService.startSession(session.getId());
