@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignmentStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -21,7 +22,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,8 +57,6 @@ public class CampaignCenterAssignmentService {
         this.clock = clock;
     }
 
-
-
     public CampaignCenterAssignment createAssignment(
             Long campaignId,
             Long centerId,
@@ -71,7 +69,7 @@ public class CampaignCenterAssignmentService {
 
         VaccinationCampaign campaign = lockCampaign(campaignId);
         VaccinationCenter center = centerRepository.findById(centerId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Vaccination center not found with ID: " + centerId));
         rejectActiveOverlap(campaignId, centerId, null, activeFrom, activeTo);
 
@@ -138,9 +136,20 @@ public class CampaignCenterAssignmentService {
             LocalDate activeTo
     ) {
         requireId(id, "Campaign-center assignment ID is required");
+        Long campaignId = findCampaignId(id);
+        return updateFutureAssignment(campaignId, id, activeFrom, activeTo);
+    }
+
+    public CampaignCenterAssignment updateFutureAssignment(
+            Long campaignId,
+            Long id,
+            LocalDate activeFrom,
+            LocalDate activeTo
+    ) {
+        requireId(campaignId, "Campaign ID is required");
+        requireId(id, "Campaign-center assignment ID is required");
         CampaignCenterAssignment.validatePeriod(activeFrom, activeTo);
 
-        Long campaignId = findCampaignId(id);
         lockCampaign(campaignId);
         CampaignCenterAssignment target = findAuthoritativeAssignment(id);
         verifyOwnership(target, campaignId);
@@ -164,11 +173,17 @@ public class CampaignCenterAssignmentService {
 
     public CampaignCenterAssignment endAssignment(Long id, LocalDate activeTo) {
         requireId(id, "Campaign-center assignment ID is required");
+        Long campaignId = findCampaignId(id);
+        return endAssignment(campaignId, id, activeTo);
+    }
+
+    public CampaignCenterAssignment endAssignment(Long campaignId, Long id, LocalDate activeTo) {
+        requireId(campaignId, "Campaign ID is required");
+        requireId(id, "Campaign-center assignment ID is required");
         if (activeTo == null) {
             throw new IllegalArgumentException("Assignment active-to date is required");
         }
 
-        Long campaignId = findCampaignId(id);
         lockCampaign(campaignId);
         CampaignCenterAssignment target = findAuthoritativeAssignment(id);
         verifyOwnership(target, campaignId);
@@ -190,8 +205,14 @@ public class CampaignCenterAssignmentService {
 
     public CampaignCenterAssignment cancelFutureAssignment(Long id) {
         requireId(id, "Campaign-center assignment ID is required");
-
         Long campaignId = findCampaignId(id);
+        return cancelFutureAssignment(campaignId, id);
+    }
+
+    public CampaignCenterAssignment cancelFutureAssignment(Long campaignId, Long id) {
+        requireId(campaignId, "Campaign ID is required");
+        requireId(id, "Campaign-center assignment ID is required");
+
         lockCampaign(campaignId);
         CampaignCenterAssignment target = findAuthoritativeAssignment(id);
         verifyOwnership(target, campaignId);
@@ -280,24 +301,25 @@ public class CampaignCenterAssignmentService {
         }
     }
 
-
     private Long findCampaignId(Long assignmentId) {
         return assignmentRepository.findCampaignIdById(assignmentId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Campaign-center assignment not found with ID: " + assignmentId));
     }
 
     private VaccinationCampaign lockCampaign(Long campaignId) {
         return campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Campaign not found with ID: " + campaignId));
     }
 
     private CampaignCenterAssignment findAuthoritativeAssignment(Long assignmentId) {
         CampaignCenterAssignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Campaign-center assignment not found with ID: " + assignmentId));
-        entityManager.refresh(assignment);
+        if (entityManager != null) {
+            entityManager.refresh(assignment);
+        }
         return assignment;
     }
 
@@ -329,7 +351,7 @@ public class CampaignCenterAssignmentService {
 
     private static void verifyOwnership(CampaignCenterAssignment assignment, Long campaignId) {
         if (!campaignId.equals(assignment.getCampaign().getId())) {
-            throw new IllegalArgumentException("Campaign-center assignment ownership changed during update");
+            throw new ResourceNotFoundException("Campaign-center assignment " + assignment.getId() + " does not belong to campaign " + campaignId);
         }
     }
 

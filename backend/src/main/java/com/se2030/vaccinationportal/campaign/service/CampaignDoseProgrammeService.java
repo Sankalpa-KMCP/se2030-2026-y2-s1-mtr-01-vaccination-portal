@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
 import com.se2030.vaccinationportal.campaign.model.DoseCategory;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
@@ -56,7 +57,7 @@ public class CampaignDoseProgrammeService {
         }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         CampaignDoseProgramme programme = new CampaignDoseProgramme(
                 campaign, 1, doseCategory, permittedDoseNumbers, minimumIntervalDays,
@@ -96,7 +97,7 @@ public class CampaignDoseProgrammeService {
         }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         LocalDate today = LocalDate.now(clock);
         if (effectiveStartDate.isBefore(today)) {

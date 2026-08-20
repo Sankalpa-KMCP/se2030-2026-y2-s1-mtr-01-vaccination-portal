@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
@@ -81,7 +82,7 @@ public class CampaignQuestionnaireAssignmentService {
         }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         Optional<CampaignQuestionnaireAssignment> currentOpenEndedOpt = assignmentRepository.findOpenEndedAssignment(campaignId);
 
