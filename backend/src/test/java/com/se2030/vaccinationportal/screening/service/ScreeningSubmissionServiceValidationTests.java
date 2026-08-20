@@ -1,5 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
+import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
@@ -22,14 +24,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +61,8 @@ class ScreeningSubmissionServiceValidationTests {
     private AnswerOptionRepository optionRepository;
     @Mock
     private PreliminaryScreeningService preliminaryScreeningService;
+    @Mock
+    private CampaignQuestionnaireAssignmentService assignmentService;
 
     private ScreeningSubmissionService service;
     private QuestionnaireVersion version;
@@ -66,7 +78,9 @@ class ScreeningSubmissionServiceValidationTests {
                 itemRepository,
                 consentRepository,
                 new ScreeningAnswerValidator(optionRepository),
-                preliminaryScreeningService
+                preliminaryScreeningService,
+                assignmentService,
+                Clock.fixed(Instant.parse("2026-08-20T00:00:00Z"), ZoneOffset.UTC)
         );
         version = new QuestionnaireVersion();
         version.setId(20L);
@@ -81,6 +95,7 @@ class ScreeningSubmissionServiceValidationTests {
     void validCompleteSubmissionSucceedsAndUsesValidatedAnswer() {
         QuestionnaireItem item = new QuestionnaireItem(version, question, 1, null);
         stubSubmissionPrerequisites(List.of(item));
+        stubEffectiveAssignment(20L);
         when(submissionRepository.save(any(ScreeningSubmission.class))).thenAnswer(invocation -> {
             ScreeningSubmission submission = invocation.getArgument(0);
             submission.setId(50L);
@@ -103,9 +118,50 @@ class ScreeningSubmissionServiceValidationTests {
     }
 
     @Test
+    void submitScreeningRejectsQuestionnaireVersionNotAssignedToCampaign() {
+        stubPublishedVersionPrerequisites();
+        stubEffectiveAssignment(21L);
+
+        Throwable failure = catchThrowable(() ->
+                service.submitScreening(1L, 2L, 20L, 30L, Map.of(40L, "valid details"))
+        );
+
+        assertAll(
+                () -> assertThat(failure)
+                        .as("a questionnaire version that is not assigned to the campaign must be rejected")
+                        .isInstanceOf(RuntimeException.class)
+                        .hasMessageContaining("not assigned"),
+                () -> verify(submissionRepository, never()).save(any()),
+                () -> verify(answerRepository, never()).save(any()),
+                () -> verify(preliminaryScreeningService, never()).evaluateAnswers(any(), any())
+        );
+    }
+
+    @Test
+    void submitScreeningRejectsCampaignWithoutEffectiveQuestionnaireAssignment() {
+        stubPublishedVersionPrerequisites();
+        lenient().when(assignmentService.getEffectiveAssignmentAt(eq(2L), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
+
+        Throwable failure = catchThrowable(() ->
+                service.submitScreening(1L, 2L, 20L, 30L, Map.of(40L, "valid details"))
+        );
+
+        assertAll(
+                () -> assertThat(failure)
+                        .as("a campaign without an effective questionnaire assignment must be rejected")
+                        .isInstanceOf(RuntimeException.class)
+                        .hasMessageContaining("effective questionnaire assignment"),
+                () -> verify(submissionRepository, never()).save(any()),
+                () -> verify(answerRepository, never()).save(any())
+        );
+    }
+
+    @Test
     void invalidSubmissionDoesNotPersistSubmissionOrPartialAnswers() {
         QuestionnaireItem item = new QuestionnaireItem(version, question, 1, null);
         stubSubmissionPrerequisites(List.of(item));
+        stubEffectiveAssignment(20L);
 
         assertThatThrownBy(() -> service.submitScreening(1L, 2L, 20L, 30L, Map.of(99L, "unrelated")))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -117,9 +173,21 @@ class ScreeningSubmissionServiceValidationTests {
     }
 
     private void stubSubmissionPrerequisites(List<QuestionnaireItem> items) {
-        when(submissionRepository.findActiveSubmission(any(), any(), any())).thenReturn(Optional.empty());
-        when(versionRepository.findById(20L)).thenReturn(Optional.of(version));
+        stubPublishedVersionPrerequisites();
         when(consentRepository.findById(30L)).thenReturn(Optional.of(consent));
         when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(20L)).thenReturn(items);
     }
+
+    private void stubPublishedVersionPrerequisites() {
+        when(submissionRepository.findActiveSubmission(any(), any(), any())).thenReturn(Optional.empty());
+        when(versionRepository.findById(20L)).thenReturn(Optional.of(version));
+    }
+
+    private void stubEffectiveAssignment(Long questionnaireVersionId) {
+        CampaignQuestionnaireAssignment assignment = mock(CampaignQuestionnaireAssignment.class);
+        lenient().when(assignment.getQuestionnaireVersionId()).thenReturn(questionnaireVersionId);
+        lenient().when(assignmentService.getEffectiveAssignmentAt(eq(2L), any(LocalDate.class)))
+                .thenReturn(Optional.of(assignment));
+    }
+
 }

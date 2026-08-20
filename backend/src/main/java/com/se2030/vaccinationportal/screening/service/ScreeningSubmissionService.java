@@ -1,12 +1,16 @@
 package com.se2030.vaccinationportal.screening.service;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
+import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
 import com.se2030.vaccinationportal.screening.model.*;
 import com.se2030.vaccinationportal.screening.repository.*;
 import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -35,6 +39,8 @@ public class ScreeningSubmissionService {
     private final ConsentNoticeVersionRepository consentNoticeVersionRepository;
     private final ScreeningAnswerValidator answerValidator;
     private final PreliminaryScreeningService preliminaryScreeningService;
+    private final CampaignQuestionnaireAssignmentService assignmentService;
+    private final Clock clock;
 
     public ScreeningSubmissionService(
             ScreeningSubmissionRepository submissionRepository,
@@ -43,7 +49,9 @@ public class ScreeningSubmissionService {
             QuestionnaireItemRepository itemRepository,
             ConsentNoticeVersionRepository consentNoticeVersionRepository,
             ScreeningAnswerValidator answerValidator,
-            PreliminaryScreeningService preliminaryScreeningService
+            PreliminaryScreeningService preliminaryScreeningService,
+            CampaignQuestionnaireAssignmentService assignmentService,
+            Clock clock
     ) {
         this.submissionRepository = submissionRepository;
         this.answerRepository = answerRepository;
@@ -52,6 +60,8 @@ public class ScreeningSubmissionService {
         this.consentNoticeVersionRepository = consentNoticeVersionRepository;
         this.answerValidator = answerValidator;
         this.preliminaryScreeningService = preliminaryScreeningService;
+        this.assignmentService = assignmentService;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -120,7 +130,23 @@ public class ScreeningSubmissionService {
             throw new IllegalStateException("Submissions are only allowed for PUBLISHED questionnaire versions");
         }
 
-        // 3. Validate Consent Notice
+        // 3. Validate that the submitted version is effective for the campaign today
+        LocalDate effectiveDate = LocalDate.now(clock);
+        CampaignQuestionnaireAssignment effectiveAssignment = assignmentService
+                .getEffectiveAssignmentAt(campaignId, effectiveDate)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Campaign " + campaignId + " has no effective questionnaire assignment on " + effectiveDate
+                ));
+
+        if (!Objects.equals(effectiveAssignment.getQuestionnaireVersionId(), versionId)) {
+            throw new IllegalStateException(
+                    "Questionnaire version " + versionId + " is not assigned to campaign " + campaignId
+                            + " on " + effectiveDate + "; effective version is "
+                            + effectiveAssignment.getQuestionnaireVersionId()
+            );
+        }
+
+        // 4. Validate Consent Notice
         ConsentNoticeVersion consentNotice = consentNoticeVersionRepository.findById(consentNoticeVersionId)
                 .orElseThrow(() -> new IllegalArgumentException("Consent notice version not found with ID: " + consentNoticeVersionId));
 
@@ -128,19 +154,19 @@ public class ScreeningSubmissionService {
             throw new IllegalStateException("The accepted consent notice version is retired. Please accept the latest active notice.");
         }
 
-        // 4. Validate all answers before persisting any submission data
+        // 5. Validate all answers before persisting any submission data
         List<QuestionnaireItem> items = itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(versionId);
         List<ScreeningAnswerValidator.ValidatedAnswer> validatedAnswers =
                 answerValidator.validateAndNormalize(versionId, items, answerMap);
 
-        // 5. Create Submission Entity
+        // 6. Create Submission Entity
         Instant now = Instant.now();
         ScreeningSubmission submission = new ScreeningSubmission(citizenId, campaignId, version, consentNotice, now);
         submission.setStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
         submission.setSubmittedAt(now);
         ScreeningSubmission savedSubmission = submissionRepository.save(submission);
 
-        // 6. Persist Answers
+        // 7. Persist Answers
         List<ScreeningAnswer> persistedAnswers = new ArrayList<>();
         for (ScreeningAnswerValidator.ValidatedAnswer validatedAnswer : validatedAnswers) {
             ScreeningAnswer answer = new ScreeningAnswer(
@@ -152,7 +178,7 @@ public class ScreeningSubmissionService {
             persistedAnswers.add(answerRepository.save(answer));
         }
 
-        // 7. Evaluate Preliminary Result
+        // 8. Evaluate Preliminary Result
         PreliminaryScreeningService.RuleEvaluationResult eval = preliminaryScreeningService.evaluateAnswers(versionId, persistedAnswers);
         savedSubmission.setPreliminaryResult(eval.overallResult());
 
