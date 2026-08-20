@@ -97,4 +97,23 @@ class OperationalStaffRosterPersistenceIntegrationTests {
         List<OperationalStaffRoster> user301Entries = rosterRepository.findByUserIdOrderByCenterIdAsc(301L);
         assertEquals(2, user301Entries.size());
     }
+
+    @Test
+    void globalPessimisticLockQuery_returnsAllCenterRostersOrderedById() {
+        OperationalStaffRoster rosterCenterA = rosterRepository.saveAndFlush(
+                new OperationalStaffRoster(centerA, 401L, StaffRole.VACCINATOR)
+        );
+        OperationalStaffRoster rosterCenterB = rosterRepository.saveAndFlush(
+                new OperationalStaffRoster(centerB, 401L, StaffRole.CHECK_IN_STAFF)
+        );
+
+        List<OperationalStaffRoster> lockedRows = rosterRepository.findByUserIdForUpdateOrderByIdAsc(401L);
+        assertEquals(2, lockedRows.size());
+        assertEquals(rosterCenterA.getId(), lockedRows.get(0).getId());
+        assertEquals(rosterCenterB.getId(), lockedRows.get(1).getId());
+        assertEquals(401L, lockedRows.get(0).getUserId());
+        assertEquals(401L, lockedRows.get(1).getUserId());
+        assertEquals(centerA.getId(), lockedRows.get(0).getCenter().getId());
+        assertEquals(centerB.getId(), lockedRows.get(1).getCenter().getId());
+    }
 }

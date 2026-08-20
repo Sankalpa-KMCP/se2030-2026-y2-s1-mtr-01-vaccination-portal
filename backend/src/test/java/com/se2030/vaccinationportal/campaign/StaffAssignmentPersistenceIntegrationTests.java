@@ -161,4 +161,33 @@ class StaffAssignmentPersistenceIntegrationTests {
                 Instant.parse("2026-10-01T12:00:00Z")
         ));
     }
+
+    @Test
+    void detectsOverlap_acrossDifferentCentersForSameUser() {
+        VaccinationCenter center2 = centerRepository.save(
+                new VaccinationCenter("CTR-STAFF-OV2", "Staff Overlap Center 2", "456 St", "+222", CenterStatus.ACTIVE, 50, 100, "UTC")
+        );
+        VaccinationSession sessionCenter2 = sessionRepository.save(new VaccinationSession(
+                campaign, center2,
+                Instant.parse("2026-10-01T11:00:00Z"), Instant.parse("2026-10-01T14:00:00Z"),
+                Instant.parse("2026-10-01T08:00:00Z"), "UTC"
+        ));
+        OperationalStaffRoster rosterUser1Center2 = rosterRepository.save(
+                new OperationalStaffRoster(center2, 501L, StaffRole.CHECK_IN_STAFF)
+        );
+
+        // Assign user 501 at center 1 for session1 from 09:00 to 12:00
+        assignmentRepository.saveAndFlush(
+                new StaffAssignment(session1, rosterUser1, StaffRole.VACCINATOR,
+                        Instant.parse("2026-10-01T09:00:00Z"), Instant.parse("2026-10-01T12:00:00Z"))
+        );
+
+        // Overlap query for user 501 at center 2 from 11:00 to 14:00 MUST detect conflict globally
+        assertTrue(assignmentRepository.existsOverlappingAssignment(
+                rosterUser1Center2.getUserId(),
+                null,
+                Instant.parse("2026-10-01T11:00:00Z"),
+                Instant.parse("2026-10-01T14:00:00Z")
+        ));
+    }
 }

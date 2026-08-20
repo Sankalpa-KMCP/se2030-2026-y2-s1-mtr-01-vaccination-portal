@@ -39,4 +39,8 @@ public interface OperationalStaffRosterRepository extends JpaRepository<Operatio
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM OperationalStaffRoster r WHERE r.center.id = :centerId AND r.userId = :userId")
     Optional<OperationalStaffRoster> findByCenterIdAndUserIdForUpdate(@Param("centerId") Long centerId, @Param("userId") Long userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM OperationalStaffRoster r WHERE r.userId = :userId ORDER BY r.id ASC")
+    List<OperationalStaffRoster> findByUserIdForUpdateOrderByIdAsc(@Param("userId") Long userId);
 }
