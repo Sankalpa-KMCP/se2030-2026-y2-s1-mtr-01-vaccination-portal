@@ -37,6 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class VaccinationSessionService {
 
+    private static final String OPERATIONAL_READINESS_UNAVAILABLE_MESSAGE =
+            "Session scheduling is unavailable until operational resource and capacity readiness can be validated";
+
     private final VaccinationSessionRepository sessionRepository;
     private final VaccinationCampaignRepository campaignRepository;
     private final VaccinationCenterRepository centerRepository;
@@ -187,11 +190,13 @@ public class VaccinationSessionService {
     }
 
     /**
-     * Schedules a DRAFT vaccination session (transitions to SCHEDULED).
-     * Lifecycle-only transition: does NOT create a SessionChangeEvent.
+     * Validates the existing scheduling constraints and fails closed while authoritative
+     * operational resource and capacity readiness cannot be evaluated.
      *
      * @param sessionId ID of the target VaccinationSession
-     * @return Saved VaccinationSession in SCHEDULED lifecycle status
+     * @return Saved VaccinationSession once operational readiness is implemented
+     * @throws IllegalStateException while operational readiness cannot be validated, or if
+     *                               the current lifecycle state cannot transition to SCHEDULED
      */
     public VaccinationSession scheduleSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
@@ -224,8 +229,16 @@ public class VaccinationSessionService {
                     "Cannot schedule session for operationally closed campaign with ID: " + campaignId);
         }
 
-        session.schedule();
-        return sessionRepository.save(session);
+        SessionLifecycleStatus lifecycleStatus = session.getLifecycleStatus();
+        if (lifecycleStatus == SessionLifecycleStatus.SCHEDULED) {
+            throw new IllegalStateException("Session is already in SCHEDULED lifecycle status");
+        }
+        if (lifecycleStatus != SessionLifecycleStatus.DRAFT) {
+            throw new IllegalStateException(
+                    "Invalid session lifecycle transition from " + lifecycleStatus + " to SCHEDULED");
+        }
+
+        throw new IllegalStateException(OPERATIONAL_READINESS_UNAVAILABLE_MESSAGE);
     }
 
     /**

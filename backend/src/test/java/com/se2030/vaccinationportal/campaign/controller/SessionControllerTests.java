@@ -366,27 +366,18 @@ class SessionControllerTests {
     // ==========================================
 
     @Test
-    @DisplayName("POST /api/v1/sessions/{id}/schedule schedules DRAFT session and returns 200 OK")
-    void scheduleSessionSuccess() throws Exception {
-        VaccinationSession scheduledSession = new VaccinationSession(
-                sampleCampaign,
-                sampleCenter,
-                Instant.parse("2026-10-15T09:00:00Z"),
-                Instant.parse("2026-10-15T12:00:00Z"),
-                Instant.parse("2026-10-15T08:00:00Z"),
-                "Asia/Colombo"
-        );
-        ReflectionTestUtils.setField(scheduledSession, "id", 500L);
-        ReflectionTestUtils.setField(scheduledSession, "lifecycleStatus", SessionLifecycleStatus.SCHEDULED);
-        ReflectionTestUtils.setField(scheduledSession, "createdAt", Instant.parse("2026-08-01T10:00:00Z"));
-        ReflectionTestUtils.setField(scheduledSession, "updatedAt", Instant.parse("2026-08-01T10:05:00Z"));
-
-        when(sessionService.scheduleSession(500L)).thenReturn(scheduledSession);
+    @DisplayName("POST /api/v1/sessions/{id}/schedule returns 409 while operational readiness is unavailable")
+    void scheduleSessionOperationalReadinessGuard() throws Exception {
+        String message = "Session scheduling is unavailable until operational resource and capacity readiness can be validated";
+        when(sessionService.scheduleSession(500L)).thenThrow(new IllegalStateException(message));
 
         mockMvc.perform(post("/api/v1/sessions/500/schedule"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(500)))
-                .andExpect(jsonPath("$.lifecycleStatus", is("SCHEDULED")));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", is(message)))
+                .andExpect(jsonPath("$.path", is("/api/v1/sessions/500/schedule")));
 
         verify(sessionService).scheduleSession(500L);
     }

@@ -140,7 +140,8 @@ class VaccinationSessionServiceQueryTests {
                 Instant.parse("2026-10-14T08:30:00Z"),
                 Instant.parse("2026-10-14T04:30:00Z")
         );
-        session2 = sessionService.scheduleSession(session2.getId());
+        session2.schedule();
+        session2 = sessionRepository.saveAndFlush(session2);
 
         // Session 3: Campaign 2, Center 1, 2026-10-14 07:30 UTC, DRAFT
         session3 = sessionService.createOneOffDraftSession(
