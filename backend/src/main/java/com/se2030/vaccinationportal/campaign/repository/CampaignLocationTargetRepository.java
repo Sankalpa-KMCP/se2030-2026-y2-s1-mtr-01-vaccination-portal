@@ -22,6 +22,14 @@ public interface CampaignLocationTargetRepository extends JpaRepository<Campaign
     List<CampaignLocationTarget> findByCampaignId(Long campaignId);
 
     /**
+     * List all administrative location targets defined for a campaign ordered deterministically.
+     *
+     * @param campaignId VaccinationCampaign entity ID
+     * @return List of CampaignLocationTarget entities
+     */
+    List<CampaignLocationTarget> findByCampaignIdOrderByTargetTypeAscTargetCodeAscIdAsc(Long campaignId);
+
+    /**
      * List all location targets for a campaign filtered by target type (e.g. all targeted districts).
      *
      * @param campaignId VaccinationCampaign entity ID
@@ -29,6 +37,15 @@ public interface CampaignLocationTargetRepository extends JpaRepository<Campaign
      * @return List of matching CampaignLocationTarget entities
      */
     List<CampaignLocationTarget> findByCampaignIdAndTargetType(Long campaignId, LocationTargetType targetType);
+
+    /**
+     * List all location targets for a campaign filtered by target type ordered deterministically.
+     *
+     * @param campaignId VaccinationCampaign entity ID
+     * @param targetType LocationTargetType enum
+     * @return List of matching CampaignLocationTarget entities
+     */
+    List<CampaignLocationTarget> findByCampaignIdAndTargetTypeOrderByTargetCodeAscIdAsc(Long campaignId, LocationTargetType targetType);
 
     /**
      * Check whether a specific administrative location target already exists for a campaign.
