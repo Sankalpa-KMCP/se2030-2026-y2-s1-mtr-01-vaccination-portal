@@ -7,15 +7,44 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #100
-**Latest verified implementation merge:** `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`
-**Last updated:** 2026-08-19
+**Evidence synchronized through implementation:** PR #102
+**Latest verified implementation merge:** `616636762687e5c2497db8e0227ee8692311703c`
+**Last updated:** 2026-08-20
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #100 — `feat(mf02): implement recurrence rule and series rest api`
+### PR #102 — `fix(mf02): guard session scheduling until operational readiness`
+
+- reviewed source: `d7663abeb39dd76861e817cbf750b9de7d5d70d5`
+- candidate development base: `046f475f13bb1e7c734492ae58f3e3bb3eb7f9ff`
+- actual merge Parent 1: `046f475f13bb1e7c734492ae58f3e3bb3eb7f9ff`
+- actual merge Parent 2: `d7663abeb39dd76861e817cbf750b9de7d5d70d5`
+- merge: `616636762687e5c2497db8e0227ee8692311703c`
+- merged at: `2026-08-20T05:57:32Z`
+- merge method: normal merge commit (two parents: `046f475f13bb1e7c734492ae58f3e3bb3eb7f9ff` and `d7663abeb39dd76861e817cbf750b9de7d5d70d5`)
+- reviewed candidate preserved: YES
+- integration drift: 0
+- Backend CI: PASS (928 H2 verify in combined merge context + 4 Testcontainers MySQL verify)
+- Frontend CI: PASS
+- production code changed: 1 file (`VaccinationSessionService.java` modified)
+- test code changed: 4 files (`SessionLifecycleHardeningIntegrationTests.java`, `VaccinationSessionConcurrencyIntegrationTests.java`, `SessionControllerTests.java`, `VaccinationSessionServiceQueryTests.java` modified)
+- total files: 5 (+113 / -37 lines)
+- functional H2 test executions: **928 candidate-local / 928 combined merge-context** (98 locally verified XML reports; 0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **4** (across 3 classes on `mysql:8.4.3`; 0 failures, 0 errors, 0 skipped; existing suite, no new MySQL test added)
+- logical combined executions: **932 candidate / 932 combined merge-context** (across separate validation paths)
+- immediate parent baseline: **926 functional H2** (from PR #100 / PR #101)
+- net-new candidate executions: **+2 H2 tests** (+1 `SessionLifecycleHardeningIntegrationTests`, +1 `VaccinationSessionConcurrencyIntegrationTests`)
+- focused scheduling guard regression executions: **129 / 129 PASS** across session lifecycle, query, controller, and concurrency test suites
+- endpoints integrated: 0 new routes added/removed (total MF-02 routes remain **45**)
+- behavior: The public route `POST /api/v1/sessions/{id}/schedule` is retained. An otherwise-valid DRAFT schedule attempt now throws `IllegalStateException` -> `HTTP 409 Conflict` with message `"Session scheduling is unavailable until operational resource and capacity readiness can be validated"`. Persisted session lifecycle status remains `DRAFT`.
+- audit finding resolution: Addresses confirmed P1 audit finding MF02-001 (Scheduling). Canonical R9 Section E.6 mandates that `DRAFT -> SCHEDULED` requires validated campaign-center assignment, operating hours, resources, capacity, and conflicts. Because authoritative models for physical resources, staff allocation, and capacity plans do not yet exist, scheduling is intentionally fail-closed rather than inventing unvalidated state transitions or production bypasses.
+- completion status: Session completion remains classified as `SPECIFICATION_PARTIAL` (not a confirmed code defect; PR #102 made zero changes to `completeSession()`, `VaccinationSession.complete()`, or the completion endpoint).
+- runtime constraint distinction: The scheduling operational-readiness guard is strictly distinct from the existing `SessionImpactReader` runtime constraint (which safely guards SCHEDULED change workflows).
+- zero production bypass: No test flags, profiles, backdoor setters, or fake readiness exist in production code. Historical SCHEDULED sessions constructed via test fixtures continue to support downstream lifecycle operations (`start`, `complete`, `cancel`, `reschedule`, `transfer`).
+
+### Preceding Milestone: PR #100 — `feat(mf02): implement recurrence rule and series rest api`
 
 - reviewed source: `f5c385ae7d43a17e60a2ee7647fe96f7cfa0446c`
 - candidate development base: `8f58ae232323daa456aaafcffa7ee2384795b226`
@@ -64,7 +93,7 @@
 
 - reviewed source: `ff60fb065bba498a8da05f41c1d3e1e56791c3c6`
 - candidate development base: `1b90e2ee4567502a5d90d72af28eda4998f554b7`
-- actual merge Parent 1: `fffca9ab7cc3dab0f2aef0a18f8190d49189ab69` (develop advanced safely through unrelated MF-01 screening PR #94 and PR #96 prior to merge)
+- actual merge Parent 1: `fffca9ab7cc3dab0f2aef0a18f8190d49189ab69`
 - merge: `e83e54bff1f2c682fbdb6d760856bde993faf162`
 - merged at: `2026-08-19T10:16:36Z`
 - merge method: normal merge commit (two parents: `fffca9ab7cc3dab0f2aef0a18f8190d49189ab69` and `ff60fb065bba498a8da05f41c1d3e1e56791c3c6`)
@@ -94,15 +123,11 @@
 - reviewed candidate preserved: YES
 - Backend CI: PASS (790 H2 verify + 3 Testcontainers MySQL verify)
 - Frontend CI: PASS
-- production code changed: 11 files (8 new, 3 modified)
-- test code changed: 3 files (1 new, 2 modified)
-- total files: 14 (+1318 / -14 lines)
 - functional H2 test executions: **790** (81 XML reports; 0 failures, 0 errors, 0 skipped)
 - MySQL Testcontainers assurance test executions: **3** (2 XML reports; 0 failures, 0 errors, 0 skipped)
 - logical combined executions: **793** (across separate validation paths)
 - previous clean baseline: **763 functional H2 + 3 MySQL** (from PR #90 / PR #91)
 - net-new executions: **+27 H2 tests** (+20 `SessionControllerChangeTests`, +3 `SessionDtoMapperTests`, +4 `VaccinationSessionServiceQueryTests`)
-- focused regression executions: **84 / 84 PASS** (23 `SessionControllerTests` + 20 `SessionControllerChangeTests` + 6 `SessionDtoMapperTests` + 17 `VaccinationSessionServiceQueryTests` + 18 `VaccinationSessionChangeIntegrationTests`)
 - endpoints integrated under `/api/v1/sessions` (7): `cancellation-preview`, `cancel`, `reschedule-preview`, `reschedule`, `transfer-preview`, `transfer`, `change-events`. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
 
 ### Preceding Milestone: PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`
@@ -115,15 +140,12 @@
 - reviewed candidate preserved: YES
 - Backend CI: PASS (763 H2 verify + 3 Testcontainers MySQL verify)
 - Frontend CI: PASS
-- production code changed: 7 files (5 new, 2 modified)
-- test code changed: 3 files (3 new, 0 modified existing)
-- total files: 10
 - functional H2 test executions: **763** (80 XML reports; 0 failures, 0 errors, 0 skipped)
 - MySQL Testcontainers assurance test executions: **3** (2 XML reports; 0 failures, 0 errors, 0 skipped)
 - logical combined executions: **766**
 - previous clean baseline: **724 functional H2 + 3 MySQL** (from PR #88 / PR #89)
 - net-new executions: **+39 H2 tests** (+23 `SessionControllerTests`, +3 `SessionDtoMapperTests`, +13 `VaccinationSessionServiceQueryTests`)
-- endpoints integrated under `/api/v1/sessions` (6): `createSession`, `getSessionById`, `getSessions`, `scheduleSession`, `startSession`, `completeSession`.
+- endpoints integrated under `/api/v1/sessions` (6): `createSession`, `getSessionById`, `getSessions`, `scheduleSession`, `startSession`, `completeSession`. Qualified as `COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD via PR #102`.
 
 ### Preceding Milestone: PR #88 — `feat(mf02): add vaccination center management REST API`
 
@@ -183,6 +205,7 @@
 | PR #92 vaccination session change control REST API (7 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) | **790 functional H2 + 3 MySQL** | +27 H2 (+20 controller, +3 mapper, +4 service query), +3 MySQL Testcontainers assurance (**793 logical executions across separate validation paths**) |
 | PR #97 pre-recurrence correctness/safety remediation | **799 functional H2 (835 combined PR context) + 4 MySQL** | +9 MF-02 H2 (+1 session start, +1 rule model, +1 series preview, +2 occurrence gen, +1 campaign date, +1 rule service, +2 series service), +1 MySQL Testcontainers assurance (**803 logical candidate executions / 839 logical combined merge executions**) |
 | PR #100 recurrence and series REST API (9 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) | **926 functional H2 + 4 MySQL** | +44 MF-02 H2 (+24 controller, +8 mapper, +12 service query), +4 MySQL Testcontainers assurance (**930 logical executions**; 882 immediate parent baseline + 44 candidate net-new) |
+| PR #102 session operational prerequisite guard (COMPLETE) | **928 functional H2 + 4 MySQL** | +2 MF-02 H2 (+1 lifecycle hardening, +1 concurrency guard), +4 MySQL Testcontainers assurance (**932 logical executions**; 926 immediate parent baseline + 2 candidate net-new) |
 
 The value **575** was a non-authoritative arithmetic result derived from a superseded figure and must not be used as verified evidence.
 
@@ -192,7 +215,7 @@ The value **575** was a non-authoritative arithmetic result derived from a super
 Build the MF-02 backend foundations required to create, validate, schedule, and safely change campaigns, centers, recurrence definitions, and concrete vaccination sessions without violating configuration history or silently mutating MF-03 appointment/waitlist data.
 
 ### Current outcome
-The Sprint has delivered substantial backend foundations, REST APIs (45 endpoints across campaigns, centers, sessions, and recurrence rules), and lifecycle/change-control behavior, but Sprint 1 remains open because production-layer and remaining lifecycle/integration work is incomplete.
+The Sprint has delivered substantial backend foundations, REST APIs (45 endpoints across campaigns, centers, sessions, and recurrence rules), and lifecycle/change-control behavior, but Sprint 1 remains open because production-layer, operational readiness models, and remaining lifecycle/integration work is incomplete.
 
 ## 4. Completed MF-02 Evidence
 
@@ -220,7 +243,7 @@ Implemented and integrated:
 ### Recurrence / concrete session
 Implemented and integrated:
 - SessionRecurrenceRule (hardened in PR #97 with 366-day inclusive safety horizon)
-- VaccinationSession (hardened in PR #97 with Clock-based early-start rejection)
+- VaccinationSession (hardened in PR #97 with Clock-based early-start rejection; scheduling fail-closed in PR #102)
 - schedule/timezone/provenance invariants
 - authoritative `VaccinationSessionValidator`
 - one-off DRAFT creation
@@ -261,13 +284,16 @@ Implemented and integrated under `/api/v1/campaigns` (PR #86): 9 REST endpoints.
 Implemented and integrated under `/api/v1/centers` (PR #88): 14 REST endpoints.
 
 ### Session Core REST API (Milestone 3)
-Implemented and integrated under `/api/v1/sessions` (PR #90): 6 REST endpoints.
+Implemented and integrated under `/api/v1/sessions` (PR #90): 6 REST endpoints (`COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD via PR #102`).
 
 ### Session Change Control REST API (Milestone 4)
 Implemented and integrated under `/api/v1/sessions` (PR #92): 7 REST endpoints (`COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`).
 
 ### Recurrence and Series REST API (Milestone 5)
 Implemented and integrated under `/api/v1/recurrence-rules` (PR #100): 9 REST endpoints (`COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`).
+
+### Session Operational Prerequisite Guard (PR #102)
+Implemented and integrated in `VaccinationSessionService.scheduleSession` (PR #102): fails closed with HTTP 409 Conflict while operational resource, staff, and capacity models remain unbuilt.
 
 ## 5. PR #71 — Campaign `DRAFT -> SCHEDULED` Evidence
 Details preserved: DRAFT only -> SCHEDULED under campaign pessimistic write lock, full validation of prerequisites.
@@ -294,39 +320,36 @@ Details preserved: Containerized MySQL 8.4.3 InnoDB integration tests via Testco
 Details preserved: F-01 (Early session start prevention), F-02 (366-day recurrence safety horizon), F-03 (Campaign service date consistency), F-04 (Missing resource HTTP 404 normalization), MySQL series concurrency assurance (`SessionSeriesMySqlConcurrencyIntegrationTests`).
 
 ## 13. PR #100 — Vaccination Session Recurrence / Series REST API Evidence
+Details preserved: 9 REST routes under `/api/v1/recurrence-rules`, `cancelRule()` internal only, DTO immutability, `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
+
+## 14. PR #102 — Session Operational Prerequisite Guard Evidence
 
 ### Behavior and Implementation Contracts
-PR #100 implements and integrates the final Prompt 115 frozen REST API design for Vaccination Session Recurrence / Series Management under `/api/v1/recurrence-rules`:
+PR #102 resolves the confirmed P1 audit finding MF02-001 (Scheduling) by introducing a fail-closed operational readiness guard:
 
-- **Route Surface (9 endpoints):**
-  1. `POST /api/v1/recurrence-rules` (201 Created + `Location: /api/v1/recurrence-rules/{id}`)
-  2. `GET /api/v1/recurrence-rules/{id}` (200 OK, returns 404 for missing rule)
-  3. `GET /api/v1/recurrence-rules` (200 OK, optional filters: `campaignId`, `centerId`, `status`, deterministic ordering: `startDate ASC, startTime ASC, id ASC`)
-  4. `PUT /api/v1/recurrence-rules/{id}` (200 OK, full replacement of mutable future definition before occurrences exist)
-  5. `POST /api/v1/recurrence-rules/{id}/generate` (200 OK, supports full rule span or optional requested window bounds)
-  6. `POST /api/v1/recurrence-rules/{id}/change-preview` (200 OK, returns proposed diff and SHA-256 preview token)
-  7. `POST /api/v1/recurrence-rules/{id}/change` (200 OK, confirms series-wide change with preview token, reason, actorId)
-  8. `POST /api/v1/recurrence-rules/{id}/cancellation-preview` (200 OK, no body, calculates impact across future occurrences)
-  9. `POST /api/v1/recurrence-rules/{id}/cancel` (200 OK, confirms full series cancellation with preview token, reason, actorId)
-
-- **Cancellation Guard:**
-  Low-level `SessionRecurrenceRuleService.cancelRule()` remains strictly **INTERNAL** and is not exposed as a public endpoint. Public recurrence cancellation invokes `SessionSeriesChangeService.confirmSeriesCancellation(...)`, enforcing preview token validation, impact calculation, reason/actor audit recording, and atomic session state updates.
-
-- **DTO and Identifier Rules:**
-  Existing `SessionSummaryResponse` and `SessionResponse` DTOs remain completely unchanged (0 diff). `occurrenceKey` and `generationKey` are exposed strictly as read-only transport outputs.
-
-- **Runtime Constraint:**
-  `SessionImpactReader` production adapter is **MISSING** (owned by MF-03). DRAFT recurrence/series operations function completely with 0/0 impact without the adapter. SCHEDULED impact-aware series operations safely require the adapter and fail fast with `IllegalStateException` -> `HTTP 409 Conflict`.
+- **Route Preservation:**
+  The public route `POST /api/v1/sessions/{id}/schedule` is preserved.
+- **Fail-Closed Behavior:**
+  An otherwise-valid DRAFT session schedule attempt throws `IllegalStateException` mapped by `GlobalCampaignExceptionHandler` to `HTTP 409 Conflict` with the structured message:
+  `"Session scheduling is unavailable until operational resource and capacity readiness can be validated"`.
+- **State Integrity:**
+  The persisted session lifecycle status remains `DRAFT`. No `session.schedule()`, state mutation, or `SessionChangeEvent` audit entry occurs.
+- **Ordering and Existing Semantics:**
+  Prerequisite checks are evaluated in strict order: missing session (404), campaign lock, session lock, parent campaign consistency, campaign suspension (400), operationally closed campaign (400), existing non-DRAFT lifecycle transitions (409), and finally the operational readiness guard (409).
+- **Out of Scope:**
+  PR #102 deliberately does NOT build placeholder/fake models for `TimeSlot`, `OperationalResource`, `StaffAssignment`, `SessionCapacityPlan`, or throughput calculators.
+- **Completion Distinction:**
+  Session completion remains classified as `SPECIFICATION_PARTIAL` and was untouched in PR #102.
 
 ### Test Impact
-- **Immediate parent baseline:** **882 functional H2 tests** (at `8f58ae232323daa456aaafcffa7ee2384795b226`).
-- **Candidate-local functional H2 baseline:** **926 / 926 PASS** across 98 locally verified XML reports (+44 net-new tests: 24 controller, 8 mapper, 12 query).
-- **Combined PR #100 Backend CI:** **926 / 926 PASS** (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
-- **Focused recurrence/REST regression:** **139 / 139 PASS** ($44 \text{ new} + 95 \text{ existing recurrence/series regression}$).
-- **MySQL CI:** **4 / 4 PASS** across 3 classes on `mysql:8.4.3` (`SessionSeriesMySqlConcurrencyIntegrationTests` PASS).
+- **Immediate parent baseline:** **926 functional H2 tests** (at `046f475f13bb1e7c734492ae58f3e3bb3eb7f9ff`).
+- **Candidate-local functional H2 baseline:** **928 / 928 PASS** across 98 locally verified XML reports (+2 net-new tests).
+- **Combined PR #102 Backend CI:** **928 / 928 PASS** (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
+- **Focused scheduling guard regression:** **129 / 129 PASS** across session lifecycle, query, controller, and concurrency test suites.
+- **MySQL CI:** **4 / 4 PASS** across 3 classes on `mysql:8.4.3`. PR #102 added no new MySQL tests.
 - **Frontend CI:** PASS.
 
-## 14. Concurrency / Transaction Evidence
+## 15. Concurrency / Transaction Evidence
 
 Current high-risk workflows use transactional boundaries and explicit pessimistic locking where needed.
 
@@ -340,13 +363,14 @@ Representative established lock orders:
 - campaign scheduling: Campaign
 - campaign activation: Campaign
 - campaign resumption: Campaign
+- session scheduling guard: Campaign -> Session
 
 ### Test Database Architecture and Concurrency Assurance
-- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (926 tests, 98 locally verified XML reports).
+- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (928 tests, 98 locally verified XML reports).
 - **Representative Production-Equivalent MySQL Assurance (PR #84 & PR #97):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`), parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`), and series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`).
 - **Scope Boundary:** *Representative single-row lifecycle, parent/child reverse-impact, and series concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.*
 
-## 15. Historical Milestone Chronology
+## 16. Historical Milestone Chronology
 
 | PR | Scope |
 |---|---|
@@ -398,14 +422,16 @@ Representative established lock orders:
 | #86 | Campaign Management REST API vertical slice (9 endpoints) |
 | #87 | Evidence synchronization after PR #86 |
 | #88 | Vaccination Center Management REST API vertical slice (14 endpoints) |
-| #89 | Documentation synchronization after PR #88 |
-| #90 | Vaccination Session Core REST API vertical slice (6 endpoints) |
-| #91 | Documentation synchronization after PR #90 |
+| #89 | Evidence synchronization after PR #88 |
+| #90 | Vaccination Session Core REST API vertical slice (6 endpoints; COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD) |
+| #91 | Evidence synchronization after PR #90 |
 | #92 | Vaccination Session Change Control REST API vertical slice (7 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) |
-| #93 | Documentation synchronization after PR #92 |
+| #93 | Evidence synchronization after PR #92 |
 | #97 | Pre-Recurrence Correctness and Safety Remediation (F-01, F-02, F-03, F-04, MySQL assurance) |
-| #98 | Documentation synchronization after PR #97 |
+| #98 | Evidence synchronization after PR #97 |
 | #100 | Vaccination Session Recurrence / Series REST API Milestone 5 (9 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) |
+| #101 | Documentation synchronization after PR #100 |
+| #102 | Vaccination Session Operational Prerequisite Guard (COMPLETE) |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -443,8 +469,10 @@ Representative established lock orders:
 - PR #97: `e83e54bff1f2c682fbdb6d760856bde993faf162`
 - PR #98: `6be1c7f78328c58c02b274db774936d951ef9fc0`
 - PR #100: `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`
+- PR #101: `046f475f13bb1e7c734492ae58f3e3bb3eb7f9ff`
+- PR #102: `616636762687e5c2497db8e0227ee8692311703c`
 
-## 16. Carried-Forward Findings / Risks
+## 17. Carried-Forward Findings / Risks
 
 ### Domain consistency — RESOLVED (PR #73)
 Normal questionnaire assignment creation requires a published version, and PR #73 defensively hardened `scheduleCampaign(...)` to revalidate published status through `QuestionnaireVersionPublicationPort`.
@@ -455,9 +483,21 @@ Prerequisite engineering review findings resolved: early session start rejection
 ### Recurrence and Series REST API Milestone 5 — RESOLVED (PR #100)
 Exposed 9 public REST routes under `/api/v1/recurrence-rules` matching Prompt 115 frozen design. Preserved `cancelRule()` as internal only, while exposing impact-aware preview/confirm series cancellation. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
 
+### Session Operational Prerequisite Guard — RESOLVED (PR #102)
+Resolved confirmed P1 audit finding MF02-001 (Scheduling). `POST /api/v1/sessions/{id}/schedule` fails closed with HTTP 409 Conflict while physical resource, staff assignment, and capacity planning models are absent, preserving `DRAFT` persistence state.
+
+### Campaign Configuration REST API — CONFIRMED_P1 (Pending Next Milestone)
+Domain services `CampaignDoseProgrammeService`, `CampaignQuestionnaireAssignmentService`, `CampaignCenterAssignmentService`, and `CampaignLocationTargetService` are implemented in MF-02 but unexposed via public REST (MF02-003). A 12-route REST API slice is proposed as the next confirmed engineering milestone (potential future route total: 57).
+
+### MF-02 / MF-03 Capacity & Impact Integration — PARTIAL_P1 (Shared Dependency)
+`SessionImpactReader` production adapter is MF-03-owned (currently missing; SCHEDULED changes fail closed with 409). `SlotCapacityPort` production adapter is expected to be MF-02-owned after an authoritative slot/capacity model is built.
+
+### Session Completion Policy — SPECIFICATION_PARTIAL
+Canonical mentions attendance and operational-close checks but does not define a complete decision algorithm. Not a confirmed code defect; completion implementation preserved without changes.
+
 ### Maintainability — PARTIALLY RESOLVED (PR #75)
 - `SessionSeriesChangeService` was successfully decomposed via PR #75, reducing its size from ~1,104 lines to ~694 lines.
-- `VaccinationSessionService` remains ~824 lines and is a candidate for future maintainability review if justified (`DEFER`).
+- `VaccinationSessionService` remains ~869 lines and is a candidate for future maintainability review if justified (`DEFER`).
 
 ### Optional critical ports
 Production-facing adapters for questionnaire publication (provided by MF-01 `QuestionnaireVersionService` in PR #76) and MF-03 session impact are still optional-injection boundaries in the current code. Production configuration should ultimately fail fast when required adapters are absent.
@@ -476,9 +516,11 @@ PR #84 and PR #97 established real MySQL 8.4.3 InnoDB integration tests via Test
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
 
-## 17. Remaining Sprint / Function Work
+## 18. Remaining Sprint / Function Work
 
 Still not complete:
+- Campaign Configuration REST API (12 proposed routes; CONFIRMED_P1)
+- Authoritative session operational capacity/resource model (TimeSlot, physical resources, staff allocation, capacity plan, throughput calculation)
 - design and implementation of remaining campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`USER_DATA_REQUIRED`)
 - evaluation/decomposition of `VaccinationSessionService` maintainability only if justified (`DEFER`)
 - archival retention value (`USER_DATA_REQUIRED`)
@@ -495,7 +537,7 @@ Still not complete:
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
 
-## 18. Sprint Status
+## 19. Sprint Status
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
@@ -503,15 +545,16 @@ Current status remains:
 - US-13: **IN PROGRESS**
 - Campaign Management REST API Milestone 1: **COMPLETE**
 - Vaccination Center Management REST API Milestone 2: **COMPLETE**
-- Vaccination Session Core REST API Milestone 3: **COMPLETE**
+- Vaccination Session Core REST API Milestone 3: **COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD**
 - Vaccination Session Change Control REST API Milestone 4: **COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT**
 - Pre-Recurrence Correctness and Safety Remediation: **COMPLETE**
 - Vaccination Session Recurrence / Series REST API Milestone 5: **COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT**
-- current verified backend baseline: **926 functional H2 tests plus 4 MySQL Testcontainers assurance tests** across separate validation paths.
+- Session Operational Prerequisite Guard: **COMPLETE**
+- current verified backend baseline: **928 functional H2 tests plus 4 MySQL Testcontainers assurance tests** across separate validation paths.
 
 Do not infer completion from the size of the backend test suite.
 
-## 19. Evidence Maintenance Rules
+## 20. Evidence Maintenance Rules
 
 1. Canonical Markdown is the sole semantic authority.
 2. Live Git/code/tests control implementation truth.
