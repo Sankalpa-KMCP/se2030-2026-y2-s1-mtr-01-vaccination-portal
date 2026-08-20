@@ -1,0 +1,42 @@
+package com.se2030.vaccinationportal.campaign.repository;
+
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionResourceAssignment;
+import java.time.Instant;
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+/**
+ * Persistence operations for session resource assignments and temporal overlap validation.
+ */
+@Repository
+public interface SessionResourceAssignmentRepository extends JpaRepository<SessionResourceAssignment, Long> {
+
+    List<SessionResourceAssignment> findBySessionIdOrderByStartAtAscIdAsc(Long sessionId);
+
+    List<SessionResourceAssignment> findByResourceIdOrderByStartAtAscIdAsc(Long resourceId);
+
+    /**
+     * Tests half-open interval overlap [startAt, endAt) for active (non-cancelled) session assignments.
+     */
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM SessionResourceAssignment a " +
+            "WHERE a.resource.id = :resourceId " +
+            "AND (:excludeAssignmentId IS NULL OR a.id <> :excludeAssignmentId) " +
+            "AND a.startAt < :endAt " +
+            "AND :startAt < a.endAt " +
+            "AND a.session.lifecycleStatus <> :cancelledStatus")
+    boolean existsOverlappingAssignment(
+            @Param("resourceId") Long resourceId,
+            @Param("excludeAssignmentId") Long excludeAssignmentId,
+            @Param("startAt") Instant startAt,
+            @Param("endAt") Instant endAt,
+            @Param("cancelledStatus") SessionLifecycleStatus cancelledStatus
+    );
+
+    default boolean existsOverlappingAssignment(Long resourceId, Long excludeAssignmentId, Instant startAt, Instant endAt) {
+        return existsOverlappingAssignment(resourceId, excludeAssignmentId, startAt, endAt, SessionLifecycleStatus.CANCELLED);
+    }
+}
