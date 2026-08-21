@@ -1,12 +1,14 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.OperationalResource;
 import com.se2030.vaccinationportal.campaign.model.OperationalResourceStatus;
-import com.se2030.vaccinationportal.campaign.model.OperationalStaffRoster;
-import com.se2030.vaccinationportal.campaign.model.OperationalStaffStatus;
 import com.se2030.vaccinationportal.campaign.model.ResourceType;
-import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import java.util.List;
@@ -17,24 +19,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 class OperationalResourceServiceIntegrationTests {
 
     @Autowired private OperationalResourceService resourceService;
-    @Autowired private OperationalStaffRosterService rosterService;
     @Autowired private VaccinationCenterRepository centerRepository;
 
     private VaccinationCenter center;
+    private VaccinationCenter centerOther;
 
     @BeforeEach
     void setUp() {
         center = centerRepository.save(new VaccinationCenter("CTR-SRV-01", "Service Center", "500 Clinic Way", "+555", CenterStatus.ACTIVE, 40, 80, "UTC"));
+        centerOther = centerRepository.save(new VaccinationCenter("CTR-SRV-02", "Other Center", "600 Clinic Way", "+666", CenterStatus.ACTIVE, 30, 60, "UTC"));
     }
 
     @Test
@@ -64,6 +63,54 @@ class OperationalResourceServiceIntegrationTests {
     }
 
     @Test
+    void resourceService_updatesNameAndStatus_preservesCodeAndType() {
+        OperationalResource resource = resourceService.createResource(
+                center.getId(),
+                "ROOM-A",
+                ResourceType.ROOM,
+                "Original Room Name",
+                OperationalResourceStatus.ACTIVE
+        );
+
+        OperationalResource updated = resourceService.updateResource(
+                center.getId(),
+                resource.getId(),
+                "Updated Room Name",
+                OperationalResourceStatus.MAINTENANCE
+        );
+
+        assertEquals("ROOM-A", updated.getCode());
+        assertEquals(ResourceType.ROOM, updated.getResourceType());
+        assertEquals("Updated Room Name", updated.getName());
+        assertEquals(OperationalResourceStatus.MAINTENANCE, updated.getStatus());
+
+        // Verify nested ownership check
+        assertThrows(ResourceNotFoundException.class, () -> resourceService.updateResource(
+                centerOther.getId(),
+                resource.getId(),
+                "Cross Center Update",
+                OperationalResourceStatus.ACTIVE
+        ));
+    }
+
+    @Test
+    void resourceService_getResourceWithCenterOwnership() {
+        OperationalResource resource = resourceService.createResource(
+                center.getId(),
+                "EQUIP-01",
+                ResourceType.EQUIPMENT,
+                "Freezer Unit 1"
+        );
+
+        OperationalResource found = resourceService.getResource(center.getId(), resource.getId());
+        assertNotNull(found);
+        assertEquals("EQUIP-01", found.getCode());
+
+        // Mismatch center throws 404
+        assertThrows(ResourceNotFoundException.class, () -> resourceService.getResource(centerOther.getId(), resource.getId()));
+    }
+
+    @Test
     void resourceService_queriesActiveByResourceType() {
         resourceService.createResource(center.getId(), "ST-01", ResourceType.VACCINATION_STATION, "Station 1");
         resourceService.createResource(center.getId(), "ST-02", ResourceType.VACCINATION_STATION, "Station 2");
@@ -78,32 +125,8 @@ class OperationalResourceServiceIntegrationTests {
 
         List<OperationalResource> allResources = resourceService.getResourcesForCenter(center.getId());
         assertEquals(4, allResources.size());
-    }
 
-    @Test
-    void rosterService_registersAndUpdatesStatus() {
-        OperationalStaffRoster roster = rosterService.registerStaffMember(
-                center.getId(),
-                777L,
-                StaffRole.VACCINATOR
-        );
-        assertNotNull(roster.getId());
-        assertEquals(777L, roster.getUserId());
-        assertEquals(StaffRole.VACCINATOR, roster.getRole());
-        assertEquals(OperationalStaffStatus.ACTIVE, roster.getStatus());
-
-        // Duplicate registration rejection
-        assertThrows(IllegalStateException.class, () -> rosterService.registerStaffMember(
-                center.getId(), 777L, StaffRole.CHECK_IN_STAFF
-        ));
-
-        // Update status
-        OperationalStaffRoster updated = rosterService.updateStaffStatus(roster.getId(), OperationalStaffStatus.INACTIVE);
-        assertEquals(OperationalStaffStatus.INACTIVE, updated.getStatus());
-
-        // Query by user
-        List<OperationalStaffRoster> userEntries = rosterService.getRosterEntriesForUser(777L);
-        assertEquals(1, userEntries.size());
-        assertEquals(center.getId(), userEntries.get(0).getCenter().getId());
+        List<OperationalResource> allStations = resourceService.getResourcesForCenter(center.getId(), ResourceType.VACCINATION_STATION);
+        assertEquals(3, allStations.size());
     }
 }

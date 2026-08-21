@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.OperationalResource;
 import com.se2030.vaccinationportal.campaign.model.OperationalResourceStatus;
 import com.se2030.vaccinationportal.campaign.model.ResourceType;
@@ -8,6 +9,7 @@ import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepos
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,16 +44,31 @@ public class OperationalResourceService {
         if (code == null || code.trim().isEmpty()) {
             throw new IllegalArgumentException("Resource code is required");
         }
+        if (resourceType == null) {
+            throw new IllegalArgumentException("Resource type is required");
+        }
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Resource name is required");
+        }
+
         String normalizedCode = code.trim();
         VaccinationCenter center = centerRepository.findById(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
 
         if (resourceRepository.existsByCenterIdAndCode(centerId, normalizedCode)) {
             throw new IllegalStateException("Resource code '" + normalizedCode + "' already exists for center " + centerId);
         }
 
-        OperationalResource resource = new OperationalResource(center, normalizedCode, resourceType, name, status);
-        return resourceRepository.save(resource);
+        OperationalResourceStatus finalStatus = status != null ? status : OperationalResourceStatus.ACTIVE;
+        try {
+            OperationalResource resource = new OperationalResource(center, normalizedCode, resourceType, name, finalStatus);
+            return resourceRepository.saveAndFlush(resource);
+        } catch (DataIntegrityViolationException ex) {
+            if (resourceRepository.existsByCenterIdAndCode(centerId, normalizedCode)) {
+                throw new IllegalStateException("Resource code '" + normalizedCode + "' already exists for center " + centerId, ex);
+            }
+            throw ex;
+        }
     }
 
     public OperationalResource createResource(Long centerId,
@@ -59,6 +76,43 @@ public class OperationalResourceService {
                                               ResourceType resourceType,
                                               String name) {
         return createResource(centerId, code, resourceType, name, OperationalResourceStatus.ACTIVE);
+    }
+
+    /**
+     * Updates mutable properties (name and status) of an operational resource.
+     * Code and ResourceType are immutable.
+     */
+    public OperationalResource updateResource(Long centerId,
+                                              Long resourceId,
+                                              String name,
+                                              OperationalResourceStatus status) {
+        if (centerId == null) {
+            throw new IllegalArgumentException("Center ID is required");
+        }
+        if (resourceId == null) {
+            throw new IllegalArgumentException("Resource ID is required");
+        }
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Resource name is required");
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("Resource status is required");
+        }
+
+        if (!centerRepository.existsById(centerId)) {
+            throw new ResourceNotFoundException("Vaccination center not found with ID: " + centerId);
+        }
+
+        OperationalResource resource = resourceRepository.findByIdForUpdate(resourceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Operational resource not found with ID: " + resourceId));
+
+        if (!resource.getCenter().getId().equals(centerId)) {
+            throw new ResourceNotFoundException("Operational resource with ID " + resourceId + " does not belong to center " + centerId);
+        }
+
+        resource.setName(name.trim());
+        resource.setStatus(status);
+        return resourceRepository.saveAndFlush(resource);
     }
 
     /**
@@ -72,9 +126,35 @@ public class OperationalResourceService {
             throw new IllegalArgumentException("Resource status is required");
         }
         OperationalResource resource = resourceRepository.findById(resourceId)
-                .orElseThrow(() -> new IllegalArgumentException("Operational resource not found: " + resourceId));
+                .orElseThrow(() -> new ResourceNotFoundException("Operational resource not found with ID: " + resourceId));
         resource.setStatus(newStatus);
         return resourceRepository.save(resource);
+    }
+
+    /**
+     * Retrieves an operational resource by ID with center ownership validation.
+     */
+    @Transactional(readOnly = true)
+    public OperationalResource getResource(Long centerId, Long resourceId) {
+        if (centerId == null) {
+            throw new IllegalArgumentException("Center ID is required");
+        }
+        if (resourceId == null) {
+            throw new IllegalArgumentException("Resource ID is required");
+        }
+
+        if (!centerRepository.existsById(centerId)) {
+            throw new ResourceNotFoundException("Vaccination center not found with ID: " + centerId);
+        }
+
+        OperationalResource resource = resourceRepository.findById(resourceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Operational resource not found with ID: " + resourceId));
+
+        if (!resource.getCenter().getId().equals(centerId)) {
+            throw new ResourceNotFoundException("Operational resource with ID " + resourceId + " does not belong to center " + centerId);
+        }
+
+        return resource;
     }
 
     /**
@@ -86,7 +166,7 @@ public class OperationalResourceService {
             throw new IllegalArgumentException("Resource ID is required");
         }
         return resourceRepository.findById(resourceId)
-                .orElseThrow(() -> new IllegalArgumentException("Operational resource not found: " + resourceId));
+                .orElseThrow(() -> new ResourceNotFoundException("Operational resource not found with ID: " + resourceId));
     }
 
     /**
@@ -94,8 +174,22 @@ public class OperationalResourceService {
      */
     @Transactional(readOnly = true)
     public List<OperationalResource> getResourcesForCenter(Long centerId) {
+        return getResourcesForCenter(centerId, null);
+    }
+
+    /**
+     * Retrieves operational resources for a center with optional resourceType filter.
+     */
+    @Transactional(readOnly = true)
+    public List<OperationalResource> getResourcesForCenter(Long centerId, ResourceType resourceType) {
         if (centerId == null) {
             throw new IllegalArgumentException("Center ID is required");
+        }
+        if (!centerRepository.existsById(centerId)) {
+            throw new ResourceNotFoundException("Vaccination center not found with ID: " + centerId);
+        }
+        if (resourceType != null) {
+            return resourceRepository.findByCenterIdAndResourceTypeOrderByCodeAsc(centerId, resourceType);
         }
         return resourceRepository.findByCenterIdOrderByCodeAsc(centerId);
     }
@@ -110,6 +204,9 @@ public class OperationalResourceService {
         }
         if (resourceType == null) {
             throw new IllegalArgumentException("Resource type is required");
+        }
+        if (!centerRepository.existsById(centerId)) {
+            throw new ResourceNotFoundException("Vaccination center not found with ID: " + centerId);
         }
         return resourceRepository.findByCenterIdAndResourceTypeAndStatusOrderByCodeAsc(
                 centerId,
