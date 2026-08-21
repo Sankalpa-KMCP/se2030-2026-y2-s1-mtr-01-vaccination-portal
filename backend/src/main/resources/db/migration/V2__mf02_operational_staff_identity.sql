@@ -13,4 +13,4 @@ INSERT INTO operational_staff_identities (user_id, created_at)
 SELECT DISTINCT user_id, CURRENT_TIMESTAMP
 FROM operational_staff_rosters
 WHERE user_id IS NOT NULL
-ON DUPLICATE KEY UPDATE user_id = user_id;
+ON DUPLICATE KEY UPDATE operational_staff_identities.user_id = operational_staff_identities.user_id;

@@ -413,6 +413,25 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
         Instant s2Start = sessionStart.plus(java.time.Duration.ofDays(1));
         Instant s2End = sessionEnd.plus(java.time.Duration.ofDays(1));
 
+        // Setup Session 1 with staff in natural order [U1, U2] and valid 2-vaccinator capacity plan
+        transactionTemplate.executeWithoutResult(status -> {
+            staffAssignmentRepository.deleteAllInBatch();
+            capacityPlanRepository.deleteAllInBatch();
+
+            staffAssignmentRepository.saveAndFlush(
+                    new StaffAssignment(session, r1, StaffRole.VACCINATOR, sessionStart, sessionEnd)
+            );
+            staffAssignmentRepository.saveAndFlush(
+                    new StaffAssignment(session, r2, StaffRole.VACCINATOR, sessionStart, sessionEnd)
+            );
+            capacityPlanRepository.saveAndFlush(
+                    new SessionCapacityPlan(
+                            session, 1, 240, 10, 2, 1, 1, 1, 24, 24, 50, 15, 0.0, 100, null, "Planner"
+                    )
+            );
+        });
+
+        // Setup Session 2 with staff in reverse order [U2, U1] and valid 2-vaccinator capacity plan
         Long session2Id = transactionTemplate.execute(status -> {
             VaccinationSession s2 = sessionRepository.saveAndFlush(
                     new VaccinationSession(campaign, centerA, s2Start, s2End, s2Start.minusSeconds(3600), "UTC")
@@ -425,25 +444,13 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
                             s2, 1, 240, 10, 2, 1, 1, 1, 24, 24, 50, 15, 0.0, 100, null, "Planner"
                     )
             );
-            return s2.getId();
-        });
-
-        // Add both staff to Session 1 in natural order [U1, U2]
-        transactionTemplate.executeWithoutResult(status -> {
-            staffAssignmentRepository.saveAndFlush(
-                    new StaffAssignment(session, r2, StaffRole.VACCINATOR, sessionStart, sessionEnd)
-            );
-        });
-
-        // Add both staff to Session 2 in reverse natural order [U2, U1]
-        transactionTemplate.executeWithoutResult(status -> {
-            VaccinationSession s2 = sessionRepository.findById(session2Id).orElseThrow();
             staffAssignmentRepository.saveAndFlush(
                     new StaffAssignment(s2, r2, StaffRole.VACCINATOR, s2Start, s2End)
             );
             staffAssignmentRepository.saveAndFlush(
                     new StaffAssignment(s2, r1, StaffRole.VACCINATOR, s2Start, s2End)
             );
+            return s2.getId();
         });
 
         CountDownLatch readyLatch = new CountDownLatch(2);

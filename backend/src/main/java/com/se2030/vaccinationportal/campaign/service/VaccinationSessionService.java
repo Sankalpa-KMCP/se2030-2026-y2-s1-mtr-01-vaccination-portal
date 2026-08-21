@@ -15,6 +15,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterReposit
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.validation.VaccinationSessionValidator;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -214,21 +215,14 @@ public class VaccinationSessionService {
      */
     public VaccinationSession scheduleSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
-        VaccinationSession unlockedSession = sessionRepository.findById(sessionId)
+        Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
-        Long campaignId = unlockedSession.getCampaign().getId();
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
-        if (entityManager != null) {
-            entityManager.refresh(campaign);
-        }
 
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
-        if (entityManager != null) {
-            entityManager.refresh(session);
-        }
 
         if (!session.getCampaign().getId().equals(campaignId)) {
             throw new IllegalStateException("Authoritative session parent campaign changed concurrently");
