@@ -83,21 +83,34 @@ class OperationalResourcePersistenceIntegrationTests {
     }
 
     @Test
-    void findByCenterAndTypeAndStatus() {
-        resourceRepository.saveAndFlush(new OperationalResource(centerA, "ST-01", ResourceType.VACCINATION_STATION, "Station 1"));
-        resourceRepository.saveAndFlush(new OperationalResource(centerA, "ST-02", ResourceType.VACCINATION_STATION, "Station 2"));
-        resourceRepository.saveAndFlush(new OperationalResource(centerA, "RM-01", ResourceType.ROOM, "Room 1"));
-        OperationalResource inactiveStation = new OperationalResource(centerA, "ST-03", ResourceType.VACCINATION_STATION, "Station 3");
-        inactiveStation.setStatus(OperationalResourceStatus.INACTIVE);
-        resourceRepository.saveAndFlush(inactiveStation);
-
-        List<OperationalResource> activeStations = resourceRepository.findByCenterIdAndResourceTypeAndStatusOrderByCodeAsc(
-                centerA.getId(),
+    void persistsMaintenanceStatusCorrectly() {
+        OperationalResource maintenanceStation = new OperationalResource(
+                centerA,
+                "MAINT-01",
                 ResourceType.VACCINATION_STATION,
-                OperationalResourceStatus.ACTIVE
+                "Station in Maintenance",
+                OperationalResourceStatus.MAINTENANCE
         );
-        assertEquals(2, activeStations.size());
-        assertEquals("ST-01", activeStations.get(0).getCode());
-        assertEquals("ST-02", activeStations.get(1).getCode());
+        OperationalResource saved = resourceRepository.saveAndFlush(maintenanceStation);
+
+        OperationalResource reloaded = resourceRepository.findById(saved.getId()).orElseThrow();
+        assertEquals(OperationalResourceStatus.MAINTENANCE, reloaded.getStatus());
+    }
+
+    @Test
+    void findByCenterAndTypeWithoutStatusFilter_returnsAllStatuses() {
+        resourceRepository.saveAndFlush(new OperationalResource(centerA, "ST-01", ResourceType.VACCINATION_STATION, "Station 1", OperationalResourceStatus.ACTIVE));
+        resourceRepository.saveAndFlush(new OperationalResource(centerA, "ST-02", ResourceType.VACCINATION_STATION, "Station 2", OperationalResourceStatus.MAINTENANCE));
+        resourceRepository.saveAndFlush(new OperationalResource(centerA, "ST-03", ResourceType.VACCINATION_STATION, "Station 3", OperationalResourceStatus.INACTIVE));
+        resourceRepository.saveAndFlush(new OperationalResource(centerA, "RM-01", ResourceType.ROOM, "Room 1", OperationalResourceStatus.ACTIVE));
+
+        List<OperationalResource> allStations = resourceRepository.findByCenterIdAndResourceTypeOrderByCodeAsc(
+                centerA.getId(),
+                ResourceType.VACCINATION_STATION
+        );
+        assertEquals(3, allStations.size());
+        assertEquals("ST-01", allStations.get(0).getCode());
+        assertEquals("ST-02", allStations.get(1).getCode());
+        assertEquals("ST-03", allStations.get(2).getCode());
     }
 }

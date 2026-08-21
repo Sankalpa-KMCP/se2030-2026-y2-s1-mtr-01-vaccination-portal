@@ -24,6 +24,10 @@ public interface OperationalStaffRosterRepository extends JpaRepository<Operatio
 
     List<OperationalStaffRoster> findByCenterIdOrderByUserIdAsc(Long centerId);
 
+    List<OperationalStaffRoster> findByCenterIdAndRoleOrderByUserIdAsc(Long centerId, StaffRole role);
+
+    List<OperationalStaffRoster> findByCenterIdAndStatusOrderByUserIdAsc(Long centerId, OperationalStaffStatus status);
+
     List<OperationalStaffRoster> findByCenterIdAndRoleAndStatusOrderByUserIdAsc(
             Long centerId,
             StaffRole role,
