@@ -18,5 +18,7 @@ public record ScreeningSubmissionResponse(
         Instant submittedAt,
         List<ScreeningAnswerResponse> answers,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String correctionInstructions,
+        Instant correctionRequestedAt
 ) {}

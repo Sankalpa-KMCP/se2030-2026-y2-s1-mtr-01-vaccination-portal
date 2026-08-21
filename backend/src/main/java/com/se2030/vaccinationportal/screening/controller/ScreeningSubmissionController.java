@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.screening.controller;
 
+import com.se2030.vaccinationportal.screening.dto.ScreeningResubmissionRequest;
 import com.se2030.vaccinationportal.screening.dto.ScreeningSubmissionRequest;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningSubmissionResponse;
 import com.se2030.vaccinationportal.screening.mapper.ScreeningSubmissionMapper;
@@ -47,6 +48,19 @@ public class ScreeningSubmissionController {
                 request.answers()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(submissionMapper.toResponse(submission));
+    }
+
+    @PostMapping("/submissions/{submissionId}/resubmit")
+    @RequireRoles({"CITIZEN", "ADMIN", "SYSTEM_ADMINISTRATOR"})
+    public ResponseEntity<ScreeningSubmissionResponse> resubmitCorrections(
+            @PathVariable("submissionId") Long submissionId,
+            @Valid @RequestBody ScreeningResubmissionRequest request
+    ) {
+        ScreeningSubmission submission = submissionService.resubmitCorrections(
+                submissionId,
+                request.answers()
+        );
+        return ResponseEntity.ok(submissionMapper.toResponse(submission));
     }
 
     @GetMapping("/submissions/{id}")

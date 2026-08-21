@@ -47,6 +47,12 @@ public class ScreeningSubmission {
     @Column(name = "submitted_at")
     private Instant submittedAt;
 
+    @Column(name = "correction_instructions", columnDefinition = "TEXT")
+    private String correctionInstructions;
+
+    @Column(name = "correction_requested_at")
+    private Instant correctionRequestedAt;
+
     @OneToMany(mappedBy = "submission", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ScreeningAnswer> answers = new ArrayList<>();
 
@@ -121,6 +127,12 @@ public class ScreeningSubmission {
 
     public Instant getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(Instant submittedAt) { this.submittedAt = submittedAt; }
+
+    public String getCorrectionInstructions() { return correctionInstructions; }
+    public void setCorrectionInstructions(String correctionInstructions) { this.correctionInstructions = correctionInstructions; }
+
+    public Instant getCorrectionRequestedAt() { return correctionRequestedAt; }
+    public void setCorrectionRequestedAt(Instant correctionRequestedAt) { this.correctionRequestedAt = correctionRequestedAt; }
 
     public List<ScreeningAnswer> getAnswers() { return answers; }
     public void setAnswers(List<ScreeningAnswer> answers) { this.answers = answers; }

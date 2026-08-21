@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepo
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -23,13 +24,16 @@ public class EligibilityReviewService {
 
     private final EligibilityAssessmentRepository assessmentRepository;
     private final ScreeningSubmissionRepository submissionRepository;
+    private final Clock clock;
 
     public EligibilityReviewService(
             EligibilityAssessmentRepository assessmentRepository,
-            ScreeningSubmissionRepository submissionRepository
+            ScreeningSubmissionRepository submissionRepository,
+            Clock clock
     ) {
         this.assessmentRepository = assessmentRepository;
         this.submissionRepository = submissionRepository;
+        this.clock = clock;
     }
 
     // ==========================================
@@ -167,6 +171,8 @@ public class EligibilityReviewService {
             throw new IllegalStateException("Can only request corrections for submissions in PENDING_REVIEW status");
         }
 
+        submission.setCorrectionInstructions(instructions.trim());
+        submission.setCorrectionRequestedAt(Instant.now(clock));
         submission.setStatus(ScreeningSubmissionStatus.CORRECTIONS_REQUIRED);
         return initializeSubmissionResponseRelations(submissionRepository.save(submission));
     }

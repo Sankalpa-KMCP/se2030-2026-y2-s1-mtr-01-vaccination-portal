@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service managing citizen screening submissions.
@@ -183,6 +184,70 @@ public class ScreeningSubmissionService {
         savedSubmission.setPreliminaryResult(eval.overallResult());
 
         return initializeResponseRelations(submissionRepository.save(savedSubmission));
+    }
+
+    public ScreeningSubmission resubmitCorrections(
+            Long submissionId,
+            Map<Long, String> correctedAnswers
+    ) {
+        if (submissionId == null) throw new IllegalArgumentException("Submission ID is required");
+        if (correctedAnswers == null || correctedAnswers.isEmpty()) {
+            throw new IllegalArgumentException("Corrected screening answers are required");
+        }
+
+        ScreeningSubmission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Screening submission not found with ID: " + submissionId
+                ));
+
+        if (submission.getStatus() != ScreeningSubmissionStatus.CORRECTIONS_REQUIRED) {
+            throw new IllegalStateException(
+                    "Corrections can only be resubmitted for submissions in CORRECTIONS_REQUIRED status"
+            );
+        }
+
+        Long versionId = submission.getQuestionnaireVersion().getId();
+        List<QuestionnaireItem> items = itemRepository
+                .findByQuestionnaireVersionIdOrderByDisplayOrderAsc(versionId);
+        List<ScreeningAnswerValidator.ValidatedAnswer> validatedAnswers =
+                answerValidator.validateAndNormalize(versionId, items, correctedAnswers);
+
+        Map<Long, ScreeningAnswer> existingAnswersByQuestionId = submission.getAnswers().stream()
+                .collect(Collectors.toMap(
+                        answer -> answer.getQuestion().getId(),
+                        answer -> answer
+                ));
+        Set<Long> correctedQuestionIds = validatedAnswers.stream()
+                .map(validatedAnswer -> validatedAnswer.question().getId())
+                .collect(Collectors.toSet());
+
+        new ArrayList<>(submission.getAnswers()).stream()
+                .filter(answer -> !correctedQuestionIds.contains(answer.getQuestion().getId()))
+                .forEach(submission::removeAnswer);
+
+        List<ScreeningAnswer> persistedAnswers = new ArrayList<>();
+        for (ScreeningAnswerValidator.ValidatedAnswer validatedAnswer : validatedAnswers) {
+            Long questionId = validatedAnswer.question().getId();
+            ScreeningAnswer answer = existingAnswersByQuestionId.get(questionId);
+            if (answer == null) {
+                answer = new ScreeningAnswer(
+                        submission,
+                        validatedAnswer.question(),
+                        validatedAnswer.typedAnswer()
+                );
+                submission.addAnswer(answer);
+            } else {
+                answer.setTypedAnswer(validatedAnswer.typedAnswer());
+            }
+            persistedAnswers.add(answerRepository.save(answer));
+        }
+
+        PreliminaryScreeningService.RuleEvaluationResult eval =
+                preliminaryScreeningService.evaluateAnswers(versionId, persistedAnswers);
+        submission.setPreliminaryResult(eval.overallResult());
+        submission.setStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
+
+        return initializeResponseRelations(submissionRepository.save(submission));
     }
 
     private ScreeningSubmission initializeResponseRelations(ScreeningSubmission submission) {
