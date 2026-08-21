@@ -6,5 +6,6 @@ package com.se2030.vaccinationportal.campaign.model;
  */
 public enum OperationalResourceStatus {
     ACTIVE,
+    MAINTENANCE,
     INACTIVE
 }

@@ -24,6 +24,8 @@ public interface OperationalResourceRepository extends JpaRepository<Operational
 
     List<OperationalResource> findByCenterIdOrderByCodeAsc(Long centerId);
 
+    List<OperationalResource> findByCenterIdAndResourceTypeOrderByCodeAsc(Long centerId, ResourceType resourceType);
+
     List<OperationalResource> findByCenterIdAndResourceTypeAndStatusOrderByCodeAsc(
             Long centerId,
             ResourceType resourceType,
