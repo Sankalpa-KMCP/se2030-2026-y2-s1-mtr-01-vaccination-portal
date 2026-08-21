@@ -100,7 +100,7 @@ public class StaffAssignmentService {
                     + lockedRoster.getRole());
         }
 
-        if (assignmentRepository.existsOverlappingAssignment(lockedRoster.getUserId(), null, startAt, endAt)) {
+        if (!assignmentRepository.findOverlappingAssignmentsForUpdate(lockedRoster.getUserId(), null, startAt, endAt).isEmpty()) {
             throw new IllegalStateException("Staff member with user ID " + lockedRoster.getUserId()
                     + " is already assigned to an overlapping active session window");
         }
