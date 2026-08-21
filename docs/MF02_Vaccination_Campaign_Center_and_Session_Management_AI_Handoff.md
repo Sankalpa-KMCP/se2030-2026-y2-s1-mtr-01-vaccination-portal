@@ -99,8 +99,8 @@ Total MF-02 REST routes currently integrated: **65** ($9 \text{ Campaign Existin
      - Canonical enum contains: `ACTIVE`, `MAINTENANCE`, `INACTIVE`.
      - `MAINTENANCE` was the canonical Section 6.6 value missing from the initial M1 implementation and was added in M2A.
      - No database schema migration required because JPA persistence uses `EnumType.STRING` and the existing database column accommodates `MAINTENANCE`.
-   - StaffRole:
-     - Remains `VACCINATOR`, `CHECK_IN_STAFF`, `SUPERVISOR` (3 canonical values).
+    - StaffRole:
+      - `StaffRole` remains the live implementation-defined three-value set `VACCINATOR`, `CHECK_IN_STAFF`, and `SUPERVISOR`; canonical requires the operational vaccinator/check-in semantics but does not define a closed StaffRole enum.
    - Resource and Roster Semantics & Concurrency:
      - Resource create defaults status `ACTIVE`.
      - Resource list returns all statuses (`ACTIVE`, `MAINTENANCE`, `INACTIVE`) by default; `resourceType` filter does not filter by status.

@@ -49,7 +49,7 @@
 - total MF-02 routes growth: 57 -> **65** ($9 \text{ Existing Campaign} + 12 \text{ Campaign Configuration} [21 \text{ Campaign-family}] + 14 \text{ Center Existing} + 8 \text{ Center Operational [4 Resources + 4 Staff Roster]} [22 \text{ Center-family}] + 13 \text{ Session} + 9 \text{ Recurrence} = 65$)
 - behavior: Public REST exposure of center operational resources and staff roster configuration with pessimistic row locking on updates, unique constraint translation on creates, and strict nested 404 normalization.
 - OperationalResourceStatus Canonical Correction: Enum contains `ACTIVE`, `MAINTENANCE`, `INACTIVE`. `MAINTENANCE` was the canonical Section 6.6 value missing from M1 and was added in M2A. No schema migration required (`EnumType.STRING` column).
-- StaffRole: Remains `VACCINATOR`, `CHECK_IN_STAFF`, `SUPERVISOR` (3 canonical values).
+- StaffRole: `StaffRole` remains the live implementation-defined three-value set `VACCINATOR`, `CHECK_IN_STAFF`, and `SUPERVISOR`; canonical requires the operational vaccinator/check-in semantics but does not define a closed StaffRole enum.
 - Concurrency & Integrity:
   - Updates use pessimistic locking on entity rows (`findByIdForUpdate`).
   - Database uniqueness constraints `unique(center_id, code)` and `unique(center_id, user_id)` remain final authority.
@@ -556,7 +556,7 @@ PR #108 exposes center operational resources and center operational staff roster
   - `MAINTENANCE` was the canonical Section 6.6 value missing from M1 and was added in M2A.
   - No database schema migration required (`EnumType.STRING` column).
 - **StaffRole:**
-  - Remains `VACCINATOR`, `CHECK_IN_STAFF`, `SUPERVISOR` (3 canonical values).
+  - `StaffRole` remains the live implementation-defined three-value set `VACCINATOR`, `CHECK_IN_STAFF`, and `SUPERVISOR`; canonical requires the operational vaccinator/check-in semantics but does not define a closed StaffRole enum.
 - **Preserved History:**
   - Resource status changes and roster status changes do not cascade-delete or corrupt existing assignment rows (`SessionResourceAssignment`) or staff assignment snapshots (`StaffAssignment`).
 - **Scheduling Guard Preserved:**
