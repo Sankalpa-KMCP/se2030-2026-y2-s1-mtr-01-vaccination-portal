@@ -366,9 +366,24 @@ class SessionControllerTests {
     // ==========================================
 
     @Test
-    @DisplayName("POST /api/v1/sessions/{id}/schedule returns 409 while operational readiness is unavailable")
-    void scheduleSessionOperationalReadinessGuard() throws Exception {
-        String message = "Session scheduling is unavailable until operational resource and capacity readiness can be validated";
+    @DisplayName("POST /api/v1/sessions/{id}/schedule transitions to SCHEDULED and returns 200 OK")
+    void scheduleSessionSuccess() throws Exception {
+        VaccinationSession scheduledSession = sampleSession;
+        ReflectionTestUtils.setField(scheduledSession, "lifecycleStatus", SessionLifecycleStatus.SCHEDULED);
+        when(sessionService.scheduleSession(500L)).thenReturn(scheduledSession);
+
+        mockMvc.perform(post("/api/v1/sessions/500/schedule"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(500)))
+                .andExpect(jsonPath("$.lifecycleStatus", is("SCHEDULED")));
+
+        verify(sessionService).scheduleSession(500L);
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/schedule returns 409 on operational readiness failure")
+    void scheduleSessionOperationalReadinessFailure() throws Exception {
+        String message = "No approved capacity plan exists for session 500";
         when(sessionService.scheduleSession(500L)).thenThrow(new IllegalStateException(message));
 
         mockMvc.perform(post("/api/v1/sessions/500/schedule"))

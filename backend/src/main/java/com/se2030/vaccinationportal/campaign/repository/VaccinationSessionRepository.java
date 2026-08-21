@@ -30,6 +30,9 @@ public interface VaccinationSessionRepository extends JpaRepository<VaccinationS
 
     boolean existsByRecurrenceRuleIdAndOriginOccurrenceDateAfter(Long recurrenceRuleId, LocalDate date);
 
+    @Query(value = "SELECT campaign_id FROM vaccination_sessions WHERE id = :id", nativeQuery = true)
+    Optional<Long> findCampaignIdBySessionId(@Param("id") Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM VaccinationSession s WHERE s.id = :id")
     Optional<VaccinationSession> findByIdForUpdate(@Param("id") Long id);

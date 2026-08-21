@@ -15,6 +15,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterReposit
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.validation.VaccinationSessionValidator;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -22,6 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,15 +39,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class VaccinationSessionService {
 
-    private static final String OPERATIONAL_READINESS_UNAVAILABLE_MESSAGE =
-            "Session scheduling is unavailable until operational resource and capacity readiness can be validated";
-
     private final VaccinationSessionRepository sessionRepository;
     private final VaccinationCampaignRepository campaignRepository;
     private final VaccinationCenterRepository centerRepository;
     private final SessionChangeEventRepository sessionChangeEventRepository;
     private final VaccinationSessionValidator validator;
     private final SessionImpactReader sessionImpactReader;
+    private final SessionOperationalReadinessService operationalReadinessService;
     private final Clock clock;
     @PersistenceContext
     private EntityManager entityManager;
@@ -58,6 +58,7 @@ public class VaccinationSessionService {
             SessionChangeEventRepository sessionChangeEventRepository,
             VaccinationSessionValidator validator,
             @Autowired(required = false) SessionImpactReader sessionImpactReader,
+            SessionOperationalReadinessService operationalReadinessService,
             Clock clock
     ) {
         this.sessionRepository = sessionRepository;
@@ -66,7 +67,20 @@ public class VaccinationSessionService {
         this.sessionChangeEventRepository = sessionChangeEventRepository;
         this.validator = validator;
         this.sessionImpactReader = sessionImpactReader;
+        this.operationalReadinessService = operationalReadinessService;
         this.clock = clock != null ? clock : Clock.systemUTC();
+    }
+
+    public VaccinationSessionService(
+            VaccinationSessionRepository sessionRepository,
+            VaccinationCampaignRepository campaignRepository,
+            VaccinationCenterRepository centerRepository,
+            SessionChangeEventRepository sessionChangeEventRepository,
+            VaccinationSessionValidator validator,
+            SessionImpactReader sessionImpactReader,
+            Clock clock
+    ) {
+        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, sessionImpactReader, null, clock);
     }
 
     public VaccinationSessionService(
@@ -77,7 +91,7 @@ public class VaccinationSessionService {
             VaccinationSessionValidator validator,
             SessionImpactReader sessionImpactReader
     ) {
-        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, sessionImpactReader, Clock.systemUTC());
+        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, sessionImpactReader, null, Clock.systemUTC());
     }
 
     public VaccinationSessionService(
@@ -87,7 +101,7 @@ public class VaccinationSessionService {
             SessionChangeEventRepository sessionChangeEventRepository,
             VaccinationSessionValidator validator
     ) {
-        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, null, Clock.systemUTC());
+        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, null, null, Clock.systemUTC());
     }
 
     /**
@@ -190,55 +204,34 @@ public class VaccinationSessionService {
     }
 
     /**
-     * Validates the existing scheduling constraints and fails closed while authoritative
-     * operational resource and capacity readiness cannot be evaluated.
+     * Evaluates authoritative operational resource, staff, and capacity readiness,
+     * and transitions a DRAFT session to SCHEDULED status.
+     * Lifecycle-only transition: does NOT create a SessionChangeEvent.
      *
      * @param sessionId ID of the target VaccinationSession
-     * @return Saved VaccinationSession once operational readiness is implemented
-     * @throws IllegalStateException while operational readiness cannot be validated, or if
-     *                               the current lifecycle state cannot transition to SCHEDULED
+     * @return Saved VaccinationSession in SCHEDULED status
+     * @throws IllegalStateException    if operational readiness checks fail or lifecycle transition is invalid
+     * @throws IllegalArgumentException if campaign/session lifecycle precludes scheduling
      */
     public VaccinationSession scheduleSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
-        VaccinationSession unlockedSession = sessionRepository.findById(sessionId)
+        Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
-        Long campaignId = unlockedSession.getCampaign().getId();
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
-        if (entityManager != null) {
-            entityManager.refresh(campaign);
-        }
 
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
-        if (entityManager != null) {
-            entityManager.refresh(session);
-        }
 
         if (!session.getCampaign().getId().equals(campaignId)) {
             throw new IllegalStateException("Authoritative session parent campaign changed concurrently");
         }
 
-        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
-            throw new IllegalArgumentException(
-                    "Cannot schedule session for suspended campaign with ID: " + campaignId);
-        }
-        if (campaign.getStatus().isOperationallyClosed()) {
-            throw new IllegalArgumentException(
-                    "Cannot schedule session for operationally closed campaign with ID: " + campaignId);
-        }
+        operationalReadinessService.assertReadyForScheduling(campaign, session);
 
-        SessionLifecycleStatus lifecycleStatus = session.getLifecycleStatus();
-        if (lifecycleStatus == SessionLifecycleStatus.SCHEDULED) {
-            throw new IllegalStateException("Session is already in SCHEDULED lifecycle status");
-        }
-        if (lifecycleStatus != SessionLifecycleStatus.DRAFT) {
-            throw new IllegalStateException(
-                    "Invalid session lifecycle transition from " + lifecycleStatus + " to SCHEDULED");
-        }
-
-        throw new IllegalStateException(OPERATIONAL_READINESS_UNAVAILABLE_MESSAGE);
+        session.schedule();
+        return sessionRepository.saveAndFlush(session);
     }
 
     /**

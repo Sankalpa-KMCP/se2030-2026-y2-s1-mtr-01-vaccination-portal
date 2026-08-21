@@ -123,10 +123,7 @@ class SessionLifecycleHardeningIntegrationTests {
                 IllegalStateException.class,
                 () -> sessionService.scheduleSession(sessionId)
         );
-        assertEquals(
-                "Session scheduling is unavailable until operational resource and capacity readiness can be validated",
-                ex.getMessage()
-        );
+        assertTrue(ex.getMessage().contains("vaccination station") || ex.getMessage().contains("capacity plan"));
 
         entityManager.clear();
         VaccinationSession reloaded = sessionRepository.findById(sessionId).orElseThrow();

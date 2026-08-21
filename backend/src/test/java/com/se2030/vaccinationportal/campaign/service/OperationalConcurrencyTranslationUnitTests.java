@@ -15,6 +15,7 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +32,7 @@ class OperationalConcurrencyTranslationUnitTests {
     @Mock private OperationalResourceRepository resourceRepository;
     @Mock private OperationalStaffRosterRepository rosterRepository;
     @Mock private VaccinationCenterRepository centerRepository;
+    @Mock private OperationalStaffIdentityLockService identityLockService;
 
     private OperationalResourceService resourceService;
     private OperationalStaffRosterService rosterService;
@@ -39,7 +41,7 @@ class OperationalConcurrencyTranslationUnitTests {
     @BeforeEach
     void setUp() {
         resourceService = new OperationalResourceService(resourceRepository, centerRepository);
-        rosterService = new OperationalStaffRosterService(rosterRepository, centerRepository);
+        rosterService = new OperationalStaffRosterService(rosterRepository, centerRepository, identityLockService);
 
         sampleCenter = new VaccinationCenter(
                 "CTR-01",
@@ -91,10 +93,8 @@ class OperationalConcurrencyTranslationUnitTests {
     @DisplayName("registerStaffMember - database duplicate user race translating DataIntegrityViolationException throws IllegalStateException")
     void registerStaffMember_dbDuplicateRace_translatesToIllegalStateException() {
         when(centerRepository.findById(1L)).thenReturn(Optional.of(sampleCenter));
-        // Passes pre-check
-        when(rosterRepository.existsByCenterIdAndUserId(1L, 501L))
-                .thenReturn(false) // First pre-check passes
-                .thenReturn(true);  // Second check in catch block confirms duplicate
+        when(rosterRepository.findByUserIdForUpdateOrderByIdAsc(501L)).thenReturn(List.of());
+        when(rosterRepository.existsByCenterIdAndUserId(1L, 501L)).thenReturn(true);
 
         when(rosterRepository.saveAndFlush(any()))
                 .thenThrow(new DataIntegrityViolationException("Duplicate entry '1-501' for key 'uk_center_staff_user'"));

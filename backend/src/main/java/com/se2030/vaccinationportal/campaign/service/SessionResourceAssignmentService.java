@@ -83,7 +83,7 @@ public class SessionResourceAssignmentService {
                     + resource.getStatus() + ")");
         }
 
-        if (assignmentRepository.existsOverlappingAssignment(resourceId, null, startAt, endAt)) {
+        if (!assignmentRepository.findOverlappingAssignmentsForUpdate(resourceId, null, startAt, endAt).isEmpty()) {
             throw new IllegalStateException("Operational resource " + resourceId
                     + " is already assigned to an overlapping active session window");
         }
