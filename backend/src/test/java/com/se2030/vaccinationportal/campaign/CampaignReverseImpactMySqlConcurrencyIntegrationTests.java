@@ -9,7 +9,16 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
@@ -47,13 +56,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CampaignReverseImpactMySqlConcurrencyIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
 
     @Autowired private VaccinationSessionService sessionService;
+    @Autowired private SessionResourceAssignmentRepository resourceAssignmentRepository;
+    @Autowired private StaffAssignmentRepository staffAssignmentRepository;
+    @Autowired private SessionCapacityPlanRepository capacityPlanRepository;
+    @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
+    @Autowired private OperationalResourceRepository resourceRepository;
+    @Autowired private OperationalStaffRosterRepository staffRosterRepository;
+    @Autowired private VaccinationSessionRepository sessionRepository;
+    @Autowired private SessionRecurrenceRuleRepository ruleRepository;
+    @Autowired private CampaignCenterAssignmentRepository assignmentRepository;
+    @Autowired private CenterClosureRepository closureRepository;
+    @Autowired private OperatingHoursRepository operatingHoursRepository;
+    @Autowired private CampaignDoseProgrammeRepository doseProgrammeRepository;
     @Autowired private VaccinationCampaignRepository campaignRepository;
     @Autowired private VaccinationCenterRepository centerRepository;
-    @Autowired private CampaignCenterAssignmentRepository assignmentRepository;
-    @Autowired private OperatingHoursRepository operatingHoursRepository;
-    @Autowired private VaccinationSessionRepository sessionRepository;
-    @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
+    @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private PlatformTransactionManager transactionManager;
 
     private TransactionTemplate transactionTemplate;
@@ -67,9 +85,18 @@ class CampaignReverseImpactMySqlConcurrencyIntegrationTests extends AbstractMySq
 
         transactionTemplate = new TransactionTemplate(transactionManager);
         transactionTemplate.executeWithoutResult(status -> {
+            resourceAssignmentRepository.deleteAllInBatch();
+            staffAssignmentRepository.deleteAllInBatch();
+            capacityPlanRepository.deleteAllInBatch();
+            sessionChangeEventRepository.deleteAllInBatch();
             sessionRepository.deleteAllInBatch();
+            ruleRepository.deleteAllInBatch();
+            resourceRepository.deleteAllInBatch();
+            staffRosterRepository.deleteAllInBatch();
             assignmentRepository.deleteAllInBatch();
+            closureRepository.deleteAllInBatch();
             operatingHoursRepository.deleteAllInBatch();
+            doseProgrammeRepository.deleteAllInBatch();
             campaignRepository.deleteAllInBatch();
             centerRepository.deleteAllInBatch();
             targetGroupRepository.deleteAllInBatch();
