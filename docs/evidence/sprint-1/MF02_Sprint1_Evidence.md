@@ -7,15 +7,57 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #106
-**Latest verified implementation merge:** `888f9d4b53d5206ff9fdfaadcedaf86092ab62f1`
-**Last updated:** 2026-08-20
+**Evidence synchronized through implementation:** PR #108
+**Latest verified implementation merge:** `6edcaca67af0dca9d4e0a76bd69b8f180b6e7b85`
+**Last updated:** 2026-08-21
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #106 — `feat(mf02): implement session operational core model and calculation engine`
+### PR #108 — `feat(mf02): expose center operational resources and staff roster rest api`
+
+- reviewed source: `5dc5e2be5f30d211bf075afd9323141822c63290`
+- candidate development base: `e63bb76ac3dbb08b5009976233bf4255a059a712`
+- actual merge Parent 1: `e63bb76ac3dbb08b5009976233bf4255a059a712`
+- actual merge Parent 2: `5dc5e2be5f30d211bf075afd9323141822c63290`
+- merge: `6edcaca67af0dca9d4e0a76bd69b8f180b6e7b85`
+- merged at: `2026-08-21T04:21:37Z`
+- merge method: normal merge commit (two parents: `e63bb76ac3dbb08b5009976233bf4255a059a712` and `5dc5e2be5f30d211bf075afd9323141822c63290`)
+- reviewed candidate preserved: YES
+- integration drift: 0
+- Backend CI: PASS (1041 H2 verify in combined merge context + 4 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m37s; Run 32446414058, Job 96666733750)
+- Frontend CI: PASS (14s; Run 32446414084, Job 96666733813)
+- production code changed: 15 files (10 new, 5 modified)
+- test code changed: 6 files (4 new, 2 modified)
+- total files: 21 (+1783 / -59 lines)
+- functional H2 test executions: **1041 candidate-local / 1041 combined merge-context** (0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **4** (across 3 classes on `mysql:8.4.3`; 0 failures, 0 errors, 0 skipped; existing suite, no new M2A MySQL test added). The existing MySQL/InnoDB concurrency assurance suite remains green with the M2A persistence and REST additions.
+- logical combined executions: **1045 candidate / 1045 combined merge-context** (across separate validation paths)
+- immediate parent baseline: **998 functional H2** (from PR #106 / PR #107)
+- net-new candidate executions: **+43 H2 tests** across 6 test files (+14 `CenterOperationalResourceControllerTests`, +19 `CenterStaffRosterControllerTests`, +3 `OperationalConcurrencyTranslationUnitTests`, +2 `OperationalResourcePersistenceIntegrationTests`, -2 net / +23 additional assertion paths `OperationalResourceServiceIntegrationTests`, +7 `OperationalStaffRosterServiceIntegrationTests`)
+- focused operational resource & roster regression executions: **50 / 50 PASS** candidate + full regression suite 1041 / 1041 PASS
+- endpoints integrated under `/api/v1/centers/{centerId}` (8):
+  1. `POST /api/v1/centers/{centerId}/resources` (Create center operational resource; 201 Created + Location header `/api/v1/centers/{centerId}/resources/{id}`)
+  2. `GET /api/v1/centers/{centerId}/resources` (List center operational resources with optional `?resourceType=` filter; returns all statuses `ACTIVE`, `MAINTENANCE`, `INACTIVE` by default; 200 OK)
+  3. `GET /api/v1/centers/{centerId}/resources/{resourceId}` (Get center operational resource by ID; 200 OK)
+  4. `PUT /api/v1/centers/{centerId}/resources/{resourceId}` (Update operational resource name/status with pessimistic locking; 200 OK)
+  5. `POST /api/v1/centers/{centerId}/staff-roster` (Register staff member to center roster; 201 Created + Location header `/api/v1/centers/{centerId}/staff-roster/{id}`)
+  6. `GET /api/v1/centers/{centerId}/staff-roster` (List center staff roster with optional `?role=` and `?status=` filters; returns all roles and statuses by default; 200 OK)
+  7. `GET /api/v1/centers/{centerId}/staff-roster/{rosterId}` (Get center staff roster entry by ID; 200 OK)
+  8. `PUT /api/v1/centers/{centerId}/staff-roster/{rosterId}` (Update staff roster role/status with pessimistic locking; 200 OK)
+- total MF-02 routes growth: 57 -> **65** ($9 \text{ Existing Campaign} + 12 \text{ Campaign Configuration} [21 \text{ Campaign-family}] + 14 \text{ Center Existing} + 8 \text{ Center Operational [4 Resources + 4 Staff Roster]} [22 \text{ Center-family}] + 13 \text{ Session} + 9 \text{ Recurrence} = 65$)
+- behavior: Public REST exposure of center operational resources and staff roster configuration with pessimistic row locking on updates, unique constraint translation on creates, and strict nested 404 normalization.
+- OperationalResourceStatus Canonical Correction: Enum contains `ACTIVE`, `MAINTENANCE`, `INACTIVE`. `MAINTENANCE` was the canonical Section 6.6 value missing from M1 and was added in M2A. No schema migration required (`EnumType.STRING` column).
+- StaffRole: `StaffRole` remains the live implementation-defined three-value set `VACCINATOR`, `CHECK_IN_STAFF`, and `SUPERVISOR`; canonical requires the operational vaccinator/check-in semantics but does not define a closed StaffRole enum.
+- Concurrency & Integrity:
+  - Updates use pessimistic locking on entity rows (`findByIdForUpdate`).
+  - Database uniqueness constraints `unique(center_id, code)` and `unique(center_id, user_id)` remain final authority.
+  - Uniqueness constraint violations on concurrent creates/registrations map narrowly to HTTP 409 Conflict.
+  - Existing assignment rows (`SessionResourceAssignment`) and staff snapshot records (`StaffAssignment`) are preserved during registry updates.
+- Scheduling Guard State: PR #102 fail-closed guard remains `COMPLETE`. `DRAFT -> SCHEDULED` still fails closed with 409 Conflict.
+
+### Preceding Milestone: PR #106 — `feat(mf02): implement session operational core model and calculation engine`
 
 - reviewed source: `46de335ec2654c89417366d65ca439c3ff1c5501` (original M1 commit `e91269927355e3adcaba11eec75e45728d1889d7`, cross-center staff-lock correction `46de335ec2654c89417366d65ca439c3ff1c5501`)
 - candidate development base: `c8d5b452ee88ec97988874e211ffb26ea321b3e1`
@@ -269,6 +311,7 @@
 | PR #102 session operational prerequisite guard (COMPLETE) | **928 functional H2 + 4 MySQL** | +2 MF-02 H2 (+1 lifecycle hardening, +1 concurrency guard), +4 MySQL Testcontainers assurance (**932 logical executions**; 926 immediate parent baseline + 2 candidate net-new) |
 | PR #104 campaign configuration REST API (12 endpoints; COMPLETE_WITH_SEEDED_MASTER_DATA) | **953 functional H2 + 4 MySQL** | +25 MF-02 H2 (+8 mapper, +16 controller, +1 workflow), +4 MySQL Testcontainers assurance (**957 logical executions**; 928 immediate parent baseline + 25 candidate net-new) |
 | PR #106 session operational core model and calculation engine (Milestone 1; COMPLETE) | **998 functional H2 + 4 MySQL** | +45 MF-02 H2 across 8 test files, +4 MySQL Testcontainers assurance (**1002 logical executions**; 953 immediate parent baseline + 45 candidate net-new) |
+| PR #108 center operational resource and staff roster REST API (Milestone 2A; 8 endpoints; COMPLETE) | **1041 functional H2 + 4 MySQL** | +43 MF-02 H2 across 6 test files, +4 MySQL Testcontainers assurance (**1045 logical executions**; 998 immediate parent baseline + 43 candidate net-new) |
 
 The value **575** was a non-authoritative arithmetic result derived from a superseded figure and must not be used as verified evidence.
 
@@ -278,7 +321,7 @@ The value **575** was a non-authoritative arithmetic result derived from a super
 Build the MF-02 backend foundations required to create, validate, schedule, and safely change campaigns, centers, recurrence definitions, concrete vaccination sessions, and operational resources/capacity plans without violating configuration history or silently mutating MF-03 appointment/waitlist data.
 
 ### Current outcome
-The Sprint has delivered substantial backend foundations, REST APIs (57 endpoints across campaigns, campaign configuration, centers, sessions, and recurrence rules), lifecycle/change-control behavior, and the Session Operational Core Model & Calculation Engine (PR #106), but Sprint 1 remains open because operational configuration REST (Milestone 2), operational readiness integration (Milestone 3), slot capacity integration (Milestone 4), remaining lifecycle/integration work, security, Flyway, and frontend remain pending.
+The Sprint has delivered substantial backend foundations, REST APIs (65 endpoints across campaigns, campaign configuration, centers, center operational resources/staff roster, sessions, and recurrence rules), lifecycle/change-control behavior, the Session Operational Core Model & Calculation Engine (PR #106), and the Center Operational Resource & Staff Roster REST API (PR #108; Milestone 2A), but Sprint 1 remains open because session resource/staff assignment REST (Milestone 2B), session capacity plan REST (Milestone 2C), operational readiness integration (Milestone 3), slot capacity integration (Milestone 4), remaining lifecycle/integration work, security, Flyway, and frontend remain pending.
 
 ## 4. Completed MF-02 Evidence
 
@@ -302,6 +345,9 @@ Implemented and integrated:
 - CampaignCenterAssignment
 - center deactivation reverse-impact protection
 - hours/closure reverse-impact protection
+
+### Center operational resources & staff roster (Milestone 2A — PR #108)
+Implemented and integrated under `/api/v1/centers/{centerId}` (PR #108): 8 REST endpoints (4 operational resource routes and 4 operational staff roster routes). Includes canonical correction of `OperationalResourceStatus` (`ACTIVE`, `MAINTENANCE`, `INACTIVE`), pessimistic row locking on updates, and narrow duplicate key race translation to HTTP 409 Conflict.
 
 ### Recurrence / concrete session
 Implemented and integrated:
@@ -376,6 +422,9 @@ Implemented and integrated under `/api/v1/campaigns/{id}` (PR #104): 12 REST end
 
 ### Session Operational Core Model & Calculation Engine (PR #106)
 Implemented and integrated operational domain models, repositories, pure calculation engine, and cross-center staff roster pessimistic lock foundation (PR #106; Milestone 1 COMPLETE).
+
+### Center Operational Resources & Staff Roster REST API (PR #108)
+Implemented and integrated under `/api/v1/centers/{centerId}` (PR #108): 8 REST endpoints (4 operational resource routes and 4 operational staff roster routes; Milestone 2A COMPLETE).
 
 ## 5. PR #71 — Campaign `DRAFT -> SCHEDULED` Evidence
 Details preserved: DRAFT only -> SCHEDULED under campaign pessimistic write lock, full validation of prerequisites.
@@ -483,7 +532,44 @@ PR #106 implements the core domain foundation and calculation engine for operati
 - **MySQL CI:** **4 / 4 PASS** across 3 classes on `mysql:8.4.3`. PR #106 added no new MySQL tests. The existing MySQL/InnoDB concurrency assurance suite remains green with the M1 persistence additions.
 - **Frontend CI:** PASS (14s; Run 32356332549, Job 96386194726).
 
-## 17. Concurrency / Transaction Evidence
+## 17. PR #108 — Center Operational Resource and Staff Roster REST API Evidence
+
+### Behavior and Implementation Contracts
+PR #108 exposes center operational resources and center operational staff roster configuration via REST (Milestone 2A):
+
+- **Center Operational Resources:**
+  - `POST /api/v1/centers/{centerId}/resources` -> creates operational resource (status defaults `ACTIVE`, 201 Created + Location header).
+  - `GET /api/v1/centers/{centerId}/resources` -> lists operational resources for center (returns `ACTIVE`, `MAINTENANCE`, `INACTIVE` by default; optional `?resourceType=` filter).
+  - `GET /api/v1/centers/{centerId}/resources/{resourceId}` -> returns resource by ID (200 OK).
+  - `PUT /api/v1/centers/{centerId}/resources/{resourceId}` -> updates mutable fields `name` and `status` under pessimistic row lock (`findByIdForUpdate`, 200 OK). `code` and `resourceType` are immutable.
+  - Nested Center Ownership: Operations verify resource belongs to `centerId`, throwing `ResourceNotFoundException` (HTTP 404) on mismatch.
+  - Uniqueness & Conflict: `unique(center_id, code)` enforced; duplicate code returns HTTP 409 Conflict.
+- **Center Operational Staff Roster:**
+  - `POST /api/v1/centers/{centerId}/staff-roster` -> registers staff user to center roster (status defaults `ACTIVE`, 201 Created + Location header).
+  - `GET /api/v1/centers/{centerId}/staff-roster` -> lists roster for center (returns all roles and statuses by default; optional `?role=` and `?status=` filters).
+  - `GET /api/v1/centers/{centerId}/staff-roster/{rosterId}` -> returns roster entry by ID (200 OK).
+  - `PUT /api/v1/centers/{centerId}/staff-roster/{rosterId}` -> updates mutable fields `staffRole` and `status` under pessimistic row lock (`findByIdForUpdate`, 200 OK). `userId` is immutable.
+  - Nested Center Ownership: Operations verify roster entry belongs to `centerId`, throwing `ResourceNotFoundException` (HTTP 404) on mismatch.
+  - Uniqueness & Conflict: `unique(center_id, user_id)` enforced; duplicate user at same center returns HTTP 409 Conflict.
+- **OperationalResourceStatus Canonical Correction:**
+  - Authoritative enum contains `ACTIVE`, `MAINTENANCE`, `INACTIVE`.
+  - `MAINTENANCE` was the canonical Section 6.6 value missing from M1 and was added in M2A.
+  - No database schema migration required (`EnumType.STRING` column).
+- **StaffRole:**
+  - `StaffRole` remains the live implementation-defined three-value set `VACCINATOR`, `CHECK_IN_STAFF`, and `SUPERVISOR`; canonical requires the operational vaccinator/check-in semantics but does not define a closed StaffRole enum.
+- **Preserved History:**
+  - Resource status changes and roster status changes do not cascade-delete or corrupt existing assignment rows (`SessionResourceAssignment`) or staff assignment snapshots (`StaffAssignment`).
+- **Scheduling Guard Preserved:**
+  - PR #102 fail-closed guard remains in effect; `DRAFT -> SCHEDULED` is still rejected with HTTP 409 Conflict until Milestone 3 readiness integration.
+
+### Test Impact
+- **Immediate parent baseline:** **998 functional H2 tests** (at `e63bb76ac3dbb08b5009976233bf4255a059a712`).
+- **Candidate-local functional H2 baseline:** **1041 / 1041 PASS** across locally verified Surefire XML reports (+43 net-new tests across 6 test files).
+- **Combined PR #108 Backend CI:** **1041 / 1041 PASS** (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m37s; Run 32446414058, Job 96666733750).
+- **MySQL CI:** **4 / 4 PASS** across 3 classes on `mysql:8.4.3`. PR #108 added no new MySQL tests. The existing MySQL/InnoDB concurrency assurance suite remains green with the M2A persistence and REST additions.
+- **Frontend CI:** PASS (14s; Run 32446414084, Job 96666733813).
+
+## 18. Concurrency / Transaction Evidence
 
 Current high-risk workflows use transactional boundaries and explicit pessimistic locking where needed.
 
@@ -498,14 +584,16 @@ Representative established lock orders:
 - campaign activation: Campaign
 - campaign resumption: Campaign
 - session scheduling guard: Campaign -> Session
+- resource row update: `OperationalResource` via `findByIdForUpdate`
+- staff roster row update: `OperationalStaffRoster` via `findByIdForUpdate`
 - staff roster cross-center lock query: `findByUserIdForUpdateOrderByIdAsc(userId)` (PESSIMISTIC_WRITE across all roster rows for the user in ascending ID order)
 
 ### Test Database Architecture and Concurrency Assurance
-- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (998 tests).
+- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (1041 tests).
 - **Representative Production-Equivalent MySQL Assurance (PR #84 & PR #97):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`), parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`), and series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`).
-- **Scope Boundary:** *Representative single-row lifecycle, parent/child reverse-impact, and series concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.* The existing MySQL/InnoDB concurrency assurance suite remains green with the M1 persistence additions. Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3.
+- **Scope Boundary:** *Representative single-row lifecycle, parent/child reverse-impact, and series concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.* The existing MySQL/InnoDB concurrency assurance suite remains green with the M2A persistence and REST additions. Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3.
 
-## 18. Historical Milestone Chronology
+## 19. Historical Milestone Chronology
 
 | PR | Scope |
 |---|---|
@@ -571,6 +659,8 @@ Representative established lock orders:
 | #104 | Campaign Configuration REST API (12 endpoints; COMPLETE_WITH_SEEDED_MASTER_DATA) |
 | #105 | Documentation synchronization after PR #104 |
 | #106 | Session Operational Core Model and Calculation Engine (Milestone 1; COMPLETE) |
+| #107 | Documentation synchronization after PR #106 |
+| #108 | Center Operational Resource and Staff Roster REST API (Milestone 2A; 8 endpoints; COMPLETE) |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -614,8 +704,10 @@ Representative established lock orders:
 - PR #104: `6454a8faf2fe7a511f324deb5227c34d6197d81c`
 - PR #105: `c8d5b452ee88ec97988874e211ffb26ea321b3e1`
 - PR #106: `888f9d4b53d5206ff9fdfaadcedaf86092ab62f1`
+- PR #107: `e63bb76ac3dbb08b5009976233bf4255a059a712`
+- PR #108: `6edcaca67af0dca9d4e0a76bd69b8f180b6e7b85`
 
-## 19. Carried-Forward Findings / Risks
+## 20. Carried-Forward Findings / Risks
 
 ### Domain consistency — RESOLVED (PR #73)
 Normal questionnaire assignment creation requires a published version, and PR #73 defensively hardened `scheduleCampaign(...)` to revalidate published status through `QuestionnaireVersionPublicationPort`.
@@ -639,6 +731,14 @@ Resolved confirmed P1 audit finding MF02-003 (Campaign Configuration API Blocker
 - **Future M3 Concurrency Obligation:** Dedicated MySQL/Testcontainers concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3 before the PR #102 scheduling guard is replaced (`REQUIRED_IN_M3`).
 - **Scheduling Guard Preserved:** PR #102 fail-closed guard remains in effect; `DRAFT -> SCHEDULED` is still rejected with HTTP 409 Conflict until Milestone 3 readiness integration.
 
+### Center Operational Resource & Staff Roster REST API — RESOLVED (PR #108)
+- **Exposed 8 REST routes under `/api/v1/centers/{centerId}`:** 4 operational resource endpoints and 4 operational staff roster endpoints.
+- **OperationalResourceStatus Canonical Correction:** Authoritative enum contains `ACTIVE`, `MAINTENANCE`, `INACTIVE`. `MAINTENANCE` was the canonical Section 6.6 value missing from M1 and was added in M2A.
+- **Pessimistic Update Locking:** Update paths for resources and roster entries execute under pessimistic row locks (`findByIdForUpdate`).
+- **Duplicate Protection:** Database uniqueness constraints `unique(center_id, code)` and `unique(center_id, user_id)` are enforced. Uniqueness race exceptions map narrowly to HTTP 409 Conflict.
+- **Preserved History:** Existing assignment rows (`SessionResourceAssignment`) and staff snapshot records (`StaffAssignment`) are preserved during registry updates.
+- **Nested Ownership:** Mismatches between path `centerId` and resource/roster parent center normalize to HTTP 404 Not Found.
+
 ### MF-02 / MF-03 Capacity & Impact Integration — PARTIAL_P1 (Shared Dependency)
 `SessionImpactReader` production adapter is MF-03-owned (currently missing; SCHEDULED changes fail closed with 409). `SlotCapacityPort` production adapter is expected to be MF-02-owned after an authoritative slot/capacity model is built.
 
@@ -661,15 +761,18 @@ PR #84 and PR #97 established real MySQL 8.4.3 InnoDB integration tests via Test
 - Validated parent/child reverse-impact pessimistic-locking serialization (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
 - Validated concurrent series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`).
 - Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step.
-- *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, and series concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite. The existing MySQL/InnoDB concurrency assurance suite remains green with the M1 persistence additions. Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3.
+- *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, and series concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite. The existing MySQL/InnoDB concurrency assurance suite remains green with the M2A persistence and REST additions. Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3.
 
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
 
-## 20. Remaining Sprint / Function Work
+## 21. Remaining Sprint / Function Work
 
 Still not complete:
-- Session Operational Configuration REST API (Milestone 2: PENDING_M2)
+- Center Operational Resources & Staff Roster REST API (Milestone 2A: COMPLETE)
+- Session Resource & Staff Assignment REST API (Milestone 2B: PENDING_M2B)
+- Session Capacity Plan REST API (Milestone 2C: PENDING_M2C)
+- Session Operational Configuration REST API (Milestone 2 Overall: IN_PROGRESS)
 - Session Operational Readiness & Guard Replacement (Milestone 3: PENDING_M3)
 - MF02/MF03 Slot Capacity Integration (Milestone 4: PENDING_M4)
 - design and implementation of remaining campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`USER_DATA_REQUIRED`)
@@ -688,7 +791,7 @@ Still not complete:
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
 
-## 21. Sprint Status
+## 22. Sprint Status
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
@@ -704,18 +807,22 @@ Current status remains:
 - Campaign Configuration REST API: **COMPLETE_WITH_SEEDED_MASTER_DATA**
 - Session Operational Core Model (Milestone 1): **COMPLETE**
 - Session Operational Calculation Engine (Milestone 1): **COMPLETE**
+- Center Operational Resources & Staff Roster REST API (Milestone 2A): **COMPLETE**
+- Session Resource & Staff Assignment REST API (Milestone 2B): **PENDING**
+- Session Capacity Plan REST API (Milestone 2C): **PENDING**
+- Session Operational Configuration REST (Milestone 2 Overall): **IN PROGRESS**
 - Global staff roster lock foundation: **COMPLETE**
 - Live staff scheduling concurrency: **NOT_YET_PROVEN**
 - Roster registration vs scheduling MySQL proof: **REQUIRED_IN_M3**
-- Operational Configuration REST (Milestone 2): **PENDING_M2**
 - Session Operational Readiness (Milestone 3): **PENDING_M3**
 - Session Scheduling Guard Replacement (Milestone 3): **PENDING_M3**
 - MF02/MF03 Slot Capacity Integration (Milestone 4): **PENDING_M4**
-- current verified backend baseline: **998 functional H2 tests plus 4 MySQL Testcontainers assurance tests** across separate validation paths.
+- current verified backend baseline: **1041 functional H2 tests plus 4 MySQL Testcontainers assurance tests** across separate validation paths.
+- MF02_DOCUMENTATION_M2A_SYNC: **LOCAL_CANDIDATE_READY**
 
 Do not infer completion from the size of the backend test suite.
 
-## 22. Evidence Maintenance Rules
+## 23. Evidence Maintenance Rules
 
 1. Canonical Markdown is the sole semantic authority.
 2. Live Git/code/tests control implementation truth.
