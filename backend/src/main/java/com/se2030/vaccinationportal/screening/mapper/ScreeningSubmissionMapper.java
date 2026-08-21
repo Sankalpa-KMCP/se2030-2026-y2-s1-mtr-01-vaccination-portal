@@ -24,7 +24,9 @@ public class ScreeningSubmissionMapper {
                 submission.getSubmittedAt(),
                 submission.getAnswers().stream().map(this::toResponse).toList(),
                 submission.getCreatedAt(),
-                submission.getUpdatedAt()
+                submission.getUpdatedAt(),
+                submission.getCorrectionInstructions(),
+                submission.getCorrectionRequestedAt()
         );
     }
 
