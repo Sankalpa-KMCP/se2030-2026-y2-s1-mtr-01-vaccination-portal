@@ -2,9 +2,11 @@ package com.se2030.vaccinationportal.campaign.repository;
 
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -20,6 +22,29 @@ public interface StaffAssignmentRepository extends JpaRepository<StaffAssignment
     List<StaffAssignment> findByUserIdOrderByStartAtAscIdAsc(Long userId);
 
     List<StaffAssignment> findByStaffRosterIdOrderByStartAtAscIdAsc(Long staffRosterId);
+
+    /**
+     * Finds overlapping assignments for a staff user across active sessions using a pessimistic write lock (current read).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM StaffAssignment a " +
+            "WHERE a.userId = :userId " +
+            "AND (:excludeAssignmentId IS NULL OR a.id <> :excludeAssignmentId) " +
+            "AND a.startAt < :endAt " +
+            "AND :startAt < a.endAt " +
+            "AND a.session.lifecycleStatus <> :cancelledStatus " +
+            "ORDER BY a.id ASC")
+    List<StaffAssignment> findOverlappingAssignmentsForUpdate(
+            @Param("userId") Long userId,
+            @Param("excludeAssignmentId") Long excludeAssignmentId,
+            @Param("startAt") Instant startAt,
+            @Param("endAt") Instant endAt,
+            @Param("cancelledStatus") SessionLifecycleStatus cancelledStatus
+    );
+
+    default List<StaffAssignment> findOverlappingAssignmentsForUpdate(Long userId, Long excludeAssignmentId, Instant startAt, Instant endAt) {
+        return findOverlappingAssignmentsForUpdate(userId, excludeAssignmentId, startAt, endAt, SessionLifecycleStatus.CANCELLED);
+    }
 
     /**
      * Tests half-open interval overlap [startAt, endAt) for a staff user across active sessions.
