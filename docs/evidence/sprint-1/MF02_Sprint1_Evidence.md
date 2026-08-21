@@ -7,15 +7,35 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #112
-**Latest verified implementation merge:** `56860a20bf87a08bc755d92c9e9fe4032b6bf0c7`
-**Last updated:** 2026-08-21
+**Evidence synchronized through implementation:** PR #114
+**Latest verified implementation merge:** `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`
+**Last updated:** 2026-08-22
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #112 — `feat(mf02): expose session capacity plan rest api`
+### PR #114 — `feat(mf02): enforce operational readiness for session scheduling`
+
+- reviewed commits: `eeeed097d5430bc63e12ff699282b6cd617ca93c`, `59359fe9fa9fd67ca9f403d111f2e2689b784888`, and `f4bc3319db6e3a22cea925154e48d6d00dd58a6d`
+- candidate development base: `b30d9dd02698684dd2337b259c4c95b87daced48`
+- merge: `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`
+- merged at: `2026-08-21T18:36:26Z`
+- merge method: normal merge commit
+- Backend CI: PASS (1123 H2 verify + 15 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 3m29s; Run 32513794982, Job 96870725052)
+- Frontend CI: PASS (14s; Run 32513794969, Job 96870724758)
+- production code changed: 6 files (4 new, 2 modified)
+- test code changed: 4 files (3 new, 1 modified)
+- migration scripts: 1 new (`V2__mf02_operational_staff_identity.sql`)
+- functional H2 test executions: **1123** (0 failures, 0 errors, 0 skipped; +20 over immediate parent baseline 1103)
+- MySQL Testcontainers assurance test executions: **15** (across 6 classes on `mysql:8.4.3`; 0 failures, 0 errors, 0 skipped; 7 historical + 7 M3 operational readiness tests + 1 Flyway migration test)
+- logical combined executions: **1138** (1123 H2 + 15 MySQL) across separate validation paths
+- immediate parent baseline: **1103 functional H2 + 7 MySQL** (from PR #112 / PR #113)
+- net-new candidate executions: **+20 H2 tests** (+10 `SessionOperationalReadinessServiceIntegrationTests`, +7 `OperationalStaffIdentityLockServiceIntegrationTests`, +3 other) + **8 MySQL assurance tests** (7 `SessionOperationalReadinessMySqlConcurrencyIntegrationTests` + 1 `OperationalStaffIdentityMigrationMySqlIntegrationTests`)
+- behavior: Replaces synthetic session scheduling guard with authoritative operational readiness verification. Enforces center operational resources, staffing qualification and supervisor rules, capacity plan snapshot validity, and deterministic ascending `userId` locking via `OperationalStaffIdentity` with native upsert bootstrap. Verified Flyway V2 migration runtime execution against real MySQL/InnoDB.
+- Milestone 3 Conclusion: Completes Milestone 3 (Session Operational Readiness & Guard Replacement).
+
+### Preceding Milestone: PR #112 — `feat(mf02): expose session capacity plan rest api`
 
 - reviewed source: `0525aea5f016023187e03f75c51a189182f58130`
 - candidate development base: `fd79ca6b301039216886c2d20404edf14ac91b1b`
@@ -907,6 +927,14 @@ Resolved confirmed P1 audit finding MF02-003 (Campaign Configuration API Blocker
 - **MySQL Concurrency Serialization Proof:** Added `SessionCapacityPlanMySqlConcurrencyIntegrationTests` verifying that competing creation workers serialize deterministically on real MySQL 8.4.3 InnoDB into distinct incremental revisions without key collision or lost updates (suite total: 7 / 7 PASS).
 - **Milestone 2 Completion:** Closes Milestone 2 (Session Operational Configuration REST API; 21 total endpoints across M2A, M2B, and M2C).
 
+### Session Operational Readiness & Scheduling Enforcement — RESOLVED (PR #114)
+- **Replaced Synthetic Scheduling Guard:** Removed the PR #102 synthetic scheduling blocker. `POST /api/v1/sessions/{id}/schedule` now performs authoritative domain readiness validation via `SessionOperationalReadinessService` within the scheduled session transaction.
+- **Enforced Multi-Entity Preconditions:** Requires parent campaign to be `PUBLISHED` or `ACTIVE` (and not `SUSPENDED`), hosting center to be `ACTIVE` with session operating window falling entirely within center hours on open days, active assigned operational resources matching center with distinct ID lock ordering, active qualifying assigned staff matching center with distinct ID lock ordering, active assigned supervisor requirement, and fresh valid capacity plan snapshot matching exact assigned resource/vaccinator counts.
+- **Stable-User Serialization Anchor (`OperationalStaffIdentity`):** Resolved the zero-row cross-center concurrent staff registration race. `OperationalStaffIdentity` provides an atomic first-user bootstrap anchor backed by native MySQL `INSERT INTO operational_staff_identities (user_id, created_at) VALUES (?, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE operational_staff_identities.user_id = operational_staff_identities.user_id`. All staff operations (roster registration, staff assignment overlap validation, session scheduling readiness) acquire pessimistic write locks on `OperationalStaffIdentity` in deterministic ascending `userId` order before accessing `OperationalStaffRoster`, eliminating zero-row deadlock / race risks.
+- **Flyway V2 Migration & Real MySQL Verification:** Added `V2__mf02_operational_staff_identity.sql` migration script and verified execution on real `mysql:8.4.3` via `OperationalStaffIdentityMigrationMySqlIntegrationTests`. Verified table creation, unique constraint `uk_operational_staff_identity_user`, and idempotent backfill of existing distinct staff users across centers.
+- **MySQL Concurrency Assurance Suite Growth:** Added `SessionOperationalReadinessMySqlConcurrencyIntegrationTests` with 7 comprehensive concurrency tests on `mysql:8.4.3` (Single-user registration serialization, Zero-row cross-center registration serialization, Concurrent scheduleSession vs cross-center registration, Reverse multi-user staff ordering deadlock freedom, Concurrent scheduleSession vs resource status change, Concurrent scheduleSession vs staff roster status change, and Concurrent duplicate scheduleSession idempotency/conflict handling). Total MySQL suite in CI: 15 tests across 6 classes (7 historical + 7 M3 readiness + 1 Flyway migration).
+- **Milestone 3 Completion:** Closes Milestone 3 (Session Operational Readiness & Guard Replacement).
+
 ### MF-02 / MF-03 Capacity & Impact Integration — PARTIAL_P1 (Shared Dependency)
 `SessionImpactReader` production adapter is MF-03-owned (currently missing; SCHEDULED changes fail closed with 409). `SlotCapacityPort` production adapter is expected to be MF-02-owned after an authoritative slot/capacity model is built.
 
@@ -923,15 +951,17 @@ Production-facing adapters for questionnaire publication (provided by MF-01 `Que
 ### Concurrency test quality — RESOLVED (PR #78)
 PR #78 eliminated the remaining `Thread.sleep(300)` timing delay from `CampaignAssignmentReverseImpactConcurrencyIntegrationTests.java` and established deterministic latch coordination with explicit winner/state assertions. Zero `Thread.sleep` calls remain across the backend test suite.
 
-### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84, PR #97, PR #110, & PR #112)
-PR #84, PR #97, PR #110, and PR #112 established real MySQL 8.4.3 InnoDB integration tests via Testcontainers:
+### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84, PR #97, PR #110, PR #112, & PR #114)
+PR #84, PR #97, PR #110, PR #112, and PR #114 established real MySQL 8.4.3 InnoDB integration tests via Testcontainers:
 - Validated single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`).
 - Validated parent/child reverse-impact pessimistic-locking serialization (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
 - Validated concurrent series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`).
 - Validated concurrent session resource assignment and cross-center staff assignment serialization (`SessionOperationalAssignmentMySqlConcurrencyIntegrationTests`).
 - Validated concurrent session capacity plan revision creation serialization (`SessionCapacityPlanMySqlConcurrencyIntegrationTests`).
-- Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step. Total suite in CI: 7 tests across 5 classes on `mysql:8.4.3`.
-- *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, series concurrency, operational assignment concurrency, and capacity plan revision concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite. Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3.
+- Validated concurrent session operational readiness verification and staff identity serialization (`SessionOperationalReadinessMySqlConcurrencyIntegrationTests`).
+- Validated Flyway V2 migration DDL and idempotent backfill on real MySQL (`OperationalStaffIdentityMigrationMySqlIntegrationTests`).
+- Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step. Total suite in CI: 15 tests across 6 classes on `mysql:8.4.3`.
+- *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, series concurrency, operational assignment concurrency, capacity plan revision concurrency, and operational readiness concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.
 
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
@@ -943,7 +973,7 @@ Still not complete:
 - Session Resource & Staff Assignment REST API (Milestone 2B: COMPLETE)
 - Session Capacity Plan REST API (Milestone 2C: COMPLETE)
 - Session Operational Configuration REST API (Milestone 2 Overall: COMPLETE)
-- Session Operational Readiness & Guard Replacement (Milestone 3: PENDING_M3)
+- Session Operational Readiness & Guard Replacement (Milestone 3: COMPLETE)
 - MF02/MF03 Slot Capacity Integration (Milestone 4: PENDING_M4)
 - design and implementation of remaining campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`USER_DATA_REQUIRED`)
 - evaluation/decomposition of `VaccinationSessionService` maintainability only if justified (`DEFER`)
@@ -955,8 +985,8 @@ Still not complete:
 - Campaign date update REST API
 - Spring Security/RBAC
 - OpenAPI
-- Flyway migrations
-- representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, & PR #112; broad production database certification deferred)
+- Flyway migrations (V2 migration implemented and verified for OperationalStaffIdentity; broader schema migration pending)
+- representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, & PR #114; broad production database certification deferred)
 - MF-02 frontend
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
@@ -982,13 +1012,13 @@ Current status remains:
 - Session Capacity Plan REST API (Milestone 2C): **COMPLETE**
 - Session Operational Configuration REST (Milestone 2 Overall): **COMPLETE**
 - Global staff roster lock foundation: **COMPLETE**
-- Live staff scheduling concurrency: **NOT_YET_PROVEN**
-- Roster registration vs scheduling MySQL proof: **REQUIRED_IN_M3**
-- Session Operational Readiness (Milestone 3): **PENDING_M3**
-- Session Scheduling Guard Replacement (Milestone 3): **PENDING_M3**
+- Live staff scheduling concurrency: **COMPLETE**
+- Roster registration vs scheduling MySQL proof: **COMPLETE**
+- Session Operational Readiness (Milestone 3): **COMPLETE**
+- Session Scheduling Guard Replacement (Milestone 3): **COMPLETE**
 - MF02/MF03 Slot Capacity Integration (Milestone 4): **PENDING_M4**
-- current verified backend baseline: **1103 functional H2 tests plus 7 MySQL Testcontainers assurance tests** across separate validation paths.
-- MF02_DOCUMENTATION_M2C_SYNC: **LOCAL_CANDIDATE_READY**
+- current verified backend baseline: **1123 functional H2 tests plus 15 MySQL Testcontainers assurance tests** across separate validation paths.
+- MF02_DOCUMENTATION_M3_SYNC: **LOCAL_CANDIDATE_READY**
 
 Do not infer completion from the size of the backend test suite.
 

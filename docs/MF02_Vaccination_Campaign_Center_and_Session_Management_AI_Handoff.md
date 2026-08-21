@@ -8,14 +8,12 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Last synchronized implementation checkpoint:** PR #112
-**Reviewed PR #112 candidate:** `0525aea5f016023187e03f75c51a189182f58130`
-**PR #112 candidate development base:** `fd79ca6b301039216886c2d20404edf14ac91b1b`
-**PR #112 MySQL test fixture repair commit:** `9659f0f6ebd515fcf690dfe40bf8a7ded54ba461`
-**PR #112 pre-merge develop baseline:** `b74238db44557e6de15349159f994123e4b7caa3` (non-material MF-01 screening merge PR #113)
-**PR #112 actual merge Parent 1:** `b74238db44557e6de15349159f994123e4b7caa3`
-**PR #112 actual merge Parent 2:** `9659f0f6ebd515fcf690dfe40bf8a7ded54ba461`
-**PR #112 merge:** `56860a20bf87a08bc755d92c9e9fe4032b6bf0c7`
+**Last synchronized implementation checkpoint:** PR #114
+**Reviewed PR #114 commits:** `eeeed097d5430bc63e12ff699282b6cd617ca93c`, `59359fe9fa9fd67ca9f403d111f2e2689b784888`, and `f4bc3319db6e3a22cea925154e48d6d00dd58a6d`
+**PR #114 candidate development base:** `b30d9dd02698684dd2337b259c4c95b87daced48`
+**PR #114 merge:** `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`
+**Preceding documentation synchronization milestone:** PR #113 (`2a64c8e7f3dde7281e2fb38a0f5d2425caf944a9` / merge `b30d9dd02698684dd2337b259c4c95b87daced48`)
+**Preceding session capacity plan milestone:** PR #112 (`0525aea5f016023187e03f75c51a189182f58130` / merge `56860a20bf87a08bc755d92c9e9fe4032b6bf0c7`)
 **Preceding documentation synchronization milestone:** PR #111 (`2b39987ef1c0800b73c2420185934eb99fbfd0f3` / merge `fd79ca6b301039216886c2d20404edf14ac91b1b`)
 **Preceding session operational assignments milestone:** PR #110 (`d3a1d787cd0b5b8f29a62709d4fd26e853ba4fbd` / merge `1c7a09c772018eaf56481aa77ff38688587879fc`)
 **Preceding documentation synchronization milestone:** PR #109 (`a4a289af163628e36fa78831e5f8fdf4e45cf5dc` / merge `94af45a27636deb4e057c94846086da018da8d9e`)
@@ -41,12 +39,12 @@
 **Preceding documentation synchronization milestone:** PR #85 (`ac860a9d271daa2ecf4211571e44a93a2f2622f4` / merge `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`)
 **Preceding MySQL assurance milestone:** PR #84 (`ded72c17d8bb4aaf222d6e2a96b44fa93208e880` / merge `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`)
 **Current verified backend baseline:**
-- **Candidate-local functional H2 baseline:** **1103 functional H2 tests** across locally verified Surefire XML reports (0 failures, 0 errors, 0 skipped; +23 over immediate parent baseline 1080).
-- **Fresh PR #112 merge-context Backend CI:** **1105 functional H2 tests** across the combined tree context (1103 + 2 from develop merge PR #113; 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m45s; Run 32474023752, Job 96746548406).
-- **Authoritative fresh MySQL assurance:** **7 MySQL/Testcontainers assurance tests** across 5 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped; 6 historical + 1 M2C session capacity plan test).
-- **Combined logical executions:** **1110 logical candidate executions** (1103 H2 + 7 MySQL) across separate validation paths.
-- Clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS (23s; Run 32474023738, Job 96746548469).
-- **PR #112 net-new executions:** +23 H2 tests across 3 test files (+23 `SessionCapacityPlanControllerTests`, `SessionCapacityPlanServiceIntegrationTests`, `SessionCapacityPlanPersistenceIntegrationTests`) + 1 MySQL assurance test (`SessionCapacityPlanMySqlConcurrencyIntegrationTests`).
+- **Candidate-local functional H2 baseline:** **1123 functional H2 tests** across locally verified Surefire XML reports (0 failures, 0 errors, 0 skipped; +20 over immediate parent baseline 1103).
+- **Fresh PR #114 Backend CI:** **1123 functional H2 tests** + **15 MySQL Testcontainers assurance tests** across 6 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 3m29s; Run 32513794982, Job 96870725052).
+- **Authoritative fresh MySQL assurance:** **15 MySQL/Testcontainers assurance tests** across 6 classes on `mysql:8.4.3` (7 historical + 7 M3 operational readiness tests + 1 Flyway migration test).
+- **Combined logical executions:** **1138 logical candidate executions** (1123 H2 + 15 MySQL) across separate validation paths.
+- Clean Maven test/verify PASS; Backend CI PASS; Frontend CI PASS (14s; Run 32513794969, Job 96870724758).
+- **PR #114 net-new executions:** +20 H2 tests (+10 `SessionOperationalReadinessServiceIntegrationTests`, +7 `OperationalStaffIdentityLockServiceIntegrationTests`, +3 other) + 8 MySQL assurance tests (7 `SessionOperationalReadinessMySqlConcurrencyIntegrationTests` + 1 `OperationalStaffIdentityMigrationMySqlIntegrationTests`).
 - **Thread.sleep in tests:** 0 occurrences across `backend/src/test`.
 
 > This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
@@ -792,6 +790,8 @@ Key full merge checkpoints:
 - PR #110: `1c7a09c772018eaf56481aa77ff38688587879fc`
 - PR #111: `fd79ca6b301039216886c2d20404edf14ac91b1b`
 - PR #112: `56860a20bf87a08bc755d92c9e9fe4032b6bf0c7`
+- PR #113: `b30d9dd02698684dd2337b259c4c95b87daced48`
+- PR #114: `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`
 
 ## 15. Status Discipline
 
@@ -799,10 +799,10 @@ Never claim:
 - MF-02 complete;
 - Sprint 1 complete;
 - US-13 complete;
-- production API/security/migrations/frontend complete (Campaign REST API, Center REST API, Session Core REST API, Session Change Control REST API, Pre-Recurrence Remediation, Recurrence/Series REST API, Session Scheduling Guard, Campaign Configuration REST API, Session Operational Core Model/Calculation Engine, Center Operational Resource & Staff Roster REST API, Session Operational Assignments REST API, and Session Capacity Plan REST API are integrated; security, Flyway, frontend, and Operational Readiness remain pending);
+- production API/security/migrations/frontend complete (Campaign REST API, Center REST API, Session Core REST API, Session Change Control REST API, Pre-Recurrence Remediation, Recurrence/Series REST API, Campaign Configuration REST API, Session Operational Core Model/Calculation Engine, Center Operational Resource & Staff Roster REST API, Session Operational Assignments REST API, Session Capacity Plan REST API, and Session Operational Readiness & Scheduling Enforcement are integrated; security, frontend, and Slot Capacity Integration remain pending);
 - MySQL concurrency fully certified across all endpoints;
-- 566, 575, 599, 616, 645, 680, 724, 763, 790, 799, 835, 882, 926, 928, 953, 998, 1041, or 1080 as the current backend baseline;
-- 1110 as the functional H2 baseline (1110 represents logical combined coverage across separate validation paths: 1103 H2 + 7 MySQL).
+- 566, 575, 599, 616, 645, 680, 724, 763, 790, 799, 835, 882, 926, 928, 953, 998, 1041, 1080, or 1103 as the current backend baseline;
+- 1110 as the functional H2 baseline (1138 represents logical combined coverage across separate validation paths: 1123 H2 + 15 MySQL).
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
@@ -823,19 +823,19 @@ Current status remains:
 - Session Capacity Plan REST API (Milestone 2C): **COMPLETE**
 - Session Operational Configuration REST (Milestone 2 Overall): **COMPLETE**
 - Global staff roster lock foundation: **COMPLETE**
-- Live staff scheduling concurrency: **NOT_YET_PROVEN**
-- Roster registration vs scheduling MySQL proof: **REQUIRED_IN_M3**
-- Session Operational Readiness (Milestone 3): **PENDING_M3**
-- Session Scheduling Guard Replacement (Milestone 3): **PENDING_M3**
+- Live staff scheduling concurrency: **COMPLETE**
+- Roster registration vs scheduling MySQL proof: **COMPLETE**
+- Session Operational Readiness (Milestone 3): **COMPLETE**
+- Session Scheduling Guard Replacement (Milestone 3): **COMPLETE**
 - MF02/MF03 Slot Capacity Integration (Milestone 4): **PENDING_M4**
-- current verified backend baseline: **1103 functional H2 tests plus 7 MySQL Testcontainers assurance tests** across separate validation paths.
-- MF02_DOCUMENTATION_M2C_SYNC: **LOCAL_CANDIDATE_READY**
+- current verified backend baseline: **1123 functional H2 tests plus 15 MySQL Testcontainers assurance tests** across separate validation paths.
+- MF02_DOCUMENTATION_M3_SYNC: **LOCAL_CANDIDATE_READY**
 
 ## 16. Startup Procedure for the Next AI Session
 
 1. Read canonical Markdown `3.3-AI / 2026-08-14-R9`.
 2. Fetch live `origin/develop`.
-3. Verify whether `56860a20bf87a08bc755d92c9e9fe4032b6bf0c7` remains an ancestor/current checkpoint.
+3. Verify whether `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b` remains an ancestor/current checkpoint.
 4. Run/inspect current backend tests before changing behavior.
 5. Read this handoff and Sprint evidence.
 6. Review `MF02_Completion_and_Hardening_Plan.md`.
