@@ -173,7 +173,7 @@ Total MF-02 REST routes currently integrated: **73** ($21 \text{ Campaign-family
      - Excludes M2B session resource/staff assignments, M2C capacity plans, M3 readiness evaluation, and M4 slot capacity integration.
    - REST routes added: 8 (total MF-02 routes: 57 -> 65).
 
-2. **PR #106 — `feat(mf02): implement session operational core model and calculation engine`**
+3. **PR #106 — `feat(mf02): implement session operational core model and calculation engine`**
    - reviewed source: `46de335ec2654c89417366d65ca439c3ff1c5501` (original M1 commit `e91269927355e3adcaba11eec75e45728d1889d7`, cross-center staff-lock correction `46de335ec2654c89417366d65ca439c3ff1c5501`)
    - candidate development base: `c8d5b452ee88ec97988874e211ffb26ea321b3e1`
    - actual merge Parent 1: `c8d5b452ee88ec97988874e211ffb26ea321b3e1`
@@ -211,7 +211,7 @@ Total MF-02 REST routes currently integrated: **73** ($21 \text{ Campaign-family
      - `DRAFT -> SCHEDULED` is still fail-closed with HTTP 409 Conflict. These foundations are NOT wired into `DRAFT -> SCHEDULED` yet.
    - REST routes added: 0 (total MF-02 routes remain 57).
 
-2. **PR #104 — `feat(mf02): expose campaign configuration rest api`**
+4. **PR #104 — `feat(mf02): expose campaign configuration rest api`**
    - reviewed source: `eb41c2210fa8fdce80a8524746386b9c341ff2ec`
    - candidate development base: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548`
    - actual merge Parent 1: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548`
@@ -244,72 +244,39 @@ Total MF-02 REST routes currently integrated: **73** ($21 \text{ Campaign-family
    - deterministic ordering: Enforced at repository query level across all configuration history lists.
    - cross-module boundary: MF-01 questionnaire publication lifecycle remains strictly behind `QuestionnaireVersionPublicationPort`; 0 direct MF-01 repository access. 0 MF-03 implementation added.
 
-3. **PR #104 — `feat(mf02): expose campaign configuration rest api`**
-   - reviewed source: `eb41c2210fa8fdce80a8524746386b9c341ff2ec`
-   - candidate development base: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548`
-   - actual merge Parent 1: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548`
-   - actual merge Parent 2: `eb41c2210fa8fdce80a8524746386b9c341ff2ec`
-   - merge: `6454a8faf2fe7a511f324deb5227c34d6197d81c`
-   - merged at: `2026-08-20T06:45:46Z`
-   - merge method: normal merge commit (two parents: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548` and `eb41c2210fa8fdce80a8524746386b9c341ff2ec`)
-   - integration drift: 0
-   - Backend CI: PASS (953 H2 verify in combined merge context + 4 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m39s)
-   - Frontend CI: PASS (13s)
-   - authoritative backend baseline at PR #104: **953 functional H2 tests** (101 locally verified Surefire XML reports; +25 over immediate parent baseline 928) and **953 combined merge-context H2 tests** in CI + **4 MySQL assurance tests** across 3 classes
-   - net-new executions: **+25 H2 tests** (+8 `CampaignConfigurationDtoMapperTests`, +16 `CampaignConfigurationControllerTests`, +1 `CampaignConfigurationWorkflowIntegrationTests`)
-   - scope: 21 files (13 new production, 5 modified production, 3 new test files; +1505 / -21 lines)
-   - integrated endpoints under `/api/v1/campaigns/{id}` (12):
-     1. `POST /api/v1/campaigns/{id}/dose-programmes` (Create initial dose programme; 201 Created + `Location: /api/v1/campaigns/{id}/dose-programmes`)
-     2. `POST /api/v1/campaigns/{id}/dose-programmes/versions` (Create new dose programme version; 201 Created + `Location: /api/v1/campaigns/{id}/dose-programmes`)
-     3. `GET /api/v1/campaigns/{id}/dose-programmes` (Get dose programme version history, ordered by `versionNumber` DESC; 200 OK)
-     4. `POST /api/v1/campaigns/{id}/questionnaire-assignments` (Assign published questionnaire version; 201 Created + `Location: /api/v1/campaigns/{id}/questionnaire-assignments`)
-     5. `GET /api/v1/campaigns/{id}/questionnaire-assignments` (Get questionnaire assignment history, ordered by `activeFrom` DESC, `id` DESC; 200 OK)
-     6. `POST /api/v1/campaigns/{id}/center-assignments` (Create campaign-center assignment; 201 Created + `Location: /api/v1/campaigns/{id}/center-assignments/{id}`)
-     7. `GET /api/v1/campaigns/{id}/center-assignments` (Get campaign-center assignments, ordered by `activeFrom` ASC, `id` ASC; 200 OK)
-     8. `PUT /api/v1/campaigns/{id}/center-assignments/{assignmentId}` (Update mutable future campaign-center assignment; 200 OK)
-     9. `POST /api/v1/campaigns/{id}/center-assignments/{assignmentId}/end-date` (End currently effective campaign-center assignment early; 200 OK)
-     10. `POST /api/v1/campaigns/{id}/center-assignments/{assignmentId}/cancel` (Cancel mutable future campaign-center assignment; 200 OK)
-     11. `POST /api/v1/campaigns/{id}/location-targets` (Add administrative location target; 201 Created + `Location: /api/v1/campaigns/{id}/location-targets`)
-     12. `GET /api/v1/campaigns/{id}/location-targets` (Get location targets with optional `?type=` filter, ordered by `targetType` ASC, `targetCode` ASC, `id` ASC; 200 OK)
-   - audit finding resolution: Resolves confirmed P1 audit finding MF02-003 (Campaign Configuration API Blocker). Exposes existing domain services `CampaignDoseProgrammeService`, `CampaignQuestionnaireAssignmentService`, `CampaignCenterAssignmentService`, and `CampaignLocationTargetService` through clean REST endpoints.
-   - master data boundary: `VaccineType` and `TargetGroup` remain seeded reference data without public administration REST routes (`PUBLIC_WORKFLOW_CLOSED_WITH_SEEDED_MASTER_DATA`).
-   - nested ownership & 404 normalization: `CampaignCenterAssignmentService` enforces nested campaign ownership on mutations (`PUT`, `end-date`, `cancel`), throwing `ResourceNotFoundException` (HTTP 404) on cross-campaign assignment mismatches. Genuine missing resources normalize to 404, while invalid business arguments remain 400 and lifecycle/overlap conflicts remain 409.
-   - deterministic ordering: Enforced at repository query level across all configuration history lists.
-   - cross-module boundary: MF-01 questionnaire publication lifecycle remains strictly behind `QuestionnaireVersionPublicationPort`; 0 direct MF-01 repository access. 0 MF-03 implementation added.
-
-4. **PR #102 — `fix(mf02): guard session scheduling until operational readiness`**
+5. **PR #102 — `fix(mf02): guard session scheduling until operational readiness`**
    - reviewed source: `d7663abeb39dd76861e817cbf750b9de7d5d70d5`
    - merge: `616636762687e5c2497db8e0227ee8692311703c`
    - behavior: The public route `POST /api/v1/sessions/{id}/schedule` remains available. An otherwise-valid DRAFT session schedule attempt fails closed with `IllegalStateException` -> `HTTP 409 Conflict` and message `"Session scheduling is unavailable until operational resource and capacity readiness can be validated"`. The persisted session remains `DRAFT`.
    - audit finding resolution: Addresses confirmed P1 audit finding MF02-001 (Scheduling). Scheduling is intentionally fail-closed rather than inventing unvalidated state transitions or production bypasses.
 
-5. **PR #100 — `feat(mf02): implement recurrence rule and series rest api`**
+6. **PR #100 — `feat(mf02): implement recurrence rule and series rest api`**
    - reviewed source: `f5c385ae7d43a17e60a2ee7647fe96f7cfa0446c`
    - merge: `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`
    - integrated endpoints under `/api/v1/recurrence-rules` (9): `createRule`, `getRuleById`, `getRules`, `replaceRule`, `generateOccurrences`, `previewSeriesChange`, `confirmSeriesChange`, `previewSeriesCancellation`, `confirmSeriesCancellation`. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
 
-6. **PR #97 — `fix(mf02): harden pre-recurrence correctness and safety`**
+7. **PR #97 — `fix(mf02): harden pre-recurrence correctness and safety`**
    - reviewed source: `ff60fb065bba498a8da05f41c1d3e1e56791c3c6`
    - merge: `e83e54bff1f2c682fbdb6d760856bde993faf162`
    - remediation contents: F-01 (Early session start prevention), F-02 (366-day recurrence safety horizon), F-03 (Campaign service-date consistency), F-04 (Recurrence/series missing-resource HTTP 404 normalization), MySQL series concurrency assurance (`SessionSeriesMySqlConcurrencyIntegrationTests`).
 
-7. **PR #92 — `feat(mf02): add session change control REST API`**
+8. **PR #92 — `feat(mf02): add session change control REST API`**
    - reviewed source: `ccf5c3d58035d35e56d316207848d58388446547`
    - merge: `6ff63bdd04f34d3bd334d011fdf55dee8010a140`
    - integrated endpoints under `/api/v1/sessions` (7): `cancellation-preview`, `cancel`, `reschedule-preview`, `reschedule`, `transfer-preview`, `transfer`, `change-events`. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
 
-8. **PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`**
+9. **PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`**
    - reviewed source: `3324ab4b2a84960dea946c531115b5aee829ad61`
    - merge: `9cc7a606260e24e243090f70f5e957b0544bfa3b`
    - integrated endpoints under `/api/v1/sessions` (6): `createSession`, `getSessionById`, `getSessions`, `scheduleSession`, `startSession`, `completeSession`. Qualified as `COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD via PR #102`.
 
-9. **PR #88 — `feat(mf02): add vaccination center management REST API`**
-   - merge: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
-   - integrated endpoints under `/api/v1/centers` (14): Center Master (6), Operating Hours (4), Center Closures (4).
+10. **PR #88 — `feat(mf02): add vaccination center management REST API`**
+    - merge: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
+    - integrated endpoints under `/api/v1/centers` (14): Center Master (6), Operating Hours (4), Center Closures (4).
 
-10. **PR #86 — `feat(mf02): add campaign management REST API`**
-   - merge: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
-   - integrated endpoints under `/api/v1/campaigns` (9): Campaign Master & Lifecycle transitions.
+11. **PR #86 — `feat(mf02): add campaign management REST API`**
+    - merge: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
+    - integrated endpoints under `/api/v1/campaigns` (9): Campaign Master & Lifecycle transitions.
 
 ## 3. Implemented MF-02 Backend Scope
 
