@@ -9,14 +9,14 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /** Test-only construction support for persisted historical campaign states. */
-final class CampaignTestFixtures {
+public final class CampaignTestFixtures {
 
     private static final Field STATUS_FIELD = statusField();
 
     private CampaignTestFixtures() {
     }
 
-    static VaccinationCampaign campaign(
+    public static VaccinationCampaign campaign(
             String code,
             String name,
             String description,
@@ -43,7 +43,7 @@ final class CampaignTestFixtures {
         return campaign;
     }
 
-    static void forceStatus(VaccinationCampaign campaign, CampaignStatus status) {
+    public static void forceStatus(VaccinationCampaign campaign, CampaignStatus status) {
         if (campaign == null) {
             throw new IllegalArgumentException("Campaign is required");
         }

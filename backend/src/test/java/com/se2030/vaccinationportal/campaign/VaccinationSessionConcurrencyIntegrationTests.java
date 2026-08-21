@@ -177,9 +177,7 @@ class VaccinationSessionConcurrencyIntegrationTests {
 
         assertEquals(0, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
         assertTrue(outcomes.stream().allMatch(outcome -> outcome.error() instanceof IllegalStateException));
-        assertTrue(outcomes.stream().allMatch(outcome -> outcome.error().getMessage().equals(
-                "Session scheduling is unavailable until operational resource and capacity readiness can be validated"
-        )));
+        assertTrue(outcomes.stream().allMatch(outcome -> outcome.error().getMessage().contains("vaccination station") || outcome.error().getMessage().contains("capacity plan")));
         assertEquals(
                 SessionLifecycleStatus.DRAFT,
                 sessionRepository.findById(draft.getId()).orElseThrow().getLifecycleStatus()

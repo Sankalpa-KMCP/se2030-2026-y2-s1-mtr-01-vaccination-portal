@@ -50,8 +50,11 @@ public class OperationalStaffRosterService {
         VaccinationCenter center = centerRepository.findById(centerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
 
-        if (rosterRepository.existsByCenterIdAndUserId(centerId, userId)) {
-            throw new IllegalStateException("Staff user " + userId + " is already rostered at center " + centerId);
+        List<OperationalStaffRoster> existingUserRosters = rosterRepository.findByUserIdForUpdateOrderByIdAsc(userId);
+        for (OperationalStaffRoster existing : existingUserRosters) {
+            if (existing.getCenter().getId().equals(centerId)) {
+                throw new IllegalStateException("Staff user " + userId + " is already rostered at center " + centerId);
+            }
         }
 
         OperationalStaffStatus finalStatus = status != null ? status : OperationalStaffStatus.ACTIVE;
@@ -101,6 +104,8 @@ public class OperationalStaffRosterService {
         if (!roster.getCenter().getId().equals(centerId)) {
             throw new ResourceNotFoundException("Operational staff roster entry with ID " + rosterId + " does not belong to center " + centerId);
         }
+
+        rosterRepository.findByUserIdForUpdateOrderByIdAsc(roster.getUserId());
 
         roster.setRole(role);
         roster.setStatus(status);

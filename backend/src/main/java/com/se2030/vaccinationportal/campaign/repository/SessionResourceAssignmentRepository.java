@@ -2,9 +2,11 @@ package com.se2030.vaccinationportal.campaign.repository;
 
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionResourceAssignment;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,6 +20,29 @@ public interface SessionResourceAssignmentRepository extends JpaRepository<Sessi
     List<SessionResourceAssignment> findBySessionIdOrderByStartAtAscIdAsc(Long sessionId);
 
     List<SessionResourceAssignment> findByResourceIdOrderByStartAtAscIdAsc(Long resourceId);
+
+    /**
+     * Finds overlapping assignments for an operational resource across active sessions using a pessimistic write lock (current read).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM SessionResourceAssignment a " +
+            "WHERE a.resource.id = :resourceId " +
+            "AND (:excludeAssignmentId IS NULL OR a.id <> :excludeAssignmentId) " +
+            "AND a.startAt < :endAt " +
+            "AND :startAt < a.endAt " +
+            "AND a.session.lifecycleStatus <> :cancelledStatus " +
+            "ORDER BY a.id ASC")
+    List<SessionResourceAssignment> findOverlappingAssignmentsForUpdate(
+            @Param("resourceId") Long resourceId,
+            @Param("excludeAssignmentId") Long excludeAssignmentId,
+            @Param("startAt") Instant startAt,
+            @Param("endAt") Instant endAt,
+            @Param("cancelledStatus") SessionLifecycleStatus cancelledStatus
+    );
+
+    default List<SessionResourceAssignment> findOverlappingAssignmentsForUpdate(Long resourceId, Long excludeAssignmentId, Instant startAt, Instant endAt) {
+        return findOverlappingAssignmentsForUpdate(resourceId, excludeAssignmentId, startAt, endAt, SessionLifecycleStatus.CANCELLED);
+    }
 
     /**
      * Tests half-open interval overlap [startAt, endAt) for active (non-cancelled) session assignments.
