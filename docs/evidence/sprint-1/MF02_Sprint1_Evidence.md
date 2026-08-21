@@ -7,15 +7,55 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #108
-**Latest verified implementation merge:** `6edcaca67af0dca9d4e0a76bd69b8f180b6e7b85`
+**Evidence synchronized through implementation:** PR #110
+**Latest verified implementation merge:** `1c7a09c772018eaf56481aa77ff38688587879fc`
 **Last updated:** 2026-08-21
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #108 — `feat(mf02): expose center operational resources and staff roster rest api`
+### PR #110 — `feat(mf02): expose session operational assignment rest api`
+
+- reviewed source: `d3a1d787cd0b5b8f29a62709d4fd26e853ba4fbd`
+- candidate development base: `94af45a27636deb4e057c94846086da018da8d9e`
+- MySQL test fixture repair commit: `228dde476b5b86354bdb07f7887c99e76f035348`
+- production concurrency correction commit: `26db0433045478876c3ea1c4cbc1ba1708aad16c`
+- actual merge Parent 1: `94af45a27636deb4e057c94846086da018da8d9e`
+- actual merge Parent 2: `26db0433045478876c3ea1c4cbc1ba1708aad16c`
+- merge: `1c7a09c772018eaf56481aa77ff38688587879fc`
+- merged at: `2026-08-21T08:22:21Z`
+- merge method: normal merge commit (two parents: `94af45a27636deb4e057c94846086da018da8d9e` and `26db0433045478876c3ea1c4cbc1ba1708aad16c`)
+- reviewed candidate preserved: YES
+- integration drift: 0
+- Backend CI: PASS (1080 H2 verify in combined merge context + 6 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m16s; Run 32462530177, Job 96712222310)
+- Frontend CI: PASS (15s; Run 32462530139, Job 96712222180)
+- production code changed: 11 files (9 new, 2 modified)
+- test code changed: 3 files (3 new)
+- total files: 14 (+1995 / -1 lines)
+- functional H2 test executions: **1080 candidate-local / 1080 combined merge-context** (0 failures, 0 errors, 0 skipped)
+- MySQL Testcontainers assurance test executions: **6** (across 4 classes on `mysql:8.4.3`; 0 failures, 0 errors, 0 skipped; 4 historical + 2 M2B operational assignment tests: 1 resource assignment + 1 staff assignment).
+- logical combined executions: **1086 candidate / 1086 combined merge-context** (across separate validation paths)
+- immediate parent baseline: **1041 functional H2** (from PR #108 / PR #109)
+- net-new candidate executions: **+39 H2 tests** across 3 test files (+20 `SessionOperationalAssignmentControllerTests`, +9 `SessionResourceAssignmentServiceIntegrationTests`, +10 `StaffAssignmentServiceIntegrationTests`) + **2 MySQL concurrency assurance tests** (`SessionOperationalAssignmentMySqlConcurrencyIntegrationTests`)
+- focused operational assignment regression executions: **39 / 39 PASS** candidate + full regression suite 1080 / 1080 PASS
+- endpoints integrated under `/api/v1/sessions/{sessionId}` (8):
+  1. `POST /api/v1/sessions/{sessionId}/resource-assignments` (Assign center resource to DRAFT session; 201 Created + Location header `/api/v1/sessions/{sessionId}/resource-assignments/{id}`)
+  2. `GET /api/v1/sessions/{sessionId}/resource-assignments` (List session resource assignments, ordered by `startAt` ASC, `id` ASC; 200 OK)
+  3. `GET /api/v1/sessions/{sessionId}/resource-assignments/{assignmentId}` (Get single resource assignment; 200 OK)
+  4. `DELETE /api/v1/sessions/{sessionId}/resource-assignments/{assignmentId}` (Delete resource assignment from DRAFT session; 204 No Content)
+  5. `POST /api/v1/sessions/{sessionId}/staff-assignments` (Assign staff member to DRAFT session; 201 Created + Location header `/api/v1/sessions/{sessionId}/staff-assignments/{id}`)
+  6. `GET /api/v1/sessions/{sessionId}/staff-assignments` (List session staff assignments, ordered by `startAt` ASC, `id` ASC; 200 OK)
+  7. `GET /api/v1/sessions/{sessionId}/staff-assignments/{assignmentId}` (Get single staff assignment; 200 OK)
+  8. `DELETE /api/v1/sessions/{sessionId}/staff-assignments/{assignmentId}` (Delete staff assignment from DRAFT session; 204 No Content)
+- total MF-02 routes growth: 65 -> **73** ($21 \text{ Campaign} + 22 \text{ Center} + 21 \text{ Session [6 Core + 7 Change + 8 Operational Assignments]} + 9 \text{ Recurrence} = 73$)
+- behavior: Public REST exposure of session resource and staff assignments with DRAFT-only mutation semantics, active entity and same-center validation, role qualification matching, and deterministic concurrency locking.
+- Concurrency & Visibility Finding:
+  - Real MySQL 8.4.3 Testcontainers execution exposed that under `REPEATABLE READ`, initial non-locking entity lookups establish MVCC consistent-read snapshots that prevent unblocked transactions from seeing newly committed overlapping assignments.
+  - Resolved by introducing `findOverlappingAssignmentsForUpdate` with `@Lock(LockModeType.PESSIMISTIC_WRITE)` in `StaffAssignmentRepository`, ensuring a current-read check occurs immediately after acquiring global user roster locks without introducing target-first deadlock risk.
+- Scheduling Guard State: PR #102 fail-closed guard remains `COMPLETE`. `DRAFT -> SCHEDULED` still fails closed with 409 Conflict.
+
+### Preceding Milestone: PR #108 — `feat(mf02): expose center operational resources and staff roster rest api`
 
 - reviewed source: `5dc5e2be5f30d211bf075afd9323141822c63290`
 - candidate development base: `e63bb76ac3dbb08b5009976233bf4255a059a712`
@@ -661,6 +701,8 @@ Representative established lock orders:
 | #106 | Session Operational Core Model and Calculation Engine (Milestone 1; COMPLETE) |
 | #107 | Documentation synchronization after PR #106 |
 | #108 | Center Operational Resource and Staff Roster REST API (Milestone 2A; 8 endpoints; COMPLETE) |
+| #109 | Documentation synchronization after PR #108 |
+| #110 | Session Operational Assignments REST API (Milestone 2B; 8 endpoints; COMPLETE) |
 
 ### Key merge checkpoints
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -706,6 +748,8 @@ Representative established lock orders:
 - PR #106: `888f9d4b53d5206ff9fdfaadcedaf86092ab62f1`
 - PR #107: `e63bb76ac3dbb08b5009976233bf4255a059a712`
 - PR #108: `6edcaca67af0dca9d4e0a76bd69b8f180b6e7b85`
+- PR #109: `94af45a27636deb4e057c94846086da018da8d9e`
+- PR #110: `1c7a09c772018eaf56481aa77ff38688587879fc`
 
 ## 20. Carried-Forward Findings / Risks
 
@@ -739,6 +783,13 @@ Resolved confirmed P1 audit finding MF02-003 (Campaign Configuration API Blocker
 - **Preserved History:** Existing assignment rows (`SessionResourceAssignment`) and staff snapshot records (`StaffAssignment`) are preserved during registry updates.
 - **Nested Ownership:** Mismatches between path `centerId` and resource/roster parent center normalize to HTTP 404 Not Found.
 
+### Session Operational Assignments REST API & MySQL Concurrency Assurance — RESOLVED (PR #110)
+- **Exposed 8 REST routes under `/api/v1/sessions/{sessionId}`:** 4 session resource assignment endpoints (`POST`, `GET` list, `GET` by ID, `DELETE`) and 4 session staff assignment endpoints (`POST`, `GET` list, `GET` by ID, `DELETE`).
+- **DRAFT-Only Mutation Invariant:** Assignment creation and deletion are strictly constrained to `DRAFT` sessions; non-DRAFT mutation attempts reject with `IllegalStateException` (HTTP 409 Conflict). Read operations remain lifecycle-independent.
+- **Interval and Qualification Bounds:** Assignment time intervals `[startAt, endAt)` are strictly bounded within session operating windows, validated with half-open collision checks, and require `ACTIVE` resources/staff roster entries belonging to the same center with matching `StaffRole` qualifications.
+- **MySQL REPEATABLE READ Snapshot Resolution:** Concurrency testing on real MySQL 8.4.3 exposed that initial non-locking entity reads establish MVCC consistent-read snapshots that prevent unblocked transactions from seeing newly committed overlapping assignments. Resolved by introducing `findOverlappingAssignmentsForUpdate` with `@Lock(LockModeType.PESSIMISTIC_WRITE)` in `StaffAssignmentRepository`, ensuring a current-read check occurs immediately after acquiring global user roster locks without introducing target-first deadlock risk.
+- **MySQL Assurance Suite Growth:** Added `SessionOperationalAssignmentMySqlConcurrencyIntegrationTests` with 2 tests verifying serialization of concurrent overlapping assignments on real MySQL 8.4.3 InnoDB (suite total: 6 / 6 PASS).
+
 ### MF-02 / MF-03 Capacity & Impact Integration — PARTIAL_P1 (Shared Dependency)
 `SessionImpactReader` production adapter is MF-03-owned (currently missing; SCHEDULED changes fail closed with 409). `SlotCapacityPort` production adapter is expected to be MF-02-owned after an authoritative slot/capacity model is built.
 
@@ -755,13 +806,14 @@ Production-facing adapters for questionnaire publication (provided by MF-01 `Que
 ### Concurrency test quality — RESOLVED (PR #78)
 PR #78 eliminated the remaining `Thread.sleep(300)` timing delay from `CampaignAssignmentReverseImpactConcurrencyIntegrationTests.java` and established deterministic latch coordination with explicit winner/state assertions. Zero `Thread.sleep` calls remain across the backend test suite.
 
-### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84 & PR #97)
-PR #84 and PR #97 established real MySQL 8.4.3 InnoDB integration tests via Testcontainers:
+### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84, PR #97, & PR #110)
+PR #84, PR #97, and PR #110 established real MySQL 8.4.3 InnoDB integration tests via Testcontainers:
 - Validated single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`).
 - Validated parent/child reverse-impact pessimistic-locking serialization (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
 - Validated concurrent series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`).
+- Validated concurrent session resource assignment and cross-center staff assignment serialization (`SessionOperationalAssignmentMySqlConcurrencyIntegrationTests`).
 - Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step.
-- *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, and series concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite. The existing MySQL/InnoDB concurrency assurance suite remains green with the M2A persistence and REST additions. Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3.
+- *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, series concurrency, and operational assignment concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite. Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3.
 
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
@@ -770,7 +822,7 @@ Lifecycle/change event repositories inherit normal delete APIs, so “append-onl
 
 Still not complete:
 - Center Operational Resources & Staff Roster REST API (Milestone 2A: COMPLETE)
-- Session Resource & Staff Assignment REST API (Milestone 2B: PENDING_M2B)
+- Session Resource & Staff Assignment REST API (Milestone 2B: COMPLETE)
 - Session Capacity Plan REST API (Milestone 2C: PENDING_M2C)
 - Session Operational Configuration REST API (Milestone 2 Overall: IN_PROGRESS)
 - Session Operational Readiness & Guard Replacement (Milestone 3: PENDING_M3)
@@ -786,7 +838,7 @@ Still not complete:
 - Spring Security/RBAC
 - OpenAPI
 - Flyway migrations
-- representative production MySQL concurrency assurance (RESOLVED in PR #84 & PR #97; broad production database certification deferred)
+- representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, & PR #110; broad production database certification deferred)
 - MF-02 frontend
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
@@ -808,7 +860,7 @@ Current status remains:
 - Session Operational Core Model (Milestone 1): **COMPLETE**
 - Session Operational Calculation Engine (Milestone 1): **COMPLETE**
 - Center Operational Resources & Staff Roster REST API (Milestone 2A): **COMPLETE**
-- Session Resource & Staff Assignment REST API (Milestone 2B): **PENDING**
+- Session Resource & Staff Assignment REST API (Milestone 2B): **COMPLETE**
 - Session Capacity Plan REST API (Milestone 2C): **PENDING**
 - Session Operational Configuration REST (Milestone 2 Overall): **IN PROGRESS**
 - Global staff roster lock foundation: **COMPLETE**
@@ -817,8 +869,8 @@ Current status remains:
 - Session Operational Readiness (Milestone 3): **PENDING_M3**
 - Session Scheduling Guard Replacement (Milestone 3): **PENDING_M3**
 - MF02/MF03 Slot Capacity Integration (Milestone 4): **PENDING_M4**
-- current verified backend baseline: **1041 functional H2 tests plus 4 MySQL Testcontainers assurance tests** across separate validation paths.
-- MF02_DOCUMENTATION_M2A_SYNC: **LOCAL_CANDIDATE_READY**
+- current verified backend baseline: **1080 functional H2 tests plus 6 MySQL Testcontainers assurance tests** across separate validation paths.
+- MF02_DOCUMENTATION_M2B_SYNC: **LOCAL_CANDIDATE_READY**
 
 Do not infer completion from the size of the backend test suite.
 
