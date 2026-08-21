@@ -2,9 +2,9 @@ package com.se2030.vaccinationportal.campaign;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.se2030.vaccinationportal.campaign.dto.request.CreateSessionCapacityPlanRequest;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
@@ -31,6 +31,7 @@ import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRep
 import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffIdentityRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
@@ -53,6 +54,7 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -70,7 +72,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Production-equivalent MySQL Testcontainers concurrency tests verifying deterministic serialization
+ * Production-equivalent MySQL Testcontainers concurrency tests verifying deterministic serialization,
+ * atomic first-user bootstrap, zero-row registration concurrency, multi-user lock ordering,
  * and operational readiness enforcement against real MySQL/InnoDB.
  */
 class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
@@ -88,6 +91,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
     @Autowired private OperationalResourceRepository resourceRepository;
     @Autowired private OperationalStaffRosterRepository staffRosterRepository;
+    @Autowired private OperationalStaffIdentityRepository identityRepository;
     @Autowired private VaccinationSessionRepository sessionRepository;
     @Autowired private SessionRecurrenceRuleRepository ruleRepository;
     @Autowired private CampaignCenterAssignmentRepository campaignCenterAssignmentRepository;
@@ -208,6 +212,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
             ruleRepository.deleteAllInBatch();
             resourceRepository.deleteAllInBatch();
             staffRosterRepository.deleteAllInBatch();
+            identityRepository.deleteAllInBatch();
             campaignCenterAssignmentRepository.deleteAllInBatch();
             closureRepository.deleteAllInBatch();
             operatingHoursRepository.deleteAllInBatch();
@@ -221,7 +226,273 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
 
     @Test
     @Timeout(30)
-    @DisplayName("Scenario A: Concurrent scheduleSession vs resource status change serializes deterministically")
+    @DisplayName("MySQL Test A: Zero-row double registration for brand-new user converges on single identity anchor without race")
+    void zeroRowDoubleRegistration_convergesOnSingleIdentityAnchor() throws Exception {
+        Long centerAId = centerA.getId();
+        Long centerBId = centerB.getId();
+        Long newUserId = 9001L;
+
+        // Verify initial state: zero identity rows, zero roster rows for new user
+        assertTrue(identityRepository.findByUserId(newUserId).isEmpty(), "Must have zero identity rows initially");
+        assertTrue(staffRosterRepository.findByUserIdOrderByCenterIdAsc(newUserId).isEmpty(), "Must have zero roster rows initially");
+
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        AtomicBoolean regASucceeded = new AtomicBoolean(false);
+        AtomicBoolean regBSucceeded = new AtomicBoolean(false);
+
+        Future<?> fA = executor.submit(() -> {
+            readyLatch.countDown();
+            try {
+                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
+                rosterService.registerStaffMember(centerAId, newUserId, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE);
+                regASucceeded.set(true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        Future<?> fB = executor.submit(() -> {
+            readyLatch.countDown();
+            try {
+                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
+                rosterService.registerStaffMember(centerBId, newUserId, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE);
+                regBSucceeded.set(true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        fA.get(15, TimeUnit.SECONDS);
+        fB.get(15, TimeUnit.SECONDS);
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+
+        assertTrue(regASucceeded.get(), "Registration at center A must succeed");
+        assertTrue(regBSucceeded.get(), "Registration at center B must succeed");
+
+        // Exactly one identity anchor must exist for the user
+        assertEquals(1, identityRepository.findAll().stream().filter(i -> i.getUserId().equals(newUserId)).count(),
+                "Must create exactly one identity anchor row for the user");
+
+        // Exactly two roster entries must exist across the two distinct centers
+        List<OperationalStaffRoster> rosters = staffRosterRepository.findByUserIdOrderByCenterIdAsc(newUserId);
+        assertEquals(2, rosters.size(), "User should have exactly 2 roster entries across center A and center B");
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("MySQL Test B: Concurrent staff assignment mutation vs new cross-center roster registration serializes under identity anchor")
+    void concurrentAssignmentMutationVsCrossCenterRosterRegistration() throws Exception {
+        Long sessionId = session.getId();
+        Long centerBId = centerB.getId();
+        Long userId = 8888L;
+
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        AtomicBoolean assignmentDeleteSucceeded = new AtomicBoolean(false);
+        AtomicBoolean registerBSucceeded = new AtomicBoolean(false);
+
+        Long assignmentId = staffAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(sessionId).get(0).getId();
+
+        Future<?> fDelete = executor.submit(() -> {
+            readyLatch.countDown();
+            try {
+                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
+                staffAssignmentService.deleteAssignment(sessionId, assignmentId);
+                assignmentDeleteSucceeded.set(true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        Future<?> fRegister = executor.submit(() -> {
+            readyLatch.countDown();
+            try {
+                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
+                rosterService.registerStaffMember(centerBId, userId, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE);
+                registerBSucceeded.set(true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        fDelete.get(15, TimeUnit.SECONDS);
+        fRegister.get(15, TimeUnit.SECONDS);
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+
+        assertTrue(assignmentDeleteSucceeded.get(), "Assignment deletion must succeed under identity lock");
+        assertTrue(registerBSucceeded.get(), "Cross-center registration must succeed under identity lock");
+
+        assertEquals(2, staffRosterRepository.findByUserIdOrderByCenterIdAsc(userId).size());
+        assertTrue(staffAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(sessionId).isEmpty());
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("MySQL Test C: Concurrent scheduleSession vs cross-center roster registration serializes deterministically")
+    void concurrentScheduleSessionVsCrossCenterRosterRegistration() throws Exception {
+        Long sessionId = session.getId();
+        Long centerBId = centerB.getId();
+        Long userId = 8888L;
+
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        AtomicBoolean scheduleSucceeded = new AtomicBoolean(false);
+        AtomicBoolean registerSucceeded = new AtomicBoolean(false);
+
+        Future<?> fSchedule = executor.submit(() -> {
+            readyLatch.countDown();
+            try {
+                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
+                sessionService.scheduleSession(sessionId);
+                scheduleSucceeded.set(true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        Future<?> fRegister = executor.submit(() -> {
+            readyLatch.countDown();
+            try {
+                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
+                rosterService.registerStaffMember(centerBId, userId, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE);
+                registerSucceeded.set(true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        fSchedule.get(15, TimeUnit.SECONDS);
+        fRegister.get(15, TimeUnit.SECONDS);
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+
+        assertTrue(scheduleSucceeded.get(), "Session schedule must succeed");
+        assertTrue(registerSucceeded.get(), "Roster registration must succeed");
+
+        VaccinationSession reloadedSession = sessionRepository.findById(sessionId).orElseThrow();
+        assertEquals(SessionLifecycleStatus.SCHEDULED, reloadedSession.getLifecycleStatus());
+        assertEquals(2, staffRosterRepository.findByUserIdOrderByCenterIdAsc(userId).size());
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("MySQL Test D: Reverse multi-user staff ordering acquires identity locks in deterministic ascending order without deadlock")
+    void reverseMultiUserStaffOrdering_preventsDeadlock() throws Exception {
+        Long u1 = 9101L;
+        Long u2 = 9102L;
+
+        // Setup 2 staff members at Center A
+        OperationalStaffRoster r1 = transactionTemplate.execute(status ->
+                rosterService.registerStaffMember(centerA.getId(), u1, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE)
+        );
+        OperationalStaffRoster r2 = transactionTemplate.execute(status ->
+                rosterService.registerStaffMember(centerA.getId(), u2, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE)
+        );
+
+        // Session 1 operating window: 08:00 - 12:00
+        Long session1Id = session.getId();
+        // Session 2 operating window on day 2: 08:00 - 12:00
+        Instant s2Start = sessionStart.plus(java.time.Duration.ofDays(1));
+        Instant s2End = sessionEnd.plus(java.time.Duration.ofDays(1));
+
+        Long session2Id = transactionTemplate.execute(status -> {
+            VaccinationSession s2 = sessionRepository.saveAndFlush(
+                    new VaccinationSession(campaign, centerA, s2Start, s2End, s2Start.minusSeconds(3600), "UTC")
+            );
+            resourceAssignmentRepository.saveAndFlush(
+                    new SessionResourceAssignment(s2, stationResource, s2Start, s2End)
+            );
+            capacityPlanRepository.saveAndFlush(
+                    new SessionCapacityPlan(
+                            s2, 1, 240, 10, 2, 1, 1, 1, 24, 24, 50, 15, 0.0, 100, null, "Planner"
+                    )
+            );
+            return s2.getId();
+        });
+
+        // Add both staff to Session 1 in natural order [U1, U2]
+        transactionTemplate.executeWithoutResult(status -> {
+            staffAssignmentRepository.saveAndFlush(
+                    new StaffAssignment(session, r2, StaffRole.VACCINATOR, sessionStart, sessionEnd)
+            );
+        });
+
+        // Add both staff to Session 2 in reverse natural order [U2, U1]
+        transactionTemplate.executeWithoutResult(status -> {
+            VaccinationSession s2 = sessionRepository.findById(session2Id).orElseThrow();
+            staffAssignmentRepository.saveAndFlush(
+                    new StaffAssignment(s2, r2, StaffRole.VACCINATOR, s2Start, s2End)
+            );
+            staffAssignmentRepository.saveAndFlush(
+                    new StaffAssignment(s2, r1, StaffRole.VACCINATOR, s2Start, s2End)
+            );
+        });
+
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        AtomicBoolean s1Scheduled = new AtomicBoolean(false);
+        AtomicBoolean s2Scheduled = new AtomicBoolean(false);
+
+        Future<?> f1 = executor.submit(() -> {
+            readyLatch.countDown();
+            try {
+                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
+                sessionService.scheduleSession(session1Id);
+                s1Scheduled.set(true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        Future<?> f2 = executor.submit(() -> {
+            readyLatch.countDown();
+            try {
+                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
+                sessionService.scheduleSession(session2Id);
+                s2Scheduled.set(true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        f1.get(15, TimeUnit.SECONDS);
+        f2.get(15, TimeUnit.SECONDS);
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+
+        assertTrue(s1Scheduled.get(), "Session 1 must schedule successfully");
+        assertTrue(s2Scheduled.get(), "Session 2 must schedule successfully");
+
+        assertEquals(SessionLifecycleStatus.SCHEDULED, sessionRepository.findById(session1Id).orElseThrow().getLifecycleStatus());
+        assertEquals(SessionLifecycleStatus.SCHEDULED, sessionRepository.findById(session2Id).orElseThrow().getLifecycleStatus());
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("Scenario E: Concurrent scheduleSession vs resource status change serializes deterministically")
     void concurrentScheduleVsResourceStatusChange() throws Exception {
         Long sessionId = session.getId();
         Long centerId = centerA.getId();
@@ -281,7 +552,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
 
     @Test
     @Timeout(30)
-    @DisplayName("Scenario B: Concurrent scheduleSession vs staff roster status change serializes deterministically")
+    @DisplayName("Scenario F: Concurrent scheduleSession vs staff roster status change serializes deterministically")
     void concurrentScheduleVsStaffRosterStatusChange() throws Exception {
         Long sessionId = session.getId();
         Long centerId = centerA.getId();
@@ -341,62 +612,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
 
     @Test
     @Timeout(30)
-    @DisplayName("Scenario C: Concurrent cross-center roster registration vs staff assignment/scheduling serializes under global user lock")
-    void concurrentRosterRegistrationVsAssignmentAndScheduling() throws Exception {
-        Long sessionId = session.getId();
-        Long centerBId = centerB.getId();
-        Long userId = 8888L;
-
-        CountDownLatch readyLatch = new CountDownLatch(2);
-        CountDownLatch startLatch = new CountDownLatch(1);
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-
-        AtomicBoolean registrationSucceeded = new AtomicBoolean(false);
-        AtomicBoolean scheduleSucceeded = new AtomicBoolean(false);
-
-        Future<?> fRegister = executor.submit(() -> {
-            readyLatch.countDown();
-            try {
-                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
-                rosterService.registerStaffMember(centerBId, userId, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE);
-                registrationSucceeded.set(true);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        Future<?> fSchedule = executor.submit(() -> {
-            readyLatch.countDown();
-            try {
-                assertTrue(startLatch.await(10, TimeUnit.SECONDS));
-                sessionService.scheduleSession(sessionId);
-                scheduleSucceeded.set(true);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
-        startLatch.countDown();
-
-        fRegister.get(15, TimeUnit.SECONDS);
-        fSchedule.get(15, TimeUnit.SECONDS);
-        executor.shutdown();
-        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
-
-        assertTrue(registrationSucceeded.get(), "Cross-center registration should succeed under deterministic user lock");
-        assertTrue(scheduleSucceeded.get(), "Session schedule should succeed");
-
-        assertEquals(2, staffRosterRepository.findByUserIdOrderByCenterIdAsc(userId).size(),
-                "User should now have 2 roster entries across center A and center B");
-
-        VaccinationSession reloadedSession = sessionRepository.findById(sessionId).orElseThrow();
-        assertEquals(SessionLifecycleStatus.SCHEDULED, reloadedSession.getLifecycleStatus());
-    }
-
-    @Test
-    @Timeout(30)
-    @DisplayName("Scenario D: Concurrent duplicate schedule commands for same DRAFT session execute exactly one state transition")
+    @DisplayName("Scenario G: Concurrent duplicate schedule commands for same DRAFT session execute exactly one state transition")
     void concurrentDuplicateScheduleCommands() throws Exception {
         Long sessionId = session.getId();
 

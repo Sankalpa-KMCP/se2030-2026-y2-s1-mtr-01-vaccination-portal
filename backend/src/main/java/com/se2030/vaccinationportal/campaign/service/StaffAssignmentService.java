@@ -28,13 +28,16 @@ public class StaffAssignmentService {
     private final StaffAssignmentRepository assignmentRepository;
     private final VaccinationSessionRepository sessionRepository;
     private final OperationalStaffRosterRepository staffRosterRepository;
+    private final OperationalStaffIdentityLockService identityLockService;
 
     public StaffAssignmentService(StaffAssignmentRepository assignmentRepository,
                                   VaccinationSessionRepository sessionRepository,
-                                  OperationalStaffRosterRepository staffRosterRepository) {
+                                  OperationalStaffRosterRepository staffRosterRepository,
+                                  OperationalStaffIdentityLockService identityLockService) {
         this.assignmentRepository = Objects.requireNonNull(assignmentRepository, "assignmentRepository must not be null");
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "sessionRepository must not be null");
         this.staffRosterRepository = Objects.requireNonNull(staffRosterRepository, "staffRosterRepository must not be null");
+        this.identityLockService = Objects.requireNonNull(identityLockService, "identityLockService must not be null");
     }
 
     /**
@@ -77,6 +80,8 @@ public class StaffAssignmentService {
 
         OperationalStaffRoster targetRoster = staffRosterRepository.findById(staffRosterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff roster entry not found with ID: " + staffRosterId));
+
+        identityLockService.lockUser(targetRoster.getUserId());
 
         List<OperationalStaffRoster> userRosters = staffRosterRepository.findByUserIdForUpdateOrderByIdAsc(targetRoster.getUserId());
 
@@ -150,7 +155,7 @@ public class StaffAssignmentService {
 
     /**
      * Deletes a staff assignment from a DRAFT vaccination session.
-     * Uses deterministic lock order: VaccinationSession -> global user OperationalStaffRoster set (ordered by ID ASC).
+     * Uses deterministic lock order: VaccinationSession -> OperationalStaffIdentity -> user OperationalStaffRoster set (ordered by ID ASC).
      */
     public void deleteAssignment(Long sessionId, Long assignmentId) {
         if (sessionId == null) {
@@ -175,6 +180,7 @@ public class StaffAssignmentService {
             throw new ResourceNotFoundException("Staff assignment with ID " + assignmentId + " does not belong to session " + sessionId);
         }
 
+        identityLockService.lockUser(assignment.getUserId());
         staffRosterRepository.findByUserIdForUpdateOrderByIdAsc(assignment.getUserId());
         assignmentRepository.delete(assignment);
     }

@@ -23,11 +23,14 @@ public class OperationalStaffRosterService {
 
     private final OperationalStaffRosterRepository rosterRepository;
     private final VaccinationCenterRepository centerRepository;
+    private final OperationalStaffIdentityLockService identityLockService;
 
     public OperationalStaffRosterService(OperationalStaffRosterRepository rosterRepository,
-                                          VaccinationCenterRepository centerRepository) {
+                                          VaccinationCenterRepository centerRepository,
+                                          OperationalStaffIdentityLockService identityLockService) {
         this.rosterRepository = Objects.requireNonNull(rosterRepository, "rosterRepository must not be null");
         this.centerRepository = Objects.requireNonNull(centerRepository, "centerRepository must not be null");
+        this.identityLockService = Objects.requireNonNull(identityLockService, "identityLockService must not be null");
     }
 
     /**
@@ -49,6 +52,8 @@ public class OperationalStaffRosterService {
 
         VaccinationCenter center = centerRepository.findById(centerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
+
+        identityLockService.lockUser(userId);
 
         List<OperationalStaffRoster> existingUserRosters = rosterRepository.findByUserIdForUpdateOrderByIdAsc(userId);
         for (OperationalStaffRoster existing : existingUserRosters) {
@@ -98,6 +103,11 @@ public class OperationalStaffRosterService {
             throw new ResourceNotFoundException("Vaccination center not found with ID: " + centerId);
         }
 
+        OperationalStaffRoster initialRoster = rosterRepository.findById(rosterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Operational staff roster entry not found with ID: " + rosterId));
+
+        identityLockService.lockUser(initialRoster.getUserId());
+
         OperationalStaffRoster roster = rosterRepository.findByIdForUpdate(rosterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Operational staff roster entry not found with ID: " + rosterId));
 
@@ -122,10 +132,16 @@ public class OperationalStaffRosterService {
         if (newStatus == null) {
             throw new IllegalArgumentException("Staff status is required");
         }
-        OperationalStaffRoster roster = rosterRepository.findById(rosterId)
+        OperationalStaffRoster initialRoster = rosterRepository.findById(rosterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Operational staff roster entry not found with ID: " + rosterId));
+
+        identityLockService.lockUser(initialRoster.getUserId());
+
+        OperationalStaffRoster roster = rosterRepository.findByIdForUpdate(rosterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Operational staff roster entry not found with ID: " + rosterId));
+
         roster.setStatus(newStatus);
-        return rosterRepository.save(roster);
+        return rosterRepository.saveAndFlush(roster);
     }
 
     /**

@@ -49,6 +49,7 @@ public class SessionOperationalReadinessService {
     private final SessionCapacityPlanRepository planRepository;
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final SessionCapacityCalculationService calculationService;
+    private final OperationalStaffIdentityLockService identityLockService;
 
     public SessionOperationalReadinessService(
             VaccinationSessionValidator sessionValidator,
@@ -59,7 +60,8 @@ public class SessionOperationalReadinessService {
             StaffAssignmentRepository staffAssignmentRepository,
             SessionCapacityPlanRepository planRepository,
             CampaignDoseProgrammeRepository doseProgrammeRepository,
-            SessionCapacityCalculationService calculationService
+            SessionCapacityCalculationService calculationService,
+            OperationalStaffIdentityLockService identityLockService
     ) {
         this.sessionValidator = Objects.requireNonNull(sessionValidator, "sessionValidator must not be null");
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "sessionRepository must not be null");
@@ -70,6 +72,7 @@ public class SessionOperationalReadinessService {
         this.planRepository = Objects.requireNonNull(planRepository, "planRepository must not be null");
         this.doseProgrammeRepository = Objects.requireNonNull(doseProgrammeRepository, "doseProgrammeRepository must not be null");
         this.calculationService = Objects.requireNonNull(calculationService, "calculationService must not be null");
+        this.identityLockService = Objects.requireNonNull(identityLockService, "identityLockService must not be null");
     }
 
     /**
@@ -151,9 +154,12 @@ public class SessionOperationalReadinessService {
 
         List<Long> userIds = staffAssignments.stream()
                 .map(StaffAssignment::getUserId)
+                .filter(Objects::nonNull)
                 .distinct()
                 .sorted()
                 .toList();
+
+        identityLockService.lockUsersOrdered(userIds);
 
         for (Long userId : userIds) {
             List<OperationalStaffRoster> userRosters = staffRosterRepository.findByUserIdForUpdateOrderByIdAsc(userId);

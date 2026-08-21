@@ -32,6 +32,7 @@ class OperationalConcurrencyTranslationUnitTests {
     @Mock private OperationalResourceRepository resourceRepository;
     @Mock private OperationalStaffRosterRepository rosterRepository;
     @Mock private VaccinationCenterRepository centerRepository;
+    @Mock private OperationalStaffIdentityLockService identityLockService;
 
     private OperationalResourceService resourceService;
     private OperationalStaffRosterService rosterService;
@@ -40,7 +41,7 @@ class OperationalConcurrencyTranslationUnitTests {
     @BeforeEach
     void setUp() {
         resourceService = new OperationalResourceService(resourceRepository, centerRepository);
-        rosterService = new OperationalStaffRosterService(rosterRepository, centerRepository);
+        rosterService = new OperationalStaffRosterService(rosterRepository, centerRepository, identityLockService);
 
         sampleCenter = new VaccinationCenter(
                 "CTR-01",
