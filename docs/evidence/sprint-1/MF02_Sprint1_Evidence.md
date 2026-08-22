@@ -5,39 +5,17 @@
 **Canonical authority:** `3.3-AI / 2026-08-14-R9`
 **Source authority:** canonical Markdown only
 **Sprint:** Sprint 1 — **IN PROGRESS**
-**MF-02:** **COMPLETE**
+**MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #120 (MF-03 SessionImpactReader Provider Integration) / PR #117 (MF-02 M4 Slot Capacity Integration)
-**Latest verified implementation merge:** `359d3328dd95a65b834465e21167a229934df93c`
+**Evidence synchronized through implementation:** PR #117
+**Latest verified implementation merge:** `c89cdcb610fd4690ee98e11f13955c8b9ef68966`
 **Last updated:** 2026-08-22
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #120 — `feat(mf03): provide session impact reader` (Cross-Module Dependency Resolution)
-
-- reviewed commits:
-  - production: `5592d1dd0e734fd916655808782d8853aa169d2b` (`feat(mf03): provide session impact reader`)
-  - test proof: `7cd0c7a669de40d7210487461828391ddf0bfe58` (`test(mf03): prove session impact query on mysql`)
-  - test recovery: `b459c7b9c27c43f1bc78cae6b17fa39f23aa2e7e` (`test(mf03): repair session impact mysql fixture`)
-- candidate development base: `fec1af2d55c6c89d495ccb46b49cb39138e49c5c`
-- merge: `359d3328dd95a65b834465e21167a229934df93c`
-- merged at: `2026-08-22T14:48:07Z`
-- merge method: normal merge commit (two parents: `fec1af2d55c6c89d495ccb46b49cb39138e49c5c` and `b459c7b9c27c43f1bc78cae6b17fa39f23aa2e7e`)
-- Backend CI: PASS (1172 H2 verify + 25 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m50s; Run 32581339822, Job 97051061465)
-- Frontend CI: PASS (13s; Run 32581339843, Job 97051061428)
-- production code changed: 2 files (1 new `SessionImpactService`, 1 modified `AppointmentRepository`)
-- test code changed: 3 files (3 new: `SessionImpactServiceIntegrationTests`, `SessionImpactCrossModuleIntegrationTests`, `SessionImpactMySqlIntegrationTests`)
-- functional H2 test executions: **1172** (0 failures, 0 errors, 0 skipped; +12 delta over pre-P0A baseline 1160)
-- MySQL Testcontainers assurance test executions: **25** (across 10 classes on `mysql:8.4.3`; 0 failures, 0 errors, 0 skipped; 23 historical across 9 classes + 2 P0A SessionImpact tests across 1 class `SessionImpactMySqlIntegrationTests`)
-- logical combined executions: **1197** (1172 H2 + 25 MySQL) across separate validation paths
-- immediate parent baseline: **1160 functional H2 + 23 MySQL** (from PR #117 / PR #118 / PR #119 develop state)
-- net-new candidate executions: **+12 H2 tests** (+7 `SessionImpactServiceIntegrationTests`, +5 `SessionImpactCrossModuleIntegrationTests`) + **2 MySQL assurance tests** (`SessionImpactMySqlIntegrationTests`: `testCountActiveAppointmentsOnRealMySql`, `testUnknownSessionIdOnRealMySql`)
-- behavior: Implements the MF-03-owned production provider `SessionImpactService` for MF-02 consumer interface `SessionImpactReader`. Executes native appointment count query on MySQL 8.4.3 using current JPA schema mapping. Active appointments (`CONFIRMED`, `CHECKED_IN`) are counted; `CANCELLED`, `COMPLETED`, and `NO_SHOW` are excluded; waitlist count is 0. MF-02 scheduled session change/cancellation flows no longer fail-closed when evaluating impact against live appointments. Fail-closed fallback is defensively retained for unconfigured contexts.
-- Cross-Module Resolution Conclusion: Resolves the external MF-03 `SessionImpactReader` dependency for MF-02 without altering MF-02 production code.
-
-### Preceding Milestone: PR #117 — `feat(mf02): integrate slot capacity with booking port`
+### PR #117 — `feat(mf02): integrate slot capacity with booking port`
 
 - reviewed commits:
   - production: `b248541bd5efeedbfbb6a3708a4b4ef60b509156` (`feat(mf02): integrate slot capacity with booking port`), `396a1787a2a2267a9bbc5a3e8b9fd779b4b30147` (`fix(mf02): serialize session slot capacity configuration`), `a180f76d434ac2645e8f621527e6a61695896416` (`fix(mf02): use current reads for slot capacity aggregates`)
@@ -979,8 +957,8 @@ Resolved confirmed P1 audit finding MF02-003 (Campaign Configuration API Blocker
 - **MySQL Concurrency Assurance Suite Growth:** Added `SessionOperationalReadinessMySqlConcurrencyIntegrationTests` with 7 comprehensive concurrency tests on `mysql:8.4.3` (Test A: Zero-row double registration; Test B: Concurrent staff assignment mutation vs cross-center roster registration; Test C: Concurrent scheduleSession vs cross-center registration; Test D: Reverse multi-user staff ordering deadlock freedom; Scenario E: Concurrent scheduleSession vs resource status change; Scenario F: Concurrent scheduleSession vs staff roster status change; and Scenario G: Concurrent duplicate scheduleSession idempotency/conflict handling). Total MySQL suite in CI: 15 tests across 7 classes (7 historical across 5 classes + 7 M3 readiness across 1 class + 1 V2 migration SQL test across 1 class).
 - **Milestone 3 Completion:** Closes Milestone 3 (Session Operational Readiness & Guard Replacement).
 
-### MF-02 / MF-03 Capacity & Impact Integration — RESOLVED (PR #117 & PR #120)
-`SessionImpactReader` provider is MF-03-owned (`SessionImpactService`, integrated and verified in PR #120; active appointments counted, cancelled/completed/no-show excluded, waitlist 0). `SlotCapacityPort` provider is MF-02-owned (`TimeSlotCapacityService`, integrated and verified in PR #117). Cross-module contracts are complete and verified; fail-closed fallback is retained in MF-02.
+### MF-02 / MF-03 Capacity & Impact Integration — PARTIAL_P1 (Shared Dependency)
+`SessionImpactReader` production adapter is MF-03-owned (currently missing; SCHEDULED changes fail closed with 409). `SlotCapacityPort` production adapter is expected to be MF-02-owned after an authoritative slot/capacity model is built.
 
 ### Session Completion Policy — SPECIFICATION_PARTIAL
 Canonical mentions attendance and operational-close checks but does not define a complete decision algorithm. Not a confirmed code defect; completion implementation preserved without changes.
@@ -989,14 +967,14 @@ Canonical mentions attendance and operational-close checks but does not define a
 - `SessionSeriesChangeService` was successfully decomposed via PR #75, reducing its size from ~1,104 lines to ~694 lines.
 - `VaccinationSessionService` remains ~869 lines and is a candidate for future maintainability review if justified (`DEFER`).
 
-### Optional critical ports — RESOLVED
-Production-facing adapters for questionnaire publication (provided by MF-01 `QuestionnaireVersionService` in PR #76) and session impact (provided by MF-03 `SessionImpactService` in PR #120) are fully implemented, tested, and active in Spring wiring. Defensively retained fail-closed fallback behavior remains in place for unconfigured or isolated test contexts.
+### Optional critical ports
+Production-facing adapters for questionnaire publication (provided by MF-01 `QuestionnaireVersionService` in PR #76) and MF-03 session impact are still optional-injection boundaries in the current code. Production configuration should ultimately fail fast when required adapters are absent.
 
 ### Concurrency test quality — RESOLVED (PR #78)
 PR #78 eliminated the remaining `Thread.sleep(300)` timing delay from `CampaignAssignmentReverseImpactConcurrencyIntegrationTests.java` and established deterministic latch coordination with explicit winner/state assertions. Zero `Thread.sleep` calls remain across the backend test suite.
 
-### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84, PR #97, PR #110, PR #112, PR #114, PR #117, & PR #120)
-PR #84, PR #97, PR #110, PR #112, PR #114, PR #117, and PR #120 established real MySQL 8.4.3 InnoDB integration tests via Testcontainers:
+### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117)
+PR #84, PR #97, PR #110, PR #112, PR #114, and PR #117 established real MySQL 8.4.3 InnoDB integration tests via Testcontainers:
 - Validated single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`).
 - Validated parent/child reverse-impact pessimistic-locking serialization (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
 - Validated concurrent series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`).
@@ -1006,8 +984,7 @@ PR #84, PR #97, PR #110, PR #112, PR #114, PR #117, and PR #120 established real
 - Validated V2 migration DDL and idempotent backfill on real MySQL (`OperationalStaffIdentityMigrationMySqlIntegrationTests`).
 - Validated concurrent booking capacity reservations, slot creation/update aggregate ceiling enforcement under current reads, and time slot deletion (`SlotCapacityMySqlConcurrencyIntegrationTests`).
 - Validated V3 migration DDL on real MySQL (`TimeSlotMigrationMySqlIntegrationTests`).
-- Validated native appointment count query against real MySQL 8.4.3 (`SessionImpactMySqlIntegrationTests`).
-- Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step. Total suite in CI: 25 tests across 10 classes on `mysql:8.4.3`.
+- Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step. Total suite in CI: 23 tests across 9 classes on `mysql:8.4.3`.
 - *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, series concurrency, operational assignment concurrency, capacity plan revision concurrency, operational readiness concurrency, and time slot capacity reservation/aggregate concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.
 
 ### Audit deletion
@@ -1023,10 +1000,10 @@ Completed MF-02 Capabilities:
 - Session Operational Readiness & Guard Replacement (Milestone 3: COMPLETE)
 - MF02/MF03 Slot Capacity Integration (Milestone 4: COMPLETE)
 - All 78 MF-02 REST endpoints integrated and verified across campaigns, centers, operational assignments, capacity plans, recurrence rules, and sessions.
-- Cross-module MF-03 `SessionImpactReader` provider integration (PR #120: COMPLETE).
 
 Policy-Constrained / External Dependencies:
 - Blocked campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`AMBIGUOUS_REQUIRES_POLICY / USER_DATA_REQUIRED`)
+- Production MF-03 impact adapter (owned by MF-03; `SessionImpactReader` dependency; scheduled session change routes fail closed when unavailable)
 - DRAFT parent-campaign / child-session scheduling policy (`IMPLEMENTATION_DEFINED / unresolved policy`)
 - Evaluation/decomposition of `VaccinationSessionService` maintainability only if justified (`DEFER`)
 
@@ -1034,7 +1011,7 @@ Project-Wide Infrastructure / Follow-Ons (outside MF-02 core scope):
 - Spring Security / RBAC framework integration
 - OpenAPI documentation
 - Database migrations (`V2__mf02_operational_staff_identity.sql` and `V3__mf02_time_slot.sql` migration SQL scripts implemented and verified on real MySQL; Flyway application startup runtime is a project-wide infrastructure follow-on; broader schema migrations pending)
-- Representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, PR #117, & PR #120; broad production database certification deferred)
+- Representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
 - MF-02 frontend web application and frontend automated tests
 - Final end-to-end / Definition-of-Done evidence
 
@@ -1042,14 +1019,14 @@ Project-Wide Infrastructure / Follow-Ons (outside MF-02 core scope):
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
-- MF-02: **COMPLETE** (all MF-02-owned canonical requirements, 78 REST routes, operational-model milestones M1–M4, and external MF-03 `SessionImpactReader` provider integration are complete and verified; 0 MF-02-owned engineering gaps remain)
+- MF-02: **COMPLETE_WITH_EXTERNAL_MF03_DEPENDENCY** (all MF-02-owned canonical requirements, 78 REST routes, and operational-model milestones M1–M4 are complete; external MF-03 `SessionImpactReader` adapter pending)
 - US-13: **IN PROGRESS**
 - Campaign Management REST API Milestone 1: **COMPLETE**
 - Vaccination Center Management REST API Milestone 2: **COMPLETE**
 - Vaccination Session Core REST API Milestone 3: **COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD**
-- Vaccination Session Change Control REST API Milestone 4: **COMPLETE**
+- Vaccination Session Change Control REST API Milestone 4: **COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT**
 - Pre-Recurrence Correctness and Safety Remediation: **COMPLETE**
-- Vaccination Session Recurrence / Series REST API Milestone 5: **COMPLETE**
+- Vaccination Session Recurrence / Series REST API Milestone 5: **COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT**
 - Session Operational Prerequisite Guard: **COMPLETE**
 - Campaign Configuration REST API: **COMPLETE_WITH_SEEDED_MASTER_DATA**
 - Session Operational Core Model (Milestone 1): **COMPLETE**
@@ -1064,8 +1041,7 @@ Current status remains:
 - Session Operational Readiness (Milestone 3): **COMPLETE**
 - Session Scheduling Guard Replacement (Milestone 3): **COMPLETE**
 - MF02/MF03 Slot Capacity Integration (Milestone 4): **COMPLETE**
-- MF03 Session Impact Reader Provider Integration: **COMPLETE**
-- current verified backend baseline: **1172 functional H2 tests plus 25 MySQL Testcontainers assurance tests across 10 classes** across separate validation paths.
+- current verified backend baseline: **1160 functional H2 tests plus 23 MySQL Testcontainers assurance tests across 9 classes** across separate validation paths.
 - MF02_DOCUMENTATION_CLOSURE_AUDIT: **COMPLETE**
 
 Do not infer completion from the size of the backend test suite.
