@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
 import CampaignManagementPage from '../features/campaign-management/pages/CampaignManagementPage';
+import CenterOperationsPage from '../features/center-operations/pages/CenterOperationsPage';
 
 export default function App() {
   const [activeView, setActiveView] = useState('campaigns');
@@ -12,6 +13,7 @@ export default function App() {
 
       <main className="container my-4 flex-grow-1">
         {activeView === 'campaigns' && <CampaignManagementPage />}
+        {activeView === 'center-operations' && <CenterOperationsPage />}
 
         {activeView === 'overview' && (
           <section className="row justify-content-center">

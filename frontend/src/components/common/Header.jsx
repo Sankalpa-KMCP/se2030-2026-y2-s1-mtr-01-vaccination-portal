@@ -29,6 +29,15 @@ export default function Header({ activeView = 'overview', onNavigate }) {
                   Campaigns
                 </button>
               </li>
+              <li className="nav-item">
+                <button
+                  type="button"
+                  className={`btn btn-sm ${activeView === 'center-operations' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
+                  onClick={() => onNavigate && onNavigate('center-operations')}
+                >
+                  Center Operations
+                </button>
+              </li>
             </ul>
 
             <span className="navbar-text text-white-50 small d-none d-md-inline">
