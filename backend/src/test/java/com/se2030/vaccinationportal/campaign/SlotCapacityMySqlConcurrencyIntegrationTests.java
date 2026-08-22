@@ -22,6 +22,18 @@ import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.TimeSlotCapacityService;
 import com.se2030.vaccinationportal.campaign.service.TimeSlotService;
 import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffIdentityRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -67,6 +79,39 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
     private SessionCapacityPlanRepository capacityPlanRepository;
 
     @Autowired
+    private SessionResourceAssignmentRepository resourceAssignmentRepository;
+
+    @Autowired
+    private StaffAssignmentRepository staffAssignmentRepository;
+
+    @Autowired
+    private SessionChangeEventRepository sessionChangeEventRepository;
+
+    @Autowired
+    private OperationalResourceRepository resourceRepository;
+
+    @Autowired
+    private OperationalStaffRosterRepository staffRosterRepository;
+
+    @Autowired
+    private OperationalStaffIdentityRepository identityRepository;
+
+    @Autowired
+    private SessionRecurrenceRuleRepository ruleRepository;
+
+    @Autowired
+    private CampaignCenterAssignmentRepository campaignCenterAssignmentRepository;
+
+    @Autowired
+    private CenterClosureRepository closureRepository;
+
+    @Autowired
+    private OperatingHoursRepository operatingHoursRepository;
+
+    @Autowired
+    private CampaignDoseProgrammeRepository doseProgrammeRepository;
+
+    @Autowired
     private VaccinationCampaignRepository campaignRepository;
 
     @Autowired
@@ -93,13 +138,7 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         assertConnectedToRealMySql();
         transactionTemplate = new TransactionTemplate(transactionManager);
 
-        timeSlotRepository.deleteAllInBatch();
-        capacityPlanRepository.deleteAllInBatch();
-        sessionRepository.deleteAllInBatch();
-        campaignRepository.deleteAllInBatch();
-        centerRepository.deleteAllInBatch();
-        targetGroupRepository.deleteAllInBatch();
-        vaccineTypeRepository.deleteAllInBatch();
+        cleanupDatabase();
 
         VaccineType vax = vaccineTypeRepository.save(new VaccineType("VAX-CONC-01", "Concurrency Vaccine"));
         TargetGroup tg = targetGroupRepository.save(new TargetGroup("TG-CONC-01", "Concurrency Target Group"));
@@ -475,5 +514,35 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         // Total capacity must remain <= 10
         Integer total = timeSlotRepository.sumCapacityBySessionId(session.getId());
         assertTrue(total <= 10, "Total configured slot capacity (" + total + ") must not exceed approved capacity (10)");
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (transactionTemplate != null) {
+            cleanupDatabase();
+        }
+    }
+
+    private void cleanupDatabase() {
+        transactionTemplate.executeWithoutResult(status -> {
+            timeSlotRepository.deleteAllInBatch();
+            resourceAssignmentRepository.deleteAllInBatch();
+            staffAssignmentRepository.deleteAllInBatch();
+            capacityPlanRepository.deleteAllInBatch();
+            sessionChangeEventRepository.deleteAllInBatch();
+            sessionRepository.deleteAllInBatch();
+            ruleRepository.deleteAllInBatch();
+            resourceRepository.deleteAllInBatch();
+            staffRosterRepository.deleteAllInBatch();
+            identityRepository.deleteAllInBatch();
+            campaignCenterAssignmentRepository.deleteAllInBatch();
+            closureRepository.deleteAllInBatch();
+            operatingHoursRepository.deleteAllInBatch();
+            doseProgrammeRepository.deleteAllInBatch();
+            campaignRepository.deleteAllInBatch();
+            centerRepository.deleteAllInBatch();
+            targetGroupRepository.deleteAllInBatch();
+            vaccineTypeRepository.deleteAllInBatch();
+        });
     }
 }

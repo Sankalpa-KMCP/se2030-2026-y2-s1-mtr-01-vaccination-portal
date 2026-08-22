@@ -1,10 +1,25 @@
 package com.se2030.vaccinationportal.campaign;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
+import com.se2030.vaccinationportal.campaign.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -13,6 +28,9 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,11 +44,38 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TimeSlotMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
 
+    @Autowired private VaccinationSessionRepository sessionRepository;
+    @Autowired private VaccinationCampaignRepository campaignRepository;
+    @Autowired private VaccinationCenterRepository centerRepository;
+    @Autowired private VaccineTypeRepository vaccineTypeRepository;
+    @Autowired private TargetGroupRepository targetGroupRepository;
+    @Autowired private PlatformTransactionManager transactionManager;
+
     @Test
     @Timeout(30)
     @DisplayName("Migration SQL V3 MySQL Runtime Proof: V3 migration script executes on real MySQL and creates time_slots table")
     void migrationV3_executesOnRealMySql() throws Exception {
         assertConnectedToRealMySql();
+
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        Long testSessionId = template.execute(status -> {
+            VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-MIG-V3", "Migration Vaccine V3"));
+            TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-MIG-V3", "Migration Target Group V3"));
+            VaccinationCampaign cmp = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                    "CMP-MIG-V3", "Migration Campaign", "Testing V3 Migration",
+                    vax, tg,
+                    LocalDate.now().minusDays(1), LocalDate.now().plusDays(30),
+                    Instant.now().minus(1, ChronoUnit.DAYS), Instant.now().plus(30, ChronoUnit.DAYS),
+                    CampaignStatus.ACTIVE
+            ));
+            VaccinationCenter ctr = centerRepository.saveAndFlush(new VaccinationCenter(
+                    "CTR-MIG-V3", "Migration Center", "100 Road", "555-0100", CenterStatus.ACTIVE, 50, 100, "UTC"
+            ));
+            VaccinationSession sess = sessionRepository.saveAndFlush(new VaccinationSession(
+                    cmp, ctr, Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200), Instant.now(), "UTC"
+            ));
+            return sess.getId();
+        });
 
         try (Connection conn = dataSource.getConnection()) {
             conn.setAutoCommit(true);
@@ -51,24 +96,6 @@ class TimeSlotMigrationMySqlIntegrationTests extends AbstractMySqlTestContainers
             }
 
             try (Statement stmt = conn.createStatement()) {
-                // Ensure referenced campaign, center, and session exist to satisfy foreign key constraints
-                stmt.execute("INSERT INTO vaccination_campaigns (" +
-                        "id, name, description, start_date, end_date, campaign_status, created_at, updated_at" +
-                        ") VALUES " +
-                        "(991, 'Mig Camp', 'Desc', '2026-01-01', '2026-12-31', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
-                        "ON DUPLICATE KEY UPDATE name = name;");
-
-                stmt.execute("INSERT INTO vaccination_centers (" +
-                        "id, code, name, address, contact, timezone, center_status, safe_concurrent_occupancy, created_at, updated_at" +
-                        ") VALUES " +
-                        "(991, 'CTR-MIG-991', 'Mig Center', '100 Road', '111', 'UTC', 'ACTIVE', 50, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
-                        "ON DUPLICATE KEY UPDATE code = code;");
-
-                stmt.execute("INSERT INTO vaccination_sessions (" +
-                        "id, campaign_id, center_id, start_at, end_at, booking_close_at, lifecycle_status, booking_status, created_at, updated_at" +
-                        ") VALUES " +
-                        "(991, 991, 991, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR), CURRENT_TIMESTAMP, 'SCHEDULED', 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
-                        "ON DUPLICATE KEY UPDATE lifecycle_status = lifecycle_status;");
 
                 // Execute statements in V3 migration script (strip SQL comments line-by-line first)
                 String[] lines = v3Sql.split("\\R");
@@ -108,9 +135,9 @@ class TimeSlotMigrationMySqlIntegrationTests extends AbstractMySqlTestContainers
 
                 // Verify sample insert and capacity check
                 stmt.execute("INSERT INTO time_slots (session_id, start_time, end_time, capacity, reserved_count, lock_version, created_at, updated_at) " +
-                        "VALUES (991, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR), 10, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);");
+                        "VALUES (" + testSessionId + ", CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR), 10, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);");
 
-                try (ResultSet rs = stmt.executeQuery("SELECT capacity, reserved_count FROM time_slots WHERE session_id = 991")) {
+                try (ResultSet rs = stmt.executeQuery("SELECT capacity, reserved_count FROM time_slots WHERE session_id = " + testSessionId)) {
                     assertTrue(rs.next());
                     assertEquals(10, rs.getInt("capacity"));
                     assertEquals(0, rs.getInt("reserved_count"));
