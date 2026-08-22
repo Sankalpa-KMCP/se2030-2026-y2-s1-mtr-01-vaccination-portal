@@ -104,3 +104,52 @@ export async function updateOperationalResource(centerId, resourceId, payload) {
   });
   return handleResponse(response);
 }
+
+/**
+ * Fetch operational staff roster for a center, optionally filtered by role and status.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {string|null} [role] - Optional StaffRole filter (VACCINATOR, CHECK_IN_STAFF, SUPERVISOR)
+ * @param {string|null} [status] - Optional OperationalStaffStatus filter (ACTIVE, INACTIVE)
+ * @returns {Promise<Array>} List of OperationalStaffRosterResponse objects
+ */
+export async function listStaffRoster(centerId, role = null, status = null) {
+  const params = new URLSearchParams();
+  if (role) params.append('role', role);
+  if (status) params.append('status', status);
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+
+  const response = await apiRequest(`/v1/centers/${centerId}/staff-roster${queryString}`, { method: 'GET' });
+  return handleResponse(response);
+}
+
+/**
+ * Register a staff member on the center's operational roster.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {Object} payload - RegisterStaffRosterRequest payload ({ userId, role, status })
+ * @returns {Promise<Object>} Created OperationalStaffRosterResponse object
+ */
+export async function registerStaffMember(centerId, payload) {
+  const response = await apiRequest(`/v1/centers/${centerId}/staff-roster`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update the mutable attributes (role, status) of an operational staff roster record.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {number|string} rosterId - Staff roster entry identifier
+ * @param {Object} payload - UpdateStaffRosterRequest payload ({ role, status })
+ * @returns {Promise<Object>} Updated OperationalStaffRosterResponse object
+ */
+export async function updateStaffRoster(centerId, rosterId, payload) {
+  const response = await apiRequest(`/v1/centers/${centerId}/staff-roster/${rosterId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
