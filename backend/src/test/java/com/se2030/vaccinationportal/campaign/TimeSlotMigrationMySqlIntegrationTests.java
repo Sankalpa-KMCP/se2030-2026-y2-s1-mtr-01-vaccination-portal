@@ -96,6 +96,7 @@ class TimeSlotMigrationMySqlIntegrationTests extends AbstractMySqlTestContainers
             }
 
             try (Statement stmt = conn.createStatement()) {
+                stmt.execute("DROP TABLE IF EXISTS time_slots;");
 
                 // Execute statements in V3 migration script (strip SQL comments line-by-line first)
                 String[] lines = v3Sql.split("\\R");
