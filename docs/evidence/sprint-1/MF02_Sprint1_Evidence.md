@@ -34,7 +34,7 @@
 - logical combined executions: **1183** (1160 H2 + 23 MySQL) across separate validation paths
 - immediate parent baseline: **1138 functional H2 + 15 MySQL** (from PR #116 / PR #114 develop state)
 - net-new candidate executions: **+22 H2 tests** over pre-M4 base (+19 `TimeSlotCapacityServiceIntegrationTests`, +3 `SlotCapacityPortCrossModuleIntegrationTests`) + **8 MySQL assurance tests** (7 `SlotCapacityMySqlConcurrencyIntegrationTests` + 1 `TimeSlotMigrationMySqlIntegrationTests`)
-- behavior: Implements session time slot model, repository, service, and cross-MF booking capacity port (`SessionSlotCapacityPort`). Enforces hard session approved capacity ceiling, non-negative capacity floor, session operating window containment, pessimistic locking on reservation/release, parent session lock serialization, and current-read aggregate evaluation under MySQL `REPEATABLE_READ`. Proves V3 migration SQL DDL execution on real MySQL 8.4.3.
+- behavior: Implements session time slot model, repository, service, and cross-MF booking capacity port (`SlotCapacityPort`). Enforces hard session approved capacity ceiling, non-negative capacity floor, session operating window containment, pessimistic locking on reservation/release, parent session lock serialization, and current-read aggregate evaluation under MySQL `REPEATABLE_READ`. Proves V3 migration SQL DDL execution on real MySQL 8.4.3.
 - Milestone 4 Conclusion: Completes Milestone 4 (Slot Capacity Integration). All four operational-model milestones M1–M4 are complete; M2 comprised M2A/M2B/M2C.
 
 ### Preceding Milestone: PR #114 — `feat(mf02): enforce operational readiness for session scheduling`
@@ -992,34 +992,34 @@ Lifecycle/change event repositories inherit normal delete APIs, so “append-onl
 
 ## 23. Remaining Sprint / Function Work
 
-Still not complete:
+Completed MF-02 Capabilities:
 - Center Operational Resources & Staff Roster REST API (Milestone 2A: COMPLETE)
 - Session Resource & Staff Assignment REST API (Milestone 2B: COMPLETE)
 - Session Capacity Plan REST API (Milestone 2C: COMPLETE)
 - Session Operational Configuration REST API (Milestone 2 Overall: COMPLETE)
 - Session Operational Readiness & Guard Replacement (Milestone 3: COMPLETE)
 - MF02/MF03 Slot Capacity Integration (Milestone 4: COMPLETE)
-- design and implementation of remaining campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`USER_DATA_REQUIRED`)
-- evaluation/decomposition of `VaccinationSessionService` maintainability only if justified (`DEFER`)
-- archival retention value (`USER_DATA_REQUIRED`)
+- All 78 MF-02 REST endpoints integrated and verified across campaigns, centers, operational assignments, capacity plans, recurrence rules, and sessions.
+
+Policy-Constrained / External Dependencies:
+- Blocked campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`AMBIGUOUS_REQUIRES_POLICY / USER_DATA_REQUIRED`)
+- Production MF-03 impact adapter (owned by MF-03; `SessionImpactReader` dependency; scheduled session change routes fail closed when unavailable)
 - DRAFT parent-campaign / child-session scheduling policy (`IMPLEMENTATION_DEFINED / unresolved policy`)
-- MF-01 production adapter/FK
-- MF-03 production booking/impact consumer
-- transactional outbox
-- Campaign date update REST API
-- Spring Security/RBAC
-- OpenAPI
-- Database migrations (`V2__mf02_operational_staff_identity.sql` and `V3__mf02_time_slot.sql` migration SQL scripts implemented and verified on real MySQL; Flyway runtime is not currently configured; broader schema migration pending)
-- representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
-- MF-02 frontend
-- frontend tests
-- final end-to-end / Definition-of-Done evidence
+- Evaluation/decomposition of `VaccinationSessionService` maintainability only if justified (`DEFER`)
+
+Project-Wide Infrastructure / Follow-Ons (outside MF-02 core scope):
+- Spring Security / RBAC framework integration
+- OpenAPI documentation
+- Database migrations (`V2__mf02_operational_staff_identity.sql` and `V3__mf02_time_slot.sql` migration SQL scripts implemented and verified on real MySQL; Flyway application startup runtime is a project-wide infrastructure follow-on; broader schema migrations pending)
+- Representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
+- MF-02 frontend web application and frontend automated tests
+- Final end-to-end / Definition-of-Done evidence
 
 ## 24. Sprint Status
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
-- MF-02: **IN PROGRESS**
+- MF-02: **COMPLETE_WITH_EXTERNAL_MF03_DEPENDENCY** (all MF-02-owned canonical requirements, 78 REST routes, and operational-model milestones M1–M4 are complete; external MF-03 `SessionImpactReader` adapter pending)
 - US-13: **IN PROGRESS**
 - Campaign Management REST API Milestone 1: **COMPLETE**
 - Vaccination Center Management REST API Milestone 2: **COMPLETE**
@@ -1042,7 +1042,7 @@ Current status remains:
 - Session Scheduling Guard Replacement (Milestone 3): **COMPLETE**
 - MF02/MF03 Slot Capacity Integration (Milestone 4): **COMPLETE**
 - current verified backend baseline: **1160 functional H2 tests plus 23 MySQL Testcontainers assurance tests across 9 classes** across separate validation paths.
-- MF02_DOCUMENTATION_M4_SYNC: **LOCAL_CANDIDATE_READY**
+- MF02_DOCUMENTATION_CLOSURE_AUDIT: **COMPLETE**
 
 Do not infer completion from the size of the backend test suite.
 

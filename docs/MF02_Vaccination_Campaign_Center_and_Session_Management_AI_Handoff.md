@@ -97,14 +97,14 @@ Total MF-02 REST routes currently integrated: **78** ($21 \text{ Campaign-family
      - `TimeSlot` entity (`session_id`, `start_time`, `end_time`, `capacity`, `reserved_count`, `lock_version`, timestamps)
      - `TimeSlotRepository` (`findBySessionId`, `findBySessionIdForUpdateOrderByIdAsc`, `sumCapacityBySessionId`, `findByIdForUpdate`)
      - `TimeSlotService` (`createSlot`, `updateSlotCapacity`, `deleteSlot`, `getSlotsForSession`)
-     - `TimeSlotCapacityService` implementing `SessionSlotCapacityPort` for cross-MF booking integration (`reserveCapacity`, `releaseCapacity`, `getAvailableCapacity`, `getSlotCapacityInfo`)
+     - `TimeSlotCapacityService` implementing `SlotCapacityPort` for cross-MF booking integration (`hasAvailableCapacity`, `reserveCapacity`, `releaseCapacity`, `getSlotStartTime`)
      - `V3__mf02_time_slot.sql` migration script (Flyway runtime is not currently configured; verified via direct SQL execution against MySQL 8.4.3)
    - Slot Capacity Semantics:
      - Hard session approved capacity ceiling: Total configured time slot capacity across all slots for a session must not exceed `approvedCapacity` of the latest approved `SessionCapacityPlan`.
      - Non-negative capacity floor: Slot capacity cannot be reduced below current `reservedCount` (`capacity >= reservedCount`).
      - Session operating window containment: Slot intervals `[startTime, endTime)` must fall strictly within the session operating window `[session.startAt, session.endAt]`.
-     - Overbooking prevention: `reserveCapacity(slotId, count)` atomicity via pessimistic locking (`findByIdForUpdate`), preventing overbooking under concurrent reservation races.
-     - Release floor: `releaseCapacity(slotId, count)` cannot reduce `reservedCount` below 0.
+     - Overbooking prevention: `reserveCapacity(slotId)` atomicity via pessimistic locking (`findByIdForUpdate`), preventing overbooking under concurrent reservation races.
+     - Release floor: `releaseCapacity(slotId)` safely releases booked capacity and cannot reduce `reservedCount` below 0.
      - Parent session lock serialization: `TimeSlotService.createSlot` and `updateSlotCapacity` lock parent `VaccinationSession` (`findByIdForUpdate`) and evaluate aggregate slot capacity via current read `findBySessionIdForUpdateOrderByIdAsc`, eliminating snapshot-isolation anomalies under MySQL `REPEATABLE_READ`.
    - Milestone 4 Conclusion: Completes Milestone 4 (Slot Capacity Integration). All four operational-model milestones M1–M4 are complete; M2 comprised M2A/M2B/M2C.
 
@@ -629,15 +629,15 @@ The following summarizes the current production-layer status:
 - Session Operational Configuration REST API (Milestone 2 Overall; 21 endpoints) — **RESOLVED in PR #112 (COMPLETE)**
 - Session Operational Readiness & Guard Replacement (Milestone 3) — **RESOLVED in PR #114 (COMPLETE)**
 - MF02/MF03 Slot Capacity Integration (Milestone 4) — **RESOLVED in PR #117 (COMPLETE)**
-- Blocked lifecycle endpoints (`complete`, `cancel`, `archive`) (pending specification/integration)
-- Spring Security/RBAC/authentication enforcement (pending)
-- OpenAPI documentation (pending)
-- Database migrations (`V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql` integrated and verified on real MySQL; Flyway runtime is not currently configured; subsequent migrations pending)
-- representative production MySQL Testcontainers assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
-- MF-02 frontend business screens (pending)
-- frontend automated tests (pending)
-- production MF-03 impact adapter (pending)
-- reliable transactional outbox delivery (pending)
+- Blocked campaign lifecycle transitions (`complete`, `cancel`, `archive` pending upstream policy/specification and MF-03 booking impact integration; Session `complete` and `cancel` endpoints are implemented, with cancellation fail-closed when MF-03 `SessionImpactReader` is missing)
+- Production MF-03 impact adapter (owned by MF-03; `SessionImpactReader` dependency)
+- Spring Security/RBAC framework integration (project-wide security follow-on)
+- OpenAPI documentation (project-wide documentation follow-on)
+- Database migrations (`V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql` integrated and verified on real MySQL; Flyway application startup runtime is a project-wide infrastructure follow-on; broader schema migrations pending)
+- Representative production MySQL Testcontainers assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
+- MF-02 frontend business screens (frontend UI deliverable)
+- Frontend automated tests (frontend UI deliverable)
+- Reliable transactional outbox delivery (project-wide infrastructure follow-on)
 
 ## 9. Known Issues / Risks to Resolve Before More Lifecycle Growth
 
@@ -732,15 +732,11 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 ## 13. Immediate Engineering Order
 
 Recommended next direction (classified as **RECOMMENDATION_ONLY**; implementation not started):
-1. synchronize maintained documentation to PR #117 (Milestone 4: Slot Capacity Integration) — represented by this step;
-2. acknowledge completion of the operational-model program: Milestones M1, M2A, M2B, M2C, M3, and M4 are fully integrated;
-3. acknowledge external MF-03 `SessionImpactReader` dependency (owned by MF-03; required for non-fail-closed scheduled session modifications);
-4. analyze and resolve remaining campaign lifecycle gaps (completion algorithm, cancellation impact integration, archive retention policy);
-5. evaluate/decompose `VaccinationSessionService` maintainability only if justified (`DEFER`);
-6. add Spring Security / RBAC;
-7. add database migrations / runtime management;
-8. implement MF-02 frontend and frontend tests;
-9. final end-to-end / Definition-of-Done evidence.
+1. acknowledge completion of the operational-model program: Milestones M1, M2A, M2B, M2C, M3, and M4 are fully integrated and verified;
+2. acknowledge external MF-03 `SessionImpactReader` dependency (owned by MF-03; required for non-fail-closed scheduled session modifications);
+3. analyze and resolve remaining campaign lifecycle policy gaps (completion algorithm, cancellation impact integration, archive retention policy);
+4. evaluate/decompose `VaccinationSessionService` maintainability only if justified (`DEFER`);
+5. project-wide follow-ons (outside MF-02 core scope): Spring Security / RBAC framework, OpenAPI documentation, Flyway application startup runtime, and React frontend UI.
 
 ## 14. Historical Milestone Summary
 
@@ -861,21 +857,22 @@ Key full merge checkpoints:
 - PR #114: `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`
 - PR #116: `9525a0cae67578960a7f238365a40c6056d93d84`
 - PR #117: `c89cdcb610fd4690ee98e11f13955c8b9ef68966`
+- PR #118: `21879c3b65998582f7804b2278f23fcd55f377a9`
 
 ## 15. Status Discipline
 
 Never claim:
-- MF-02 complete;
+- MF-02 complete without acknowledging external MF-03 integration dependency;
 - Sprint 1 complete;
 - US-13 complete;
-- production API/security/migrations/frontend complete (Campaign REST API, Center REST API, Session Core REST API, Session Change Control REST API, Pre-Recurrence Remediation, Recurrence/Series REST API, Campaign Configuration REST API, Session Operational Core Model/Calculation Engine, Center Operational Resource & Staff Roster REST API, Session Operational Assignments REST API, Session Capacity Plan REST API, Session Operational Readiness & Scheduling Enforcement, and Slot Capacity Integration are integrated; security, frontend, and production MF-03 booking consumer remain pending);
+- production security/migrations/frontend complete (Campaign REST API, Center REST API, Session Core REST API, Session Change Control REST API, Pre-Recurrence Remediation, Recurrence/Series REST API, Campaign Configuration REST API, Session Operational Core Model/Calculation Engine, Center Operational Resource & Staff Roster REST API, Session Operational Assignments REST API, Session Capacity Plan REST API, Session Operational Readiness & Scheduling Enforcement, and Slot Capacity Integration are integrated; Spring Security framework, OpenAPI documentation, frontend web application, and production MF-03 booking consumer remain external/project-wide follow-ons);
 - MySQL concurrency fully certified across all endpoints;
 - 566, 575, 599, 616, 645, 680, 724, 763, 790, 799, 835, 882, 926, 928, 953, 998, 1041, 1080, 1103, 1105, 1123, or 1138 as the current backend baseline;
 - 1183 as the functional H2 baseline (1183 represents logical combined coverage across separate validation paths: 1160 H2 + 23 MySQL).
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
-- MF-02: **IN PROGRESS**
+- MF-02: **COMPLETE_WITH_EXTERNAL_MF03_DEPENDENCY** (all MF-02-owned canonical requirements, 78 REST routes, and operational-model milestones M1–M4 are complete; external MF-03 `SessionImpactReader` adapter pending)
 - US-13: **IN PROGRESS**
 - Campaign Management REST API Milestone 1: **COMPLETE**
 - Vaccination Center Management REST API Milestone 2: **COMPLETE**
@@ -898,13 +895,13 @@ Current status remains:
 - Session Scheduling Guard Replacement (Milestone 3): **COMPLETE**
 - MF02/MF03 Slot Capacity Integration (Milestone 4): **COMPLETE**
 - current verified backend baseline: **1160 functional H2 tests plus 23 MySQL Testcontainers assurance tests across 9 classes** across separate validation paths.
-- MF02_DOCUMENTATION_M4_SYNC: **LOCAL_CANDIDATE_READY**
+- MF02_DOCUMENTATION_CLOSURE_AUDIT: **COMPLETE**
 
 ## 16. Startup Procedure for the Next AI Session
 
 1. Read canonical Markdown `3.3-AI / 2026-08-14-R9`.
 2. Fetch live `origin/develop`.
-3. Verify whether `c89cdcb610fd4690ee98e11f13955c8b9ef68966` remains an ancestor/current checkpoint.
+3. Verify whether `21879c3b65998582f7804b2278f23fcd55f377a9` remains an ancestor/current checkpoint.
 4. Run/inspect current backend tests before changing behavior.
 5. Read this handoff and Sprint evidence.
 6. Review `MF02_Completion_and_Hardening_Plan.md`.
