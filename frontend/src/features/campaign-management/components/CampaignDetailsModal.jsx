@@ -3,10 +3,16 @@ import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import DoseProgrammeTab from './DoseProgrammeTab';
 import DoseProgrammeFormModal from './DoseProgrammeFormModal';
+import QuestionnaireTab from './QuestionnaireTab';
+import QuestionnaireAssignmentFormModal from './QuestionnaireAssignmentFormModal';
 import {
   getDoseProgrammes,
   createDoseProgramme,
   createDoseProgrammeVersion,
+  getQuestionnaireAssignments,
+  assignQuestionnaire,
+  getScreeningQuestionnaires,
+  getQuestionnaireVersions,
 } from '../api/campaignConfigurationApi';
 
 function getStatusBadgeClass(status) {
@@ -63,6 +69,17 @@ export default function CampaignDetailsModal({
   const [doseModalLoading, setDoseModalLoading] = useState(false);
   const [doseModalError, setDoseModalError] = useState(null);
 
+  // Questionnaire State
+  const [questionnaireAssignments, setQuestionnaireAssignments] = useState([]);
+  const [questionnaireLoading, setQuestionnaireLoading] = useState(false);
+  const [questionnaireError, setQuestionnaireError] = useState(null);
+  const [versionsMap, setVersionsMap] = useState({});
+
+  // Questionnaire Form Modal State
+  const [showQuestionnaireModal, setShowQuestionnaireModal] = useState(false);
+  const [questionnaireModalLoading, setQuestionnaireModalLoading] = useState(false);
+  const [questionnaireModalError, setQuestionnaireModalError] = useState(null);
+
   const fetchDoseProgrammes = useCallback(async (campaignId) => {
     if (!campaignId) return;
     setDoseLoading(true);
@@ -77,11 +94,60 @@ export default function CampaignDetailsModal({
     }
   }, []);
 
+  const fetchQuestionnaireAssignments = useCallback(async (campaignId) => {
+    if (!campaignId) return;
+    setQuestionnaireLoading(true);
+    setQuestionnaireError(null);
+    try {
+      const data = await getQuestionnaireAssignments(campaignId);
+      setQuestionnaireAssignments(data || []);
+    } catch (err) {
+      setQuestionnaireError(err);
+    } finally {
+      setQuestionnaireLoading(false);
+    }
+  }, []);
+
+  const fetchQuestionnaireCatalogue = useCallback(async () => {
+    try {
+      const qList = await getScreeningQuestionnaires();
+      if (qList && qList.length > 0) {
+        const map = {};
+        await Promise.all(
+          qList.map(async (q) => {
+            try {
+              const vList = await getQuestionnaireVersions(q.id);
+              if (vList) {
+                vList.forEach((v) => {
+                  map[v.id] = {
+                    questionnaireId: q.id,
+                    questionnaireName: q.name,
+                    questionnaireCode: q.code,
+                    versionNumber: v.versionNumber,
+                    publishedAt: v.publishedAt,
+                    status: v.status,
+                  };
+                });
+              }
+            } catch {
+              // Ignore individual questionnaire version lookup error
+            }
+          })
+        );
+        setVersionsMap(map);
+      }
+    } catch {
+      // Ignore catalogue lookup error
+    }
+  }, []);
+
   useEffect(() => {
     if (campaign?.id) {
       fetchDoseProgrammes(campaign.id);
+      fetchQuestionnaireAssignments(campaign.id);
+      fetchQuestionnaireCatalogue();
     }
-  }, [campaign?.id, fetchDoseProgrammes]);
+  }, [campaign?.id, fetchDoseProgrammes, fetchQuestionnaireAssignments, fetchQuestionnaireCatalogue]);
 
   const handleDoseFormSubmit = async (payload) => {
     if (!campaign?.id) return;
@@ -102,9 +168,29 @@ export default function CampaignDetailsModal({
     }
   };
 
+  const handleQuestionnaireSubmit = async (payload) => {
+    if (!campaign?.id) return;
+    setQuestionnaireModalLoading(true);
+    setQuestionnaireModalError(null);
+    try {
+      await assignQuestionnaire(campaign.id, payload);
+      setShowQuestionnaireModal(false);
+      await fetchQuestionnaireAssignments(campaign.id);
+      await fetchQuestionnaireCatalogue();
+    } catch (err) {
+      setQuestionnaireModalError(err);
+    } finally {
+      setQuestionnaireModalLoading(false);
+    }
+  };
+
   if (!campaign && !loading && !error) return null;
 
   const latestDoseProgramme = doseProgrammes.length > 0 ? doseProgrammes[0] : null;
+  const todayIsoStr = new Date().toISOString().split('T')[0];
+  const activeQuestionnaireAssignment = questionnaireAssignments.find(
+    (a) => a.activeFrom <= todayIsoStr && (a.activeTo == null || a.activeTo > todayIsoStr)
+  );
 
   return (
     <div
@@ -164,6 +250,20 @@ export default function CampaignDetailsModal({
                 <li className="nav-item" role="presentation">
                   <button
                     type="button"
+                    className={`nav-link border-0 fw-semibold small ${activeTab === 'questionnaire' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('questionnaire')}
+                  >
+                    Questionnaire{' '}
+                    {activeQuestionnaireAssignment && (
+                      <span className="badge bg-success-subtle text-success border border-success-subtle ms-1" style={{ fontSize: '0.7rem' }}>
+                        Assigned
+                      </span>
+                    )}
+                  </button>
+                </li>
+                <li className="nav-item" role="presentation">
+                  <button
+                    type="button"
                     className={`nav-link border-0 fw-semibold small ${activeTab === 'audit' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
                     onClick={() => setActiveTab('audit')}
                   >
@@ -188,17 +288,31 @@ export default function CampaignDetailsModal({
                       <div className="small text-muted font-monospace">
                         Internal ID: #{campaign.id}
                       </div>
-                      <div className="small text-muted">
-                        Dose Configuration:{' '}
-                        {latestDoseProgramme ? (
-                          <span className="badge bg-success-subtle text-success border border-success-subtle">
-                            v{latestDoseProgramme.versionNumber} ({latestDoseProgramme.doseCategory})
-                          </span>
-                        ) : (
-                          <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
-                            Not Configured
-                          </span>
-                        )}
+                      <div className="d-flex gap-2">
+                        <span className="small text-muted">
+                          Dose:{' '}
+                          {latestDoseProgramme ? (
+                            <span className="badge bg-success-subtle text-success border border-success-subtle">
+                              v{latestDoseProgramme.versionNumber}
+                            </span>
+                          ) : (
+                            <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                              Not Configured
+                            </span>
+                          )}
+                        </span>
+                        <span className="small text-muted">
+                          Questionnaire:{' '}
+                          {activeQuestionnaireAssignment ? (
+                            <span className="badge bg-success-subtle text-success border border-success-subtle">
+                              Linked
+                            </span>
+                          ) : (
+                            <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                              Not Assigned
+                            </span>
+                          )}
+                        </span>
                       </div>
                     </div>
 
@@ -319,6 +433,21 @@ export default function CampaignDetailsModal({
                   />
                 )}
 
+                {/* Tab: Questionnaire Linkage */}
+                {activeTab === 'questionnaire' && (
+                  <QuestionnaireTab
+                    campaign={campaign}
+                    assignments={questionnaireAssignments}
+                    versionsMap={versionsMap}
+                    loading={questionnaireLoading}
+                    error={questionnaireError}
+                    onOpenAssignModal={() => {
+                      setQuestionnaireModalError(null);
+                      setShowQuestionnaireModal(true);
+                    }}
+                  />
+                )}
+
                 {/* Tab: Audit History */}
                 {activeTab === 'audit' && (
                   <div>
@@ -382,6 +511,21 @@ export default function CampaignDetailsModal({
           }}
           loading={doseModalLoading}
           error={doseModalError}
+        />
+      )}
+
+      {/* Questionnaire Assignment Form Modal */}
+      {showQuestionnaireModal && (
+        <QuestionnaireAssignmentFormModal
+          campaign={campaign}
+          currentAssignment={activeQuestionnaireAssignment}
+          onSubmit={handleQuestionnaireSubmit}
+          onCancel={() => {
+            setShowQuestionnaireModal(false);
+            setQuestionnaireModalError(null);
+          }}
+          loading={questionnaireModalLoading}
+          error={questionnaireModalError}
         />
       )}
     </div>

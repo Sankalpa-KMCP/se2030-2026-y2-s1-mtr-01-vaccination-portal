@@ -68,3 +68,69 @@ export async function createDoseProgrammeVersion(campaignId, payload) {
   });
   return handleResponse(response);
 }
+
+/**
+ * Fetch all questionnaire assignment history records for a campaign.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @returns {Promise<Array>} List of CampaignQuestionnaireAssignmentResponse objects
+ */
+export async function getQuestionnaireAssignments(campaignId) {
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/questionnaire-assignments`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Assign a published questionnaire version to a campaign.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @param {Object} payload - AssignQuestionnaireRequest payload ({ questionnaireVersionId, effectiveStartDate })
+ * @returns {Promise<Object>} Created CampaignQuestionnaireAssignmentResponse
+ */
+export async function assignQuestionnaire(campaignId, payload) {
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/questionnaire-assignments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch all root questionnaire definitions from MF-01 Screening Configuration catalog.
+ *
+ * @returns {Promise<Array>} List of QuestionnaireResponse objects
+ */
+export async function getScreeningQuestionnaires() {
+  const response = await apiRequest('/v1/screening/questionnaires', {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch all versions for a given questionnaire container from MF-01.
+ *
+ * @param {number|string} questionnaireId - Questionnaire identifier
+ * @returns {Promise<Array>} List of QuestionnaireVersionResponse objects
+ */
+export async function getQuestionnaireVersions(questionnaireId) {
+  const response = await apiRequest(`/v1/screening/questionnaires/${questionnaireId}/versions`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch specific questionnaire version details from MF-01.
+ *
+ * @param {number|string} versionId - QuestionnaireVersion identifier
+ * @returns {Promise<Object>} QuestionnaireVersionResponse object
+ */
+export async function getQuestionnaireVersion(versionId) {
+  const response = await apiRequest(`/v1/screening/questionnaire-versions/${versionId}`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
