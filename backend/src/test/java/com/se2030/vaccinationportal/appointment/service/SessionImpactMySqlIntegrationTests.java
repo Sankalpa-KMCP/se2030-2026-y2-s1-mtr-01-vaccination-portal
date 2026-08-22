@@ -15,9 +15,17 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffIdentityRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
@@ -71,10 +79,31 @@ class SessionImpactMySqlIntegrationTests extends AbstractMySqlTestContainersInte
     private TimeSlotRepository timeSlotRepository;
 
     @Autowired
+    private SessionResourceAssignmentRepository resourceAssignmentRepository;
+
+    @Autowired
+    private StaffAssignmentRepository staffAssignmentRepository;
+
+    @Autowired
+    private SessionCapacityPlanRepository capacityPlanRepository;
+
+    @Autowired
     private SessionChangeEventRepository sessionChangeEventRepository;
 
     @Autowired
     private VaccinationSessionRepository sessionRepository;
+
+    @Autowired
+    private SessionRecurrenceRuleRepository ruleRepository;
+
+    @Autowired
+    private OperationalResourceRepository resourceRepository;
+
+    @Autowired
+    private OperationalStaffRosterRepository staffRosterRepository;
+
+    @Autowired
+    private OperationalStaffIdentityRepository identityRepository;
 
     @Autowired
     private CampaignCenterAssignmentRepository campaignCenterAssignmentRepository;
@@ -84,6 +113,9 @@ class SessionImpactMySqlIntegrationTests extends AbstractMySqlTestContainersInte
 
     @Autowired
     private OperatingHoursRepository operatingHoursRepository;
+
+    @Autowired
+    private CampaignDoseProgrammeRepository doseProgrammeRepository;
 
     @Autowired
     private VaccinationCampaignRepository campaignRepository;
@@ -254,11 +286,19 @@ class SessionImpactMySqlIntegrationTests extends AbstractMySqlTestContainersInte
             appointmentRepository.deleteAllInBatch();
             bookingGuardRepository.deleteAllInBatch();
             timeSlotRepository.deleteAllInBatch();
+            resourceAssignmentRepository.deleteAllInBatch();
+            staffAssignmentRepository.deleteAllInBatch();
+            capacityPlanRepository.deleteAllInBatch();
             sessionChangeEventRepository.deleteAllInBatch();
             sessionRepository.deleteAllInBatch();
+            ruleRepository.deleteAllInBatch();
+            resourceRepository.deleteAllInBatch();
+            staffRosterRepository.deleteAllInBatch();
+            identityRepository.deleteAllInBatch();
             campaignCenterAssignmentRepository.deleteAllInBatch();
             closureRepository.deleteAllInBatch();
             operatingHoursRepository.deleteAllInBatch();
+            doseProgrammeRepository.deleteAllInBatch();
             campaignRepository.deleteAllInBatch();
             centerRepository.deleteAllInBatch();
             targetGroupRepository.deleteAllInBatch();
