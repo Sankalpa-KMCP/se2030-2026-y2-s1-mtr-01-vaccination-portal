@@ -80,7 +80,9 @@ Total MF-02 REST routes currently integrated: **78** ($21 \text{ Campaign-family
 ### Current verified integrations
 
 1. **PR #117 — `feat(mf02): integrate slot capacity with booking port`**
-   - reviewed source: `b248541bd5efeedbfbb6a3708a4b4ef60b509156`, `396a1787a2a2267a9bbc5a3e8b9fd779b4b30147`, `a180f76d434ac2645e8f621527e6a61695896416`, `265a3d2bae5dd9c2a87a6c2cd188a89b96168b14`, and `9399acc8c1297ed525882a74b6a79186fe1f5f19`
+   - reviewed commits:
+     - production: `b248541bd5efeedbfbb6a3708a4b4ef60b509156` (`feat(mf02): integrate slot capacity with booking port`), `396a1787a2a2267a9bbc5a3e8b9fd779b4b30147` (`fix(mf02): serialize session slot capacity configuration`), `a180f76d434ac2645e8f621527e6a61695896416` (`fix(mf02): use current reads for slot capacity aggregates`)
+     - test recovery: `265a3d2bae5dd9c2a87a6c2cd188a89b96168b14` (`test(mf02): repair m4 mysql fixtures`), `9399acc8c1297ed525882a74b6a79186fe1f5f19` (`test(mf02): ensure clean table before v3 migration sql execution`)
    - candidate development base: `9525a0cae67578960a7f238365a40c6056d93d84`
    - merge: `c89cdcb610fd4690ee98e11f13955c8b9ef68966`
    - merged at: `2026-08-22T03:39:08Z`
@@ -96,7 +98,7 @@ Total MF-02 REST routes currently integrated: **78** ($21 \text{ Campaign-family
      - `TimeSlotRepository` (`findBySessionId`, `findBySessionIdForUpdateOrderByIdAsc`, `sumCapacityBySessionId`, `findByIdForUpdate`)
      - `TimeSlotService` (`createSlot`, `updateSlotCapacity`, `deleteSlot`, `getSlotsForSession`)
      - `TimeSlotCapacityService` implementing `SessionSlotCapacityPort` for cross-MF booking integration (`reserveCapacity`, `releaseCapacity`, `getAvailableCapacity`, `getSlotCapacityInfo`)
-     - `V3__mf02_time_slot.sql` Flyway migration script
+     - `V3__mf02_time_slot.sql` migration script (Flyway runtime is not currently configured; verified via direct SQL execution against MySQL 8.4.3)
    - Slot Capacity Semantics:
      - Hard session approved capacity ceiling: Total configured time slot capacity across all slots for a session must not exceed `approvedCapacity` of the latest approved `SessionCapacityPlan`.
      - Non-negative capacity floor: Slot capacity cannot be reduced below current `reservedCount` (`capacity >= reservedCount`).
@@ -104,7 +106,7 @@ Total MF-02 REST routes currently integrated: **78** ($21 \text{ Campaign-family
      - Overbooking prevention: `reserveCapacity(slotId, count)` atomicity via pessimistic locking (`findByIdForUpdate`), preventing overbooking under concurrent reservation races.
      - Release floor: `releaseCapacity(slotId, count)` cannot reduce `reservedCount` below 0.
      - Parent session lock serialization: `TimeSlotService.createSlot` and `updateSlotCapacity` lock parent `VaccinationSession` (`findByIdForUpdate`) and evaluate aggregate slot capacity via current read `findBySessionIdForUpdateOrderByIdAsc`, eliminating snapshot-isolation anomalies under MySQL `REPEATABLE_READ`.
-   - Milestone 4 Conclusion: Completes Milestone 4 (Slot Capacity Integration). All 4 planned MF-02 operational-model milestones (M1, M2A, M2B, M2C, M3, M4) are now integrated.
+   - Milestone 4 Conclusion: Completes Milestone 4 (Slot Capacity Integration). All four operational-model milestones M1–M4 are complete; M2 comprised M2A/M2B/M2C.
 
 2. **PR #114 — `feat(mf02): enforce operational readiness for session scheduling`**
    - reviewed source: `eeeed097d5430bc63e12ff699282b6cd617ca93c`, `59359fe9fa9fd67ca9f403d111f2e2689b784888`, and `f4bc3319db6e3a22cea925154e48d6d00dd58a6d`
@@ -630,7 +632,7 @@ The following summarizes the current production-layer status:
 - Blocked lifecycle endpoints (`complete`, `cancel`, `archive`) (pending specification/integration)
 - Spring Security/RBAC/authentication enforcement (pending)
 - OpenAPI documentation (pending)
-- Flyway business migrations (`V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql` integrated and verified on real MySQL; subsequent migrations pending)
+- Database migrations (`V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql` integrated and verified on real MySQL; Flyway runtime is not currently configured; subsequent migrations pending)
 - representative production MySQL Testcontainers assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
 - MF-02 frontend business screens (pending)
 - frontend automated tests (pending)
@@ -657,8 +659,8 @@ Eliminated `Thread.sleep(300)` in `CampaignAssignmentReverseImpactConcurrencyInt
 - PR #97 added `SessionSeriesMySqlConcurrencyIntegrationTests` validating concurrent series confirmation versus occurrence generation.
 - PR #110 added `SessionOperationalAssignmentMySqlConcurrencyIntegrationTests` validating concurrent session resource assignment and cross-center staff assignment serialization.
 - PR #112 added `SessionCapacityPlanMySqlConcurrencyIntegrationTests` validating concurrent session capacity plan revision creation serialization under parent session pessimistic locking.
-- PR #114 added `SessionOperationalReadinessMySqlConcurrencyIntegrationTests` and `OperationalStaffIdentityMigrationMySqlIntegrationTests` validating operational readiness evaluation under concurrent roster/resource updates and Flyway V2 execution.
-- PR #117 added `SlotCapacityMySqlConcurrencyIntegrationTests` and `TimeSlotMigrationMySqlIntegrationTests` validating concurrent booking capacity reservations, slot creation/update aggregate ceiling enforcement under current reads, and Flyway V3 execution.
+- PR #114 added `SessionOperationalReadinessMySqlConcurrencyIntegrationTests` and `OperationalStaffIdentityMigrationMySqlIntegrationTests` validating operational readiness evaluation under concurrent roster/resource updates and V2 migration SQL execution on real MySQL 8.4.3.
+- PR #117 added `SlotCapacityMySqlConcurrencyIntegrationTests` and `TimeSlotMigrationMySqlIntegrationTests` validating concurrent booking capacity reservations, slot creation/update aggregate ceiling enforcement under current reads, and V3 migration SQL execution on real MySQL 8.4.3.
 - Total suite in CI: 23 tests across 9 classes on `mysql:8.4.3`.
 
 ### 9.6 Append-only audit limitation
@@ -730,16 +732,15 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 ## 13. Immediate Engineering Order
 
 Recommended next direction (classified as **RECOMMENDATION_ONLY**; implementation not started):
-1. synchronize maintained documentation to PR #112 (Milestone 2C) — represented by this step;
-2. `NEXT_ENGINEERING_FOCUS`: **MF02_M3_OPERATIONAL_READINESS_AND_SCHEDULING_GUARD_REPLACEMENT** (Milestone 3: readiness evaluation engine, PR #102 guard replacement, and MySQL staff-roster concurrency certification);
-3. `MF02_MF03_SLOT_CAPACITY_INTEGRATION` (Milestone 4: `SlotCapacityPort` production adapter and slot generation);
-4. complete MF-02/MF-03 capacity-impact integration (`SessionImpactReader` adapter, `SlotCapacityPort` adapter);
-5. analyze and resolve remaining campaign lifecycle gaps (completion algorithm, cancellation impact integration, archive retention policy);
-6. evaluate/decompose `VaccinationSessionService` maintainability only if justified (`DEFER`);
-7. add security/RBAC;
-8. add Flyway migrations;
-9. implement MF-02 frontend and frontend tests;
-10. final end-to-end / Definition-of-Done evidence.
+1. synchronize maintained documentation to PR #117 (Milestone 4: Slot Capacity Integration) — represented by this step;
+2. acknowledge completion of the operational-model program: Milestones M1, M2A, M2B, M2C, M3, and M4 are fully integrated;
+3. acknowledge external MF-03 `SessionImpactReader` dependency (owned by MF-03; required for non-fail-closed scheduled session modifications);
+4. analyze and resolve remaining campaign lifecycle gaps (completion algorithm, cancellation impact integration, archive retention policy);
+5. evaluate/decompose `VaccinationSessionService` maintainability only if justified (`DEFER`);
+6. add Spring Security / RBAC;
+7. add database migrations / runtime management;
+8. implement MF-02 frontend and frontend tests;
+9. final end-to-end / Definition-of-Done evidence.
 
 ## 14. Historical Milestone Summary
 
@@ -808,6 +809,9 @@ Recommended next direction (classified as **RECOMMENDATION_ONLY**; implementatio
 | #110 | Session Operational Assignments REST API (Milestone 2B; 8 endpoints; COMPLETE) |
 | #111 | Documentation synchronization after PR #110 |
 | #112 | Session Capacity Plan REST API (Milestone 2C; 5 endpoints; COMPLETE) |
+| #114 | Session Operational Readiness & Scheduling Enforcement (Milestone 3; COMPLETE) |
+| #116 | Documentation synchronization after PR #114 (M3 sync) |
+| #117 | Slot Capacity Integration with Booking Port (Milestone 4; COMPLETE) |
 
 Key full merge checkpoints:
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`

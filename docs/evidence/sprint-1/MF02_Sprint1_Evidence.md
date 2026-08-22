@@ -17,7 +17,9 @@
 
 ### PR #117 — `feat(mf02): integrate slot capacity with booking port`
 
-- reviewed commits: `b248541bd5efeedbfbb6a3708a4b4ef60b509156`, `396a1787a2a2267a9bbc5a3e8b9fd779b4b30147`, `a180f76d434ac2645e8f621527e6a61695896416`, `265a3d2bae5dd9c2a87a6c2cd188a89b96168b14`, and `9399acc8c1297ed525882a74b6a79186fe1f5f19`
+- reviewed commits:
+  - production: `b248541bd5efeedbfbb6a3708a4b4ef60b509156` (`feat(mf02): integrate slot capacity with booking port`), `396a1787a2a2267a9bbc5a3e8b9fd779b4b30147` (`fix(mf02): serialize session slot capacity configuration`), `a180f76d434ac2645e8f621527e6a61695896416` (`fix(mf02): use current reads for slot capacity aggregates`)
+  - test recovery: `265a3d2bae5dd9c2a87a6c2cd188a89b96168b14` (`test(mf02): repair m4 mysql fixtures`), `9399acc8c1297ed525882a74b6a79186fe1f5f19` (`test(mf02): ensure clean table before v3 migration sql execution`)
 - candidate development base: `9525a0cae67578960a7f238365a40c6056d93d84`
 - merge: `c89cdcb610fd4690ee98e11f13955c8b9ef68966`
 - merged at: `2026-08-22T03:39:08Z`
@@ -26,14 +28,14 @@
 - Frontend CI: PASS (14s; Run 32549398452, Job 96973524017)
 - production code changed: 5 files (4 new, 1 modified)
 - test code changed: 4 files (4 new)
-- migration scripts: 1 new (`V3__mf02_time_slot.sql`)
+- migration scripts: 1 new (`V3__mf02_time_slot.sql`; Flyway runtime is not currently configured; verified via direct SQL execution against MySQL 8.4.3)
 - functional H2 test executions: **1160** (0 failures, 0 errors, 0 skipped; +22 delta over pre-M4 integrated develop baseline 1138)
 - MySQL Testcontainers assurance test executions: **23** (across 9 classes on `mysql:8.4.3`; 0 failures, 0 errors, 0 skipped; 15 historical across 7 classes + 7 M4 slot capacity concurrency tests across 1 class + 1 V3 migration SQL test across 1 class)
 - logical combined executions: **1183** (1160 H2 + 23 MySQL) across separate validation paths
 - immediate parent baseline: **1138 functional H2 + 15 MySQL** (from PR #116 / PR #114 develop state)
 - net-new candidate executions: **+22 H2 tests** over pre-M4 base (+19 `TimeSlotCapacityServiceIntegrationTests`, +3 `SlotCapacityPortCrossModuleIntegrationTests`) + **8 MySQL assurance tests** (7 `SlotCapacityMySqlConcurrencyIntegrationTests` + 1 `TimeSlotMigrationMySqlIntegrationTests`)
-- behavior: Implements session time slot model, repository, service, and cross-MF booking capacity port (`SessionSlotCapacityPort`). Enforces hard session approved capacity ceiling, non-negative capacity floor, session operating window containment, pessimistic locking on reservation/release, parent session lock serialization, and current-read aggregate evaluation under MySQL `REPEATABLE_READ`. Proves Flyway V3 DDL execution on real MySQL 8.4.3.
-- Milestone 4 Conclusion: Completes Milestone 4 (Slot Capacity Integration). All 4 planned operational-model milestones (M1, M2A, M2B, M2C, M3, M4) are now integrated.
+- behavior: Implements session time slot model, repository, service, and cross-MF booking capacity port (`SessionSlotCapacityPort`). Enforces hard session approved capacity ceiling, non-negative capacity floor, session operating window containment, pessimistic locking on reservation/release, parent session lock serialization, and current-read aggregate evaluation under MySQL `REPEATABLE_READ`. Proves V3 migration SQL DDL execution on real MySQL 8.4.3.
+- Milestone 4 Conclusion: Completes Milestone 4 (Slot Capacity Integration). All four operational-model milestones M1–M4 are complete; M2 comprised M2A/M2B/M2C.
 
 ### Preceding Milestone: PR #114 — `feat(mf02): enforce operational readiness for session scheduling`
 
@@ -1007,7 +1009,7 @@ Still not complete:
 - Campaign date update REST API
 - Spring Security/RBAC
 - OpenAPI
-- Flyway migrations (V2 and V3 migrations implemented and verified on real MySQL; broader schema migration pending)
+- Database migrations (`V2__mf02_operational_staff_identity.sql` and `V3__mf02_time_slot.sql` migration SQL scripts implemented and verified on real MySQL; Flyway runtime is not currently configured; broader schema migration pending)
 - representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
 - MF-02 frontend
 - frontend tests
