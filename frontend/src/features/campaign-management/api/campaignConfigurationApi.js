@@ -220,3 +220,37 @@ export async function getActiveCenters() {
   });
   return handleResponse(response);
 }
+
+// -------------------------------------------------------------------------------------------------
+// Campaign Location Target Management (F2C2)
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * Fetch all administrative location targets for a campaign, optionally filtered by type.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @param {string|null} [type=null] - Optional LocationTargetType (PROVINCE, DISTRICT, HEALTH_REGION, CENTER)
+ * @returns {Promise<Array>} List of CampaignLocationTargetResponse objects
+ */
+export async function getLocationTargets(campaignId, type = null) {
+  const query = type ? `?type=${encodeURIComponent(type)}` : '';
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/location-targets${query}`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Add an administrative service-area location target to a campaign.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @param {Object} payload - CreateLocationTargetRequest { targetType: string, targetCode: string }
+ * @returns {Promise<Object>} Created CampaignLocationTargetResponse
+ */
+export async function createLocationTarget(campaignId, payload) {
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/location-targets`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}

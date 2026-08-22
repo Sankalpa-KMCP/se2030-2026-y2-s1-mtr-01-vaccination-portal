@@ -7,6 +7,8 @@ import QuestionnaireTab from './QuestionnaireTab';
 import QuestionnaireAssignmentFormModal from './QuestionnaireAssignmentFormModal';
 import CenterAssignmentsTab from './CenterAssignmentsTab';
 import CenterAssignmentModal from './CenterAssignmentModal';
+import LocationTargetsTab from './LocationTargetsTab';
+import LocationTargetModal from './LocationTargetModal';
 import {
   getDoseProgrammes,
   createDoseProgramme,
@@ -21,6 +23,8 @@ import {
   endCenterAssignment,
   cancelCenterAssignment,
   getActiveCenters,
+  getLocationTargets,
+  createLocationTarget,
 } from '../api/campaignConfigurationApi';
 
 function getStatusBadgeClass(status) {
@@ -100,6 +104,16 @@ export default function CampaignDetailsModal({
   const [selectedCenterAssignment, setSelectedCenterAssignment] = useState(null);
   const [centerModalLoading, setCenterModalLoading] = useState(false);
   const [centerModalError, setCenterModalError] = useState(null);
+
+  // Location Target State
+  const [locationTargets, setLocationTargets] = useState([]);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+
+  // Location Target Modal State
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [locationModalLoading, setLocationModalLoading] = useState(false);
+  const [locationModalError, setLocationModalError] = useState(null);
 
   const fetchDoseProgrammes = useCallback(async (campaignId) => {
     if (!campaignId) return;
@@ -188,6 +202,20 @@ export default function CampaignDetailsModal({
     }
   }, []);
 
+  const fetchLocationTargets = useCallback(async (campaignId) => {
+    if (!campaignId) return;
+    setLocationLoading(true);
+    setLocationError(null);
+    try {
+      const data = await getLocationTargets(campaignId);
+      setLocationTargets(data || []);
+    } catch (err) {
+      setLocationError(err);
+    } finally {
+      setLocationLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (campaign?.id) {
       fetchDoseProgrammes(campaign.id);
@@ -195,6 +223,7 @@ export default function CampaignDetailsModal({
       fetchQuestionnaireCatalogue();
       fetchCenterAssignments(campaign.id);
       fetchActiveCentersList();
+      fetchLocationTargets(campaign.id);
     }
   }, [
     campaign?.id,
@@ -203,6 +232,7 @@ export default function CampaignDetailsModal({
     fetchQuestionnaireCatalogue,
     fetchCenterAssignments,
     fetchActiveCentersList,
+    fetchLocationTargets,
   ]);
 
   const handleDoseFormSubmit = async (payload) => {
@@ -261,6 +291,21 @@ export default function CampaignDetailsModal({
       setCenterModalError(err);
     } finally {
       setCenterModalLoading(false);
+    }
+  };
+
+  const handleLocationTargetSubmit = async (payload) => {
+    if (!campaign?.id) return;
+    setLocationModalLoading(true);
+    setLocationModalError(null);
+    try {
+      await createLocationTarget(campaign.id, payload);
+      setShowLocationModal(false);
+      await fetchLocationTargets(campaign.id);
+    } catch (err) {
+      setLocationModalError(err);
+    } finally {
+      setLocationModalLoading(false);
     }
   };
 
@@ -361,6 +406,20 @@ export default function CampaignDetailsModal({
                 <li className="nav-item" role="presentation">
                   <button
                     type="button"
+                    className={`nav-link border-0 fw-semibold small ${activeTab === 'locations' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('locations')}
+                  >
+                    Location Targets{' '}
+                    {locationTargets.length > 0 && (
+                      <span className="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle ms-1 font-monospace" style={{ fontSize: '0.7rem' }}>
+                        {locationTargets.length}
+                      </span>
+                    )}
+                  </button>
+                </li>
+                <li className="nav-item" role="presentation">
+                  <button
+                    type="button"
                     className={`nav-link border-0 fw-semibold small ${activeTab === 'audit' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
                     onClick={() => setActiveTab('audit')}
                   >
@@ -419,6 +478,18 @@ export default function CampaignDetailsModal({
                           ) : (
                             <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
                               0 Active
+                            </span>
+                          )}
+                        </span>
+                        <span className="small text-muted">
+                          Locations:{' '}
+                          {locationTargets.length > 0 ? (
+                            <span className="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle">
+                              {locationTargets.length} Scoped
+                            </span>
+                          ) : (
+                            <span className="badge bg-light text-muted border">
+                              Unrestricted
                             </span>
                           )}
                         </span>
@@ -587,6 +658,21 @@ export default function CampaignDetailsModal({
                   />
                 )}
 
+                {/* Tab: Location Targets */}
+                {activeTab === 'locations' && (
+                  <LocationTargetsTab
+                    campaign={campaign}
+                    targets={locationTargets}
+                    loading={locationLoading}
+                    error={locationError}
+                    onOpenAddModal={() => {
+                      setLocationModalError(null);
+                      setShowLocationModal(true);
+                    }}
+                    onRefresh={() => fetchLocationTargets(campaign.id)}
+                  />
+                )}
+
                 {/* Tab: Audit History */}
                 {activeTab === 'audit' && (
                   <div>
@@ -683,6 +769,20 @@ export default function CampaignDetailsModal({
           }}
           loading={centerModalLoading}
           error={centerModalError}
+        />
+      )}
+
+      {/* Location Target Add Modal */}
+      {showLocationModal && (
+        <LocationTargetModal
+          isOpen={showLocationModal}
+          onClose={() => {
+            setShowLocationModal(false);
+            setLocationModalError(null);
+          }}
+          onSubmit={handleLocationTargetSubmit}
+          loading={locationModalLoading}
+          error={locationModalError}
         />
       )}
     </div>
