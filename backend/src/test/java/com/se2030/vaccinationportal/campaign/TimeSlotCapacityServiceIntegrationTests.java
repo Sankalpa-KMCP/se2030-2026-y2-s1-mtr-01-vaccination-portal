@@ -33,6 +33,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
+import com.se2030.vaccinationportal.campaign.dto.request.CreateSessionCapacityPlanRequest;
+import com.se2030.vaccinationportal.campaign.service.SessionCapacityPlanService;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -49,6 +52,9 @@ class TimeSlotCapacityServiceIntegrationTests {
 
     @Autowired
     private TimeSlotService timeSlotService;
+
+    @Autowired
+    private SessionCapacityPlanService planService;
 
     @Autowired
     private TimeSlotRepository timeSlotRepository;
@@ -329,5 +335,78 @@ class TimeSlotCapacityServiceIntegrationTests {
         assertThrows(IllegalStateException.class, () ->
                 timeSlotService.updateSlotCapacity(slot.getId(), 55)
         );
+    }
+
+    @Test
+    @DisplayName("updateSlotCapacity enforces approved session capacity aggregate across multiple slots")
+    void updateSlotCapacity_concurrentTwoSlotAggregate_enforcesApprovedCapacity() {
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 10, 60, 15, 0.0, null, null, "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        TimeSlot slotA = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+        TimeSlot slotB = timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(1, ChronoUnit.HOURS), baseStart.plus(2, ChronoUnit.HOURS), 4);
+
+        // Update slotA from 4 to 6 (total: 6 + 4 = 10 <= 10) -> succeeds
+        TimeSlot updatedA = timeSlotService.updateSlotCapacity(slotA.getId(), 6);
+        assertEquals(6, updatedA.getCapacity());
+
+        // Update slotB from 4 to 6 (total would be 6 + 6 = 12 > 10) -> rejected
+        assertThrows(IllegalStateException.class, () ->
+                timeSlotService.updateSlotCapacity(slotB.getId(), 6)
+        );
+
+        Integer total = timeSlotRepository.sumCapacityBySessionId(scheduledSession.getId());
+        assertEquals(10, total);
+    }
+
+    @Test
+    @DisplayName("createSlot vs updateSlotCapacity enforces approved session capacity aggregate")
+    void createSlot_vs_updateSlot_enforcesApprovedCapacity() {
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 10, 60, 15, 0.0, null, null, "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        TimeSlot slotA = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+        timeSlotService.updateSlotCapacity(slotA.getId(), 6);
+
+        // Attempting to create slotB with capacity 5 (total would be 6 + 5 = 11 > 10) -> rejected
+        assertThrows(IllegalStateException.class, () ->
+                timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(1, ChronoUnit.HOURS), baseStart.plus(2, ChronoUnit.HOURS), 5)
+        );
+
+        // Creating slotB with capacity 4 (total 6 + 4 = 10 <= 10) -> succeeds
+        TimeSlot slotB = timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(1, ChronoUnit.HOURS), baseStart.plus(2, ChronoUnit.HOURS), 4);
+        assertEquals(4, slotB.getCapacity());
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan rejects approved capacity below existing configured slot total")
+    void createCapacityPlan_rejectsApprovedCapacityBelowExistingSlotTotal() {
+        SessionCapacityPlan plan1 = new SessionCapacityPlan(
+                draftSession, 1, 240, 10, 2, 2, 2, 2, 48, 20, 60, 15, 0.0, null, null, "admin"
+        );
+        capacityPlanRepository.save(plan1);
+
+        timeSlotService.createSlot(draftSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+        timeSlotService.createSlot(draftSession.getId(), baseStart.plus(1, ChronoUnit.HOURS), baseStart.plus(2, ChronoUnit.HOURS), 10);
+
+        // Configured slot total is 20. Attempting new capacity plan with approvedCapacity = 15 should fail
+        CreateSessionCapacityPlanRequest requestInvalid = new CreateSessionCapacityPlanRequest(
+                0, 15, 60, 15, 0.0, "Approved reduction", "admin"
+        );
+        assertThrows(IllegalStateException.class, () ->
+                planService.createCapacityPlan(draftSession.getId(), requestInvalid)
+        );
+
+        // Attempting new capacity plan with approvedCapacity = 25 should succeed
+        CreateSessionCapacityPlanRequest requestValid = new CreateSessionCapacityPlanRequest(
+                0, 25, 60, 15, 0.0, "Approved expansion", "admin"
+        );
+        SessionCapacityPlan plan2 = planService.createCapacityPlan(draftSession.getId(), requestValid);
+        assertNotNull(plan2);
+        assertEquals(25, plan2.getApprovedCapacity());
     }
 }

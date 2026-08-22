@@ -57,14 +57,27 @@ public class TimeSlotService {
 
     @Transactional
     public TimeSlot updateSlotCapacity(Long slotId, int newCapacity) {
+        if (slotId == null) {
+            throw new IllegalArgumentException("Slot ID must not be null");
+        }
+        TimeSlot initialSlot = timeSlotRepository.findById(slotId)
+                .orElseThrow(() -> new IllegalArgumentException("TimeSlot not found with ID: " + slotId));
+
+        Long sessionId = initialSlot.getSession().getId();
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found with ID: " + sessionId));
+
         TimeSlot slot = timeSlotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new IllegalArgumentException("TimeSlot not found with ID: " + slotId));
+
+        if (!slot.getSession().getId().equals(session.getId())) {
+            throw new IllegalStateException("TimeSlot session mismatch");
+        }
 
         if (newCapacity < slot.getReservedCount()) {
             throw new IllegalStateException("Cannot reduce slot capacity (" + newCapacity + ") below existing reserved bookings (" + slot.getReservedCount() + ")");
         }
 
-        Long sessionId = slot.getSession().getId();
         Integer currentSum = timeSlotRepository.sumCapacityBySessionId(sessionId);
         int diff = newCapacity - slot.getCapacity();
         int newTotal = (currentSum != null ? currentSum : 0) + diff;

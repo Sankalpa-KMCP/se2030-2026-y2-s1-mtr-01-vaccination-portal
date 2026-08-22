@@ -371,4 +371,109 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         assertEquals(1, timeSlotRepository.findById(slotA.getId()).orElseThrow().getReservedCount());
         assertEquals(1, timeSlotRepository.findById(slotB.getId()).orElseThrow().getReservedCount());
     }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("Task 32: Concurrent two-slot capacity update - Serialized by parent session lock in MySQL")
+    void concurrentTwoSlotUpdate_enforcesApprovedCapacityAggregateInMySQL() throws Exception {
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                session, 1, 240, 10, 2, 2, 2, 2, 48, 10, 60, 15, 0.0, null, null, "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        TimeSlot slotA = timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+        TimeSlot slotB = timeSlotService.createSlot(session.getId(), baseStart.plus(1, ChronoUnit.HOURS), baseStart.plus(2, ChronoUnit.HOURS), 4);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        // T1: update slotA from 4 to 6 (requires 6 + 4 = 10)
+        Future<Boolean> f1 = executor.submit(() -> {
+            readyLatch.countDown();
+            startLatch.await(10, TimeUnit.SECONDS);
+            try {
+                timeSlotService.updateSlotCapacity(slotA.getId(), 6);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+
+        // T2: update slotB from 4 to 6 (requires 4 + 6 = 10; combined would be 12 > 10)
+        Future<Boolean> f2 = executor.submit(() -> {
+            readyLatch.countDown();
+            startLatch.await(10, TimeUnit.SECONDS);
+            try {
+                timeSlotService.updateSlotCapacity(slotB.getId(), 6);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        boolean r1 = f1.get(10, TimeUnit.SECONDS);
+        boolean r2 = f2.get(10, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Exactly one should succeed and one should fail
+        assertTrue((r1 && !r2) || (!r1 && r2), "Exactly one conflicting slot capacity update should succeed");
+
+        Integer total = timeSlotRepository.sumCapacityBySessionId(session.getId());
+        assertEquals(10, total, "Total configured slot capacity must not exceed approved capacity (10)");
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("Task 33: Concurrent create vs update slot capacity - Serialized by parent session lock in MySQL")
+    void concurrentCreateVsUpdate_enforcesApprovedCapacityAggregateInMySQL() throws Exception {
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                session, 1, 240, 10, 2, 2, 2, 2, 48, 10, 60, 15, 0.0, null, null, "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        TimeSlot slotA = timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        // T1: update slotA from 4 to 7
+        Future<Boolean> f1 = executor.submit(() -> {
+            readyLatch.countDown();
+            startLatch.await(10, TimeUnit.SECONDS);
+            try {
+                timeSlotService.updateSlotCapacity(slotA.getId(), 7);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+
+        // T2: create slotB with capacity 5 (combined would be 7 + 5 = 12 > 10)
+        Future<Boolean> f2 = executor.submit(() -> {
+            readyLatch.countDown();
+            startLatch.await(10, TimeUnit.SECONDS);
+            try {
+                timeSlotService.createSlot(session.getId(), baseStart.plus(1, ChronoUnit.HOURS), baseStart.plus(2, ChronoUnit.HOURS), 5);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        boolean r1 = f1.get(10, TimeUnit.SECONDS);
+        boolean r2 = f2.get(10, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Total capacity must remain <= 10
+        Integer total = timeSlotRepository.sumCapacityBySessionId(session.getId());
+        assertTrue(total <= 10, "Total configured slot capacity (" + total + ") must not exceed approved capacity (10)");
+    }
 }
