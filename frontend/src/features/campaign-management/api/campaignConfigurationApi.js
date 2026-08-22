@@ -134,3 +134,89 @@ export async function getQuestionnaireVersion(versionId) {
   });
   return handleResponse(response);
 }
+
+/**
+ * Fetch all center assignment history records for a vaccination campaign.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @returns {Promise<Array>} List of CampaignCenterAssignmentResponse objects
+ */
+export async function getCenterAssignments(campaignId) {
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/center-assignments`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Create a new campaign-center authorization assignment.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @param {Object} payload - CreateCenterAssignmentRequest payload ({ centerId, activeFrom, activeTo })
+ * @returns {Promise<Object>} Created CampaignCenterAssignmentResponse
+ */
+export async function createCenterAssignment(campaignId, payload) {
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/center-assignments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update the active period of a future (unstarted) campaign-center assignment.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @param {number|string} assignmentId - Assignment identifier
+ * @param {Object} payload - UpdateCenterAssignmentRequest payload ({ activeFrom, activeTo })
+ * @returns {Promise<Object>} Updated CampaignCenterAssignmentResponse
+ */
+export async function updateCenterAssignment(campaignId, assignmentId, payload) {
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/center-assignments/${assignmentId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * End an effective campaign-center assignment early.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @param {number|string} assignmentId - Assignment identifier
+ * @param {Object} payload - EndCenterAssignmentRequest payload ({ activeTo })
+ * @returns {Promise<Object>} Updated CampaignCenterAssignmentResponse
+ */
+export async function endCenterAssignment(campaignId, assignmentId, payload) {
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/center-assignments/${assignmentId}/end-date`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Cancel a future (unstarted) campaign-center assignment.
+ *
+ * @param {number|string} campaignId - Campaign identifier
+ * @param {number|string} assignmentId - Assignment identifier
+ * @returns {Promise<Object>} Cancelled CampaignCenterAssignmentResponse
+ */
+export async function cancelCenterAssignment(campaignId, assignmentId) {
+  const response = await apiRequest(`/v1/campaigns/${campaignId}/center-assignments/${assignmentId}/cancel`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch all active physical vaccination centers for assignment selection.
+ *
+ * @returns {Promise<Array>} List of CenterSummaryResponse objects
+ */
+export async function getActiveCenters() {
+  const response = await apiRequest('/v1/centers?status=ACTIVE', {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}

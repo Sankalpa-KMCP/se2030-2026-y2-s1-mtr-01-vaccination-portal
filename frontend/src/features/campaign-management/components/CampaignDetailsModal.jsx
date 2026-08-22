@@ -5,6 +5,8 @@ import DoseProgrammeTab from './DoseProgrammeTab';
 import DoseProgrammeFormModal from './DoseProgrammeFormModal';
 import QuestionnaireTab from './QuestionnaireTab';
 import QuestionnaireAssignmentFormModal from './QuestionnaireAssignmentFormModal';
+import CenterAssignmentsTab from './CenterAssignmentsTab';
+import CenterAssignmentModal from './CenterAssignmentModal';
 import {
   getDoseProgrammes,
   createDoseProgramme,
@@ -13,6 +15,12 @@ import {
   assignQuestionnaire,
   getScreeningQuestionnaires,
   getQuestionnaireVersions,
+  getCenterAssignments,
+  createCenterAssignment,
+  updateCenterAssignment,
+  endCenterAssignment,
+  cancelCenterAssignment,
+  getActiveCenters,
 } from '../api/campaignConfigurationApi';
 
 function getStatusBadgeClass(status) {
@@ -80,6 +88,19 @@ export default function CampaignDetailsModal({
   const [questionnaireModalLoading, setQuestionnaireModalLoading] = useState(false);
   const [questionnaireModalError, setQuestionnaireModalError] = useState(null);
 
+  // Center Assignment State
+  const [centerAssignments, setCenterAssignments] = useState([]);
+  const [centerLoading, setCenterLoading] = useState(false);
+  const [centerError, setCenterError] = useState(null);
+  const [activeCenters, setActiveCenters] = useState([]);
+  const [loadingActiveCenters, setLoadingActiveCenters] = useState(false);
+
+  // Center Modal State
+  const [centerModalMode, setCenterModalMode] = useState(null); // 'CREATE' | 'UPDATE_FUTURE' | 'END_ACTIVE' | 'CANCEL_CONFIRM' | null
+  const [selectedCenterAssignment, setSelectedCenterAssignment] = useState(null);
+  const [centerModalLoading, setCenterModalLoading] = useState(false);
+  const [centerModalError, setCenterModalError] = useState(null);
+
   const fetchDoseProgrammes = useCallback(async (campaignId) => {
     if (!campaignId) return;
     setDoseLoading(true);
@@ -141,13 +162,48 @@ export default function CampaignDetailsModal({
     }
   }, []);
 
+  const fetchCenterAssignments = useCallback(async (campaignId) => {
+    if (!campaignId) return;
+    setCenterLoading(true);
+    setCenterError(null);
+    try {
+      const data = await getCenterAssignments(campaignId);
+      setCenterAssignments(data || []);
+    } catch (err) {
+      setCenterError(err);
+    } finally {
+      setCenterLoading(false);
+    }
+  }, []);
+
+  const fetchActiveCentersList = useCallback(async () => {
+    setLoadingActiveCenters(true);
+    try {
+      const data = await getActiveCenters();
+      setActiveCenters(data || []);
+    } catch {
+      // Handled gracefully in modal
+    } finally {
+      setLoadingActiveCenters(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (campaign?.id) {
       fetchDoseProgrammes(campaign.id);
       fetchQuestionnaireAssignments(campaign.id);
       fetchQuestionnaireCatalogue();
+      fetchCenterAssignments(campaign.id);
+      fetchActiveCentersList();
     }
-  }, [campaign?.id, fetchDoseProgrammes, fetchQuestionnaireAssignments, fetchQuestionnaireCatalogue]);
+  }, [
+    campaign?.id,
+    fetchDoseProgrammes,
+    fetchQuestionnaireAssignments,
+    fetchQuestionnaireCatalogue,
+    fetchCenterAssignments,
+    fetchActiveCentersList,
+  ]);
 
   const handleDoseFormSubmit = async (payload) => {
     if (!campaign?.id) return;
@@ -184,12 +240,39 @@ export default function CampaignDetailsModal({
     }
   };
 
+  const handleCenterAssignmentSubmit = async (payload) => {
+    if (!campaign?.id) return;
+    setCenterModalLoading(true);
+    setCenterModalError(null);
+    try {
+      if (centerModalMode === 'CREATE') {
+        await createCenterAssignment(campaign.id, payload);
+      } else if (centerModalMode === 'UPDATE_FUTURE' && selectedCenterAssignment) {
+        await updateCenterAssignment(campaign.id, selectedCenterAssignment.id, payload);
+      } else if (centerModalMode === 'END_ACTIVE' && selectedCenterAssignment) {
+        await endCenterAssignment(campaign.id, selectedCenterAssignment.id, payload);
+      } else if (centerModalMode === 'CANCEL_CONFIRM' && selectedCenterAssignment) {
+        await cancelCenterAssignment(campaign.id, selectedCenterAssignment.id);
+      }
+      setCenterModalMode(null);
+      setSelectedCenterAssignment(null);
+      await fetchCenterAssignments(campaign.id);
+    } catch (err) {
+      setCenterModalError(err);
+    } finally {
+      setCenterModalLoading(false);
+    }
+  };
+
   if (!campaign && !loading && !error) return null;
 
   const latestDoseProgramme = doseProgrammes.length > 0 ? doseProgrammes[0] : null;
   const todayIsoStr = new Date().toISOString().split('T')[0];
   const activeQuestionnaireAssignment = questionnaireAssignments.find(
     (a) => a.activeFrom <= todayIsoStr && (a.activeTo == null || a.activeTo > todayIsoStr)
+  );
+  const currentCenterAssignments = centerAssignments.filter(
+    (a) => a.status === 'ACTIVE' && a.activeFrom <= todayIsoStr && (a.activeTo == null || a.activeTo > todayIsoStr)
   );
 
   return (
@@ -264,6 +347,20 @@ export default function CampaignDetailsModal({
                 <li className="nav-item" role="presentation">
                   <button
                     type="button"
+                    className={`nav-link border-0 fw-semibold small ${activeTab === 'centers' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('centers')}
+                  >
+                    Center Assignments{' '}
+                    {currentCenterAssignments.length > 0 && (
+                      <span className="badge bg-success-subtle text-success border border-success-subtle ms-1 font-monospace" style={{ fontSize: '0.7rem' }}>
+                        {currentCenterAssignments.length}
+                      </span>
+                    )}
+                  </button>
+                </li>
+                <li className="nav-item" role="presentation">
+                  <button
+                    type="button"
                     className={`nav-link border-0 fw-semibold small ${activeTab === 'audit' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
                     onClick={() => setActiveTab('audit')}
                   >
@@ -310,6 +407,18 @@ export default function CampaignDetailsModal({
                           ) : (
                             <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
                               Not Assigned
+                            </span>
+                          )}
+                        </span>
+                        <span className="small text-muted">
+                          Centers:{' '}
+                          {currentCenterAssignments.length > 0 ? (
+                            <span className="badge bg-success-subtle text-success border border-success-subtle">
+                              {currentCenterAssignments.length} Active
+                            </span>
+                          ) : (
+                            <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                              0 Active
                             </span>
                           )}
                         </span>
@@ -448,6 +557,36 @@ export default function CampaignDetailsModal({
                   />
                 )}
 
+                {/* Tab: Center Assignments */}
+                {activeTab === 'centers' && (
+                  <CenterAssignmentsTab
+                    campaign={campaign}
+                    assignments={centerAssignments}
+                    loading={centerLoading}
+                    error={centerError}
+                    onOpenCreateModal={() => {
+                      setCenterModalError(null);
+                      setSelectedCenterAssignment(null);
+                      setCenterModalMode('CREATE');
+                    }}
+                    onOpenUpdateModal={(a) => {
+                      setCenterModalError(null);
+                      setSelectedCenterAssignment(a);
+                      setCenterModalMode('UPDATE_FUTURE');
+                    }}
+                    onOpenEndModal={(a) => {
+                      setCenterModalError(null);
+                      setSelectedCenterAssignment(a);
+                      setCenterModalMode('END_ACTIVE');
+                    }}
+                    onOpenCancelModal={(a) => {
+                      setCenterModalError(null);
+                      setSelectedCenterAssignment(a);
+                      setCenterModalMode('CANCEL_CONFIRM');
+                    }}
+                  />
+                )}
+
                 {/* Tab: Audit History */}
                 {activeTab === 'audit' && (
                   <div>
@@ -526,6 +665,24 @@ export default function CampaignDetailsModal({
           }}
           loading={questionnaireModalLoading}
           error={questionnaireModalError}
+        />
+      )}
+
+      {/* Center Assignment Mutation Modal */}
+      {centerModalMode && (
+        <CenterAssignmentModal
+          mode={centerModalMode}
+          assignment={selectedCenterAssignment}
+          activeCenters={activeCenters}
+          loadingCenters={loadingActiveCenters}
+          onSubmit={handleCenterAssignmentSubmit}
+          onCancel={() => {
+            setCenterModalMode(null);
+            setSelectedCenterAssignment(null);
+            setCenterModalError(null);
+          }}
+          loading={centerModalLoading}
+          error={centerModalError}
         />
       )}
     </div>
