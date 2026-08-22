@@ -7,15 +7,35 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02:** **IN PROGRESS**
 **US-13:** **IN PROGRESS**
-**Evidence synchronized through implementation:** PR #114
-**Latest verified implementation merge:** `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`
+**Evidence synchronized through implementation:** PR #117
+**Latest verified implementation merge:** `c89cdcb610fd4690ee98e11f13955c8b9ef68966`
 **Last updated:** 2026-08-22
 
 > This is an implementation/verification evidence record. It is not the semantic requirements source of truth. Historical test counts are checkpoint-scoped and must not be presented as the current baseline.
 
 ## 1. Current Verification Snapshot
 
-### PR #114 — `feat(mf02): enforce operational readiness for session scheduling`
+### PR #117 — `feat(mf02): integrate slot capacity with booking port`
+
+- reviewed commits: `b248541bd5efeedbfbb6a3708a4b4ef60b509156`, `396a1787a2a2267a9bbc5a3e8b9fd779b4b30147`, `a180f76d434ac2645e8f621527e6a61695896416`, `265a3d2bae5dd9c2a87a6c2cd188a89b96168b14`, and `9399acc8c1297ed525882a74b6a79186fe1f5f19`
+- candidate development base: `9525a0cae67578960a7f238365a40c6056d93d84`
+- merge: `c89cdcb610fd4690ee98e11f13955c8b9ef68966`
+- merged at: `2026-08-22T03:39:08Z`
+- merge method: normal merge commit (two parents: `9525a0cae67578960a7f238365a40c6056d93d84` and `9399acc8c1297ed525882a74b6a79186fe1f5f19`)
+- Backend CI: PASS (1160 H2 verify + 23 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m32s; Run 32549398387, Job 96973523785)
+- Frontend CI: PASS (14s; Run 32549398452, Job 96973524017)
+- production code changed: 5 files (4 new, 1 modified)
+- test code changed: 4 files (4 new)
+- migration scripts: 1 new (`V3__mf02_time_slot.sql`)
+- functional H2 test executions: **1160** (0 failures, 0 errors, 0 skipped; +22 delta over pre-M4 integrated develop baseline 1138)
+- MySQL Testcontainers assurance test executions: **23** (across 9 classes on `mysql:8.4.3`; 0 failures, 0 errors, 0 skipped; 15 historical across 7 classes + 7 M4 slot capacity concurrency tests across 1 class + 1 V3 migration SQL test across 1 class)
+- logical combined executions: **1183** (1160 H2 + 23 MySQL) across separate validation paths
+- immediate parent baseline: **1138 functional H2 + 15 MySQL** (from PR #116 / PR #114 develop state)
+- net-new candidate executions: **+22 H2 tests** over pre-M4 base (+19 `TimeSlotCapacityServiceIntegrationTests`, +3 `SlotCapacityPortCrossModuleIntegrationTests`) + **8 MySQL assurance tests** (7 `SlotCapacityMySqlConcurrencyIntegrationTests` + 1 `TimeSlotMigrationMySqlIntegrationTests`)
+- behavior: Implements session time slot model, repository, service, and cross-MF booking capacity port (`SessionSlotCapacityPort`). Enforces hard session approved capacity ceiling, non-negative capacity floor, session operating window containment, pessimistic locking on reservation/release, parent session lock serialization, and current-read aggregate evaluation under MySQL `REPEATABLE_READ`. Proves Flyway V3 DDL execution on real MySQL 8.4.3.
+- Milestone 4 Conclusion: Completes Milestone 4 (Slot Capacity Integration). All 4 planned operational-model milestones (M1, M2A, M2B, M2C, M3, M4) are now integrated.
+
+### Preceding Milestone: PR #114 — `feat(mf02): enforce operational readiness for session scheduling`
 
 - reviewed commits: `eeeed097d5430bc63e12ff699282b6cd617ca93c`, `59359fe9fa9fd67ca9f403d111f2e2689b784888`, and `f4bc3319db6e3a22cea925154e48d6d00dd58a6d`
 - candidate development base: `b30d9dd02698684dd2337b259c4c95b87daced48`
@@ -951,8 +971,8 @@ Production-facing adapters for questionnaire publication (provided by MF-01 `Que
 ### Concurrency test quality — RESOLVED (PR #78)
 PR #78 eliminated the remaining `Thread.sleep(300)` timing delay from `CampaignAssignmentReverseImpactConcurrencyIntegrationTests.java` and established deterministic latch coordination with explicit winner/state assertions. Zero `Thread.sleep` calls remain across the backend test suite.
 
-### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84, PR #97, PR #110, PR #112, & PR #114)
-PR #84, PR #97, PR #110, PR #112, and PR #114 established real MySQL 8.4.3 InnoDB integration tests via Testcontainers:
+### Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117)
+PR #84, PR #97, PR #110, PR #112, PR #114, and PR #117 established real MySQL 8.4.3 InnoDB integration tests via Testcontainers:
 - Validated single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`).
 - Validated parent/child reverse-impact pessimistic-locking serialization (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`).
 - Validated concurrent series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`).
@@ -960,8 +980,10 @@ PR #84, PR #97, PR #110, PR #112, and PR #114 established real MySQL 8.4.3 InnoD
 - Validated concurrent session capacity plan revision creation serialization (`SessionCapacityPlanMySqlConcurrencyIntegrationTests`).
 - Validated concurrent session operational readiness verification and staff identity serialization (`SessionOperationalReadinessMySqlConcurrencyIntegrationTests`).
 - Validated V2 migration DDL and idempotent backfill on real MySQL (`OperationalStaffIdentityMigrationMySqlIntegrationTests`).
-- Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step. Total suite in CI: 15 tests across 7 classes on `mysql:8.4.3`.
-- *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, series concurrency, operational assignment concurrency, capacity plan revision concurrency, and operational readiness concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.
+- Validated concurrent booking capacity reservations, slot creation/update aggregate ceiling enforcement under current reads, and time slot deletion (`SlotCapacityMySqlConcurrencyIntegrationTests`).
+- Validated V3 migration DDL on real MySQL (`TimeSlotMigrationMySqlIntegrationTests`).
+- Automated in GitHub Actions CI under dedicated `-Pmysql-concurrency` profile step. Total suite in CI: 23 tests across 9 classes on `mysql:8.4.3`.
+- *Scope boundary:* Representative single-row lifecycle, parent/child reverse-impact, series concurrency, operational assignment concurrency, capacity plan revision concurrency, operational readiness concurrency, and time slot capacity reservation/aggregate concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.
 
 ### Audit deletion
 Lifecycle/change event repositories inherit normal delete APIs, so “append-only” is not deletion-proof persistence.
@@ -974,19 +996,19 @@ Still not complete:
 - Session Capacity Plan REST API (Milestone 2C: COMPLETE)
 - Session Operational Configuration REST API (Milestone 2 Overall: COMPLETE)
 - Session Operational Readiness & Guard Replacement (Milestone 3: COMPLETE)
-- MF02/MF03 Slot Capacity Integration (Milestone 4: PENDING_M4)
+- MF02/MF03 Slot Capacity Integration (Milestone 4: COMPLETE)
 - design and implementation of remaining campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`USER_DATA_REQUIRED`)
 - evaluation/decomposition of `VaccinationSessionService` maintainability only if justified (`DEFER`)
 - archival retention value (`USER_DATA_REQUIRED`)
 - DRAFT parent-campaign / child-session scheduling policy (`IMPLEMENTATION_DEFINED / unresolved policy`)
 - MF-01 production adapter/FK
-- MF-03 production impact adapter
+- MF-03 production booking/impact consumer
 - transactional outbox
 - Campaign date update REST API
 - Spring Security/RBAC
 - OpenAPI
-- Flyway migrations (V2 migration implemented and verified for OperationalStaffIdentity; broader schema migration pending)
-- representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, & PR #114; broad production database certification deferred)
+- Flyway migrations (V2 and V3 migrations implemented and verified on real MySQL; broader schema migration pending)
+- representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
 - MF-02 frontend
 - frontend tests
 - final end-to-end / Definition-of-Done evidence
@@ -1016,9 +1038,9 @@ Current status remains:
 - Roster registration vs scheduling MySQL proof: **COMPLETE**
 - Session Operational Readiness (Milestone 3): **COMPLETE**
 - Session Scheduling Guard Replacement (Milestone 3): **COMPLETE**
-- MF02/MF03 Slot Capacity Integration (Milestone 4): **PENDING_M4**
-- current verified backend baseline: **1123 functional H2 tests plus 15 MySQL Testcontainers assurance tests across 7 classes** across separate validation paths.
-- MF02_DOCUMENTATION_M3_SYNC: **LOCAL_CANDIDATE_READY**
+- MF02/MF03 Slot Capacity Integration (Milestone 4): **COMPLETE**
+- current verified backend baseline: **1160 functional H2 tests plus 23 MySQL Testcontainers assurance tests across 9 classes** across separate validation paths.
+- MF02_DOCUMENTATION_M4_SYNC: **LOCAL_CANDIDATE_READY**
 
 Do not infer completion from the size of the backend test suite.
 
