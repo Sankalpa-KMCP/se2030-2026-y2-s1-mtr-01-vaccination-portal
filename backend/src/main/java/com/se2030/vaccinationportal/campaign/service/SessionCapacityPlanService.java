@@ -12,11 +12,13 @@ import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionResourceAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
+import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -40,19 +42,22 @@ public class SessionCapacityPlanService {
     private final SessionResourceAssignmentRepository resourceAssignmentRepository;
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final SessionCapacityCalculationService calculationService;
+    private final TimeSlotRepository timeSlotRepository;
 
     public SessionCapacityPlanService(VaccinationSessionRepository sessionRepository,
                                       SessionCapacityPlanRepository planRepository,
                                       StaffAssignmentRepository staffAssignmentRepository,
                                       SessionResourceAssignmentRepository resourceAssignmentRepository,
                                       CampaignDoseProgrammeRepository doseProgrammeRepository,
-                                      SessionCapacityCalculationService calculationService) {
+                                      SessionCapacityCalculationService calculationService,
+                                      TimeSlotRepository timeSlotRepository) {
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "sessionRepository must not be null");
         this.planRepository = Objects.requireNonNull(planRepository, "planRepository must not be null");
         this.staffAssignmentRepository = Objects.requireNonNull(staffAssignmentRepository, "staffAssignmentRepository must not be null");
         this.resourceAssignmentRepository = Objects.requireNonNull(resourceAssignmentRepository, "resourceAssignmentRepository must not be null");
         this.doseProgrammeRepository = Objects.requireNonNull(doseProgrammeRepository, "doseProgrammeRepository must not be null");
         this.calculationService = Objects.requireNonNull(calculationService, "calculationService must not be null");
+        this.timeSlotRepository = Objects.requireNonNull(timeSlotRepository, "timeSlotRepository must not be null");
     }
 
     /**
@@ -153,6 +158,14 @@ public class SessionCapacityPlanService {
 
         if (session.getLifecycleStatus() != SessionLifecycleStatus.DRAFT) {
             throw new IllegalStateException("Session capacity plans can only be created for sessions in DRAFT status");
+        }
+
+        List<TimeSlot> existingSlots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
+        int currentSlotCapacity = existingSlots.stream().mapToInt(TimeSlot::getCapacity).sum();
+        if (currentSlotCapacity > 0 && request.approvedCapacity() != null
+                && request.approvedCapacity() < currentSlotCapacity) {
+            throw new IllegalStateException("Approved capacity (" + request.approvedCapacity()
+                    + ") cannot be reduced below currently configured slot capacity total (" + currentSlotCapacity + ")");
         }
 
         int durationMinutes = calculateDurationMinutes(session);
