@@ -12,6 +12,7 @@ import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionResourceAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
+import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
@@ -159,8 +160,9 @@ public class SessionCapacityPlanService {
             throw new IllegalStateException("Session capacity plans can only be created for sessions in DRAFT status");
         }
 
-        Integer currentSlotCapacity = timeSlotRepository.sumCapacityBySessionId(sessionId);
-        if (currentSlotCapacity != null && currentSlotCapacity > 0 && request.approvedCapacity() != null
+        List<TimeSlot> existingSlots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
+        int currentSlotCapacity = existingSlots.stream().mapToInt(TimeSlot::getCapacity).sum();
+        if (currentSlotCapacity > 0 && request.approvedCapacity() != null
                 && request.approvedCapacity() < currentSlotCapacity) {
             throw new IllegalStateException("Approved capacity (" + request.approvedCapacity()
                     + ") cannot be reduced below currently configured slot capacity total (" + currentSlotCapacity + ")");

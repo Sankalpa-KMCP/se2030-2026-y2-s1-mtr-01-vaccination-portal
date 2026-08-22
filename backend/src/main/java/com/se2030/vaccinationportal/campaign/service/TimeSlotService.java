@@ -42,8 +42,9 @@ public class TimeSlotService {
             throw new IllegalArgumentException("Slot interval must fall within session operating window");
         }
 
-        Integer currentSum = timeSlotRepository.sumCapacityBySessionId(sessionId);
-        int newTotal = (currentSum != null ? currentSum : 0) + capacity;
+        List<TimeSlot> existingSlots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
+        int currentSum = existingSlots.stream().mapToInt(TimeSlot::getCapacity).sum();
+        int newTotal = currentSum + capacity;
 
         capacityPlanRepository.findTopBySessionIdOrderByRevisionDesc(sessionId).ifPresent(plan -> {
             if (newTotal > plan.getApprovedCapacity()) {
@@ -67,7 +68,10 @@ public class TimeSlotService {
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found with ID: " + sessionId));
 
-        TimeSlot slot = timeSlotRepository.findByIdForUpdate(slotId)
+        List<TimeSlot> sessionSlots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
+        TimeSlot slot = sessionSlots.stream()
+                .filter(s -> s.getId().equals(slotId))
+                .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("TimeSlot not found with ID: " + slotId));
 
         if (!slot.getSession().getId().equals(session.getId())) {
@@ -78,9 +82,9 @@ public class TimeSlotService {
             throw new IllegalStateException("Cannot reduce slot capacity (" + newCapacity + ") below existing reserved bookings (" + slot.getReservedCount() + ")");
         }
 
-        Integer currentSum = timeSlotRepository.sumCapacityBySessionId(sessionId);
+        int currentSum = sessionSlots.stream().mapToInt(TimeSlot::getCapacity).sum();
         int diff = newCapacity - slot.getCapacity();
-        int newTotal = (currentSum != null ? currentSum : 0) + diff;
+        int newTotal = currentSum + diff;
 
         capacityPlanRepository.findTopBySessionIdOrderByRevisionDesc(sessionId).ifPresent(plan -> {
             if (newTotal > plan.getApprovedCapacity()) {

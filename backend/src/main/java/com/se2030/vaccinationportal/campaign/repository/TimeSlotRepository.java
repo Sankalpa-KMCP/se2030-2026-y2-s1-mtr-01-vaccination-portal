@@ -18,6 +18,10 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
     @Query("SELECT ts FROM TimeSlot ts WHERE ts.id = :id")
     Optional<TimeSlot> findByIdForUpdate(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT ts FROM TimeSlot ts WHERE ts.session.id = :sessionId ORDER BY ts.id ASC")
+    List<TimeSlot> findBySessionIdForUpdateOrderByIdAsc(@Param("sessionId") Long sessionId);
+
     List<TimeSlot> findBySessionIdOrderByStartTimeAsc(Long sessionId);
 
     List<TimeSlot> findBySessionId(Long sessionId);
