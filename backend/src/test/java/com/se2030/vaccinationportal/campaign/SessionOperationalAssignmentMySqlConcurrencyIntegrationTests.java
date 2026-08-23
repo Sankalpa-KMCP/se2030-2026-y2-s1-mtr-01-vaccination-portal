@@ -21,6 +21,7 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
@@ -78,6 +79,7 @@ class SessionOperationalAssignmentMySqlConcurrencyIntegrationTests extends Abstr
     @Autowired private CenterClosureRepository closureRepository;
     @Autowired private OperatingHoursRepository operatingHoursRepository;
     @Autowired private CampaignDoseProgrammeRepository doseProgrammeRepository;
+    @Autowired private CampaignLifecycleEventRepository lifecycleEventRepository;
     @Autowired private VaccinationCampaignRepository campaignRepository;
     @Autowired private VaccinationCenterRepository centerRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
@@ -110,6 +112,7 @@ class SessionOperationalAssignmentMySqlConcurrencyIntegrationTests extends Abstr
             closureRepository.deleteAllInBatch();
             operatingHoursRepository.deleteAllInBatch();
             doseProgrammeRepository.deleteAllInBatch();
+            lifecycleEventRepository.deleteAllInBatch();
             campaignRepository.deleteAllInBatch();
             centerRepository.deleteAllInBatch();
             targetGroupRepository.deleteAllInBatch();
