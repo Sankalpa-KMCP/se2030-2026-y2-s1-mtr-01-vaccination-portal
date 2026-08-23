@@ -38,6 +38,15 @@ export default function Header({ activeView = 'overview', onNavigate }) {
                   Center Operations
                 </button>
               </li>
+              <li className="nav-item">
+                <button
+                  type="button"
+                  className={`btn btn-sm ${activeView === 'sessions' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
+                  onClick={() => onNavigate && onNavigate('sessions')}
+                >
+                  Sessions
+                </button>
+              </li>
             </ul>
 
             <span className="navbar-text text-white-50 small d-none d-md-inline">
