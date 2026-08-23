@@ -1,6 +1,23 @@
 import React from 'react';
+import { useAuth } from '../../auth/context/AuthContext';
+
+const ROLE_LABELS = {
+  ROLE_ADMIN: 'Administrator',
+  ROLE_CENTER_MANAGER: 'Center Manager',
+  ROLE_HEALTHCARE_OFFICER: 'Healthcare Officer',
+  ROLE_CAMPAIGN_OFFICER: 'Campaign Officer',
+  ROLE_INVENTORY_OFFICER: 'Inventory Officer',
+  ROLE_CITIZEN: 'Citizen',
+  ROLE_MANAGEMENT_USER: 'Management User',
+};
+
+function formatRole(roleCode) {
+  return ROLE_LABELS[roleCode] || roleCode.replace(/^ROLE_/, '').replace(/_/g, ' ');
+}
 
 export default function Header({ activeView = 'overview', onNavigate }) {
+  const { user, logout } = useAuth();
+
   return (
     <header>
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm" aria-label="Main Navigation">
@@ -49,9 +66,30 @@ export default function Header({ activeView = 'overview', onNavigate }) {
               </li>
             </ul>
 
-            <span className="navbar-text text-white-50 small d-none d-md-inline">
-              MF-02 Campaign Management
-            </span>
+            {user && (
+              <div className="d-flex align-items-center gap-2 ms-auto">
+                <div className="text-end d-none d-sm-block text-white me-2">
+                  <div className="small fw-semibold">{user.email}</div>
+                  {user.roles && user.roles.length > 0 && (
+                    <div className="d-flex gap-1 justify-content-end">
+                      {user.roles.map((role) => (
+                        <span key={role} className="badge bg-light text-primary py-0 px-1" style={{ fontSize: '0.7rem' }}>
+                          {formatRole(role)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline-light btn-sm px-3"
+                  onClick={logout}
+                  title="Sign out of your session"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </nav>
