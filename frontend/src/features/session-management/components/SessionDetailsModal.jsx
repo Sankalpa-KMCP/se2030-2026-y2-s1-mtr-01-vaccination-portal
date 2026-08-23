@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getSessionById, formatInTimezone } from '../api/sessionApi';
+import SessionAssignmentsTab from './SessionAssignmentsTab';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 
@@ -13,17 +14,20 @@ export default function SessionDetailsModal({
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     if (!isOpen || !sessionId) {
       setSession(null);
       setLoading(false);
       setError(null);
+      setActiveTab('overview');
       return;
     }
 
     setLoading(true);
     setError(null);
+    setActiveTab('overview');
 
     getSessionById(sessionId)
       .then((data) => {
@@ -84,12 +88,38 @@ export default function SessionDetailsModal({
             />
           </div>
 
+          {/* Navigation Tabs */}
+          {session && (
+            <div className="px-4 pt-3 border-bottom bg-light">
+              <ul className="nav nav-tabs card-header-tabs" role="tablist">
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'overview' ? 'active fw-bold text-primary' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('overview')}
+                  >
+                    Overview
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'assignments' ? 'active fw-bold text-primary' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('assignments')}
+                  >
+                    Operational Assignments
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
+
           <div className="modal-body p-4">
             {error && <ApiErrorAlert error={error} />}
 
             {loading && <LoadingSpinner message="Loading session details..." />}
 
-            {!loading && session && (
+            {!loading && session && activeTab === 'overview' && (
               <div className="d-flex flex-column gap-3">
                 {/* Campaign & Center Overview Card */}
                 <div className="card bg-light border-0 p-3">
@@ -183,6 +213,10 @@ export default function SessionDetailsModal({
                   </span>
                 </div>
               </div>
+            )}
+
+            {!loading && session && activeTab === 'assignments' && (
+              <SessionAssignmentsTab session={session} />
             )}
           </div>
 
