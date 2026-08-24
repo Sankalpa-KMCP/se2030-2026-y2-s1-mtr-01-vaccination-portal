@@ -20,14 +20,23 @@ export default function LoginPage() {
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
+    if (!trimmedEmail.includes('@') || trimmedEmail.startsWith('@') || trimmedEmail.endsWith('@')) {
       setClientError('Please enter a valid email address.');
+      return;
+    }
+
+    if (trimmedEmail.length > 255) {
+      setClientError('Email must not exceed 255 characters.');
       return;
     }
 
     if (!password) {
       setClientError('Password is required.');
+      return;
+    }
+
+    if (password.length > 128) {
+      setClientError('Password must not exceed 128 characters.');
       return;
     }
 

@@ -25,15 +25,18 @@ export function getToken() {
 /**
  * Safely persists the access token to sessionStorage.
  * @param {string} token - JWT access token string.
+ * @returns {boolean} True if successfully stored, false on failure.
  */
 export function setToken(token) {
   try {
     if (typeof window !== 'undefined' && window.sessionStorage && token) {
       window.sessionStorage.setItem(TOKEN_KEY, token);
+      return true;
     }
   } catch {
     // Storage access restricted or disabled
   }
+  return false;
 }
 
 /**
