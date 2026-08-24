@@ -284,3 +284,46 @@ export async function listCapacityPlans(sessionId) {
   });
   return handleResponse(response);
 }
+
+// -------------------------------------------------------------------------------------------------
+// Simple Session Lifecycle API (F4B)
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * Transitions a DRAFT session to SCHEDULED status after backend operational readiness validation.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @returns {Promise<Object>} Updated SessionResponse object
+ */
+export async function scheduleSession(sessionId) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/schedule`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Transitions a SCHEDULED session to IN_PROGRESS status when scheduled start time has arrived.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @returns {Promise<Object>} Updated SessionResponse object
+ */
+export async function startSession(sessionId) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/start`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Transitions an IN_PROGRESS session to COMPLETED status.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @returns {Promise<Object>} Updated SessionResponse object
+ */
+export async function completeSession(sessionId) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/complete`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}

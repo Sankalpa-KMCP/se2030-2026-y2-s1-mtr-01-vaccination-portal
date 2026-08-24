@@ -128,6 +128,13 @@ export default function SessionsPage() {
     }, 5000);
   };
 
+  const handleSessionUpdated = (updatedSession) => {
+    if (!updatedSession) return;
+    setSessions((prev) =>
+      prev.map((s) => (s.id === updatedSession.id ? { ...s, ...updatedSession } : s))
+    );
+  };
+
   return (
     <div className="container-fluid px-0">
       {/* Page Header */}
@@ -203,6 +210,7 @@ export default function SessionsPage() {
         sessionId={selectedSessionId}
         campaignsMap={campaignsMap}
         centersMap={centersMap}
+        onSessionUpdated={handleSessionUpdated}
       />
     </div>
   );
