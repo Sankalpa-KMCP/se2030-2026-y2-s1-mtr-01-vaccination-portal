@@ -34,10 +34,7 @@ export default function SessionsPage() {
   // Race safety for session listing requests
   const latestSessionReqRef = useRef(null);
   const latestFiltersRef = useRef(filters);
-
-  useEffect(() => {
-    latestFiltersRef.current = filters;
-  }, [filters]);
+  latestFiltersRef.current = filters;
 
   // Load campaign & center catalogues once on mount
   useEffect(() => {
