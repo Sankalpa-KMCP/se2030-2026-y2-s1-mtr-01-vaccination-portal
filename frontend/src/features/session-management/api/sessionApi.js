@@ -237,3 +237,50 @@ export function formatTimeInTimezone(isoString, timeZone = 'UTC') {
     day: undefined,
   });
 }
+
+// -------------------------------------------------------------------------------------------------
+// Capacity Planning API (F5B)
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * Previews throughput and occupancy parameters for a session from operational state without persisting.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - PreviewCapacityPlanRequest
+ * @returns {Promise<Object>} CapacityPlanPreviewResponse
+ */
+export async function previewCapacityPlan(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/capacity-plans/preview`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Create and approve a new immutable session capacity plan revision.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - CreateSessionCapacityPlanRequest
+ * @returns {Promise<Object>} Created SessionCapacityPlanResponse
+ */
+export async function createCapacityPlan(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/capacity-plans`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * List all historical capacity plan revisions for a vaccination session, ordered by revision ascending.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @returns {Promise<Array>} List of SessionCapacityPlanResponse objects
+ */
+export async function listCapacityPlans(sessionId) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/capacity-plans`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
