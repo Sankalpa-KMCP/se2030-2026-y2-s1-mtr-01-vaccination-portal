@@ -9,6 +9,58 @@ import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 
 /**
+ * Helper to strictly validate and parse integer inputs.
+ * Rejects decimals (e.g. "2.5"), exponents (e.g. "1e2"), negative signs, and non-numeric characters.
+ *
+ * @param {string|number|null|undefined} rawVal - Raw form value
+ * @param {Object} options
+ * @param {string} options.fieldName - Field display name for error message
+ * @param {boolean} [options.required=false] - Whether the field is required
+ * @param {number} [options.min=0] - Minimum acceptable integer value
+ * @returns {{ error: string|null, value: number|null }}
+ */
+function parseStrictInteger(rawVal, { fieldName, required = false, min = 0 }) {
+  if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '') {
+    if (required) {
+      return { error: `${fieldName} is required.`, value: null };
+    }
+    return { error: null, value: null };
+  }
+  const trimmed = String(rawVal).trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return { error: `${fieldName} must be a valid non-negative whole integer.`, value: null };
+  }
+  const num = Number(trimmed);
+  if (!Number.isSafeInteger(num)) {
+    return { error: `${fieldName} exceeds maximum safe integer range.`, value: null };
+  }
+  if (num < min) {
+    return { error: `${fieldName} must be at least ${min}.`, value: null };
+  }
+  return { error: null, value: num };
+}
+
+/**
+ * Helper to strictly validate and parse decimal ratio inputs (0.0 to 1.0).
+ *
+ * @param {string|number|null|undefined} rawVal - Raw form value
+ * @param {Object} options
+ * @param {string} options.fieldName - Field display name for error message
+ * @returns {{ error: string|null, value: number|null }}
+ */
+function parseStrictDecimalRatio(rawVal, { fieldName }) {
+  if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '') {
+    return { error: null, value: null };
+  }
+  const trimmed = String(rawVal).trim();
+  const num = Number(trimmed);
+  if (isNaN(num) || !isFinite(num) || num < 0.0 || num > 1.0) {
+    return { error: `${fieldName} must be a valid number between 0.0 and 1.0.`, value: null };
+  }
+  return { error: null, value: num };
+}
+
+/**
  * Session Capacity Planning tab component (F5B).
  * Supports previewing throughput from operational assignments, approving standard or overridden
  * capacity plans, and inspecting immutable historical revisions.
@@ -39,6 +91,10 @@ export default function SessionCapacityPlanTab({ session }) {
   const [successMessage, setSuccessMessage] = useState(null);
 
   const activeSessionIdRef = useRef(session?.id);
+  const previewGenerationRef = useRef(0);
+  const previewInFlightRef = useRef(false);
+  const createInFlightRef = useRef(false);
+
   const tz = session?.scheduleTimezone || 'UTC';
   const isDraft = session?.lifecycleStatus === 'DRAFT';
 
@@ -65,6 +121,7 @@ export default function SessionCapacityPlanTab({ session }) {
 
   useEffect(() => {
     activeSessionIdRef.current = session?.id;
+    previewGenerationRef.current += 1;
     setPreviewResult(null);
     setPreviewError(null);
     setCreateError(null);
@@ -87,7 +144,10 @@ export default function SessionCapacityPlanTab({ session }) {
       ...prev,
       [name]: value,
     }));
-    // Clear create error on input change
+    // Invalidate preview and bump generation on any field modification
+    previewGenerationRef.current += 1;
+    setPreviewResult(null);
+    setPreviewError(null);
     if (createError) setCreateError(null);
   };
 
@@ -95,85 +155,106 @@ export default function SessionCapacityPlanTab({ session }) {
     if (e) e.preventDefault();
     if (!session?.id) return;
 
+    // Synchronous re-entry and cross-operation guards
+    if (previewInFlightRef.current || createInFlightRef.current) {
+      return;
+    }
+
     setPreviewError(null);
     setCreateError(null);
     setSuccessMessage(null);
 
-    // Client-side validation for preview inputs
-    const fullyEquippedRaw = formData.fullyEquippedStationCount;
-    if (fullyEquippedRaw === '' || fullyEquippedRaw === null || isNaN(parseInt(fullyEquippedRaw, 10))) {
-      setPreviewError(new Error('Fully equipped station count must be a non-negative integer.'));
+    // Strict validation
+    const fullyEquippedRes = parseStrictInteger(formData.fullyEquippedStationCount, {
+      fieldName: 'Fully equipped station count',
+      required: true,
+      min: 0,
+    });
+    if (fullyEquippedRes.error) {
+      setPreviewError(new Error(fullyEquippedRes.error));
       return;
     }
-    const fullyEquipped = parseInt(fullyEquippedRaw, 10);
-    if (fullyEquipped < 0) {
-      setPreviewError(new Error('Fully equipped station count must be non-negative.'));
+
+    const safeOccRes = parseStrictInteger(formData.safeConcurrentOccupancy, {
+      fieldName: 'Safe concurrent occupancy',
+      required: false,
+      min: 1,
+    });
+    if (safeOccRes.error) {
+      setPreviewError(new Error(safeOccRes.error));
       return;
     }
 
-    let safeOcc = null;
-    if (formData.safeConcurrentOccupancy !== '' && formData.safeConcurrentOccupancy !== null) {
-      safeOcc = parseInt(formData.safeConcurrentOccupancy, 10);
-      if (isNaN(safeOcc) || safeOcc < 1) {
-        setPreviewError(new Error('Safe concurrent occupancy must be a positive integer if specified.'));
-        return;
-      }
+    const dwellRes = parseStrictInteger(formData.expectedDwellMinutes, {
+      fieldName: 'Expected dwell minutes',
+      required: false,
+      min: 1,
+    });
+    if (dwellRes.error) {
+      setPreviewError(new Error(dwellRes.error));
+      return;
     }
 
-    let dwell = null;
-    if (formData.expectedDwellMinutes !== '' && formData.expectedDwellMinutes !== null) {
-      dwell = parseInt(formData.expectedDwellMinutes, 10);
-      if (isNaN(dwell) || dwell < 1) {
-        setPreviewError(new Error('Expected dwell minutes must be a positive integer if specified.'));
-        return;
-      }
+    const accompanyingRes = parseStrictDecimalRatio(formData.expectedAccompanyingPersonsPerBooking, {
+      fieldName: 'Expected accompanying ratio',
+    });
+    if (accompanyingRes.error) {
+      setPreviewError(new Error(accompanyingRes.error));
+      return;
     }
 
-    let accompanying = null;
-    if (formData.expectedAccompanyingPersonsPerBooking !== '' && formData.expectedAccompanyingPersonsPerBooking !== null) {
-      accompanying = parseFloat(formData.expectedAccompanyingPersonsPerBooking);
-      if (isNaN(accompanying) || accompanying < 0.0 || accompanying > 1.0) {
-        setPreviewError(new Error('Expected accompanying ratio must be between 0.0 and 1.0.'));
-        return;
-      }
-    }
-
-    let approvedCap = null;
-    if (formData.approvedCapacity !== '' && formData.approvedCapacity !== null) {
-      approvedCap = parseInt(formData.approvedCapacity, 10);
-      if (isNaN(approvedCap) || approvedCap < 0) {
-        setPreviewError(new Error('Approved capacity must be a non-negative integer if specified.'));
-        return;
-      }
+    const approvedCapRes = parseStrictInteger(formData.approvedCapacity, {
+      fieldName: 'Approved capacity',
+      required: false,
+      min: 0,
+    });
+    if (approvedCapRes.error) {
+      setPreviewError(new Error(approvedCapRes.error));
+      return;
     }
 
     const payload = {
-      fullyEquippedStationCount: fullyEquipped,
-      safeConcurrentOccupancy: safeOcc,
-      expectedDwellMinutes: dwell,
-      expectedAccompanyingPersonsPerBooking: accompanying,
-      approvedCapacity: approvedCap,
+      fullyEquippedStationCount: fullyEquippedRes.value,
+      safeConcurrentOccupancy: safeOccRes.value,
+      expectedDwellMinutes: dwellRes.value,
+      expectedAccompanyingPersonsPerBooking: accompanyingRes.value,
+      approvedCapacity: approvedCapRes.value,
       overrideReason: formData.overrideReason?.trim() || null,
     };
 
+    const currentGeneration = ++previewGenerationRef.current;
+    previewInFlightRef.current = true;
     setLoadingPreview(true);
 
     try {
       const result = await previewCapacityPlan(session.id, payload);
-      setPreviewResult(result);
-      setLoadingPreview(false);
+      // Discard response if generation or active session changed in-flight
+      if (previewGenerationRef.current === currentGeneration && activeSessionIdRef.current === session.id) {
+        setPreviewResult(result);
+      }
     } catch (err) {
-      setPreviewError(err);
+      if (previewGenerationRef.current === currentGeneration && activeSessionIdRef.current === session.id) {
+        setPreviewError(err);
+      }
+    } finally {
+      previewInFlightRef.current = false;
       setLoadingPreview(false);
     }
   };
 
   const handleUseRecommendedThroughput = () => {
     if (previewResult?.recommendedThroughput !== undefined) {
+      const recVal = String(previewResult.recommendedThroughput);
       setFormData((prev) => ({
         ...prev,
-        approvedCapacity: String(previewResult.recommendedThroughput),
+        approvedCapacity: recVal,
       }));
+      setPreviewResult((prev) => (prev ? {
+        ...prev,
+        projectedApprovedCapacity: previewResult.recommendedThroughput,
+        overrideRequired: false,
+        overrideValid: true,
+      } : null));
     }
   };
 
@@ -181,73 +262,82 @@ export default function SessionCapacityPlanTab({ session }) {
     if (e) e.preventDefault();
     if (!session?.id) return;
 
+    // Synchronous re-entry and cross-operation guards
+    if (createInFlightRef.current || previewInFlightRef.current) {
+      return;
+    }
+
     setCreateError(null);
     setSuccessMessage(null);
 
-    // Client-side validation for creation inputs
-    const fullyEquippedRaw = formData.fullyEquippedStationCount;
-    if (fullyEquippedRaw === '' || fullyEquippedRaw === null || isNaN(parseInt(fullyEquippedRaw, 10))) {
-      setCreateError(new Error('Fully equipped station count is required and must be non-negative.'));
-      return;
-    }
-    const fullyEquipped = parseInt(fullyEquippedRaw, 10);
-    if (fullyEquipped < 0) {
-      setCreateError(new Error('Fully equipped station count must be non-negative.'));
+    // Require current valid preview before creating plan
+    if (!previewResult) {
+      setCreateError(new Error('Please preview the capacity plan with current values before approving and creating.'));
       return;
     }
 
-    const approvedCapRaw = formData.approvedCapacity;
-    if (approvedCapRaw === '' || approvedCapRaw === null || isNaN(parseInt(approvedCapRaw, 10))) {
-      setCreateError(new Error('Approved capacity is required to create a capacity plan.'));
+    // Strict validation for create inputs
+    const fullyEquippedRes = parseStrictInteger(formData.fullyEquippedStationCount, {
+      fieldName: 'Fully equipped station count',
+      required: true,
+      min: 0,
+    });
+    if (fullyEquippedRes.error) {
+      setCreateError(new Error(fullyEquippedRes.error));
       return;
     }
-    const approvedCap = parseInt(approvedCapRaw, 10);
-    if (approvedCap < 0) {
-      setCreateError(new Error('Approved capacity must be a non-negative integer.'));
+
+    const approvedCapRes = parseStrictInteger(formData.approvedCapacity, {
+      fieldName: 'Approved capacity',
+      required: true,
+      min: 0,
+    });
+    if (approvedCapRes.error) {
+      setCreateError(new Error(approvedCapRes.error));
       return;
     }
 
-    let safeOcc = null;
-    if (formData.safeConcurrentOccupancy !== '' && formData.safeConcurrentOccupancy !== null) {
-      safeOcc = parseInt(formData.safeConcurrentOccupancy, 10);
-      if (isNaN(safeOcc) || safeOcc < 1) {
-        setCreateError(new Error('Safe concurrent occupancy must be a positive integer if specified.'));
-        return;
-      }
+    const safeOccRes = parseStrictInteger(formData.safeConcurrentOccupancy, {
+      fieldName: 'Safe concurrent occupancy',
+      required: false,
+      min: 1,
+    });
+    if (safeOccRes.error) {
+      setCreateError(new Error(safeOccRes.error));
+      return;
     }
 
-    let dwell = null;
-    if (formData.expectedDwellMinutes !== '' && formData.expectedDwellMinutes !== null) {
-      dwell = parseInt(formData.expectedDwellMinutes, 10);
-      if (isNaN(dwell) || dwell < 1) {
-        setCreateError(new Error('Expected dwell minutes must be a positive integer if specified.'));
-        return;
-      }
+    const dwellRes = parseStrictInteger(formData.expectedDwellMinutes, {
+      fieldName: 'Expected dwell minutes',
+      required: false,
+      min: 1,
+    });
+    if (dwellRes.error) {
+      setCreateError(new Error(dwellRes.error));
+      return;
     }
 
-    let accompanying = null;
-    if (formData.expectedAccompanyingPersonsPerBooking !== '' && formData.expectedAccompanyingPersonsPerBooking !== null) {
-      accompanying = parseFloat(formData.expectedAccompanyingPersonsPerBooking);
-      if (isNaN(accompanying) || accompanying < 0.0 || accompanying > 1.0) {
-        setCreateError(new Error('Expected accompanying ratio must be between 0.0 and 1.0.'));
-        return;
-      }
+    const accompanyingRes = parseStrictDecimalRatio(formData.expectedAccompanyingPersonsPerBooking, {
+      fieldName: 'Expected accompanying ratio',
+    });
+    if (accompanyingRes.error) {
+      setCreateError(new Error(accompanyingRes.error));
+      return;
     }
 
     const reason = formData.overrideReason?.trim() || null;
+    const approvedCap = approvedCapRes.value;
 
-    // If previewResult is available, enforce known client-side checks for user convenience
-    if (previewResult) {
-      if (approvedCap > previewResult.recommendedThroughput && (!reason || reason.length === 0)) {
-        setCreateError(new Error('An override reason is required when approved capacity exceeds recommended throughput.'));
-        return;
-      }
-      if (previewResult.sessionServiceCeiling != null && approvedCap > previewResult.sessionServiceCeiling) {
-        setCreateError(
-          new Error(`Approved capacity (${approvedCap}) cannot exceed the center's session service ceiling (${previewResult.sessionServiceCeiling} doses).`)
-        );
-        return;
-      }
+    // Enforce current preview constraints
+    if (approvedCap > previewResult.recommendedThroughput && (!reason || reason.length === 0)) {
+      setCreateError(new Error('An override reason is required when approved capacity exceeds recommended throughput.'));
+      return;
+    }
+    if (previewResult.sessionServiceCeiling != null && approvedCap > previewResult.sessionServiceCeiling) {
+      setCreateError(
+        new Error(`Approved capacity (${approvedCap}) cannot exceed the center's session service ceiling (${previewResult.sessionServiceCeiling} doses).`)
+      );
+      return;
     }
 
     if (reason && reason.length > 255) {
@@ -257,29 +347,32 @@ export default function SessionCapacityPlanTab({ session }) {
 
     // Exact backend payload (approvedBy is omitted and managed authoritatively by backend AUTH-3)
     const payload = {
-      fullyEquippedStationCount: fullyEquipped,
+      fullyEquippedStationCount: fullyEquippedRes.value,
       approvedCapacity: approvedCap,
-      safeConcurrentOccupancy: safeOcc,
-      expectedDwellMinutes: dwell,
-      expectedAccompanyingPersonsPerBooking: accompanying,
+      safeConcurrentOccupancy: safeOccRes.value,
+      expectedDwellMinutes: dwellRes.value,
+      expectedAccompanyingPersonsPerBooking: accompanyingRes.value,
       overrideReason: reason,
     };
 
+    createInFlightRef.current = true;
     setSubmittingCreate(true);
 
     try {
       const created = await createCapacityPlan(session.id, payload);
-      setSubmittingCreate(false);
       setSuccessMessage(`Capacity Plan Revision #${created.revision} created and approved successfully.`);
-      fetchHistory(session.id);
+      previewGenerationRef.current += 1;
       setPreviewResult(null);
+      fetchHistory(session.id);
     } catch (err) {
-      setSubmittingCreate(false);
       if (err?.status === 403) {
         setCreateError(new Error('You are not authorized to approve a capacity override. Role ROLE_CENTER_MANAGER is required.'));
       } else {
         setCreateError(err);
       }
+    } finally {
+      createInFlightRef.current = false;
+      setSubmittingCreate(false);
     }
   };
 
@@ -449,6 +542,7 @@ export default function SessionCapacityPlanTab({ session }) {
                     name="fullyEquippedStationCount"
                     className="form-control form-control-sm"
                     min="0"
+                    step="1"
                     placeholder="e.g. 2"
                     value={formData.fullyEquippedStationCount}
                     onChange={handleInputChange}
@@ -469,6 +563,7 @@ export default function SessionCapacityPlanTab({ session }) {
                     name="safeConcurrentOccupancy"
                     className="form-control form-control-sm"
                     min="1"
+                    step="1"
                     placeholder="Hosting center default"
                     value={formData.safeConcurrentOccupancy}
                     onChange={handleInputChange}
@@ -488,6 +583,7 @@ export default function SessionCapacityPlanTab({ session }) {
                     name="expectedDwellMinutes"
                     className="form-control form-control-sm"
                     min="1"
+                    step="1"
                     placeholder="Default: 15 min"
                     value={formData.expectedDwellMinutes}
                     onChange={handleInputChange}
@@ -528,6 +624,7 @@ export default function SessionCapacityPlanTab({ session }) {
                     name="approvedCapacity"
                     className="form-control form-control-sm"
                     min="0"
+                    step="1"
                     placeholder="Enter planned capacity or preview recommendation"
                     value={formData.approvedCapacity}
                     onChange={handleInputChange}
@@ -617,7 +714,8 @@ export default function SessionCapacityPlanTab({ session }) {
                 </div>
 
                 {/* Override Condition Alert */}
-                {formData.approvedCapacity !== '' && parseInt(formData.approvedCapacity, 10) > previewResult.recommendedThroughput && (
+                {parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value != null &&
+                  parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value > previewResult.recommendedThroughput && (
                   <div className="alert alert-warning border-0 shadow-sm small mb-3" role="alert">
                     <div className="fw-bold mb-1">⚠️ Capacity Override Detected</div>
                     <div>
@@ -634,7 +732,9 @@ export default function SessionCapacityPlanTab({ session }) {
                 )}
 
                 {/* Hard Ceiling Violation Warning */}
-                {formData.approvedCapacity !== '' && previewResult.sessionServiceCeiling != null && parseInt(formData.approvedCapacity, 10) > previewResult.sessionServiceCeiling && (
+                {parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value != null &&
+                  previewResult.sessionServiceCeiling != null &&
+                  parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value > previewResult.sessionServiceCeiling && (
                   <div className="alert alert-danger border-0 shadow-sm small mb-3" role="alert">
                     <strong>Hard Ceiling Exceeded:</strong> Target capacity ({formData.approvedCapacity}) exceeds the center's maximum service ceiling of {previewResult.sessionServiceCeiling} doses. The backend will reject this request.
                   </div>
