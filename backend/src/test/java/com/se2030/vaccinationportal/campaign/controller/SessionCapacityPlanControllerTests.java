@@ -60,6 +60,7 @@ class SessionCapacityPlanControllerTests {
         validator.afterPropertiesSet();
 
         mockMvc = MockMvcBuilders.standaloneSetup(new SessionCapacityPlanController(capacityPlanService))
+                .setCustomArgumentResolvers(new org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver())
                 .setControllerAdvice(new GlobalCampaignExceptionHandler())
                 .setValidator(validator)
                 .build();
@@ -251,7 +252,7 @@ class SessionCapacityPlanControllerTests {
     @Test
     @DisplayName("POST /capacity-plans creates revision 1 and returns 201 with Location header")
     void createCapacityPlan_revision1_success() throws Exception {
-        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class)))
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
                 .thenReturn(samplePlanRev1);
 
         String jsonPayload = """
@@ -280,13 +281,13 @@ class SessionCapacityPlanControllerTests {
                 .andExpect(jsonPath("$.approvedCapacity", is(72)))
                 .andExpect(jsonPath("$.approvedBy", is("admin-1")));
 
-        verify(capacityPlanService).createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class));
+        verify(capacityPlanService).createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any());
     }
 
     @Test
     @DisplayName("POST /capacity-plans creates revision 2 when re-approved")
     void createCapacityPlan_revision2_success() throws Exception {
-        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class)))
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
                 .thenReturn(samplePlanRev2);
 
         String jsonPayload = """
@@ -310,7 +311,7 @@ class SessionCapacityPlanControllerTests {
     @Test
     @DisplayName("POST /capacity-plans returns 409 when session is not in DRAFT status")
     void createCapacityPlan_nonDraftSession_returns409() throws Exception {
-        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class)))
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
                 .thenThrow(new IllegalStateException("Session capacity plans can only be created for sessions in DRAFT status"));
 
         String jsonPayload = """
@@ -329,9 +330,55 @@ class SessionCapacityPlanControllerTests {
     }
 
     @Test
+    @DisplayName("POST /capacity-plans returns 401 when anonymous user attempts capacity override")
+    void createCapacityPlan_unauthenticatedOverride_returns401() throws Exception {
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
+                .thenThrow(new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException(
+                        "Full authentication is required to override session capacity"));
+
+        String jsonPayload = """
+                {
+                    "fullyEquippedStationCount": 3,
+                    "approvedCapacity": 85,
+                    "overrideReason": "Surge demand"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/300/capacity-plans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status", is(401)))
+                .andExpect(jsonPath("$.message", containsString("Full authentication is required")));
+    }
+
+    @Test
+    @DisplayName("POST /capacity-plans returns 403 when non-CenterManager user attempts capacity override")
+    void createCapacityPlan_unauthorizedRoleOverride_returns403() throws Exception {
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException(
+                        "User is not authorized to override session capacity. Role ROLE_CENTER_MANAGER is required."));
+
+        String jsonPayload = """
+                {
+                    "fullyEquippedStationCount": 3,
+                    "approvedCapacity": 85,
+                    "overrideReason": "Surge demand"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/300/capacity-plans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status", is(403)))
+                .andExpect(jsonPath("$.message", containsString("ROLE_CENTER_MANAGER is required")));
+    }
+
+    @Test
     @DisplayName("POST /capacity-plans returns 400 when approved capacity exceeds recommended throughput without override reason")
     void createCapacityPlan_exceedsRecommendedWithoutOverride_returns400() throws Exception {
-        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class)))
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
                 .thenThrow(new IllegalArgumentException("An override reason is required when approved capacity exceeds recommended throughput"));
 
         String jsonPayload = """
@@ -357,7 +404,7 @@ class SessionCapacityPlanControllerTests {
         );
         ReflectionTestUtils.setField(overridePlan, "id", 503L);
 
-        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class)))
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
                 .thenReturn(overridePlan);
 
         String jsonPayload = """
@@ -380,7 +427,7 @@ class SessionCapacityPlanControllerTests {
     @Test
     @DisplayName("POST /capacity-plans returns 400 when approved capacity exceeds hard session service ceiling")
     void createCapacityPlan_exceedsHardCeiling_returns400() throws Exception {
-        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class)))
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
                 .thenThrow(new IllegalArgumentException("Approved capacity (120) cannot exceed session service ceiling (100)"));
 
         String jsonPayload = """

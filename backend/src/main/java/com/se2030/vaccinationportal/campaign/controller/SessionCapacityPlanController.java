@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.controller;
 
+import com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor;
 import com.se2030.vaccinationportal.campaign.dto.request.CreateSessionCapacityPlanRequest;
 import com.se2030.vaccinationportal.campaign.dto.request.PreviewCapacityPlanRequest;
 import com.se2030.vaccinationportal.campaign.dto.response.CapacityPlanPreviewResponse;
@@ -7,11 +8,14 @@ import com.se2030.vaccinationportal.campaign.dto.response.SessionCapacityPlanRes
 import com.se2030.vaccinationportal.campaign.mapper.SessionCapacityPlanDtoMapper;
 import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
 import com.se2030.vaccinationportal.campaign.service.SessionCapacityPlanService;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,9 +48,13 @@ public class SessionCapacityPlanController {
     @PostMapping
     public ResponseEntity<SessionCapacityPlanResponse> createCapacityPlan(
             @PathVariable("sessionId") Long sessionId,
-            @Valid @RequestBody CreateSessionCapacityPlanRequest request
+            @Valid @RequestBody CreateSessionCapacityPlanRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        SessionCapacityPlan created = capacityPlanService.createCapacityPlan(sessionId, request);
+        AuthenticatedActor actor = principal != null
+                ? new AuthenticatedActor(principal.getUserId(), new HashSet<>(principal.getRoleCodes()))
+                : null;
+        SessionCapacityPlan created = capacityPlanService.createCapacityPlan(sessionId, request, actor);
         SessionCapacityPlanResponse response = SessionCapacityPlanDtoMapper.toResponse(created);
         URI location = URI.create(String.format("/api/v1/sessions/%d/capacity-plans/%d", sessionId, created.getRevision()));
         return ResponseEntity.created(location).body(response);

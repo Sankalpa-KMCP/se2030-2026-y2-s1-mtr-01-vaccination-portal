@@ -170,8 +170,9 @@ class SessionCapacityPlanServiceIntegrationTests {
         resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
         resourceAssignmentRepository.save(new SessionResourceAssignment(session, station2, sessionStart, sessionEnd));
 
+        // Create revision 1 anonymously (approvedBy from client is ignored -> null)
         CreateSessionCapacityPlanRequest req1 = new CreateSessionCapacityPlanRequest(
-                2, 48, null, null, null, null, "admin-1"
+                2, 48, null, null, null, null, "client-spoofed-admin"
         );
         SessionCapacityPlan rev1 = capacityPlanService.createCapacityPlan(session.getId(), req1);
 
@@ -183,20 +184,22 @@ class SessionCapacityPlanServiceIntegrationTests {
         assertEquals(2, rev1.getEffectiveStationCount());
         assertEquals(48, rev1.getRecommendedThroughput());
         assertEquals(48, rev1.getApprovedCapacity());
-        assertEquals("admin-1", rev1.getApprovedBy());
+        assertNull(rev1.getApprovedBy()); // Ignored client input, anonymous actor -> null
 
-        // Create revision 2
+        // Create revision 2 with authenticated actor (approvedBy is derived from actor userId)
+        com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor actor2 =
+                new com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor(102L, java.util.Set.of("ROLE_CENTER_MANAGER"));
         CreateSessionCapacityPlanRequest req2 = new CreateSessionCapacityPlanRequest(
-                1, 24, null, null, null, null, "admin-2"
+                1, 24, null, null, null, null, "client-spoofed-admin-2"
         );
-        SessionCapacityPlan rev2 = capacityPlanService.createCapacityPlan(session.getId(), req2);
+        SessionCapacityPlan rev2 = capacityPlanService.createCapacityPlan(session.getId(), req2, actor2);
 
         assertNotNull(rev2.getId());
         assertEquals(2, rev2.getRevision());
         assertEquals(1, rev2.getEffectiveStationCount());
         assertEquals(24, rev2.getRecommendedThroughput());
         assertEquals(24, rev2.getApprovedCapacity());
-        assertEquals("admin-2", rev2.getApprovedBy());
+        assertEquals("102", rev2.getApprovedBy());
 
         // Verify history and latest
         List<SessionCapacityPlan> history = capacityPlanService.getCapacityPlansForSession(session.getId());
@@ -242,21 +245,49 @@ class SessionCapacityPlanServiceIntegrationTests {
         staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
         resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
 
-        // 1 vaccinator, 1 station, 1 equipped -> recommended = 24. Approved = 30 without reason -> fails
-        CreateSessionCapacityPlanRequest reqNoReason = new CreateSessionCapacityPlanRequest(
-                1, 30, null, null, null, null, "admin"
-        );
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> capacityPlanService.createCapacityPlan(session.getId(), reqNoReason));
-        assertTrue(ex.getMessage().contains("override reason is required"));
-
-        // With valid override reason -> succeeds
-        CreateSessionCapacityPlanRequest reqWithReason = new CreateSessionCapacityPlanRequest(
+        // 1 vaccinator, 1 station, 1 equipped -> recommended = 24. Approved = 30 without actor -> throws AuthenticationCredentialsNotFoundException
+        CreateSessionCapacityPlanRequest reqNoActor = new CreateSessionCapacityPlanRequest(
                 1, 30, null, null, null, "Urgent booster demand", "admin"
         );
-        SessionCapacityPlan plan = capacityPlanService.createCapacityPlan(session.getId(), reqWithReason);
+        org.springframework.security.authentication.AuthenticationCredentialsNotFoundException authEx = assertThrows(
+                org.springframework.security.authentication.AuthenticationCredentialsNotFoundException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), reqNoActor, null));
+        assertTrue(authEx.getMessage().contains("Full authentication is required"));
+
+        // With unauthorized role (e.g. ROLE_CITIZEN) -> throws AccessDeniedException
+        com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor citizenActor =
+                new com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor(10L, java.util.Set.of("ROLE_CITIZEN"));
+        org.springframework.security.access.AccessDeniedException citizenEx = assertThrows(
+                org.springframework.security.access.AccessDeniedException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), reqNoActor, citizenActor));
+        assertTrue(citizenEx.getMessage().contains("ROLE_CENTER_MANAGER is required"));
+
+        // With ROLE_ADMIN only -> throws AccessDeniedException
+        com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor adminActor =
+                new com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor(1L, java.util.Set.of("ROLE_ADMIN"));
+        org.springframework.security.access.AccessDeniedException adminEx = assertThrows(
+                org.springframework.security.access.AccessDeniedException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), reqNoActor, adminActor));
+        assertTrue(adminEx.getMessage().contains("ROLE_CENTER_MANAGER is required"));
+
+        // With ROLE_CENTER_MANAGER but missing override reason -> fails with IllegalArgumentException
+        com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor managerActor =
+                new com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor(42L, java.util.Set.of("ROLE_CENTER_MANAGER"));
+        CreateSessionCapacityPlanRequest reqNoReason = new CreateSessionCapacityPlanRequest(
+                1, 30, null, null, null, null, "spoofed-client-user"
+        );
+        IllegalArgumentException reasonEx = assertThrows(IllegalArgumentException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), reqNoReason, managerActor));
+        assertTrue(reasonEx.getMessage().contains("override reason is required"));
+
+        // With valid ROLE_CENTER_MANAGER and override reason -> succeeds and sets trusted approvedBy to "42" (ignoring client value)
+        CreateSessionCapacityPlanRequest reqWithReason = new CreateSessionCapacityPlanRequest(
+                1, 30, null, null, null, "Urgent booster demand", "spoofed-client-user"
+        );
+        SessionCapacityPlan plan = capacityPlanService.createCapacityPlan(session.getId(), reqWithReason, managerActor);
         assertEquals(30, plan.getApprovedCapacity());
         assertEquals("Urgent booster demand", plan.getOverrideReason());
+        assertEquals("42", plan.getApprovedBy());
     }
 
     @Test
@@ -267,12 +298,14 @@ class SessionCapacityPlanServiceIntegrationTests {
         resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
         resourceAssignmentRepository.save(new SessionResourceAssignment(session, station2, sessionStart, sessionEnd));
 
-        // Center ceiling is 100. Approved = 120 -> fails even with override reason
+        // Center ceiling is 100. Approved = 120 -> fails even with ROLE_CENTER_MANAGER and override reason
+        com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor managerActor =
+                new com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor(42L, java.util.Set.of("ROLE_CENTER_MANAGER"));
         CreateSessionCapacityPlanRequest reqOverCeiling = new CreateSessionCapacityPlanRequest(
                 2, 120, null, null, null, "Overriding ceiling", "admin"
         );
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> capacityPlanService.createCapacityPlan(session.getId(), reqOverCeiling));
+                () -> capacityPlanService.createCapacityPlan(session.getId(), reqOverCeiling, managerActor));
         assertTrue(ex.getMessage().contains("cannot exceed session service ceiling"));
     }
 
