@@ -41,6 +41,7 @@ public class ScreeningSubmissionService {
     private final ScreeningAnswerValidator answerValidator;
     private final PreliminaryScreeningService preliminaryScreeningService;
     private final CampaignQuestionnaireAssignmentService assignmentService;
+    private final EligibilityReviewService eligibilityReviewService;
     private final Clock clock;
 
     public ScreeningSubmissionService(
@@ -52,6 +53,7 @@ public class ScreeningSubmissionService {
             ScreeningAnswerValidator answerValidator,
             PreliminaryScreeningService preliminaryScreeningService,
             CampaignQuestionnaireAssignmentService assignmentService,
+            EligibilityReviewService eligibilityReviewService,
             Clock clock
     ) {
         this.submissionRepository = submissionRepository;
@@ -62,6 +64,7 @@ public class ScreeningSubmissionService {
         this.answerValidator = answerValidator;
         this.preliminaryScreeningService = preliminaryScreeningService;
         this.assignmentService = assignmentService;
+        this.eligibilityReviewService = eligibilityReviewService;
         this.clock = clock;
     }
 
@@ -123,7 +126,10 @@ public class ScreeningSubmissionService {
             throw new IllegalStateException("An active submission already exists for this citizen and campaign");
         }
 
-        // 2. Validate Questionnaire Version (must be PUBLISHED)
+        // 2. Guard: Check assessment lifecycle eligibility under MF01-BR-13
+        eligibilityReviewService.validateScreeningAllowed(citizenId, campaignId);
+
+        // 3. Validate Questionnaire Version (must be PUBLISHED)
         QuestionnaireVersion version = versionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalArgumentException("Questionnaire version not found with ID: " + versionId));
 
@@ -131,7 +137,7 @@ public class ScreeningSubmissionService {
             throw new IllegalStateException("Submissions are only allowed for PUBLISHED questionnaire versions");
         }
 
-        // 3. Validate that the submitted version is effective for the campaign today
+        // 4. Validate that the submitted version is effective for the campaign today
         LocalDate effectiveDate = LocalDate.now(clock);
         CampaignQuestionnaireAssignment effectiveAssignment = assignmentService
                 .getEffectiveAssignmentAt(campaignId, effectiveDate)
@@ -147,7 +153,7 @@ public class ScreeningSubmissionService {
             );
         }
 
-        // 4. Validate Consent Notice
+        // 5. Validate Consent Notice
         ConsentNoticeVersion consentNotice = consentNoticeVersionRepository.findById(consentNoticeVersionId)
                 .orElseThrow(() -> new IllegalArgumentException("Consent notice version not found with ID: " + consentNoticeVersionId));
 
@@ -155,19 +161,19 @@ public class ScreeningSubmissionService {
             throw new IllegalStateException("The accepted consent notice version is retired. Please accept the latest active notice.");
         }
 
-        // 5. Validate all answers before persisting any submission data
+        // 6. Validate all answers before persisting any submission data
         List<QuestionnaireItem> items = itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(versionId);
         List<ScreeningAnswerValidator.ValidatedAnswer> validatedAnswers =
                 answerValidator.validateAndNormalize(versionId, items, answerMap);
 
-        // 6. Create Submission Entity
+        // 7. Create Submission Entity
         Instant now = Instant.now();
         ScreeningSubmission submission = new ScreeningSubmission(citizenId, campaignId, version, consentNotice, now);
         submission.setStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
         submission.setSubmittedAt(now);
         ScreeningSubmission savedSubmission = submissionRepository.save(submission);
 
-        // 7. Persist Answers
+        // 8. Persist Answers
         List<ScreeningAnswer> persistedAnswers = new ArrayList<>();
         for (ScreeningAnswerValidator.ValidatedAnswer validatedAnswer : validatedAnswers) {
             ScreeningAnswer answer = new ScreeningAnswer(
@@ -179,7 +185,7 @@ public class ScreeningSubmissionService {
             persistedAnswers.add(answerRepository.save(answer));
         }
 
-        // 8. Evaluate Preliminary Result
+        // 9. Evaluate Preliminary Result
         PreliminaryScreeningService.RuleEvaluationResult eval = preliminaryScreeningService.evaluateAnswers(versionId, persistedAnswers);
         savedSubmission.setPreliminaryResult(eval.overallResult());
 

@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.screening.service;
 
+import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
 import com.se2030.vaccinationportal.screening.model.QuestionnaireVersion;
@@ -39,6 +40,9 @@ class EligibilityReviewServiceCorrectionTests {
     @Mock
     private ScreeningSubmissionRepository submissionRepository;
 
+    @Mock
+    private VaccinationCampaignService campaignService;
+
     private EligibilityReviewService service;
 
     @BeforeEach
@@ -46,6 +50,7 @@ class EligibilityReviewServiceCorrectionTests {
         service = new EligibilityReviewService(
                 assessmentRepository,
                 submissionRepository,
+                campaignService,
                 Clock.fixed(CORRECTION_REQUESTED_AT, ZoneOffset.UTC)
         );
     }

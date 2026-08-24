@@ -74,6 +74,9 @@ class ScreeningSubmissionResubmissionTests {
     @Mock
     private CampaignQuestionnaireAssignmentService campaignQuestionnaireAssignmentService;
 
+    @Mock
+    private EligibilityReviewService eligibilityReviewService;
+
     private ScreeningSubmissionService service;
     private QuestionnaireVersion questionnaireVersion;
     private ConsentNoticeVersion consentNoticeVersion;
@@ -93,6 +96,7 @@ class ScreeningSubmissionResubmissionTests {
                 answerValidator,
                 preliminaryScreeningService,
                 campaignQuestionnaireAssignmentService,
+                eligibilityReviewService,
                 clock);
 
         questionnaireVersion = new QuestionnaireVersion();
