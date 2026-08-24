@@ -4,9 +4,57 @@ import Footer from '../components/common/Footer';
 import CampaignManagementPage from '../features/campaign-management/pages/CampaignManagementPage';
 import CenterOperationsPage from '../features/center-operations/pages/CenterOperationsPage';
 import SessionsPage from '../features/session-management/pages/SessionsPage';
+import { AuthProvider, useAuth } from '../auth/context/AuthContext';
+import LoginPage from '../auth/pages/LoginPage';
 
-export default function App() {
+function AppContent() {
+  const { isAuthenticated, isInitializing, initializationError, retryBootstrap, logout } = useAuth();
   const [activeView, setActiveView] = useState('campaigns');
+
+  if (isInitializing) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+        <div className="text-center p-4">
+          <div className="spinner-border text-primary mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
+            <span className="visually-hidden">Loading authentication state...</span>
+          </div>
+          <p className="text-muted small mb-0">Initializing application session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (initializationError) {
+    return (
+      <div className="container py-5">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="card border-0 shadow-sm">
+              <div className="card-body p-4 text-center">
+                <div className="text-danger mb-3">
+                  <span className="display-6">⚠️</span>
+                </div>
+                <h2 className="h4 text-danger mb-2">Service Temporarily Unavailable</h2>
+                <p className="text-muted small mb-4">{initializationError}</p>
+                <div className="d-flex justify-content-center gap-2">
+                  <button type="button" className="btn btn-primary" onClick={retryBootstrap}>
+                    Retry Connection
+                  </button>
+                  <button type="button" className="btn btn-outline-secondary" onClick={logout}>
+                    Sign Out & Return to Login
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   return (
     <div className="d-flex flex-column min-vh-100">
@@ -52,5 +100,13 @@ export default function App() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
