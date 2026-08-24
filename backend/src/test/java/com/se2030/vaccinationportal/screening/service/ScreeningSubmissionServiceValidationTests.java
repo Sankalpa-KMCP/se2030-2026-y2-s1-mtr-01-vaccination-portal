@@ -63,6 +63,8 @@ class ScreeningSubmissionServiceValidationTests {
     private PreliminaryScreeningService preliminaryScreeningService;
     @Mock
     private CampaignQuestionnaireAssignmentService assignmentService;
+    @Mock
+    private EligibilityReviewService eligibilityReviewService;
 
     private ScreeningSubmissionService service;
     private QuestionnaireVersion version;
@@ -80,6 +82,7 @@ class ScreeningSubmissionServiceValidationTests {
                 new ScreeningAnswerValidator(optionRepository),
                 preliminaryScreeningService,
                 assignmentService,
+                eligibilityReviewService,
                 Clock.fixed(Instant.parse("2026-08-20T00:00:00Z"), ZoneOffset.UTC)
         );
         version = new QuestionnaireVersion();

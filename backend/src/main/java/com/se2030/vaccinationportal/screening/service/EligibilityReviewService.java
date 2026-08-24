@@ -1,5 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
+import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
 import com.se2030.vaccinationportal.screening.model.*;
 import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
@@ -8,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,15 +27,18 @@ public class EligibilityReviewService {
 
     private final EligibilityAssessmentRepository assessmentRepository;
     private final ScreeningSubmissionRepository submissionRepository;
+    private final VaccinationCampaignService campaignService;
     private final Clock clock;
 
     public EligibilityReviewService(
             EligibilityAssessmentRepository assessmentRepository,
             ScreeningSubmissionRepository submissionRepository,
+            VaccinationCampaignService campaignService,
             Clock clock
     ) {
         this.assessmentRepository = assessmentRepository;
         this.submissionRepository = submissionRepository;
+        this.campaignService = campaignService;
         this.clock = clock;
     }
 
@@ -77,17 +83,55 @@ public class EligibilityReviewService {
             return false;
         }
 
-        return assessmentRepository.findByCitizenIdAndCampaignIdAndStatus(citizenId, campaignId, EligibilityAssessmentStatus.ELIGIBLE)
-                .map(assessment -> {
-                    if (assessment.getRevokedAt() != null) {
-                        return false;
-                    }
-                    if (assessment.getValidUntil() != null && assessment.getValidUntil().isBefore(Instant.now())) {
-                        return false;
-                    }
-                    return true;
-                })
-                .orElse(false);
+        List<EligibilityAssessment> assessments = assessmentRepository.findByCitizenIdAndCampaignId(citizenId, campaignId);
+        if (assessments.isEmpty()) {
+            return false;
+        }
+
+        return isAssessmentCurrentlyEligible(assessments.get(0), campaignId);
+    }
+
+    /**
+     * Enforces MF01-BR-13 before a citizen starts a new screening submission.
+     */
+    @Transactional(readOnly = true)
+    public void validateScreeningAllowed(Long citizenId, Long campaignId) {
+        if (citizenId == null || campaignId == null) {
+            throw new IllegalArgumentException("Citizen ID and Campaign ID are required");
+        }
+
+        List<EligibilityAssessment> assessments = assessmentRepository.findByCitizenIdAndCampaignId(citizenId, campaignId);
+        if (assessments.isEmpty()) {
+            return;
+        }
+
+        EligibilityAssessment latestAssessment = assessments.get(0);
+        switch (latestAssessment.getStatus()) {
+            case ELIGIBLE -> {
+                if (isAssessmentCurrentlyEligible(latestAssessment, campaignId)) {
+                    throw new IllegalStateException(
+                            "New screening is not allowed while the latest assessment is currently ELIGIBLE"
+                    );
+                }
+            }
+            case INELIGIBLE -> {
+                if (latestAssessment.getRescreeningAuthorizedAt() == null) {
+                    throw new IllegalStateException(
+                            "New screening requires rescreening authorization for the latest INELIGIBLE assessment"
+                    );
+                }
+            }
+            case REVOKED -> {
+                if (latestAssessment.getRescreeningAuthorizedAt() == null) {
+                    throw new IllegalStateException(
+                            "New screening requires rescreening authorization for the latest REVOKED assessment"
+                    );
+                }
+            }
+            case EXPIRED -> {
+                // Expired eligibility permits a new screening without manual authorization.
+            }
+        }
     }
 
     // ==========================================
@@ -126,11 +170,20 @@ public class EligibilityReviewService {
         ScreeningSubmission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found with ID: " + submissionId));
 
-        if (submission.getStatus() != ScreeningSubmissionStatus.PENDING_REVIEW && submission.getStatus() != ScreeningSubmissionStatus.CORRECTIONS_REQUIRED) {
-            throw new IllegalStateException("Cannot review submission in " + submission.getStatus() + " status");
+        if (submission.getStatus() != ScreeningSubmissionStatus.PENDING_REVIEW) {
+            throw new IllegalStateException("Final decision requires submission to be in PENDING_REVIEW status");
         }
 
-        Instant now = Instant.now();
+        Instant reviewedAt = Instant.now(clock);
+        if (decisionStatus == EligibilityAssessmentStatus.ELIGIBLE) {
+            if (validUntil == null) {
+                throw new IllegalArgumentException("validUntil is required for an ELIGIBLE decision");
+            }
+            if (!validUntil.isAfter(reviewedAt)) {
+                throw new IllegalArgumentException("validUntil must be after reviewedAt for an ELIGIBLE decision");
+            }
+        }
+
         PreliminaryScreeningResult prelim = submission.getPreliminaryResult() != null
                 ? submission.getPreliminaryResult()
                 : PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED;
@@ -143,7 +196,7 @@ public class EligibilityReviewService {
                 decisionStatus,
                 prelim,
                 reason.trim(),
-                now,
+                reviewedAt,
                 validUntil
         );
         assessment.setClinicalNotes(clinicalNotes != null ? clinicalNotes.trim() : null);
@@ -202,7 +255,7 @@ public class EligibilityReviewService {
     }
 
     /**
-     * Authorizes a citizen to undergo rescreening following an INELIGIBLE, EXPIRED, or REVOKED assessment.
+     * Authorizes a citizen to undergo rescreening following an INELIGIBLE or REVOKED assessment.
      */
     public EligibilityAssessment authorizeRescreening(Long assessmentId, Long authorizedByReviewerId, String reason) {
         if (assessmentId == null) throw new IllegalArgumentException("Assessment ID is required");
@@ -214,11 +267,35 @@ public class EligibilityReviewService {
         EligibilityAssessment assessment = assessmentRepository.findById(assessmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Assessment not found with ID: " + assessmentId));
 
-        assessment.setRescreeningAuthorizedAt(Instant.now());
+        if (assessment.getStatus() != EligibilityAssessmentStatus.INELIGIBLE
+                && assessment.getStatus() != EligibilityAssessmentStatus.REVOKED) {
+            throw new IllegalStateException(
+                    "Cannot authorize rescreening for an " + assessment.getStatus()
+                            + " assessment; only INELIGIBLE or REVOKED assessments are allowed"
+            );
+        }
+
+        assessment.setRescreeningAuthorizedAt(Instant.now(clock));
         assessment.setRescreeningAuthorizedBy(authorizedByReviewerId);
         assessment.setRescreeningReason(reason.trim());
 
         return assessmentRepository.save(assessment);
+    }
+
+    private boolean isAssessmentCurrentlyEligible(EligibilityAssessment assessment, Long campaignId) {
+        if (assessment.getStatus() != EligibilityAssessmentStatus.ELIGIBLE
+                || assessment.getRevokedAt() != null) {
+            return false;
+        }
+
+        Instant now = Instant.now(clock);
+        if (assessment.getValidUntil() != null && assessment.getValidUntil().isBefore(now)) {
+            return false;
+        }
+
+        VaccinationCampaign campaign = campaignService.getRequiredCampaignById(campaignId);
+        LocalDate serviceEndDate = campaign.getServiceEndDate();
+        return serviceEndDate == null || !LocalDate.now(clock).isAfter(serviceEndDate);
     }
 
     private ScreeningSubmission initializeSubmissionResponseRelations(ScreeningSubmission submission) {
