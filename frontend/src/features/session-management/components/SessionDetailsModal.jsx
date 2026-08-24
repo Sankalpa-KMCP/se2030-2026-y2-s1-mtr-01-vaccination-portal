@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSessionById, formatInTimezone } from '../api/sessionApi';
 import SessionAssignmentsTab from './SessionAssignmentsTab';
+import SessionCapacityPlanTab from './SessionCapacityPlanTab';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 
@@ -108,6 +109,15 @@ export default function SessionDetailsModal({
                     onClick={() => setActiveTab('assignments')}
                   >
                     Operational Assignments
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'capacity' ? 'active fw-bold text-primary' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('capacity')}
+                  >
+                    Capacity Plan
                   </button>
                 </li>
               </ul>
@@ -218,7 +228,12 @@ export default function SessionDetailsModal({
             {!loading && session && activeTab === 'assignments' && (
               <SessionAssignmentsTab session={session} />
             )}
+
+            {!loading && session && activeTab === 'capacity' && (
+              <SessionCapacityPlanTab session={session} />
+            )}
           </div>
+
 
           <div className="modal-footer bg-light">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
