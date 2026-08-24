@@ -30,10 +30,12 @@ export default function SessionDetailsModal({
   const [lifecycleError, setLifecycleError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
-  // Concurrency & Session Identity Guards
-  const lifecycleInFlightRef = useRef(false);
+  // Concurrency & Session Identity Guards with Token-Owned Mutex
+  const lifecycleRequestSeqRef = useRef(0);
+  const lifecycleMutexOwnerRef = useRef(null);
   const lifecycleGenRef = useRef(0);
   const activeSessionIdRef = useRef(sessionId);
+  const confirmHeadingRef = useRef(null);
 
   useEffect(() => {
     activeSessionIdRef.current = sessionId;
@@ -41,7 +43,7 @@ export default function SessionDetailsModal({
     setSuccessMessage(null);
     setPendingConfirmAction(null);
     setSubmittingAction(null);
-    lifecycleInFlightRef.current = false;
+    lifecycleMutexOwnerRef.current = null;
     lifecycleGenRef.current += 1;
 
     if (!isOpen || !sessionId) {
@@ -73,6 +75,13 @@ export default function SessionDetailsModal({
         }
       });
   }, [isOpen, sessionId]);
+
+  // Manage keyboard focus for inline confirmation announcement
+  useEffect(() => {
+    if (pendingConfirmAction && confirmHeadingRef.current) {
+      confirmHeadingRef.current.focus();
+    }
+  }, [pendingConfirmAction]);
 
   if (!isOpen) return null;
 
@@ -109,13 +118,15 @@ export default function SessionDetailsModal({
   };
 
   const handleExecuteAction = async (actionType) => {
-    if (lifecycleInFlightRef.current) {
+    if (lifecycleMutexOwnerRef.current !== null) {
       return;
     }
 
     const currentSessionId = sessionId;
     const reqGen = ++lifecycleGenRef.current;
-    lifecycleInFlightRef.current = true;
+    const reqToken = ++lifecycleRequestSeqRef.current;
+
+    lifecycleMutexOwnerRef.current = reqToken;
     setSubmittingAction(actionType);
     setLifecycleError(null);
     setSuccessMessage(null);
@@ -130,6 +141,12 @@ export default function SessionDetailsModal({
         updated = await completeSession(currentSessionId);
       }
 
+      // 1. Authoritative parent collection reconciliation (ALWAYS triggered on successful mutation)
+      if (updated && onSessionUpdated) {
+        onSessionUpdated(updated);
+      }
+
+      // 2. Guarded modal-local state update (ONLY if modal still views target session)
       if (activeSessionIdRef.current === currentSessionId && lifecycleGenRef.current === reqGen) {
         if (updated) {
           setSession(updated);
@@ -140,9 +157,6 @@ export default function SessionDetailsModal({
               ? 'started'
               : 'completed';
           setSuccessMessage(`Session #${updated.id} successfully ${actionPast}.`);
-          if (onSessionUpdated) {
-            onSessionUpdated(updated);
-          }
         }
         setPendingConfirmAction(null);
       }
@@ -154,7 +168,10 @@ export default function SessionDetailsModal({
       if (activeSessionIdRef.current === currentSessionId && lifecycleGenRef.current === reqGen) {
         setSubmittingAction(null);
       }
-      lifecycleInFlightRef.current = false;
+      // ONLY the request that currently owns the mutex may release it
+      if (lifecycleMutexOwnerRef.current === reqToken) {
+        lifecycleMutexOwnerRef.current = null;
+      }
     }
   };
 
@@ -286,8 +303,18 @@ export default function SessionDetailsModal({
 
                   {/* Inline Confirmation Card */}
                   {pendingConfirmAction && (
-                    <div className="mt-3 p-3 rounded border bg-white shadow-sm">
-                      <h6 className="fw-bold text-dark mb-2">
+                    <div
+                      className="mt-3 p-3 rounded border bg-white shadow-sm"
+                      role="region"
+                      aria-live="polite"
+                      aria-labelledby="sessionConfirmHeading"
+                    >
+                      <h6
+                        id="sessionConfirmHeading"
+                        ref={confirmHeadingRef}
+                        tabIndex="-1"
+                        className="fw-bold text-dark mb-2"
+                      >
                         {pendingConfirmAction === 'SCHEDULE' && 'Confirm Session Scheduling'}
                         {pendingConfirmAction === 'START' && 'Confirm Session Start'}
                         {pendingConfirmAction === 'COMPLETE' && 'Confirm Session Completion'}
