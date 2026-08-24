@@ -145,6 +145,18 @@ public class SessionCapacityPlanService {
      */
     @Transactional
     public SessionCapacityPlan createCapacityPlan(Long sessionId, CreateSessionCapacityPlanRequest request) {
+        return createCapacityPlan(sessionId, request, null);
+    }
+
+    /**
+     * Creates and approves a new immutable capacity plan revision for a session in DRAFT status with trusted actor context.
+     * Uses pessimistic locking on the session to serialize revision increments.
+     * Enforces ROLE_CENTER_MANAGER authorization when approvedCapacity > recommendedThroughput.
+     */
+    @Transactional
+    public SessionCapacityPlan createCapacityPlan(Long sessionId,
+                                                  CreateSessionCapacityPlanRequest request,
+                                                  com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor actor) {
         if (sessionId == null) {
             throw new IllegalArgumentException("Session ID must not be null");
         }
@@ -187,6 +199,20 @@ public class SessionCapacityPlanService {
         int recommendedThroughput = calculationService.calculateRecommendedThroughput(
                 effectiveStations, durationMinutes, expectedServiceMinutes);
 
+        // Enforce capacity override authorization
+        boolean overrideRequired = request.approvedCapacity() != null
+                && request.approvedCapacity() > recommendedThroughput;
+        if (overrideRequired) {
+            if (actor == null) {
+                throw new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException(
+                        "Full authentication is required to override session capacity");
+            }
+            if (!actor.hasRole("ROLE_CENTER_MANAGER")) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "User is not authorized to override session capacity. Role ROLE_CENTER_MANAGER is required.");
+            }
+        }
+
         int safeOccupancy = (request.safeConcurrentOccupancy() != null && request.safeConcurrentOccupancy() > 0)
                 ? request.safeConcurrentOccupancy()
                 : session.getCenter().getSafeConcurrentOccupancy();
@@ -204,6 +230,8 @@ public class SessionCapacityPlanService {
         Optional<SessionCapacityPlan> latestPlan = planRepository.findTopBySessionIdOrderByRevisionDesc(sessionId);
         int nextRevision = latestPlan.map(p -> p.getRevision() + 1).orElse(1);
 
+        String approvedBy = actor != null ? String.valueOf(actor.userId()) : null;
+
         SessionCapacityPlan plan = new SessionCapacityPlan(
                 session,
                 nextRevision,
@@ -220,7 +248,7 @@ public class SessionCapacityPlanService {
                 accompanying,
                 ceiling,
                 request.overrideReason(),
-                request.approvedBy()
+                approvedBy
         );
 
         return planRepository.save(plan);

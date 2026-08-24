@@ -401,12 +401,15 @@ class TimeSlotCapacityServiceIntegrationTests {
                 planService.createCapacityPlan(draftSession.getId(), requestInvalid)
         );
 
-        // Attempting new capacity plan with approvedCapacity = 25 should succeed
+        // Attempting new capacity plan with approvedCapacity = 25 (override above 0 recommended) should succeed with ROLE_CENTER_MANAGER
+        com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor manager =
+                new com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor(42L, java.util.Set.of("ROLE_CENTER_MANAGER"));
         CreateSessionCapacityPlanRequest requestValid = new CreateSessionCapacityPlanRequest(
                 0, 25, 60, 15, 0.0, "Approved expansion", "admin"
         );
-        SessionCapacityPlan plan2 = planService.createCapacityPlan(draftSession.getId(), requestValid);
+        SessionCapacityPlan plan2 = planService.createCapacityPlan(draftSession.getId(), requestValid, manager);
         assertNotNull(plan2);
         assertEquals(25, plan2.getApprovedCapacity());
+        assertEquals("42", plan2.getApprovedBy());
     }
 }
