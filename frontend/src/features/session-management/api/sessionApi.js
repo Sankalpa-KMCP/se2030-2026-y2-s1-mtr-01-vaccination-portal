@@ -238,6 +238,47 @@ export function formatTimeInTimezone(isoString, timeZone = 'UTC') {
   });
 }
 
+/**
+ * Splits an ISO UTC instant string into local date (YYYY-MM-DD) and local time (HH:mm) strings
+ * in a specified schedule timezone for prefilling HTML date and time input elements.
+ *
+ * @param {string} isoString - ISO UTC string
+ * @param {string} [timeZone='UTC'] - IANA time zone
+ * @returns {{ date: string, time: string }} Object containing formatted date and time strings
+ */
+export function utcToLocalDateAndTime(isoString, timeZone = 'UTC') {
+  if (!isoString) return { date: '', time: '' };
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return { date: '', time: '' };
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timeZone || 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    });
+    const parts = formatter.formatToParts(date);
+    const getPart = (type) => parts.find((p) => p.type === type)?.value || '';
+    const y = getPart('year');
+    const m = getPart('month');
+    const d = getPart('day');
+    let h = getPart('hour');
+    if (h === '24') h = '00';
+    const min = getPart('minute');
+    return {
+      date: `${y}-${m}-${d}`,
+      time: `${h.padStart(2, '0')}:${min.padStart(2, '0')}`,
+    };
+  } catch {
+    return { date: '', time: '' };
+  }
+}
+
+
 // -------------------------------------------------------------------------------------------------
 // Capacity Planning API (F5B)
 // -------------------------------------------------------------------------------------------------
@@ -324,6 +365,114 @@ export async function startSession(sessionId) {
 export async function completeSession(sessionId) {
   const response = await apiRequest(`/v1/sessions/${sessionId}/complete`, {
     method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+// -------------------------------------------------------------------------------------------------
+// Session Change Control API (F4C)
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * Previews the cancellation of a vaccination session without mutating state.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @returns {Promise<Object>} SessionChangePreviewResponse object
+ */
+export async function previewSessionCancellation(sessionId) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/cancellation-preview`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Confirms the cancellation of a vaccination session.
+ * Authenticated principal identity is derived server-side.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - { previewToken, reason }
+ * @returns {Promise<Object>} Updated SessionResponse object
+ */
+export async function cancelSession(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Previews a proposed same-center reschedule of a vaccination session without mutating state.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - { newStartAt, newEndAt, newBookingCloseAt }
+ * @returns {Promise<Object>} SessionChangePreviewResponse object
+ */
+export async function previewSessionReschedule(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/reschedule-preview`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Confirms a same-center reschedule of a vaccination session.
+ * Authenticated principal identity is derived server-side.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - { newStartAt, newEndAt, newBookingCloseAt, previewToken, reason }
+ * @returns {Promise<Object>} Updated SessionResponse object
+ */
+export async function rescheduleSession(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/reschedule`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Previews a proposed center transfer of a vaccination session without mutating state.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - { newCenterId, newStartAt, newEndAt, newBookingCloseAt }
+ * @returns {Promise<Object>} SessionChangePreviewResponse object
+ */
+export async function previewSessionTransfer(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/transfer-preview`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Confirms a center transfer of a vaccination session.
+ * Authenticated principal identity is derived server-side.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - { newCenterId, newStartAt, newEndAt, newBookingCloseAt, previewToken, reason }
+ * @returns {Promise<Object>} Updated SessionResponse object
+ */
+export async function transferSession(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/transfer`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Lists all historical change events for a vaccination session.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @returns {Promise<Array>} List of SessionChangeEventResponse objects
+ */
+export async function listSessionChangeEvents(sessionId) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/change-events`, {
+    method: 'GET',
   });
   return handleResponse(response);
 }
