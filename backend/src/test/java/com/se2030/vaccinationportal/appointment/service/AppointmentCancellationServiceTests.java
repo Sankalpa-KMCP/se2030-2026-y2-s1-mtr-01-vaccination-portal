@@ -180,7 +180,7 @@ class AppointmentCancellationServiceTests {
                 AppointmentAlreadyCompletedException.class,
                 () -> cancellationService.cancelAppointment(appointment.getId(), citizenId, now)
         );
-        assertTrue(ex.getMessage().contains("completed appointment cannot be cancelled"));
+        assertTrue(ex.getMessage().contains("completed appointment cannot be"));
     }
 
     @Test

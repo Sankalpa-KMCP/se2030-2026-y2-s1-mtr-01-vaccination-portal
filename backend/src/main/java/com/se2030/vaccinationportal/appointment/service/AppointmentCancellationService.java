@@ -94,43 +94,9 @@ public class AppointmentCancellationService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new AppointmentNotFoundException("Appointment not found with ID: " + appointmentId));
 
-        // Ownership check for citizen self-service cancellation
-        if (!isStaffOverride && requestingCitizenId != null && !requestingCitizenId.equals(appointment.getCitizenId())) {
-            throw new IllegalArgumentException("Citizen ID " + requestingCitizenId + " is not authorized to cancel appointment " + appointmentId);
-        }
-
-        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-            throw new IllegalStateException("Appointment " + appointmentId + " is already cancelled");
-        }
-
-        // Step 2b: MF03-BR-11 - Reject if status is COMPLETED
-        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
-            throw new AppointmentAlreadyCompletedException("A completed appointment cannot be cancelled (appointment ID: " + appointmentId + ")");
-        }
-
-        // Step 2c: MF03-BR-04 - Check 24-hour cancellation rule against time slot start time
-        if (slotCapacityPort == null) {
-            throw new IllegalStateException("SlotCapacityPort implementation (MF-02) is unavailable");
-        }
-        Instant slotStart = slotCapacityPort.getSlotStartTime(appointment.getSlotId());
-        if (slotStart == null) {
-            throw new IllegalStateException("Slot start time not available for slot ID: " + appointment.getSlotId());
-        }
-
-        Duration durationUntilStart = Duration.between(effectiveNow, slotStart);
-        boolean isWithin24Hours = durationUntilStart.toHours() < 24;
-
-        if (isWithin24Hours) {
-            if (!isStaffOverride) {
-                throw new RequiresStaffOverrideException(
-                        "Cancellations within 24 hours of session start require staff override (slot start: "
-                                + slotStart + ", request time: " + effectiveNow + ")"
-                );
-            }
-            if (staffReason == null || staffReason.trim().isEmpty()) {
-                throw new IllegalArgumentException("A staff reason is required when overriding cancellation within the 24-hour window");
-            }
-        }
+        // Ownership, completion status (MF03-BR-11), and 24-hour rule (MF03-BR-04) validation
+        AppointmentModificationValidator.validateModificationWindow(
+                appointment, requestingCitizenId, isStaffOverride, staffReason, effectiveNow, slotCapacityPort);
 
         // Step 2d: MF03-BR-05 - Atomic capacity release and status transition to CANCELLED
         boolean released = slotCapacityPort.releaseCapacity(appointment.getSlotId());

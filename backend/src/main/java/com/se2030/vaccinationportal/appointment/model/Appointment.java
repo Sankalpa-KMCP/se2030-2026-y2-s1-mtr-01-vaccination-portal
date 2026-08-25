@@ -171,6 +171,18 @@ public class Appointment {
         this.status = AppointmentStatus.COMPLETED;
     }
 
+    /**
+     * Reschedules this appointment to a new time slot (MF03-BR-06).
+     *
+     * @param newSlotId Identifier of the target time slot
+     */
+    public void reschedule(Long newSlotId) {
+        if (newSlotId == null) {
+            throw new IllegalArgumentException("New slot ID is required for rescheduling");
+        }
+        this.slotId = newSlotId;
+    }
+
     @Override
     public String toString() {
         return "Appointment{" +
