@@ -1,13 +1,9 @@
 package com.se2030.vaccinationportal.appointment.service;
 
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
-import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
-import com.se2030.vaccinationportal.appointment.exception.RequiresStaffOverrideException;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
-import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
