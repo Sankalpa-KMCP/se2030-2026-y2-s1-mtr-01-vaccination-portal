@@ -185,6 +185,113 @@ class EligibilityReviewServiceLifecycleTests {
     }
 
     @Test
+    void recordDecisionRejectsSecondSequentialDecisionWithoutAdditionalPersistence() {
+        ScreeningSubmission reviewedSubmission = submissionWithStatus(ScreeningSubmissionStatus.REVIEWED);
+        EligibilityAssessment originalAssessment = new EligibilityAssessment(
+                reviewedSubmission,
+                CITIZEN_ID,
+                CAMPAIGN_ID,
+                REVIEWER_ID,
+                EligibilityAssessmentStatus.ELIGIBLE,
+                PreliminaryScreeningResult.PRELIMINARY_PASS,
+                "Original final decision",
+                REVIEWED_AT.minusSeconds(3_600),
+                REVIEWED_AT.plusSeconds(86_400)
+        );
+        reviewedSubmission.setAssessment(originalAssessment);
+        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(reviewedSubmission));
+
+        assertThatThrownBy(() -> service.recordDecision(
+                SUBMISSION_ID,
+                REVIEWER_ID + 1,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Attempted second final decision",
+                "Should not be stored",
+                null
+        ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PENDING_REVIEW");
+
+        assertAll(
+                () -> assertThat(reviewedSubmission.getStatus()).isEqualTo(ScreeningSubmissionStatus.REVIEWED),
+                () -> assertThat(reviewedSubmission.getAssessment()).isSameAs(originalAssessment),
+                () -> assertThat(originalAssessment.getStatus()).isEqualTo(EligibilityAssessmentStatus.ELIGIBLE),
+                () -> assertThat(originalAssessment.getReason()).isEqualTo("Original final decision")
+        );
+        verify(submissionRepository, never()).save(any(ScreeningSubmission.class));
+        verify(assessmentRepository, never()).save(any(EligibilityAssessment.class));
+    }
+
+    @Test
+    void revokeEligibleAssessmentPreservesDecisionMetadataAndPersistsTrimmedReason() {
+        EligibilityAssessment assessment = assessmentWithStatus(EligibilityAssessmentStatus.ELIGIBLE);
+        assessment.setCitizenId(CITIZEN_ID);
+        assessment.setCampaignId(CAMPAIGN_ID);
+        assessment.setReviewerId(REVIEWER_ID);
+        assessment.setPreliminaryResult(PreliminaryScreeningResult.PRELIMINARY_PASS);
+        assessment.setReason("Original clinical decision");
+        assessment.setClinicalNotes("Original clinical notes");
+        assessment.setReviewedAt(REVIEWED_AT.minusSeconds(3_600));
+        assessment.setValidUntil(REVIEWED_AT.plusSeconds(86_400));
+        when(assessmentRepository.findById(ASSESSMENT_ID)).thenReturn(Optional.of(assessment));
+        when(assessmentRepository.save(same(assessment))).thenReturn(assessment);
+
+        EligibilityAssessment result = service.revokeAssessment(
+                ASSESSMENT_ID,
+                REVIEWER_ID + 1,
+                "  Eligibility withdrawn after clinical review  "
+        );
+
+        assertAll(
+                () -> assertThat(result).isSameAs(assessment),
+                () -> assertThat(assessment.getStatus()).isEqualTo(EligibilityAssessmentStatus.REVOKED),
+                () -> assertThat(assessment.getReviewerId()).isEqualTo(REVIEWER_ID),
+                () -> assertThat(assessment.getPreliminaryResult())
+                        .isEqualTo(PreliminaryScreeningResult.PRELIMINARY_PASS),
+                () -> assertThat(assessment.getReason()).isEqualTo("Original clinical decision"),
+                () -> assertThat(assessment.getClinicalNotes()).isEqualTo("Original clinical notes"),
+                () -> assertThat(assessment.getReviewedAt()).isEqualTo(REVIEWED_AT.minusSeconds(3_600)),
+                () -> assertThat(assessment.getValidUntil()).isEqualTo(REVIEWED_AT.plusSeconds(86_400)),
+                () -> assertThat(assessment.getRevocationReason())
+                        .isEqualTo("Eligibility withdrawn after clinical review"),
+                () -> assertThat(assessment.getRevokedAt()).isNotNull()
+        );
+        verify(assessmentRepository).save(same(assessment));
+    }
+
+    @Test
+    void revokeAssessmentRejectsRepeatedRevocationWithoutMutationOrSave() {
+        Instant originalRevokedAt = REVIEWED_AT.minusSeconds(1_800);
+        EligibilityAssessment assessment = assessmentWithStatus(EligibilityAssessmentStatus.REVOKED);
+        assessment.setReviewerId(REVIEWER_ID);
+        assessment.setReason("Original clinical decision");
+        assessment.setReviewedAt(REVIEWED_AT.minusSeconds(3_600));
+        assessment.setValidUntil(REVIEWED_AT.plusSeconds(86_400));
+        assessment.setRevokedAt(originalRevokedAt);
+        assessment.setRevocationReason("Original revocation reason");
+        when(assessmentRepository.findById(ASSESSMENT_ID)).thenReturn(Optional.of(assessment));
+
+        assertThatThrownBy(() -> service.revokeAssessment(
+                ASSESSMENT_ID,
+                REVIEWER_ID + 1,
+                "Replacement revocation reason"
+        ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ELIGIBLE");
+
+        assertAll(
+                () -> assertThat(assessment.getStatus()).isEqualTo(EligibilityAssessmentStatus.REVOKED),
+                () -> assertThat(assessment.getReviewerId()).isEqualTo(REVIEWER_ID),
+                () -> assertThat(assessment.getReason()).isEqualTo("Original clinical decision"),
+                () -> assertThat(assessment.getReviewedAt()).isEqualTo(REVIEWED_AT.minusSeconds(3_600)),
+                () -> assertThat(assessment.getValidUntil()).isEqualTo(REVIEWED_AT.plusSeconds(86_400)),
+                () -> assertThat(assessment.getRevokedAt()).isEqualTo(originalRevokedAt),
+                () -> assertThat(assessment.getRevocationReason()).isEqualTo("Original revocation reason")
+        );
+        verify(assessmentRepository, never()).save(any(EligibilityAssessment.class));
+    }
+
+    @Test
     void authorizeRescreeningRejectsEligibleAssessment() {
         EligibilityAssessment assessment = assessmentWithStatus(EligibilityAssessmentStatus.ELIGIBLE);
         assessment.setValidUntil(REVIEWED_AT.plusSeconds(86_400));

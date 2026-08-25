@@ -37,10 +37,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,19 +70,21 @@ class ScreeningSubmissionServiceValidationTests {
     private EligibilityReviewService eligibilityReviewService;
 
     private ScreeningSubmissionService service;
+    private ScreeningAnswerValidator answerValidator;
     private QuestionnaireVersion version;
     private ConsentNoticeVersion consent;
     private ScreeningQuestion question;
 
     @BeforeEach
     void setUp() {
+        answerValidator = spy(new ScreeningAnswerValidator(optionRepository));
         service = new ScreeningSubmissionService(
                 submissionRepository,
                 answerRepository,
                 versionRepository,
                 itemRepository,
                 consentRepository,
-                new ScreeningAnswerValidator(optionRepository),
+                answerValidator,
                 preliminaryScreeningService,
                 assignmentService,
                 eligibilityReviewService,
@@ -173,6 +178,29 @@ class ScreeningSubmissionServiceValidationTests {
         verify(submissionRepository, never()).save(any());
         verify(answerRepository, never()).save(any());
         verify(preliminaryScreeningService, never()).evaluateAnswers(any(), any());
+    }
+
+    @Test
+    void submitScreeningRejectsExistingActiveSubmissionBeforeDownstreamWorkOrPersistence() {
+        ScreeningSubmission activeSubmission = new ScreeningSubmission();
+        activeSubmission.setId(50L);
+        when(submissionRepository.findActiveSubmission(any(), any(), any()))
+                .thenReturn(Optional.of(activeSubmission));
+
+        assertThatThrownBy(() ->
+                service.submitScreening(1L, 2L, 20L, 30L, Map.of(40L, "valid details")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("active submission");
+
+        verify(eligibilityReviewService, never()).validateScreeningAllowed(any(), any());
+        verify(versionRepository, never()).findById(any());
+        verify(assignmentService, never()).getEffectiveAssignmentAt(any(), any());
+        verify(consentRepository, never()).findById(any());
+        verify(itemRepository, never()).findByQuestionnaireVersionIdOrderByDisplayOrderAsc(any());
+        verify(answerValidator, never()).validateAndNormalize(any(), anyList(), anyMap());
+        verify(preliminaryScreeningService, never()).evaluateAnswers(any(), any());
+        verify(submissionRepository, never()).save(any());
+        verify(answerRepository, never()).save(any());
     }
 
     private void stubSubmissionPrerequisites(List<QuestionnaireItem> items) {
