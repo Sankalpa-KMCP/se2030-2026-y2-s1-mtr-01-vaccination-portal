@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.screening.service;
 
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.model.EligibilityRule;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
 import com.se2030.vaccinationportal.screening.model.Questionnaire;
@@ -171,7 +172,7 @@ class QuestionnaireVersionServiceEligibilityRuleTests {
         when(ruleRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getEligibilityRuleById(999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Eligibility rule not found with ID: 999");
     }
 
@@ -180,7 +181,7 @@ class QuestionnaireVersionServiceEligibilityRuleTests {
         when(versionRepository.existsById(999L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.getEligibilityRulesForVersion(999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Questionnaire version not found with ID: 999");
     }
 }

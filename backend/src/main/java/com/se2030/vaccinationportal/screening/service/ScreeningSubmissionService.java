@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
 import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.model.*;
 import com.se2030.vaccinationportal.screening.repository.*;
 import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
@@ -74,7 +75,7 @@ public class ScreeningSubmissionService {
             throw new IllegalArgumentException("Submission ID cannot be null");
         }
         ScreeningSubmission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new IllegalArgumentException("Screening submission not found with ID: " + submissionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Screening submission not found with ID: " + submissionId));
         return initializeResponseRelations(submission);
     }
 
@@ -131,7 +132,7 @@ public class ScreeningSubmissionService {
 
         // 3. Validate Questionnaire Version (must be PUBLISHED)
         QuestionnaireVersion version = versionRepository.findById(versionId)
-                .orElseThrow(() -> new IllegalArgumentException("Questionnaire version not found with ID: " + versionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Questionnaire version not found with ID: " + versionId));
 
         if (version.getStatus() != QuestionnaireVersionStatus.PUBLISHED) {
             throw new IllegalStateException("Submissions are only allowed for PUBLISHED questionnaire versions");
@@ -155,7 +156,7 @@ public class ScreeningSubmissionService {
 
         // 5. Validate Consent Notice
         ConsentNoticeVersion consentNotice = consentNoticeVersionRepository.findById(consentNoticeVersionId)
-                .orElseThrow(() -> new IllegalArgumentException("Consent notice version not found with ID: " + consentNoticeVersionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Consent notice version not found with ID: " + consentNoticeVersionId));
 
         if (consentNotice.getRetiredAt() != null) {
             throw new IllegalStateException("The accepted consent notice version is retired. Please accept the latest active notice.");
@@ -202,7 +203,7 @@ public class ScreeningSubmissionService {
         }
 
         ScreeningSubmission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Screening submission not found with ID: " + submissionId
                 ));
 
