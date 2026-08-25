@@ -71,6 +71,12 @@ public class SecurityConfig {
                                 "/api/v1/sessions/*/transfer"
                         ).authenticated()
 
+                        // Protected Session Recurrence Confirmation Endpoints (F4D)
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                "/api/v1/recurrence-rules/*/change",
+                                "/api/v1/recurrence-rules/*/cancel"
+                        ).authenticated()
+
                         // Public Certificate Verification & Documentation
                         .requestMatchers("/api/v1/certificates/verify/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

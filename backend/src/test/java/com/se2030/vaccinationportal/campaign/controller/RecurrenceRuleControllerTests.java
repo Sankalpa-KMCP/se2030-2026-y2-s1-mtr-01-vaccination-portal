@@ -72,13 +72,49 @@ class RecurrenceRuleControllerTests {
     private VaccinationCenter sampleCenter;
     private SessionRecurrenceRule sampleRule;
 
+    private org.springframework.security.core.Authentication sampleAuth;
+    private com.se2030.vaccinationportal.shared.auth.security.UserPrincipal samplePrincipal;
+
     @BeforeEach
     void setUp() {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
+        samplePrincipal = com.se2030.vaccinationportal.shared.auth.security.UserPrincipal.fromClaims(
+                42L,
+                "officer-01@vaccination.gov",
+                List.of("ROLE_USER")
+        );
+        sampleAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                samplePrincipal,
+                null,
+                samplePrincipal.getAuthorities()
+        );
+
         mockMvc = MockMvcBuilders.standaloneSetup(new RecurrenceRuleController(
                         recurrenceRuleService, occurrenceGenerationService, seriesChangeService))
+                .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    @Override
+                    public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
+                    }
+
+                    @Override
+                    public Object resolveArgument(
+                            org.springframework.core.MethodParameter parameter,
+                            org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                            org.springframework.web.context.request.NativeWebRequest webRequest,
+                            org.springframework.web.bind.support.WebDataBinderFactory binderFactory
+                    ) {
+                        java.security.Principal principal = webRequest.getUserPrincipal();
+                        if (principal instanceof org.springframework.security.core.Authentication auth) {
+                            if (auth.getPrincipal() instanceof com.se2030.vaccinationportal.shared.auth.security.UserPrincipal userPrincipal) {
+                                return userPrincipal;
+                            }
+                        }
+                        return null;
+                    }
+                })
                 .setControllerAdvice(new GlobalCampaignExceptionHandler())
                 .setValidator(validator)
                 .build();
@@ -571,7 +607,7 @@ class RecurrenceRuleControllerTests {
     class ConfirmSeriesChangeTests {
 
         @Test
-        @DisplayName("200 OK on valid series change confirmation")
+        @DisplayName("200 OK on valid series change confirmation with authenticated principal")
         void confirmSeriesChangeSuccess() throws Exception {
             RecurrenceRuleDefinitionSnapshot currentDef = new RecurrenceRuleDefinitionSnapshot(
                     EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
@@ -598,7 +634,82 @@ class RecurrenceRuleControllerTests {
             );
 
             when(seriesChangeService.confirmSeriesChange(
-                    eq(1L), any(RecurrenceRuleDefinitionSnapshot.class), eq("sha256previewtoken1234567890abcdef"), eq("Schedule optimization"), eq("ACTOR-001")
+                    eq(1L), any(RecurrenceRuleDefinitionSnapshot.class), eq("sha256previewtoken1234567890abcdef"), eq("Schedule optimization"), eq("42")
+            )).thenReturn(result);
+
+            String requestJson = """
+                    {
+                        "weekdays": ["MONDAY", "FRIDAY"],
+                        "startDate": "2026-09-01",
+                        "endDate": "2026-10-31",
+                        "startTime": "09:00:00",
+                        "endTime": "17:00:00",
+                        "timezone": "Asia/Colombo",
+                        "previewToken": "sha256previewtoken1234567890abcdef",
+                        "reason": "Schedule optimization"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/recurrence-rules/1/change")
+                            .principal(sampleAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.rule.id", is(1)))
+                    .andExpect(jsonPath("$.rescheduledCount", is(10)))
+                    .andExpect(jsonPath("$.cancelledCount", is(5)))
+                    .andExpect(jsonPath("$.newCount", is(2)))
+                    .andExpect(jsonPath("$.preservedCount", is(1)))
+                    .andExpect(jsonPath("$.ineligibleCount", is(0)))
+                    .andExpect(jsonPath("$.eventsCreatedCount", is(15)));
+
+            verify(seriesChangeService).confirmSeriesChange(
+                    eq(1L), any(RecurrenceRuleDefinitionSnapshot.class), eq("sha256previewtoken1234567890abcdef"), eq("Schedule optimization"), eq("42")
+            );
+        }
+
+        @Test
+        @DisplayName("401 Unauthorized when unauthenticated/anonymous")
+        void confirmSeriesChangeAnonymousReturns401() throws Exception {
+            String requestJson = """
+                    {
+                        "weekdays": ["MONDAY", "FRIDAY"],
+                        "startDate": "2026-09-01",
+                        "endDate": "2026-10-31",
+                        "startTime": "09:00:00",
+                        "endTime": "17:00:00",
+                        "timezone": "Asia/Colombo",
+                        "previewToken": "sha256previewtoken1234567890abcdef",
+                        "reason": "Schedule optimization"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/recurrence-rules/1/change")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestJson))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("200 OK and ignores spoofed body actorId, forwarding authenticated principal userId")
+        void confirmSeriesChangeIgnoresSpoofedActorId() throws Exception {
+            RecurrenceRuleDefinitionSnapshot currentDef = new RecurrenceRuleDefinitionSnapshot(
+                    EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+                    LocalDate.of(2026, 9, 1),
+                    LocalDate.of(2026, 10, 31),
+                    LocalTime.of(8, 30),
+                    LocalTime.of(16, 30),
+                    "Asia/Colombo"
+            );
+            SeriesChangePreview preview = new SeriesChangePreview(
+                    1L, currentDef, currentDef, Collections.emptyList(), 0, 0, "sha256previewtoken1234567890abcdef"
+            );
+            SeriesChangeResult result = new SeriesChangeResult(
+                    sampleRule, preview, 10, 5, 2, 1, 0, 15
+            );
+
+            when(seriesChangeService.confirmSeriesChange(
+                    eq(1L), any(RecurrenceRuleDefinitionSnapshot.class), eq("sha256previewtoken1234567890abcdef"), eq("Schedule optimization"), eq("42")
             )).thenReturn(result);
 
             String requestJson = """
@@ -611,21 +722,19 @@ class RecurrenceRuleControllerTests {
                         "timezone": "Asia/Colombo",
                         "previewToken": "sha256previewtoken1234567890abcdef",
                         "reason": "Schedule optimization",
-                        "actorId": "ACTOR-001"
+                        "actorId": "spoofed-attacker-999"
                     }
                     """;
 
             mockMvc.perform(post("/api/v1/recurrence-rules/1/change")
+                            .principal(sampleAuth)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestJson))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.rule.id", is(1)))
-                    .andExpect(jsonPath("$.rescheduledCount", is(10)))
-                    .andExpect(jsonPath("$.cancelledCount", is(5)))
-                    .andExpect(jsonPath("$.newCount", is(2)))
-                    .andExpect(jsonPath("$.preservedCount", is(1)))
-                    .andExpect(jsonPath("$.ineligibleCount", is(0)))
-                    .andExpect(jsonPath("$.eventsCreatedCount", is(15)));
+                    .andExpect(status().isOk());
+
+            verify(seriesChangeService).confirmSeriesChange(
+                    eq(1L), any(RecurrenceRuleDefinitionSnapshot.class), eq("sha256previewtoken1234567890abcdef"), eq("Schedule optimization"), eq("42")
+            );
         }
 
         @Test
@@ -643,12 +752,12 @@ class RecurrenceRuleControllerTests {
                         "endTime": "17:00:00",
                         "timezone": "Asia/Colombo",
                         "previewToken": "stale-preview-token",
-                        "reason": "Schedule optimization",
-                        "actorId": "ACTOR-001"
+                        "reason": "Schedule optimization"
                     }
                     """;
 
             mockMvc.perform(post("/api/v1/recurrence-rules/1/change")
+                            .principal(sampleAuth)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestJson))
                     .andExpect(status().isConflict())
@@ -706,7 +815,7 @@ class RecurrenceRuleControllerTests {
     class ConfirmSeriesCancellationTests {
 
         @Test
-        @DisplayName("200 OK on valid cancellation confirmation")
+        @DisplayName("200 OK on valid cancellation confirmation with authenticated principal")
         void confirmSeriesCancellationSuccess() throws Exception {
             RecurrenceRuleDefinitionSnapshot currentDef = new RecurrenceRuleDefinitionSnapshot(
                     EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
@@ -726,18 +835,18 @@ class RecurrenceRuleControllerTests {
             );
 
             when(seriesChangeService.confirmSeriesCancellation(
-                    1L, "sha256canceltoken1234567890abcdef", "Center emergency closure", "ACTOR-001"
+                    1L, "sha256canceltoken1234567890abcdef", "Center emergency closure", "42"
             )).thenReturn(result);
 
             String requestJson = """
                     {
                         "previewToken": "sha256canceltoken1234567890abcdef",
-                        "reason": "Center emergency closure",
-                        "actorId": "ACTOR-001"
+                        "reason": "Center emergency closure"
                     }
                     """;
 
             mockMvc.perform(post("/api/v1/recurrence-rules/1/cancel")
+                            .principal(sampleAuth)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestJson))
                     .andExpect(status().isOk())
@@ -745,20 +854,82 @@ class RecurrenceRuleControllerTests {
                     .andExpect(jsonPath("$.rule.status", is("CANCELLED")))
                     .andExpect(jsonPath("$.cancelledCount", is(15)))
                     .andExpect(jsonPath("$.eventsCreatedCount", is(15)));
+
+            verify(seriesChangeService).confirmSeriesCancellation(
+                    1L, "sha256canceltoken1234567890abcdef", "Center emergency closure", "42"
+            );
         }
 
         @Test
-        @DisplayName("400 Bad Request when confirmation fields are invalid (blank token, blank reason, blank actor)")
-        void confirmSeriesCancellationValidationFailure() throws Exception {
+        @DisplayName("401 Unauthorized when unauthenticated/anonymous")
+        void confirmSeriesCancellationAnonymousReturns401() throws Exception {
             String requestJson = """
                     {
-                        "previewToken": "",
-                        "reason": "  ",
-                        "actorId": ""
+                        "previewToken": "sha256canceltoken1234567890abcdef",
+                        "reason": "Center emergency closure"
                     }
                     """;
 
             mockMvc.perform(post("/api/v1/recurrence-rules/1/cancel")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestJson))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("200 OK and ignores spoofed body actorId, forwarding authenticated principal userId")
+        void confirmSeriesCancellationIgnoresSpoofedActorId() throws Exception {
+            RecurrenceRuleDefinitionSnapshot currentDef = new RecurrenceRuleDefinitionSnapshot(
+                    EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+                    LocalDate.of(2026, 9, 1),
+                    LocalDate.of(2026, 10, 31),
+                    LocalTime.of(8, 30),
+                    LocalTime.of(16, 30),
+                    "Asia/Colombo"
+            );
+            SeriesChangePreview preview = new SeriesChangePreview(
+                    1L, currentDef, currentDef, Collections.emptyList(), 0, 0, "sha256canceltoken1234567890abcdef"
+            );
+            sampleRule.cancel();
+            SeriesChangeResult result = new SeriesChangeResult(
+                    sampleRule, preview, 0, 15, 0, 2, 1, 15
+            );
+
+            when(seriesChangeService.confirmSeriesCancellation(
+                    1L, "sha256canceltoken1234567890abcdef", "Center emergency closure", "42"
+            )).thenReturn(result);
+
+            String requestJson = """
+                    {
+                        "previewToken": "sha256canceltoken1234567890abcdef",
+                        "reason": "Center emergency closure",
+                        "actorId": "spoofed-999"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/recurrence-rules/1/cancel")
+                            .principal(sampleAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestJson))
+                    .andExpect(status().isOk());
+
+            verify(seriesChangeService).confirmSeriesCancellation(
+                    1L, "sha256canceltoken1234567890abcdef", "Center emergency closure", "42"
+            );
+        }
+
+        @Test
+        @DisplayName("400 Bad Request when confirmation fields are invalid (blank token, blank reason)")
+        void confirmSeriesCancellationValidationFailure() throws Exception {
+            String requestJson = """
+                    {
+                        "previewToken": "",
+                        "reason": "  "
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/recurrence-rules/1/cancel")
+                            .principal(sampleAuth)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestJson))
                     .andExpect(status().isBadRequest())
@@ -774,12 +945,12 @@ class RecurrenceRuleControllerTests {
             String requestJson = """
                     {
                         "previewToken": "stale-preview-token",
-                        "reason": "Center emergency closure",
-                        "actorId": "ACTOR-001"
+                        "reason": "Center emergency closure"
                     }
                     """;
 
             mockMvc.perform(post("/api/v1/recurrence-rules/1/cancel")
+                            .principal(sampleAuth)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestJson))
                     .andExpect(status().isConflict())
