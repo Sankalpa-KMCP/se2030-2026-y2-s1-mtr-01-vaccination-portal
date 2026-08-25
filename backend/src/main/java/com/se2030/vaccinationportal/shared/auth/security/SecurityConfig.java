@@ -64,6 +64,13 @@ public class SecurityConfig {
                         // Protected Current User Profile Endpoint
                         .requestMatchers("/api/v1/auth/me").authenticated()
 
+                        // Protected Session Change Control Confirmation Endpoints (F4C)
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                "/api/v1/sessions/*/cancel",
+                                "/api/v1/sessions/*/reschedule",
+                                "/api/v1/sessions/*/transfer"
+                        ).authenticated()
+
                         // Public Certificate Verification & Documentation
                         .requestMatchers("/api/v1/certificates/verify/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
