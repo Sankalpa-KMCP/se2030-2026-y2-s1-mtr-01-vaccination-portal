@@ -8,6 +8,7 @@ import com.se2030.vaccinationportal.campaign.dto.request.PreviewSessionReschedul
 import com.se2030.vaccinationportal.campaign.dto.request.PreviewSessionTransferRequest;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionChangeEventResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionChangePreviewResponse;
+import com.se2030.vaccinationportal.campaign.dto.response.SessionOperationalReadinessResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionSummaryResponse;
 import com.se2030.vaccinationportal.campaign.mapper.SessionDtoMapper;
@@ -15,10 +16,12 @@ import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
+import com.se2030.vaccinationportal.campaign.service.SessionOperationalReadinessService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,9 +39,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class SessionController {
 
     private final VaccinationSessionService sessionService;
+    private final SessionOperationalReadinessService readinessService;
 
-    public SessionController(VaccinationSessionService sessionService) {
-        this.sessionService = sessionService;
+    public SessionController(
+            VaccinationSessionService sessionService,
+            SessionOperationalReadinessService readinessService
+    ) {
+        this.sessionService = Objects.requireNonNull(sessionService, "sessionService must not be null");
+        this.readinessService = Objects.requireNonNull(readinessService, "readinessService must not be null");
     }
 
     @PostMapping
@@ -59,6 +67,12 @@ public class SessionController {
     public ResponseEntity<SessionResponse> getSessionById(@PathVariable Long id) {
         VaccinationSession session = sessionService.getRequiredSessionById(id);
         return ResponseEntity.ok(SessionDtoMapper.toResponse(session));
+    }
+
+    @GetMapping("/{id}/readiness")
+    public ResponseEntity<SessionOperationalReadinessResponse> getSessionReadiness(@PathVariable Long id) {
+        SessionOperationalReadinessService.OperationalReadinessResult result = readinessService.evaluateReadiness(id);
+        return ResponseEntity.ok(SessionDtoMapper.toReadinessResponse(result));
     }
 
     @GetMapping
