@@ -61,12 +61,48 @@ class SessionControllerChangeTests {
     private SessionChangePreview transferPreview;
     private SessionChangePreview cancelPreview;
 
+    private org.springframework.security.core.Authentication sampleAuth;
+    private com.se2030.vaccinationportal.shared.auth.security.UserPrincipal samplePrincipal;
+
     @BeforeEach
     void setUp() {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
+        samplePrincipal = com.se2030.vaccinationportal.shared.auth.security.UserPrincipal.fromClaims(
+                42L,
+                "officer-01@vaccination.gov",
+                List.of("ROLE_USER")
+        );
+        sampleAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                samplePrincipal,
+                null,
+                samplePrincipal.getAuthorities()
+        );
+
         mockMvc = MockMvcBuilders.standaloneSetup(new SessionController(sessionService))
+                .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    @Override
+                    public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
+                    }
+
+                    @Override
+                    public Object resolveArgument(
+                            org.springframework.core.MethodParameter parameter,
+                            org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                            org.springframework.web.context.request.NativeWebRequest webRequest,
+                            org.springframework.web.bind.support.WebDataBinderFactory binderFactory
+                    ) {
+                        java.security.Principal principal = webRequest.getUserPrincipal();
+                        if (principal instanceof org.springframework.security.core.Authentication auth) {
+                            if (auth.getPrincipal() instanceof com.se2030.vaccinationportal.shared.auth.security.UserPrincipal userPrincipal) {
+                                return userPrincipal;
+                            }
+                        }
+                        return null;
+                    }
+                })
                 .setControllerAdvice(new GlobalCampaignExceptionHandler())
                 .setValidator(validator)
                 .build();
@@ -252,7 +288,7 @@ class SessionControllerChangeTests {
     // =========================================================================
 
     @Test
-    @DisplayName("POST /api/v1/sessions/{id}/cancel confirms cancellation and returns 200 OK")
+    @DisplayName("POST /api/v1/sessions/{id}/cancel confirms cancellation with trusted principal actorId and returns 200 OK")
     void confirmCancellationSuccess() throws Exception {
         VaccinationSession cancelledSession = new VaccinationSession(
                 sampleCampaign,
@@ -269,25 +305,80 @@ class SessionControllerChangeTests {
                 eq(500L),
                 eq("cancellation-sha256-token-123456"),
                 eq("Severe weather warning"),
-                eq("officer-01")
+                eq("42")
         )).thenReturn(cancelledSession);
 
         String payload = """
                 {
                     "previewToken": "cancellation-sha256-token-123456",
-                    "reason": "Severe weather warning",
-                    "actorId": "officer-01"
+                    "reason": "Severe weather warning"
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/sessions/500/cancel")
+                        .principal(sampleAuth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(500)))
                 .andExpect(jsonPath("$.lifecycleStatus", is("CANCELLED")));
 
-        verify(sessionService).confirmCancellation(500L, "cancellation-sha256-token-123456", "Severe weather warning", "officer-01");
+        verify(sessionService).confirmCancellation(500L, "cancellation-sha256-token-123456", "Severe weather warning", "42");
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/cancel anonymously returns 401 Unauthorized")
+    void confirmCancellationAnonymousReturns401() throws Exception {
+        String payload = """
+                {
+                    "previewToken": "cancellation-sha256-token-123456",
+                    "reason": "Severe weather warning"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/500/cancel")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/cancel ignores client-supplied spoofed actorId and uses trusted principal userId")
+    void confirmCancellationSpoofedActorIgnored() throws Exception {
+        VaccinationSession cancelledSession = new VaccinationSession(
+                sampleCampaign,
+                sampleCenter,
+                Instant.parse("2026-10-15T09:00:00Z"),
+                Instant.parse("2026-10-15T12:00:00Z"),
+                Instant.parse("2026-10-15T08:00:00Z"),
+                "Asia/Colombo"
+        );
+        ReflectionTestUtils.setField(cancelledSession, "id", 500L);
+        ReflectionTestUtils.setField(cancelledSession, "lifecycleStatus", SessionLifecycleStatus.CANCELLED);
+
+        when(sessionService.confirmCancellation(
+                eq(500L),
+                eq("cancellation-sha256-token-123456"),
+                eq("Severe weather warning"),
+                eq("42")
+        )).thenReturn(cancelledSession);
+
+        String payload = """
+                {
+                    "previewToken": "cancellation-sha256-token-123456",
+                    "reason": "Severe weather warning",
+                    "actorId": "spoofed-attacker-999"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/500/cancel")
+                        .principal(sampleAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(500)));
+
+        verify(sessionService).confirmCancellation(500L, "cancellation-sha256-token-123456", "Severe weather warning", "42");
     }
 
     @Test
@@ -296,12 +387,12 @@ class SessionControllerChangeTests {
         String invalidPayload = """
                 {
                     "previewToken": "",
-                    "reason": "",
-                    "actorId": ""
+                    "reason": ""
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/sessions/500/cancel")
+                        .principal(sampleAuth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidPayload))
                 .andExpect(status().isBadRequest())
@@ -316,12 +407,12 @@ class SessionControllerChangeTests {
         String invalidPayload = String.format("""
                 {
                     "previewToken": "token-123",
-                    "reason": "%s",
-                    "actorId": "officer-01"
+                    "reason": "%s"
                 }
                 """, longReason);
 
         mockMvc.perform(post("/api/v1/sessions/500/cancel")
+                        .principal(sampleAuth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidPayload))
                 .andExpect(status().isBadRequest())
@@ -339,12 +430,12 @@ class SessionControllerChangeTests {
         String payload = """
                 {
                     "previewToken": "stale-token",
-                    "reason": "Valid reason",
-                    "actorId": "officer-01"
+                    "reason": "Valid reason"
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/sessions/500/cancel")
+                        .principal(sampleAuth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isConflict())
@@ -429,7 +520,7 @@ class SessionControllerChangeTests {
     // =========================================================================
 
     @Test
-    @DisplayName("POST /api/v1/sessions/{id}/reschedule confirms reschedule and returns 200 OK")
+    @DisplayName("POST /api/v1/sessions/{id}/reschedule confirms reschedule with trusted principal actorId and returns 200 OK")
     void confirmRescheduleSuccess() throws Exception {
         VaccinationSession rescheduledSession = new VaccinationSession(
                 sampleCampaign,
@@ -448,7 +539,78 @@ class SessionControllerChangeTests {
                 eq(Instant.parse("2026-10-16T09:00:00Z")),
                 eq("reschedule-sha256-token-123456"),
                 eq("Rescheduling for facility maintenance"),
-                eq("officer-01")
+                eq("42")
+        )).thenReturn(rescheduledSession);
+
+        String payload = """
+                {
+                    "newStartAt": "2026-10-16T10:00:00Z",
+                    "newEndAt": "2026-10-16T13:00:00Z",
+                    "newBookingCloseAt": "2026-10-16T09:00:00Z",
+                    "previewToken": "reschedule-sha256-token-123456",
+                    "reason": "Rescheduling for facility maintenance"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/500/reschedule")
+                        .principal(sampleAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(500)))
+                .andExpect(jsonPath("$.startAt", is("2026-10-16T10:00:00Z")))
+                .andExpect(jsonPath("$.endAt", is("2026-10-16T13:00:00Z")));
+
+        verify(sessionService).confirmReschedule(
+                eq(500L),
+                eq(Instant.parse("2026-10-16T10:00:00Z")),
+                eq(Instant.parse("2026-10-16T13:00:00Z")),
+                eq(Instant.parse("2026-10-16T09:00:00Z")),
+                eq("reschedule-sha256-token-123456"),
+                eq("Rescheduling for facility maintenance"),
+                eq("42")
+        );
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/reschedule anonymously returns 401 Unauthorized")
+    void confirmRescheduleAnonymousReturns401() throws Exception {
+        String payload = """
+                {
+                    "newStartAt": "2026-10-16T10:00:00Z",
+                    "newEndAt": "2026-10-16T13:00:00Z",
+                    "previewToken": "reschedule-sha256-token-123456",
+                    "reason": "Rescheduling for facility maintenance"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/500/reschedule")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/reschedule ignores client-supplied spoofed actorId and uses trusted principal userId")
+    void confirmRescheduleSpoofedActorIgnored() throws Exception {
+        VaccinationSession rescheduledSession = new VaccinationSession(
+                sampleCampaign,
+                sampleCenter,
+                Instant.parse("2026-10-16T10:00:00Z"),
+                Instant.parse("2026-10-16T13:00:00Z"),
+                Instant.parse("2026-10-16T09:00:00Z"),
+                "Asia/Colombo"
+        );
+        ReflectionTestUtils.setField(rescheduledSession, "id", 500L);
+
+        when(sessionService.confirmReschedule(
+                eq(500L),
+                eq(Instant.parse("2026-10-16T10:00:00Z")),
+                eq(Instant.parse("2026-10-16T13:00:00Z")),
+                eq(Instant.parse("2026-10-16T09:00:00Z")),
+                eq("reschedule-sha256-token-123456"),
+                eq("Rescheduling for facility maintenance"),
+                eq("42")
         )).thenReturn(rescheduledSession);
 
         String payload = """
@@ -458,17 +620,26 @@ class SessionControllerChangeTests {
                     "newBookingCloseAt": "2026-10-16T09:00:00Z",
                     "previewToken": "reschedule-sha256-token-123456",
                     "reason": "Rescheduling for facility maintenance",
-                    "actorId": "officer-01"
+                    "actorId": "spoofed-admin"
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/sessions/500/reschedule")
+                        .principal(sampleAuth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(500)))
-                .andExpect(jsonPath("$.startAt", is("2026-10-16T10:00:00Z")))
-                .andExpect(jsonPath("$.endAt", is("2026-10-16T13:00:00Z")));
+                .andExpect(jsonPath("$.id", is(500)));
+
+        verify(sessionService).confirmReschedule(
+                eq(500L),
+                eq(Instant.parse("2026-10-16T10:00:00Z")),
+                eq(Instant.parse("2026-10-16T13:00:00Z")),
+                eq(Instant.parse("2026-10-16T09:00:00Z")),
+                eq("reschedule-sha256-token-123456"),
+                eq("Rescheduling for facility maintenance"),
+                eq("42")
+        );
     }
 
     @Test
@@ -482,12 +653,12 @@ class SessionControllerChangeTests {
                     "newStartAt": "2026-10-16T10:00:00Z",
                     "newEndAt": "2026-10-16T13:00:00Z",
                     "previewToken": "stale-token",
-                    "reason": "Maintenance",
-                    "actorId": "officer-01"
+                    "reason": "Maintenance"
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/sessions/500/reschedule")
+                        .principal(sampleAuth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isConflict())
@@ -557,7 +728,7 @@ class SessionControllerChangeTests {
     // =========================================================================
 
     @Test
-    @DisplayName("POST /api/v1/sessions/{id}/transfer confirms center transfer and returns 200 OK")
+    @DisplayName("POST /api/v1/sessions/{id}/transfer confirms center transfer with trusted principal actorId and returns 200 OK")
     void confirmTransferSuccess() throws Exception {
         VaccinationSession transferredSession = new VaccinationSession(
                 sampleCampaign,
@@ -577,7 +748,82 @@ class SessionControllerChangeTests {
                 eq(Instant.parse("2026-10-16T09:00:00Z")),
                 eq("transfer-sha256-token-123456"),
                 eq("Center relocation due to renovation"),
-                eq("officer-01")
+                eq("42")
+        )).thenReturn(transferredSession);
+
+        String payload = """
+                {
+                    "newCenterId": 201,
+                    "newStartAt": "2026-10-16T10:00:00Z",
+                    "newEndAt": "2026-10-16T13:00:00Z",
+                    "newBookingCloseAt": "2026-10-16T09:00:00Z",
+                    "previewToken": "transfer-sha256-token-123456",
+                    "reason": "Center relocation due to renovation"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/500/transfer")
+                        .principal(sampleAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(500)))
+                .andExpect(jsonPath("$.centerId", is(201)))
+                .andExpect(jsonPath("$.startAt", is("2026-10-16T10:00:00Z")));
+
+        verify(sessionService).confirmCenterTransfer(
+                eq(500L),
+                eq(201L),
+                eq(Instant.parse("2026-10-16T10:00:00Z")),
+                eq(Instant.parse("2026-10-16T13:00:00Z")),
+                eq(Instant.parse("2026-10-16T09:00:00Z")),
+                eq("transfer-sha256-token-123456"),
+                eq("Center relocation due to renovation"),
+                eq("42")
+        );
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/transfer anonymously returns 401 Unauthorized")
+    void confirmTransferAnonymousReturns401() throws Exception {
+        String payload = """
+                {
+                    "newCenterId": 201,
+                    "newStartAt": "2026-10-16T10:00:00Z",
+                    "newEndAt": "2026-10-16T13:00:00Z",
+                    "previewToken": "transfer-sha256-token-123456",
+                    "reason": "Center relocation due to renovation"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/500/transfer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/transfer ignores client-supplied spoofed actorId and uses trusted principal userId")
+    void confirmTransferSpoofedActorIgnored() throws Exception {
+        VaccinationSession transferredSession = new VaccinationSession(
+                sampleCampaign,
+                targetCenter,
+                Instant.parse("2026-10-16T10:00:00Z"),
+                Instant.parse("2026-10-16T13:00:00Z"),
+                Instant.parse("2026-10-16T09:00:00Z"),
+                "Asia/Colombo"
+        );
+        ReflectionTestUtils.setField(transferredSession, "id", 500L);
+
+        when(sessionService.confirmCenterTransfer(
+                eq(500L),
+                eq(201L),
+                eq(Instant.parse("2026-10-16T10:00:00Z")),
+                eq(Instant.parse("2026-10-16T13:00:00Z")),
+                eq(Instant.parse("2026-10-16T09:00:00Z")),
+                eq("transfer-sha256-token-123456"),
+                eq("Center relocation due to renovation"),
+                eq("42")
         )).thenReturn(transferredSession);
 
         String payload = """
@@ -588,17 +834,27 @@ class SessionControllerChangeTests {
                     "newBookingCloseAt": "2026-10-16T09:00:00Z",
                     "previewToken": "transfer-sha256-token-123456",
                     "reason": "Center relocation due to renovation",
-                    "actorId": "officer-01"
+                    "actorId": "spoofed-999"
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/sessions/500/transfer")
+                        .principal(sampleAuth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(500)))
-                .andExpect(jsonPath("$.centerId", is(201)))
-                .andExpect(jsonPath("$.startAt", is("2026-10-16T10:00:00Z")));
+                .andExpect(jsonPath("$.id", is(500)));
+
+        verify(sessionService).confirmCenterTransfer(
+                eq(500L),
+                eq(201L),
+                eq(Instant.parse("2026-10-16T10:00:00Z")),
+                eq(Instant.parse("2026-10-16T13:00:00Z")),
+                eq(Instant.parse("2026-10-16T09:00:00Z")),
+                eq("transfer-sha256-token-123456"),
+                eq("Center relocation due to renovation"),
+                eq("42")
+        );
     }
 
     @Test
@@ -609,12 +865,12 @@ class SessionControllerChangeTests {
                     "newStartAt": "2026-10-16T10:00:00Z",
                     "newEndAt": "2026-10-16T13:00:00Z",
                     "previewToken": "transfer-sha256-token-123456",
-                    "reason": "Center relocation",
-                    "actorId": "officer-01"
+                    "reason": "Center relocation"
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/sessions/500/transfer")
+                        .principal(sampleAuth)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidPayload))
                 .andExpect(status().isBadRequest())

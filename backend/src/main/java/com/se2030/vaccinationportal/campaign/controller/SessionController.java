@@ -101,13 +101,18 @@ public class SessionController {
     @PostMapping("/{id}/cancel")
     public ResponseEntity<SessionResponse> confirmCancellation(
             @PathVariable Long id,
-            @Valid @RequestBody ConfirmSessionCancellationRequest request
+            @Valid @RequestBody ConfirmSessionCancellationRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
     ) {
+        if (principal == null) {
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        String trustedActorId = String.valueOf(principal.getUserId());
         VaccinationSession cancelled = sessionService.confirmCancellation(
                 id,
                 request.previewToken(),
                 request.reason(),
-                request.actorId()
+                trustedActorId
         );
         return ResponseEntity.ok(SessionDtoMapper.toResponse(cancelled));
     }
@@ -129,8 +134,13 @@ public class SessionController {
     @PostMapping("/{id}/reschedule")
     public ResponseEntity<SessionResponse> confirmReschedule(
             @PathVariable Long id,
-            @Valid @RequestBody ConfirmSessionRescheduleRequest request
+            @Valid @RequestBody ConfirmSessionRescheduleRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
     ) {
+        if (principal == null) {
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        String trustedActorId = String.valueOf(principal.getUserId());
         VaccinationSession rescheduled = sessionService.confirmReschedule(
                 id,
                 request.newStartAt(),
@@ -138,7 +148,7 @@ public class SessionController {
                 request.newBookingCloseAt(),
                 request.previewToken(),
                 request.reason(),
-                request.actorId()
+                trustedActorId
         );
         return ResponseEntity.ok(SessionDtoMapper.toResponse(rescheduled));
     }
@@ -161,8 +171,13 @@ public class SessionController {
     @PostMapping("/{id}/transfer")
     public ResponseEntity<SessionResponse> confirmCenterTransfer(
             @PathVariable Long id,
-            @Valid @RequestBody ConfirmSessionTransferRequest request
+            @Valid @RequestBody ConfirmSessionTransferRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
     ) {
+        if (principal == null) {
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        String trustedActorId = String.valueOf(principal.getUserId());
         VaccinationSession transferred = sessionService.confirmCenterTransfer(
                 id,
                 request.newCenterId(),
@@ -171,7 +186,7 @@ public class SessionController {
                 request.newBookingCloseAt(),
                 request.previewToken(),
                 request.reason(),
-                request.actorId()
+                trustedActorId
         );
         return ResponseEntity.ok(SessionDtoMapper.toResponse(transferred));
     }
