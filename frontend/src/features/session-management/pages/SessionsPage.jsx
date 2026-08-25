@@ -33,6 +33,8 @@ export default function SessionsPage() {
 
   // Race safety for session listing requests
   const latestSessionReqRef = useRef(null);
+  const latestFiltersRef = useRef(filters);
+  latestFiltersRef.current = filters;
 
   // Load campaign & center catalogues once on mount
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function SessionsPage() {
     };
   }, []);
 
-  // Fetch sessions with server-level filters
+  // Fetch sessions with server-level filters using current filter snapshot
   const fetchSessions = useCallback(() => {
     const currentReqId = Symbol('sessions_req');
     latestSessionReqRef.current = currentReqId;
@@ -81,10 +83,11 @@ export default function SessionsPage() {
     setLoading(true);
     setError(null);
 
+    const currentFilters = latestFiltersRef.current;
     const queryFilters = {
-      campaignId: filters.campaignId || null,
-      centerId: filters.centerId || null,
-      status: filters.status || null,
+      campaignId: currentFilters.campaignId || null,
+      centerId: currentFilters.centerId || null,
+      status: currentFilters.status || null,
     };
 
     listSessions(queryFilters)
@@ -98,11 +101,11 @@ export default function SessionsPage() {
         setError(err);
         setLoading(false);
       });
-  }, [filters.campaignId, filters.centerId, filters.status]);
+  }, []);
 
   useEffect(() => {
     fetchSessions();
-  }, [fetchSessions]);
+  }, [filters.campaignId, filters.centerId, filters.status, fetchSessions]);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({
@@ -127,6 +130,11 @@ export default function SessionsPage() {
       setSuccessMessage(null);
     }, 5000);
   };
+
+  // Authoritatively re-fetch sessions on lifecycle updates to preserve status-filter semantics
+  const handleSessionUpdated = useCallback(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
   return (
     <div className="container-fluid px-0">
@@ -203,6 +211,7 @@ export default function SessionsPage() {
         sessionId={selectedSessionId}
         campaignsMap={campaignsMap}
         centersMap={centersMap}
+        onSessionUpdated={handleSessionUpdated}
       />
     </div>
   );
