@@ -58,12 +58,14 @@ export default function SessionChangeControlTab({
   const [transferBookingCloseTime, setTransferBookingCloseTime] = useState('');
   const [campaignCenters, setCampaignCenters] = useState([]);
   const [loadingCampaignCenters, setLoadingCampaignCenters] = useState(false);
+  const [campaignCentersError, setCampaignCentersError] = useState(null);
 
   // Preview State
   const [previewResult, setPreviewResult] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState(null);
   const previewSnapshotRef = useRef(null);
+  const prevPreviewResultRef = useRef(null);
 
   // Confirmation State
   const [reason, setReason] = useState('');
@@ -83,6 +85,14 @@ export default function SessionChangeControlTab({
   const isDraft = session?.lifecycleStatus === 'DRAFT';
   const isScheduled = session?.lifecycleStatus === 'SCHEDULED';
   const isMutationAllowed = isDraft || isScheduled;
+
+  // Programmatically focus the confirmation heading exactly once when a new preview becomes actionable
+  useEffect(() => {
+    if (previewResult && !prevPreviewResultRef.current && confirmHeadingRef.current) {
+      confirmHeadingRef.current.focus();
+    }
+    prevPreviewResultRef.current = previewResult;
+  }, [previewResult]);
 
   // Initialize and load audit history on session change
   const fetchHistory = useCallback(() => {
@@ -124,17 +134,19 @@ export default function SessionChangeControlTab({
     setActiveAction('NONE');
     setPreviewResult(null);
     previewSnapshotRef.current = null;
+    prevPreviewResultRef.current = null;
     setPreviewError(null);
     setConfirmError(null);
     setSuccessMessage(null);
     setReason('');
     setLoadingPreview(false);
     setSubmittingConfirm(false);
+    setCampaignCentersError(null);
 
     fetchHistory();
   }, [session?.id, fetchHistory]);
 
-  // Load campaign center assignments for transfer options
+  // Load campaign center assignments for transfer options (fails closed on error or empty)
   useEffect(() => {
     if (!session?.campaignId || activeAction !== 'TRANSFER') {
       return;
@@ -142,32 +154,34 @@ export default function SessionChangeControlTab({
 
     let isMounted = true;
     setLoadingCampaignCenters(true);
+    setCampaignCentersError(null);
 
     getCenterAssignments(session.campaignId)
       .then((data) => {
         if (!isMounted) return;
-        const validAssignments = (data || []).filter(
-          (a) => a.status === 'ACTIVE' || a.status === 'FUTURE'
-        );
+        // Filter out inactive assignments AND exclude the current session center
+        const validAssignments = (data || []).filter((a) => {
+          const cId = a.centerId || a.id;
+          const isActiveOrFuture = a.status === 'ACTIVE' || a.status === 'FUTURE';
+          const isNotCurrent = Number(cId) !== Number(session.centerId);
+          return isActiveOrFuture && isNotCurrent;
+        });
         setCampaignCenters(validAssignments);
         setLoadingCampaignCenters(false);
       })
-      .catch(() => {
+      .catch((err) => {
         if (!isMounted) return;
-        // Fallback to centers list from centersMap if specific campaign assignments query fails
-        const fallback = Object.values(centersMap).map((c) => ({
-          centerId: c.id,
-          centerName: c.name,
-          centerCode: c.code,
-        }));
-        setCampaignCenters(fallback);
+        setCampaignCenters([]);
+        setCampaignCentersError(
+          err?.message || 'Failed to load campaign center assignments for transfer.'
+        );
         setLoadingCampaignCenters(false);
       });
 
     return () => {
       isMounted = false;
     };
-  }, [session?.campaignId, activeAction, centersMap]);
+  }, [session?.campaignId, session?.centerId, activeAction]);
 
   // Handle switching active change action
   const handleSelectAction = (actionType) => {
@@ -202,23 +216,55 @@ export default function SessionChangeControlTab({
         setRescheduleBookingCloseTime('');
       }
     } else if (actionType === 'TRANSFER') {
-      const startParsed = utcToLocalDateAndTime(session.startAt, tz);
-      const endParsed = utcToLocalDateAndTime(session.endAt, tz);
-      const bookingParsed = utcToLocalDateAndTime(session.bookingCloseAt, tz);
-
       setTransferCenterId('');
-      setTransferDate(startParsed.date);
-      setTransferStartTime(startParsed.time);
-      setTransferEndTime(endParsed.time);
+      setTransferDate('');
+      setTransferStartTime('');
+      setTransferEndTime('');
+      setTransferBookingCloseMode('SAME_AS_START');
+      setTransferBookingCloseDate('');
+      setTransferBookingCloseTime('');
+    }
+  };
 
-      if (session.bookingCloseAt && session.bookingCloseAt !== session.startAt) {
-        setTransferBookingCloseMode('CUSTOM');
-        setTransferBookingCloseDate(bookingParsed.date);
-        setTransferBookingCloseTime(bookingParsed.time);
+  // Handle target center selection in Transfer action
+  const handleTransferCenterChange = (e) => {
+    const selectedId = e.target.value;
+    setTransferCenterId(selectedId);
+    if (previewResult !== null) {
+      setPreviewResult(null);
+      previewSnapshotRef.current = null;
+    }
+    setConfirmError(null);
+    setPreviewError(null);
+
+    if (selectedId) {
+      const targetCenter = centersMap[selectedId];
+      const targetTz = targetCenter?.timezone?.trim();
+      if (targetTz) {
+        // Convert session timestamps to the selected destination center's local timezone
+        const startParsed = utcToLocalDateAndTime(session.startAt, targetTz);
+        const endParsed = utcToLocalDateAndTime(session.endAt, targetTz);
+        const bookingParsed = utcToLocalDateAndTime(session.bookingCloseAt, targetTz);
+
+        setTransferDate(startParsed.date);
+        setTransferStartTime(startParsed.time);
+        setTransferEndTime(endParsed.time);
+
+        if (session.bookingCloseAt && session.bookingCloseAt !== session.startAt) {
+          setTransferBookingCloseMode('CUSTOM');
+          setTransferBookingCloseDate(bookingParsed.date);
+          setTransferBookingCloseTime(bookingParsed.time);
+        } else {
+          setTransferBookingCloseMode('SAME_AS_START');
+          setTransferBookingCloseDate('');
+          setTransferBookingCloseTime('');
+        }
       } else {
-        setTransferBookingCloseMode('SAME_AS_START');
-        setTransferBookingCloseDate('');
-        setTransferBookingCloseTime('');
+        setPreviewError(
+          new Error(
+            "Unable to load the selected center's timezone. Reload center data before previewing the transfer."
+          )
+        );
       }
     }
   };
@@ -303,15 +349,24 @@ export default function SessionChangeControlTab({
         if (!transferCenterId) {
           throw new Error('Target vaccination center is required for center transfer.');
         }
+        if (Number(transferCenterId) === Number(session.centerId)) {
+          throw new Error('Cannot transfer to the current center. Use the Reschedule action instead.');
+        }
+
+        const targetCenter = centersMap[transferCenterId];
+        const targetTz = targetCenter?.timezone?.trim();
+        if (!targetTz) {
+          throw new Error(
+            "Unable to load the selected center's timezone. Reload center data before previewing the transfer."
+          );
+        }
+
         if (!transferDate || !transferStartTime || !transferEndTime) {
           throw new Error('Transfer date, start time, and end time are required.');
         }
         if (transferStartTime >= transferEndTime) {
           throw new Error('Transfer start time must be strictly before end time.');
         }
-
-        const targetCenter = centersMap[transferCenterId];
-        const targetTz = targetCenter?.timezone || 'UTC';
 
         const startAtIso = localToUtcIso(transferDate, transferStartTime, targetTz);
         const endAtIso = localToUtcIso(transferDate, transferEndTime, targetTz);
@@ -345,6 +400,7 @@ export default function SessionChangeControlTab({
           action: 'TRANSFER',
           sessionId: currentSessionId,
           payload,
+          targetTz,
         };
       }
 
@@ -430,8 +486,17 @@ export default function SessionChangeControlTab({
         updated = await rescheduleSession(currentSessionId, payload);
       } else if (activeAction === 'TRANSFER') {
         const snapshot = previewSnapshotRef.current?.payload;
-        if (!snapshot) {
-          throw new Error('Transfer parameters became stale. Please preview the change again.');
+        const snapshotTz = previewSnapshotRef.current?.targetTz;
+        const currentTargetCenter = centersMap[transferCenterId];
+        const currentTargetTz = currentTargetCenter?.timezone?.trim();
+
+        if (
+          !snapshot ||
+          !snapshotTz ||
+          snapshotTz !== currentTargetTz ||
+          Number(snapshot.newCenterId) !== Number(transferCenterId)
+        ) {
+          throw new Error('Transfer parameters or target center became stale. Please preview the change again.');
         }
         const payload = {
           newCenterId: snapshot.newCenterId,
@@ -811,6 +876,20 @@ export default function SessionChangeControlTab({
                     will be evaluated against the target center&apos;s operating hours and timezone.
                   </p>
 
+                  {campaignCentersError && (
+                    <div className="mb-3">
+                      <ApiErrorAlert error={campaignCentersError} />
+                    </div>
+                  )}
+
+                  {!loadingCampaignCenters &&
+                    !campaignCentersError &&
+                    campaignCenters.length === 0 && (
+                      <div className="alert alert-info py-2 small mb-3" role="status">
+                        No other authorized vaccination centers are assigned to this campaign for transfer.
+                      </div>
+                    )}
+
                   <div className="row g-3">
                     <div className="col-md-12">
                       <label htmlFor="transferCenterId" className="form-label small fw-semibold">
@@ -820,9 +899,13 @@ export default function SessionChangeControlTab({
                         id="transferCenterId"
                         className="form-select form-select-sm"
                         value={transferCenterId}
-                        onChange={handleFieldChange(setTransferCenterId)}
+                        onChange={handleTransferCenterChange}
                         disabled={
-                          loadingCampaignCenters || loadingPreview || submittingConfirm
+                          loadingCampaignCenters ||
+                          !!campaignCentersError ||
+                          campaignCenters.length === 0 ||
+                          loadingPreview ||
+                          submittingConfirm
                         }
                         required
                       >
@@ -832,12 +915,11 @@ export default function SessionChangeControlTab({
                           const cObj = centersMap[cId];
                           const cName = cObj?.name || ca.centerName || `Center #${cId}`;
                           const cCode = cObj?.code || ca.centerCode || '';
-                          const cTz = cObj?.timezone || 'UTC';
-                          const isCurrent = Number(cId) === Number(session.centerId);
+                          const cTz = cObj?.timezone?.trim();
                           return (
-                            <option key={cId} value={cId}>
+                            <option key={cId} value={cId} disabled={!cTz}>
                               {cCode ? `[${cCode}] ` : ''}
-                              {cName} ({cTz}) {isCurrent ? '— (Current Center)' : ''}
+                              {cName} {cTz ? `(${cTz})` : '(Timezone unavailable)'}
                             </option>
                           );
                         })}
@@ -849,165 +931,184 @@ export default function SessionChangeControlTab({
 
                     {transferCenterId && (
                       <>
-                        <div className="col-md-4">
-                          <label htmlFor="transferDate" className="form-label small fw-semibold">
-                            Session Date <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="date"
-                            id="transferDate"
-                            className="form-control form-control-sm"
-                            value={transferDate}
-                            onChange={handleFieldChange(setTransferDate)}
-                            disabled={loadingPreview || submittingConfirm}
-                            required
-                          />
-                        </div>
-
-                        <div className="col-md-4">
-                          <label
-                            htmlFor="transferStartTime"
-                            className="form-label small fw-semibold"
-                          >
-                            Start Time ({centersMap[transferCenterId]?.timezone || 'UTC'}){' '}
-                            <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="time"
-                            id="transferStartTime"
-                            className="form-control form-control-sm"
-                            value={transferStartTime}
-                            onChange={handleFieldChange(setTransferStartTime)}
-                            disabled={loadingPreview || submittingConfirm}
-                            required
-                          />
-                        </div>
-
-                        <div className="col-md-4">
-                          <label htmlFor="transferEndTime" className="form-label small fw-semibold">
-                            End Time ({centersMap[transferCenterId]?.timezone || 'UTC'}){' '}
-                            <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="time"
-                            id="transferEndTime"
-                            className="form-control form-control-sm"
-                            value={transferEndTime}
-                            onChange={handleFieldChange(setTransferEndTime)}
-                            disabled={loadingPreview || submittingConfirm}
-                            required
-                          />
-                        </div>
-
-                        {/* Booking Intake Close Mode */}
-                        <div className="col-md-12">
-                          <label className="form-label small fw-semibold d-block mb-1">
-                            Booking Intake Close Time
-                          </label>
-                          <div className="d-flex align-items-center gap-3 mb-2">
-                            <div className="form-check">
-                              <input
-                                className="form-check-input"
-                                type="radio"
-                                name="transferBookingCloseMode"
-                                id="transferBookingCloseSame"
-                                value="SAME_AS_START"
-                                checked={transferBookingCloseMode === 'SAME_AS_START'}
-                                onChange={handleFieldChange(setTransferBookingCloseMode)}
-                                disabled={loadingPreview || submittingConfirm}
-                              />
-                              <label
-                                className="form-check-label small"
-                                htmlFor="transferBookingCloseSame"
-                              >
-                                Same as Session Start
-                              </label>
-                            </div>
-                            <div className="form-check">
-                              <input
-                                className="form-check-input"
-                                type="radio"
-                                name="transferBookingCloseMode"
-                                id="transferBookingCloseCustom"
-                                value="CUSTOM"
-                                checked={transferBookingCloseMode === 'CUSTOM'}
-                                onChange={handleFieldChange(setTransferBookingCloseMode)}
-                                disabled={loadingPreview || submittingConfirm}
-                              />
-                              <label
-                                className="form-check-label small"
-                                htmlFor="transferBookingCloseCustom"
-                              >
-                                Custom Close Time
-                              </label>
-                            </div>
-                          </div>
-
-                          {transferBookingCloseMode === 'CUSTOM' && (
-                            <div className="row g-2 p-2 bg-light rounded border">
-                              <div className="col-md-6">
-                                <label
-                                  htmlFor="transferBookingCloseDate"
-                                  className="form-label small text-muted"
-                                >
-                                  Booking Close Date
+                        {(() => {
+                          const selectedCenter = centersMap[transferCenterId];
+                          const selectedTz = selectedCenter?.timezone?.trim();
+                          if (!selectedTz) {
+                            return (
+                              <div className="col-md-12">
+                                <div className="alert alert-warning py-2 small mb-0" role="alert">
+                                  Selected center&apos;s timezone metadata is unavailable. Transfer
+                                  cannot proceed until center timezone is loaded.
+                                </div>
+                              </div>
+                            );
+                          }
+                          return (
+                            <>
+                              <div className="col-md-4">
+                                <label htmlFor="transferDate" className="form-label small fw-semibold">
+                                  Session Date <span className="text-danger">*</span>
                                 </label>
                                 <input
                                   type="date"
-                                  id="transferBookingCloseDate"
+                                  id="transferDate"
                                   className="form-control form-control-sm"
-                                  value={transferBookingCloseDate}
-                                  onChange={handleFieldChange(setTransferBookingCloseDate)}
+                                  value={transferDate}
+                                  onChange={handleFieldChange(setTransferDate)}
                                   disabled={loadingPreview || submittingConfirm}
+                                  required
                                 />
                               </div>
-                              <div className="col-md-6">
+
+                              <div className="col-md-4">
                                 <label
-                                  htmlFor="transferBookingCloseTime"
-                                  className="form-label small text-muted"
+                                  htmlFor="transferStartTime"
+                                  className="form-label small fw-semibold"
                                 >
-                                  Booking Close Time (
-                                  {centersMap[transferCenterId]?.timezone || 'UTC'})
+                                  Start Time ({selectedTz}){' '}
+                                  <span className="text-danger">*</span>
                                 </label>
                                 <input
                                   type="time"
-                                  id="transferBookingCloseTime"
+                                  id="transferStartTime"
                                   className="form-control form-control-sm"
-                                  value={transferBookingCloseTime}
-                                  onChange={handleFieldChange(setTransferBookingCloseTime)}
+                                  value={transferStartTime}
+                                  onChange={handleFieldChange(setTransferStartTime)}
                                   disabled={loadingPreview || submittingConfirm}
+                                  required
                                 />
                               </div>
-                            </div>
-                          )}
-                        </div>
+
+                              <div className="col-md-4">
+                                <label htmlFor="transferEndTime" className="form-label small fw-semibold">
+                                  End Time ({selectedTz}){' '}
+                                  <span className="text-danger">*</span>
+                                </label>
+                                <input
+                                  type="time"
+                                  id="transferEndTime"
+                                  className="form-control form-control-sm"
+                                  value={transferEndTime}
+                                  onChange={handleFieldChange(setTransferEndTime)}
+                                  disabled={loadingPreview || submittingConfirm}
+                                  required
+                                />
+                              </div>
+
+                              {/* Booking Intake Close Mode */}
+                              <div className="col-md-12">
+                                <label className="form-label small fw-semibold d-block mb-1">
+                                  Booking Intake Close Time
+                                </label>
+                                <div className="d-flex align-items-center gap-3 mb-2">
+                                  <div className="form-check">
+                                    <input
+                                      className="form-check-input"
+                                      type="radio"
+                                      name="transferBookingCloseMode"
+                                      id="transferBookingCloseSame"
+                                      value="SAME_AS_START"
+                                      checked={transferBookingCloseMode === 'SAME_AS_START'}
+                                      onChange={handleFieldChange(setTransferBookingCloseMode)}
+                                      disabled={loadingPreview || submittingConfirm}
+                                    />
+                                    <label
+                                      className="form-check-label small"
+                                      htmlFor="transferBookingCloseSame"
+                                    >
+                                      Same as Session Start
+                                    </label>
+                                  </div>
+                                  <div className="form-check">
+                                    <input
+                                      className="form-check-input"
+                                      type="radio"
+                                      name="transferBookingCloseMode"
+                                      id="transferBookingCloseCustom"
+                                      value="CUSTOM"
+                                      checked={transferBookingCloseMode === 'CUSTOM'}
+                                      onChange={handleFieldChange(setTransferBookingCloseMode)}
+                                      disabled={loadingPreview || submittingConfirm}
+                                    />
+                                    <label
+                                      className="form-check-label small"
+                                      htmlFor="transferBookingCloseCustom"
+                                    >
+                                      Custom Close Time
+                                    </label>
+                                  </div>
+                                </div>
+
+                                {transferBookingCloseMode === 'CUSTOM' && (
+                                  <div className="row g-2 p-2 bg-light rounded border">
+                                    <div className="col-md-6">
+                                      <label
+                                        htmlFor="transferBookingCloseDate"
+                                        className="form-label small text-muted"
+                                      >
+                                        Booking Close Date
+                                      </label>
+                                      <input
+                                        type="date"
+                                        id="transferBookingCloseDate"
+                                        className="form-control form-control-sm"
+                                        value={transferBookingCloseDate}
+                                        onChange={handleFieldChange(setTransferBookingCloseDate)}
+                                        disabled={loadingPreview || submittingConfirm}
+                                      />
+                                    </div>
+                                    <div className="col-md-6">
+                                      <label
+                                        htmlFor="transferBookingCloseTime"
+                                        className="form-label small text-muted"
+                                      >
+                                        Booking Close Time ({selectedTz})
+                                      </label>
+                                      <input
+                                        type="time"
+                                        id="transferBookingCloseTime"
+                                        className="form-control form-control-sm"
+                                        value={transferBookingCloseTime}
+                                        onChange={handleFieldChange(setTransferBookingCloseTime)}
+                                        disabled={loadingPreview || submittingConfirm}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </>
                     )}
                   </div>
 
-                  {!previewResult && transferCenterId && (
-                    <div className="d-flex justify-content-start mt-3">
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-dark fw-semibold"
-                        onClick={handleExecutePreview}
-                        disabled={loadingPreview || actionMutexOwnerRef.current !== null}
-                      >
-                        {loadingPreview ? (
-                          <>
-                            <span
-                              className="spinner-border spinner-border-sm me-2"
-                              role="status"
-                              aria-hidden="true"
-                            />
-                            Calculating Transfer Preview...
-                          </>
-                        ) : (
-                          'Preview Center Transfer Impact'
-                        )}
-                      </button>
-                    </div>
-                  )}
+                  {!previewResult &&
+                    transferCenterId &&
+                    !!centersMap[transferCenterId]?.timezone?.trim() && (
+                      <div className="d-flex justify-content-start mt-3">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-dark fw-semibold"
+                          onClick={handleExecutePreview}
+                          disabled={loadingPreview || actionMutexOwnerRef.current !== null}
+                        >
+                          {loadingPreview ? (
+                            <>
+                              <span
+                                className="spinner-border spinner-border-sm me-2"
+                                role="status"
+                                aria-hidden="true"
+                              />
+                              Calculating Transfer Preview...
+                            </>
+                          ) : (
+                            'Preview Center Transfer Impact'
+                          )}
+                        </button>
+                      </div>
+                    )}
                 </div>
               )}
 
