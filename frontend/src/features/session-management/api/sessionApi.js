@@ -181,6 +181,41 @@ export function localToUtcIso(dateStr, timeStr, timeZone = 'UTC') {
 }
 
 /**
+ * Validates whether a provided string represents a valid, usable IANA timezone identifier.
+ *
+ * @param {string|null|undefined} timeZone - Timezone string to validate
+ * @returns {boolean} True if valid IANA timezone; false otherwise
+ */
+export function isValidIanaTimezone(timeZone) {
+  if (!timeZone || typeof timeZone !== 'string' || !timeZone.trim()) {
+    return false;
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timeZone.trim() });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Normalizes a local time string for backend Jackson LocalTime serialization.
+ * Preserves seconds if present (HH:mm:ss), or appends :00 to HH:mm without truncating precision.
+ *
+ * @param {string|null|undefined} timeStr - Time string
+ * @returns {string|null} Normalized LocalTime string (e.g. "09:00:30" or "09:00:00")
+ */
+export function formatLocalTimeForDto(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return null;
+  const trimmed = timeStr.trim();
+  const parts = trimmed.split(':');
+  if (parts.length === 2) {
+    return `${trimmed}:00`;
+  }
+  return trimmed;
+}
+
+/**
  * Format an ISO UTC instant string in a specified IANA schedule timezone.
  *
  * @param {string} isoString - ISO UTC string

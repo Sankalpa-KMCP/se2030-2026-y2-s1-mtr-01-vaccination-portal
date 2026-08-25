@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { createRecurrenceRule } from '../api/sessionApi';
+import React, { useState, useEffect, useRef } from 'react';
+import { createRecurrenceRule, isValidIanaTimezone, formatLocalTimeForDto } from '../api/sessionApi';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 
 const WEEKDAYS = [
@@ -18,18 +18,29 @@ export default function CreateRecurrenceRuleModal({
   onSuccess,
   campaigns = [],
   centersMap = {},
+  recurrenceOperationOwnerRef = null,
 }) {
   const [campaignId, setCampaignId] = useState('');
   const [centerId, setCenterId] = useState('');
   const [selectedWeekdays, setSelectedWeekdays] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('17:00');
+  const [startTime, setStartTime] = useState('09:00:00');
+  const [endTime, setEndTime] = useState('17:00:00');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
+
+  const isMountedRef = useRef(true);
+  const isSubmittingRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,10 +49,11 @@ export default function CreateRecurrenceRuleModal({
       setSelectedWeekdays(['MONDAY', 'WEDNESDAY', 'FRIDAY']);
       setStartDate('');
       setEndDate('');
-      setStartTime('09:00');
-      setEndTime('17:00');
+      setStartTime('09:00:00');
+      setEndTime('17:00:00');
       setError(null);
       setValidationErrors({});
+      isSubmittingRef.current = false;
     }
   }, [isOpen, campaigns]);
 
@@ -60,8 +72,8 @@ export default function CreateRecurrenceRuleModal({
     const errs = {};
     if (!campaignId) errs.campaignId = 'Campaign is required';
     if (!centerId) errs.centerId = 'Vaccination center is required';
-    if (!authoritativeTimezone) {
-      errs.centerId = 'Selected center does not have authoritative timezone metadata configured';
+    if (!authoritativeTimezone || !isValidIanaTimezone(authoritativeTimezone)) {
+      errs.centerId = 'Selected center does not have valid authoritative IANA timezone metadata configured';
     }
     if (!selectedWeekdays || selectedWeekdays.length === 0) {
       errs.weekdays = 'At least one recurrence weekday must be selected';
@@ -85,17 +97,25 @@ export default function CreateRecurrenceRuleModal({
     e.preventDefault();
     if (!validate()) return;
 
-    // Center timezone must be authoritative; do not fall back to browser or default
-    if (!authoritativeTimezone) {
-      setError(new Error('Cannot create recurrence rule: Selected center has no authoritative timezone.'));
+    if (isSubmittingRef.current) return;
+    if (recurrenceOperationOwnerRef && recurrenceOperationOwnerRef.current) return;
+
+    if (!authoritativeTimezone || !isValidIanaTimezone(authoritativeTimezone)) {
+      setError(new Error('Cannot create recurrence rule: Selected center has no valid authoritative IANA timezone.'));
       return;
+    }
+
+    const opId = Symbol('create_rule_op');
+    isSubmittingRef.current = true;
+    if (recurrenceOperationOwnerRef) {
+      recurrenceOperationOwnerRef.current = opId;
     }
 
     setLoading(true);
     setError(null);
 
-    const formattedStartTime = startTime.length === 5 ? `${startTime}:00` : startTime;
-    const formattedEndTime = endTime.length === 5 ? `${endTime}:00` : endTime;
+    const formattedStartTime = formatLocalTimeForDto(startTime);
+    const formattedEndTime = formatLocalTimeForDto(endTime);
 
     const payload = {
       campaignId: Number(campaignId),
@@ -105,17 +125,28 @@ export default function CreateRecurrenceRuleModal({
       endDate,
       startTime: formattedStartTime,
       endTime: formattedEndTime,
-      timezone: authoritativeTimezone,
+      timezone: authoritativeTimezone.trim(),
     };
 
     try {
       const created = await createRecurrenceRule(payload);
-      setLoading(false);
-      onSuccess(created);
-      onClose();
+      if (onSuccess) {
+        onSuccess(created);
+      }
+      if (isMountedRef.current) {
+        setLoading(false);
+        onClose();
+      }
     } catch (err) {
-      setLoading(false);
-      setError(err);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setError(err);
+      }
+    } finally {
+      isSubmittingRef.current = false;
+      if (recurrenceOperationOwnerRef && recurrenceOperationOwnerRef.current === opId) {
+        recurrenceOperationOwnerRef.current = null;
+      }
     }
   };
 
@@ -163,7 +194,7 @@ export default function CreateRecurrenceRuleModal({
                     <option value="">-- Select Campaign --</option>
                     {campaigns.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name} ({c.campaignCode})
+                        {c.name} ({c.code || c.id})
                       </option>
                     ))}
                   </select>
@@ -187,7 +218,7 @@ export default function CreateRecurrenceRuleModal({
                     <option value="">-- Select Center --</option>
                     {Object.values(centersMap).map((cnt) => (
                       <option key={cnt.id} value={cnt.id}>
-                        {cnt.name} ({cnt.centerCode})
+                        {cnt.name} ({cnt.code || cnt.id})
                       </option>
                     ))}
                   </select>
@@ -269,13 +300,14 @@ export default function CreateRecurrenceRuleModal({
                   )}
                 </div>
 
-                {/* Start & End Time (Wall clock) */}
+                {/* Start & End Time (Wall clock, step=1 supports seconds) */}
                 <div className="col-12 col-md-6">
                   <label htmlFor="create-rule-start-time" className="form-label fw-semibold">
                     Start Time <span className="text-danger">*</span>
                   </label>
                   <input
                     type="time"
+                    step="1"
                     id="create-rule-start-time"
                     className={`form-control ${validationErrors.startTime ? 'is-invalid' : ''}`}
                     value={startTime}
@@ -293,6 +325,7 @@ export default function CreateRecurrenceRuleModal({
                   </label>
                   <input
                     type="time"
+                    step="1"
                     id="create-rule-end-time"
                     className={`form-control ${validationErrors.endTime ? 'is-invalid' : ''}`}
                     value={endTime}
