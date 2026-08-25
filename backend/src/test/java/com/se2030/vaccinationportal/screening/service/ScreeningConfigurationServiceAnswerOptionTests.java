@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.screening.service;
 
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.model.AnswerOption;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
 import com.se2030.vaccinationportal.screening.model.ScreeningQuestion;
@@ -131,7 +132,7 @@ class ScreeningConfigurationServiceAnswerOptionTests {
         when(answerOptionRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getAnswerOptionById(999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Answer option not found with ID: 999");
     }
 }

@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.service.QuestionnaireVersionPublicationPort;
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.model.*;
 import com.se2030.vaccinationportal.screening.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
@@ -61,7 +62,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
             throw new IllegalArgumentException("Version ID cannot be null");
         }
         QuestionnaireVersion version = versionRepository.findById(versionId)
-                .orElseThrow(() -> new IllegalArgumentException("Questionnaire version not found with ID: " + versionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Questionnaire version not found with ID: " + versionId));
         return initializeResponseRelations(version);
     }
 
@@ -74,7 +75,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
 
     public QuestionnaireVersion createDraftVersion(Long questionnaireId) {
         Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
-                .orElseThrow(() -> new IllegalArgumentException("Questionnaire not found with ID: " + questionnaireId));
+                .orElseThrow(() -> new ResourceNotFoundException("Questionnaire not found with ID: " + questionnaireId));
 
         int nextVersionNumber = versionRepository.findFirstByQuestionnaireIdOrderByVersionNumberDesc(questionnaireId)
                 .map(v -> v.getVersionNumber() + 1)
@@ -89,7 +90,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
         mutabilityValidator.assertVersionIsDraft(version);
 
         ScreeningQuestion question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new IllegalArgumentException("Question not found with ID: " + questionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Question not found with ID: " + questionId));
 
         if (!question.isActive()) {
             throw new IllegalStateException("Cannot add inactive question to a questionnaire version");
@@ -140,7 +141,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
             throw new IllegalArgumentException("Version ID cannot be null");
         }
         if (!versionRepository.existsById(versionId)) {
-            throw new IllegalArgumentException("Questionnaire version not found with ID: " + versionId);
+            throw new ResourceNotFoundException("Questionnaire version not found with ID: " + versionId);
         }
         return ruleRepository.findByQuestionnaireVersionIdOrderByPriorityAsc(versionId);
     }
@@ -151,7 +152,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
             throw new IllegalArgumentException("Eligibility rule ID cannot be null");
         }
         return ruleRepository.findById(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Eligibility rule not found with ID: " + ruleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Eligibility rule not found with ID: " + ruleId));
     }
 
     public EligibilityRule updateEligibilityRule(

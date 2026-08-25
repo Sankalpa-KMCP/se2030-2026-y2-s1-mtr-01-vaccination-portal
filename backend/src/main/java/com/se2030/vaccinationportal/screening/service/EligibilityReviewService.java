@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.model.*;
 import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
@@ -168,7 +169,7 @@ public class EligibilityReviewService {
         }
 
         ScreeningSubmission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new IllegalArgumentException("Submission not found with ID: " + submissionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Submission not found with ID: " + submissionId));
 
         if (submission.getStatus() != ScreeningSubmissionStatus.PENDING_REVIEW) {
             throw new IllegalStateException("Final decision requires submission to be in PENDING_REVIEW status");
@@ -218,7 +219,7 @@ public class EligibilityReviewService {
         }
 
         ScreeningSubmission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new IllegalArgumentException("Submission not found with ID: " + submissionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Submission not found with ID: " + submissionId));
 
         if (submission.getStatus() != ScreeningSubmissionStatus.PENDING_REVIEW) {
             throw new IllegalStateException("Can only request corrections for submissions in PENDING_REVIEW status");
@@ -241,7 +242,7 @@ public class EligibilityReviewService {
         }
 
         EligibilityAssessment assessment = assessmentRepository.findById(assessmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Assessment not found with ID: " + assessmentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found with ID: " + assessmentId));
 
         if (assessment.getStatus() != EligibilityAssessmentStatus.ELIGIBLE) {
             throw new IllegalStateException("Only active ELIGIBLE assessments can be revoked");
@@ -265,7 +266,7 @@ public class EligibilityReviewService {
         }
 
         EligibilityAssessment assessment = assessmentRepository.findById(assessmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Assessment not found with ID: " + assessmentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found with ID: " + assessmentId));
 
         if (assessment.getStatus() != EligibilityAssessmentStatus.INELIGIBLE
                 && assessment.getStatus() != EligibilityAssessmentStatus.REVOKED) {

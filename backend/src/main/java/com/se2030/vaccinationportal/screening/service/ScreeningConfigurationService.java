@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.screening.service;
 
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.model.AnswerOption;
 import com.se2030.vaccinationportal.screening.model.Questionnaire;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
@@ -58,7 +59,7 @@ public class ScreeningConfigurationService {
             throw new IllegalArgumentException("Question ID cannot be null");
         }
         return questionRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Screening question not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Screening question not found with ID: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -67,7 +68,7 @@ public class ScreeningConfigurationService {
             throw new IllegalArgumentException("Question code cannot be blank");
         }
         return questionRepository.findByCode(code.trim())
-                .orElseThrow(() -> new IllegalArgumentException("Screening question not found with code: " + code));
+                .orElseThrow(() -> new ResourceNotFoundException("Screening question not found with code: " + code));
     }
 
     public ScreeningQuestion createQuestion(String code, String text, String description, QuestionType type, boolean defaultRequired) {
@@ -124,7 +125,7 @@ public class ScreeningConfigurationService {
             throw new IllegalArgumentException("Answer option ID cannot be null");
         }
         return answerOptionRepository.findById(optionId)
-                .orElseThrow(() -> new IllegalArgumentException("Answer option not found with ID: " + optionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Answer option not found with ID: " + optionId));
     }
 
     public AnswerOption addAnswerOption(Long questionId, String code, String label, String typedValue, int displayOrder) {
@@ -205,7 +206,7 @@ public class ScreeningConfigurationService {
             throw new IllegalArgumentException("Questionnaire ID cannot be null");
         }
         return questionnaireRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Questionnaire not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Questionnaire not found with ID: " + id));
     }
 
     public Questionnaire createQuestionnaire(String code, String name, String description) {

@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.screening.validation;
 
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -7,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,14 +57,37 @@ public class ScreeningExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+    @ExceptionHandler({
+            ResourceNotFoundException.class,
+            com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException.class
+    })
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(RuntimeException ex) {
         ErrorResponse response = ErrorResponse.of(
                 HttpStatus.NOT_FOUND.value(),
-                "Not Found / Invalid Argument",
+                "Not Found",
                 ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                "Invalid value for parameter '" + ex.getName() + "'"
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(IllegalStateException.class)
@@ -80,7 +105,7 @@ public class ScreeningExceptionHandler {
         ErrorResponse response = ErrorResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred"
+                "An unexpected internal server error occurred"
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
