@@ -138,15 +138,20 @@ public class RecurrenceRuleController {
     @PostMapping("/{id}/change")
     public ResponseEntity<SeriesChangeResultResponse> confirmSeriesChange(
             @PathVariable Long id,
-            @Valid @RequestBody ConfirmSeriesChangeRequest request
+            @Valid @RequestBody ConfirmSeriesChangeRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
     ) {
+        if (principal == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        String trustedActorId = String.valueOf(principal.getUserId());
         RecurrenceRuleDefinitionSnapshot snapshot = RecurrenceRuleDtoMapper.toDefinitionSnapshot(request);
         SeriesChangeResult result = seriesChangeService.confirmSeriesChange(
                 id,
                 snapshot,
                 request.previewToken(),
                 request.reason(),
-                request.actorId()
+                trustedActorId
         );
         return ResponseEntity.ok(RecurrenceRuleDtoMapper.toResultResponse(result));
     }
@@ -160,13 +165,18 @@ public class RecurrenceRuleController {
     @PostMapping("/{id}/cancel")
     public ResponseEntity<SeriesChangeResultResponse> confirmSeriesCancellation(
             @PathVariable Long id,
-            @Valid @RequestBody ConfirmSeriesCancellationRequest request
+            @Valid @RequestBody ConfirmSeriesCancellationRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
     ) {
+        if (principal == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        String trustedActorId = String.valueOf(principal.getUserId());
         SeriesChangeResult result = seriesChangeService.confirmSeriesCancellation(
                 id,
                 request.previewToken(),
                 request.reason(),
-                request.actorId()
+                trustedActorId
         );
         return ResponseEntity.ok(RecurrenceRuleDtoMapper.toResultResponse(result));
     }

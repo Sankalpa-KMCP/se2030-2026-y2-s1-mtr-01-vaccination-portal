@@ -39,7 +39,6 @@ public record ConfirmSeriesChangeRequest(
         @Size(max = 500, message = "Reason cannot exceed 500 characters")
         String reason,
 
-        @NotBlank(message = "Actor ID is required")
         @Size(max = 64, message = "Actor ID cannot exceed 64 characters")
         String actorId
 ) {
