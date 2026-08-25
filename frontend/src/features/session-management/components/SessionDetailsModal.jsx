@@ -8,6 +8,7 @@ import {
 } from '../api/sessionApi';
 import SessionAssignmentsTab from './SessionAssignmentsTab';
 import SessionCapacityPlanTab from './SessionCapacityPlanTab';
+import SessionChangeControlTab from './SessionChangeControlTab';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 
@@ -229,6 +230,15 @@ export default function SessionDetailsModal({
                     onClick={() => setActiveTab('capacity')}
                   >
                     Capacity Plan
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'change-control' ? 'active fw-bold text-primary' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('change-control')}
+                  >
+                    Change Control
                   </button>
                 </li>
               </ul>
@@ -505,6 +515,22 @@ export default function SessionDetailsModal({
 
             {!loading && session && activeTab === 'capacity' && (
               <SessionCapacityPlanTab session={session} />
+            )}
+
+            {!loading && session && activeTab === 'change-control' && (
+              <SessionChangeControlTab
+                session={session}
+                campaignsMap={campaignsMap}
+                centersMap={centersMap}
+                onSessionUpdated={(updatedSession) => {
+                  if (onSessionUpdated) {
+                    onSessionUpdated(updatedSession);
+                  }
+                  if (activeSessionIdRef.current === updatedSession.id) {
+                    setSession(updatedSession);
+                  }
+                }}
+              />
             )}
           </div>
 
