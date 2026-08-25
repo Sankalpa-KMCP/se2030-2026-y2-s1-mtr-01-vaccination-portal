@@ -181,6 +181,41 @@ export function localToUtcIso(dateStr, timeStr, timeZone = 'UTC') {
 }
 
 /**
+ * Validates whether a provided string represents a valid, usable IANA timezone identifier.
+ *
+ * @param {string|null|undefined} timeZone - Timezone string to validate
+ * @returns {boolean} True if valid IANA timezone; false otherwise
+ */
+export function isValidIanaTimezone(timeZone) {
+  if (!timeZone || typeof timeZone !== 'string' || !timeZone.trim()) {
+    return false;
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timeZone.trim() });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Normalizes a local time string for backend Jackson LocalTime serialization.
+ * Preserves seconds if present (HH:mm:ss), or appends :00 to HH:mm without truncating precision.
+ *
+ * @param {string|null|undefined} timeStr - Time string
+ * @returns {string|null} Normalized LocalTime string (e.g. "09:00:30" or "09:00:00")
+ */
+export function formatLocalTimeForDto(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return null;
+  const trimmed = timeStr.trim();
+  const parts = trimmed.split(':');
+  if (parts.length === 2) {
+    return `${trimmed}:00`;
+  }
+  return trimmed;
+}
+
+/**
  * Format an ISO UTC instant string in a specified IANA schedule timezone.
  *
  * @param {string} isoString - ISO UTC string
@@ -473,6 +508,172 @@ export async function transferSession(sessionId, payload) {
 export async function listSessionChangeEvents(sessionId) {
   const response = await apiRequest(`/v1/sessions/${sessionId}/change-events`, {
     method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+// -------------------------------------------------------------------------------------------------
+// Session Recurrence Rule and Series Management (F4D)
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * Creates a new bounded session recurrence rule.
+ *
+ * @param {Object} payload - CreateSessionRecurrenceRuleRequest
+ * @returns {Promise<Object>} SessionRecurrenceRuleResponse
+ */
+export async function createRecurrenceRule(payload) {
+  const response = await apiRequest('/v1/recurrence-rules', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Retrieves a specific session recurrence rule by identifier.
+ *
+ * @param {number|string} ruleId - Recurrence rule identifier
+ * @returns {Promise<Object>} SessionRecurrenceRuleResponse
+ */
+export async function getRecurrenceRuleById(ruleId) {
+  const response = await apiRequest(`/v1/recurrence-rules/${ruleId}`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Lists session recurrence rules filtered by campaign, center, and status.
+ *
+ * @param {Object} [filters={}] - Optional query filters { campaignId, centerId, status }
+ * @returns {Promise<Array>} List of SessionRecurrenceRuleResponse
+ */
+export async function listRecurrenceRules(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.campaignId) {
+    params.append('campaignId', filters.campaignId);
+  }
+  if (filters.centerId) {
+    params.append('centerId', filters.centerId);
+  }
+  if (filters.status) {
+    params.append('status', filters.status);
+  }
+
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const response = await apiRequest(`/v1/recurrence-rules${queryString}`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Updates the future schedule definition of an un-materialized recurrence rule.
+ *
+ * @param {number|string} ruleId - Recurrence rule identifier
+ * @param {Object} payload - UpdateSessionRecurrenceRuleRequest
+ * @returns {Promise<Object>} Updated SessionRecurrenceRuleResponse
+ */
+export async function updateRecurrenceRule(ruleId, payload) {
+  const response = await apiRequest(`/v1/recurrence-rules/${ruleId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Materializes concrete session occurrences for a recurrence rule within an optional date window.
+ *
+ * @param {number|string} ruleId - Recurrence rule identifier
+ * @param {Object} [payload=null] - Optional GenerateOccurrencesRequest { requestedStartDate, requestedEndDate }
+ * @returns {Promise<Object>} RecurrenceGenerationResponse
+ */
+export async function generateRecurrenceOccurrences(ruleId, payload = null) {
+  const options = {
+    method: 'POST',
+  };
+  if (payload && (payload.requestedStartDate || payload.requestedEndDate)) {
+    options.body = JSON.stringify({
+      requestedStartDate: payload.requestedStartDate || null,
+      requestedEndDate: payload.requestedEndDate || null,
+    });
+  }
+  const response = await apiRequest(`/v1/recurrence-rules/${ruleId}/generate`, options);
+  return handleResponse(response);
+}
+
+/**
+ * Previews a series-wide schedule change without applying mutations.
+ *
+ * @param {number|string} ruleId - Recurrence rule identifier
+ * @param {Object} payload - PreviewSeriesChangeRequest
+ * @returns {Promise<Object>} SeriesChangePreviewResponse
+ */
+export async function previewSeriesChange(ruleId, payload) {
+  const response = await apiRequest(`/v1/recurrence-rules/${ruleId}/change-preview`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Confirms and applies a series-wide schedule change.
+ * Authenticated server-side principal supplies audit identity; actorId is strictly omitted.
+ *
+ * @param {number|string} ruleId - Recurrence rule identifier
+ * @param {Object} payload - { weekdays, startDate, endDate, startTime, endTime, timezone, previewToken, reason }
+ * @returns {Promise<Object>} SeriesChangeResultResponse
+ */
+export async function confirmSeriesChange(ruleId, payload) {
+  const cleanPayload = {
+    weekdays: payload.weekdays,
+    startDate: payload.startDate,
+    endDate: payload.endDate,
+    startTime: payload.startTime,
+    endTime: payload.endTime,
+    timezone: payload.timezone,
+    previewToken: payload.previewToken,
+    reason: payload.reason,
+  };
+  const response = await apiRequest(`/v1/recurrence-rules/${ruleId}/change`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Previews a full series cancellation without applying mutations.
+ *
+ * @param {number|string} ruleId - Recurrence rule identifier
+ * @returns {Promise<Object>} SeriesChangePreviewResponse
+ */
+export async function previewSeriesCancellation(ruleId) {
+  const response = await apiRequest(`/v1/recurrence-rules/${ruleId}/cancellation-preview`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Confirms and applies full series cancellation.
+ * Authenticated server-side principal supplies audit identity; actorId is strictly omitted.
+ *
+ * @param {number|string} ruleId - Recurrence rule identifier
+ * @param {Object} payload - { previewToken, reason }
+ * @returns {Promise<Object>} SeriesChangeResultResponse
+ */
+export async function confirmSeriesCancellation(ruleId, payload) {
+  const cleanPayload = {
+    previewToken: payload.previewToken,
+    reason: payload.reason,
+  };
+  const response = await apiRequest(`/v1/recurrence-rules/${ruleId}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
   });
   return handleResponse(response);
 }

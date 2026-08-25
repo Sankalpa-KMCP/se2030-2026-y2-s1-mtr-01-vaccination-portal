@@ -5,10 +5,12 @@ import { getActiveCenters } from '../../campaign-management/api/campaignConfigur
 import SessionListPanel from '../components/SessionListPanel';
 import CreateSessionModal from '../components/CreateSessionModal';
 import SessionDetailsModal from '../components/SessionDetailsModal';
+import SessionRecurrencePanel from '../components/SessionRecurrencePanel';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 
 export default function SessionsPage() {
+  const [pageTab, setPageTab] = useState('sessions'); // 'sessions' | 'recurrence'
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -30,6 +32,11 @@ export default function SessionsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+
+  // Shared recurrence operation gate token that survives page tab unmount/remount
+  const recurrenceOperationOwnerRef = useRef(null);
+  // Parent-level recurrence invalidation generation to keep inventory fresh across tab switches
+  const [recurrenceRefreshGen, setRecurrenceRefreshGen] = useState(0);
 
   // Race safety for session listing requests
   const latestSessionReqRef = useRef(null);
@@ -136,6 +143,12 @@ export default function SessionsPage() {
     fetchSessions();
   }, [fetchSessions]);
 
+  // Recurrence mutations authoritatively reconcile both recurrence inventory and operational sessions
+  const handleRecurrenceDataChanged = useCallback(() => {
+    setRecurrenceRefreshGen((prev) => prev + 1);
+    fetchSessions();
+  }, [fetchSessions]);
+
   return (
     <div className="container-fluid px-0">
       {/* Page Header */}
@@ -143,20 +156,53 @@ export default function SessionsPage() {
         <div>
           <h1 className="h2 text-dark fw-bold mb-1">Vaccination Sessions</h1>
           <p className="text-secondary mb-0">
-            Operational Session Inventory & Core Scheduling
+            Operational Session Inventory, Core Scheduling & Recurrence Management
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-primary d-inline-flex align-items-center gap-2"
-          onClick={() => setIsCreateModalOpen(true)}
-          disabled={cataloguesLoading}
-        >
-          <span className="fs-5 lh-1">+</span>
-          Create Draft Session
-        </button>
+        {pageTab === 'sessions' && (
+          <button
+            type="button"
+            className="btn btn-primary d-inline-flex align-items-center gap-2"
+            onClick={() => setIsCreateModalOpen(true)}
+            disabled={cataloguesLoading}
+            id="btn-open-create-session"
+          >
+            <span className="fs-5 lh-1">+</span>
+            Create Draft Session
+          </button>
+        )}
       </div>
+
+      {/* Main Tab Navigation */}
+      <ul className="nav nav-tabs mb-4" role="tablist" aria-label="Vaccination sessions views">
+        <li className="nav-item" role="presentation">
+          <button
+            type="button"
+            className={`nav-link fw-semibold ${pageTab === 'sessions' ? 'active text-primary' : 'text-secondary'}`}
+            onClick={() => setPageTab('sessions')}
+            role="tab"
+            aria-selected={pageTab === 'sessions'}
+            aria-controls="panel-session-inventory"
+            id="tab-session-inventory"
+          >
+            Individual Sessions Inventory
+          </button>
+        </li>
+        <li className="nav-item" role="presentation">
+          <button
+            type="button"
+            className={`nav-link fw-semibold ${pageTab === 'recurrence' ? 'active text-primary' : 'text-secondary'}`}
+            onClick={() => setPageTab('recurrence')}
+            role="tab"
+            aria-selected={pageTab === 'recurrence'}
+            aria-controls="panel-recurrence-management"
+            id="tab-recurrence-management"
+          >
+            Recurrence Rules & Series Management
+          </button>
+        </li>
+      </ul>
 
       {/* Success Notification Alert */}
       {successMessage && (
@@ -178,21 +224,46 @@ export default function SessionsPage() {
         <div className="card shadow-sm border-0 p-5 text-center">
           <LoadingSpinner message="Initializing campaign and center catalogues..." />
         </div>
+      ) : pageTab === 'sessions' ? (
+        <div
+          id="panel-session-inventory"
+          role="tabpanel"
+          aria-labelledby="tab-session-inventory"
+          tabIndex="0"
+        >
+          <SessionListPanel
+            sessions={sessions}
+            loading={loading}
+            error={error}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onResetFilters={handleResetFilters}
+            onViewDetails={(id) => setSelectedSessionId(id)}
+            onOpenCreateModal={() => setIsCreateModalOpen(true)}
+            campaignsList={campaignsList}
+            centersList={centersList}
+            campaignsMap={campaignsMap}
+            centersMap={centersMap}
+          />
+        </div>
       ) : (
-        <SessionListPanel
-          sessions={sessions}
-          loading={loading}
-          error={error}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onResetFilters={handleResetFilters}
-          onViewDetails={(id) => setSelectedSessionId(id)}
-          onOpenCreateModal={() => setIsCreateModalOpen(true)}
-          campaignsList={campaignsList}
-          centersList={centersList}
-          campaignsMap={campaignsMap}
-          centersMap={centersMap}
-        />
+        <div
+          id="panel-recurrence-management"
+          role="tabpanel"
+          aria-labelledby="tab-recurrence-management"
+          tabIndex="0"
+        >
+          <SessionRecurrencePanel
+            campaignsList={campaignsList}
+            centersList={centersList}
+            campaignsMap={campaignsMap}
+            centersMap={centersMap}
+            recurrenceOperationOwnerRef={recurrenceOperationOwnerRef}
+            recurrenceRefreshGen={recurrenceRefreshGen}
+            onRecurrenceDataChanged={handleRecurrenceDataChanged}
+            onSessionDataChanged={fetchSessions}
+          />
+        </div>
       )}
 
       {/* Create Session Modal */}
