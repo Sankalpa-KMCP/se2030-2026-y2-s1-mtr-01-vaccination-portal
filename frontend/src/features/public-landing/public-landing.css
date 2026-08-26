@@ -520,38 +520,106 @@
   gap: 1.5rem;
 }
 
-.lp-workflow-list {
+/* --------------------------------------------------------------------------
+   How It Works (Operational Process Flow)
+   -------------------------------------------------------------------------- */
+.lp-workflow-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-top: 2rem;
+  gap: clamp(1.25rem, 2.5vw, 2rem);
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
-.lp-workflow-item {
+.lp-workflow-col {
+  background-color: var(--lp-bg);
+  border: 1px solid var(--lp-border);
+  border-top: 3px solid var(--lp-border-strong);
+  border-radius: var(--lp-radius-md);
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
+  transition: border-top-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.lp-workflow-item__num {
-  font-size: 1.25rem;
-  font-weight: 750;
+.lp-workflow-col:hover {
+  border-top-color: var(--lp-accent);
+  box-shadow: 0 2px 6px rgba(11, 19, 43, 0.04);
+}
+
+.lp-workflow-col__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  min-height: 24px;
+}
+
+.lp-workflow-col__stage {
+  font-size: 0.75rem;
+  font-weight: 800;
   color: var(--lp-accent);
-  margin-bottom: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
 }
 
-.lp-workflow-item__title {
-  font-size: 1.0625rem;
-  font-weight: 700;
+.lp-workflow-col__phase {
+  font-size: 0.6875rem;
+  font-weight: 650;
+  color: var(--lp-ink-500);
+  background-color: var(--lp-bg-muted);
+  border: 1px solid var(--lp-border);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--lp-radius-sm);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.lp-workflow-col__title {
+  font-size: 1.125rem;
+  font-weight: 750;
   color: var(--lp-ink-900);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
 }
 
-.lp-workflow-item__desc {
-  font-size: 0.9375rem;
+.lp-workflow-col__desc {
+  font-size: 0.925rem;
   color: var(--lp-ink-600);
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+  flex-grow: 1;
+}
+
+.lp-workflow-col__points {
+  list-style: none;
+  padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--lp-border-subtle);
+}
+
+.lp-workflow-col__point {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 550;
+  color: var(--lp-ink-600);
+}
+
+.lp-workflow-col__bullet {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--lp-accent);
+  margin-top: 0.45rem;
+  flex-shrink: 0;
 }
 
 .lp-trust-grid {
@@ -689,9 +757,13 @@
     gap: 1.25rem;
   }
 
-  .lp-workflow-list {
+  .lp-workflow-grid {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 1.25rem;
+  }
+
+  .lp-workflow-col {
+    padding: 1.5rem;
   }
 
   .lp-trust-grid {
