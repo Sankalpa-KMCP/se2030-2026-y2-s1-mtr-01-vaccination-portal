@@ -20,7 +20,7 @@ const STAGES = [
     phase: 'Planning & Execution',
     title: 'Plan and operate vaccination sessions',
     desc: 'Schedule single or recurring sessions, plan throughput capacity, execute pre-session readiness verification, and manage recorded schedule revisions.',
-    points: ['Throughput & recurrence rules', '6-point readiness verification'],
+    points: ['Throughput & recurrence rules', 'Operational readiness checks'],
   },
 ];
 
