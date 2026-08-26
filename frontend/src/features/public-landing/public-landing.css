@@ -744,6 +744,126 @@
 }
 
 /* --------------------------------------------------------------------------
+   Final CTA band
+   -------------------------------------------------------------------------- */
+.lp-cta {
+  position: relative;
+  background-color: var(--lp-navy);
+  overflow: hidden;
+}
+
+/* Faint dot texture echoing the hero illustration frame */
+.lp-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.5) 1px, transparent 1.5px);
+  background-size: 20px 20px;
+  opacity: 0.045;
+  pointer-events: none;
+}
+
+.lp-cta__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-block: clamp(3rem, 7vh, 4.25rem);
+}
+
+.lp-cta__title {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.35rem, 1.15rem + 1vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #ffffff;
+}
+
+.lp-cta__copy {
+  margin: 0 0 1.75rem;
+  max-width: 52ch;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* --------------------------------------------------------------------------
+   Public footer
+   -------------------------------------------------------------------------- */
+.lp-footer {
+  background-color: #ffffff;
+  border-top: 1px solid var(--lp-border);
+  padding-block: 2rem 1.6rem;
+}
+
+.lp-footer__inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.lp-footer__name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--lp-navy);
+}
+
+.lp-footer__descriptor {
+  margin: 0.55rem 0 0;
+  max-width: 40ch;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--lp-text-secondary);
+}
+
+.lp-footer__links {
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+}
+
+.lp-footer__link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0.35rem 0;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--lp-text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.lp-footer__link:hover {
+  color: var(--lp-teal);
+}
+
+.lp-footer__link:focus-visible {
+  outline: 2px solid #0891b2;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.lp-footer__link--action {
+  color: var(--lp-teal);
+}
+
+.lp-footer__project {
+  margin: 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--lp-border);
+  font-size: 0.78rem;
+  color: var(--lp-text-secondary);
+}
+
+/* --------------------------------------------------------------------------
    Scroll reveal (JS adds .lp-is-visible; content never hidden when motion
    is reduced or JS/observer is unavailable)
    -------------------------------------------------------------------------- */
@@ -904,5 +1024,9 @@
   .lp-trust__item + .lp-trust__item {
     padding-top: 1.35rem;
     border-top: 1px solid var(--lp-border);
+  }
+
+  .lp-footer__links {
+    gap: 1.15rem;
   }
 }
