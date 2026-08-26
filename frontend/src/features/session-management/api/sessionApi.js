@@ -68,6 +68,19 @@ export async function getSessionById(sessionId) {
 }
 
 /**
+ * Retrieves the authoritative, side-effect-free operational readiness diagnostics for a vaccination session.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @returns {Promise<Object>} SessionOperationalReadinessResponse object
+ */
+export async function getSessionReadiness(sessionId) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/readiness`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
  * Create a new one-off vaccination session in initial DRAFT lifecycle status.
  *
  * @param {Object} payload - CreateSessionRequest { campaignId, centerId, startAt, endAt, bookingCloseAt }

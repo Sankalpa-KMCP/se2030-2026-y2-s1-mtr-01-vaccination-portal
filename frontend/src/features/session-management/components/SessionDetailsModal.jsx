@@ -9,6 +9,7 @@ import {
 import SessionAssignmentsTab from './SessionAssignmentsTab';
 import SessionCapacityPlanTab from './SessionCapacityPlanTab';
 import SessionChangeControlTab from './SessionChangeControlTab';
+import SessionReadinessTab from './SessionReadinessTab';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 
@@ -239,6 +240,15 @@ export default function SessionDetailsModal({
                     onClick={() => setActiveTab('change-control')}
                   >
                     Change Control
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'readiness' ? 'active fw-bold text-primary' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('readiness')}
+                  >
+                    Readiness & Diagnostics
                   </button>
                 </li>
               </ul>
@@ -530,6 +540,13 @@ export default function SessionDetailsModal({
                     setSession(updatedSession);
                   }
                 }}
+              />
+            )}
+
+            {!loading && session && activeTab === 'readiness' && (
+              <SessionReadinessTab
+                session={session}
+                onNavigateToTab={(tabKey) => setActiveTab(tabKey)}
               />
             )}
           </div>
