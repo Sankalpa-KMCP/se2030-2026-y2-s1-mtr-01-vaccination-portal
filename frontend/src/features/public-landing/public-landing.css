@@ -1,0 +1,564 @@
+/* ==========================================================================
+   Public Landing Page — Stage 1 (shell + header + hero)
+   Fully self-contained: all selectors are .lp- namespaced and tokens are
+   scoped to .lp-page so nothing leaks into the authenticated application.
+   ========================================================================== */
+
+.lp-page {
+  /* Scoped landing palette — slate/teal direction */
+  --lp-navy: #1e293b;
+  --lp-navy-deep: #0f172a;
+  --lp-teal: #0e7490;
+  --lp-teal-hover: #155e75;
+  --lp-teal-soft: #e6f3f7;
+  --lp-teal-soft-border: #cfe6ee;
+  --lp-bg: #ffffff;
+  --lp-tint: #f6f9fb;
+  --lp-frame: #f0f7fa;
+  --lp-frame-border: #dce9ef;
+  --lp-text: #1e293b;
+  --lp-text-secondary: #5c6b7a;
+  --lp-border: #e2e8f0;
+  --lp-success: #1f7a46;
+  --lp-success-soft: #e7f4ec;
+  --lp-neutral-soft: #eef2f6;
+  --lp-shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 28px -14px rgba(15, 23, 42, 0.16);
+  --lp-shadow-chip: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 20px -12px rgba(15, 23, 42, 0.18);
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--lp-bg);
+  color: var(--lp-text);
+}
+
+/* --------------------------------------------------------------------------
+   Shared landing primitives
+   -------------------------------------------------------------------------- */
+.lp-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 2rem);
+}
+
+.lp-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.lp-btn:focus-visible {
+  outline: 2px solid #0891b2;
+  outline-offset: 2px;
+}
+
+.lp-btn--primary {
+  background-color: var(--lp-teal);
+  border-color: var(--lp-teal);
+  color: #ffffff;
+}
+
+.lp-btn--primary:hover {
+  background-color: var(--lp-teal-hover);
+  border-color: var(--lp-teal-hover);
+}
+
+.lp-btn--primary:active {
+  transform: translateY(1px);
+}
+
+.lp-btn--compact {
+  padding: 0.5rem 1.05rem;
+  font-size: 0.9rem;
+}
+
+.lp-btn--lg {
+  padding: 0.78rem 1.5rem;
+  font-size: 1rem;
+}
+
+.lp-btn__icon {
+  flex-shrink: 0;
+}
+
+/* Pills used inside the illustrative composition only */
+.lp-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.lp-pill--info {
+  background-color: var(--lp-teal-soft);
+  color: var(--lp-teal);
+}
+
+.lp-pill--success {
+  background-color: var(--lp-success-soft);
+  color: var(--lp-success);
+}
+
+.lp-pill--neutral {
+  background-color: var(--lp-neutral-soft);
+  color: var(--lp-text-secondary);
+}
+
+/* Skip link — visible only when focused */
+.lp-skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  z-index: 1100;
+  padding: 0.55rem 1rem;
+  background-color: var(--lp-navy);
+  color: #ffffff;
+  border-radius: 0 0 0.5rem 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+
+.lp-skip-link:focus-visible {
+  top: 0;
+  outline: 2px solid #0891b2;
+  outline-offset: -2px;
+}
+
+.lp-main:focus {
+  outline: none;
+}
+
+/* --------------------------------------------------------------------------
+   Public header
+   -------------------------------------------------------------------------- */
+.lp-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  background-color: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--lp-border);
+}
+
+.lp-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 64px;
+  padding-block: 0.5rem;
+}
+
+.lp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.lp-brand__glyph {
+  flex-shrink: 0;
+  color: var(--lp-teal);
+}
+
+.lp-brand__name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--lp-navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   Hero layout
+   -------------------------------------------------------------------------- */
+.lp-hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding-block: clamp(3rem, 7vh, 5.5rem);
+}
+
+.lp-hero__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
+  align-items: center;
+  gap: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+/* Hero copy */
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1.1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lp-teal);
+}
+
+.lp-eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--lp-teal);
+}
+
+.lp-hero__title {
+  margin: 0 0 1.15rem;
+  max-width: 19ch;
+  font-size: clamp(1.9rem, 1.35rem + 2.2vw, 2.85rem);
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  color: var(--lp-navy);
+}
+
+.lp-hero__lead {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--lp-text-secondary);
+}
+
+.lp-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.lp-hero__note {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1.35rem 0 0;
+  font-size: 0.84rem;
+  color: var(--lp-text-secondary);
+}
+
+.lp-hero__note svg {
+  flex-shrink: 0;
+  color: var(--lp-teal);
+}
+
+/* --------------------------------------------------------------------------
+   Hero illustration (decorative; aria-hidden upstream)
+   -------------------------------------------------------------------------- */
+.lp-hero__visual {
+  min-width: 0;
+}
+
+.lp-visual-frame {
+  position: relative;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  padding-bottom: clamp(2.75rem, 5vw, 3.5rem);
+  background-color: var(--lp-frame);
+  border: 1px solid var(--lp-frame-border);
+  border-radius: 22px;
+  overflow: visible;
+}
+
+/* Faint dot texture confined to the frame corner */
+.lp-visual-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(circle, rgba(14, 116, 144, 0.55) 1px, transparent 1.5px);
+  background-size: 18px 18px;
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.lp-session-panel {
+  position: relative;
+  z-index: 1;
+  background-color: #ffffff;
+  border: 1px solid var(--lp-border);
+  border-radius: 14px;
+  box-shadow: var(--lp-shadow-panel);
+  padding: 1.15rem 1.25rem 0.9rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.lp-session-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--lp-border);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--lp-text-secondary);
+}
+
+.lp-session-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding-block: 0.62rem;
+}
+
+.lp-session-row + .lp-session-row {
+  border-top: 1px dashed var(--lp-border);
+}
+
+.lp-session-row__time {
+  flex-shrink: 0;
+  width: 3.1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lp-navy);
+}
+
+.lp-session-row__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.lp-session-row__bar {
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--lp-border);
+}
+
+.lp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background-color: #ffffff;
+  border: 1px solid var(--lp-border);
+  border-radius: 12px;
+  box-shadow: var(--lp-shadow-chip);
+  padding: 0.6rem 0.85rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.lp-chip--ready {
+  position: absolute;
+  left: clamp(-0.75rem, -1vw, -0.5rem);
+  bottom: 1.4rem;
+  z-index: 2;
+}
+
+.lp-chip__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background-color: var(--lp-success-soft);
+  color: var(--lp-success);
+}
+
+.lp-chip__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.lp-chip__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--lp-text-secondary);
+}
+
+.lp-capacity {
+  position: absolute;
+  right: 1.25rem;
+  bottom: -1.1rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 168px;
+  background-color: #ffffff;
+  border: 1px solid var(--lp-border);
+  border-radius: 12px;
+  box-shadow: var(--lp-shadow-chip);
+  padding: 0.7rem 0.9rem 0.8rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.lp-capacity__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--lp-text-secondary);
+}
+
+.lp-meter {
+  display: block;
+  height: 7px;
+  border-radius: 4px;
+  background-color: var(--lp-neutral-soft);
+  overflow: hidden;
+}
+
+.lp-meter__fill {
+  display: block;
+  width: 62%;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--lp-teal);
+}
+
+/* Restrained hover micro-interaction on the illustration cluster */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-hero__visual:hover .lp-session-panel {
+    transform: translateY(-3px);
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06), 0 16px 32px -14px rgba(15, 23, 42, 0.2);
+  }
+
+  .lp-hero__visual:hover .lp-chip--ready,
+  .lp-hero__visual:hover .lp-capacity {
+    transform: translateY(-2px);
+  }
+}
+
+/* Entrance motion — CSS-only, suppressed under reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-hero__content > * {
+    animation: lp-rise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  .lp-hero__content > *:nth-child(1) { animation-delay: 0.04s; }
+  .lp-hero__content > *:nth-child(2) { animation-delay: 0.1s; }
+  .lp-hero__content > *:nth-child(3) { animation-delay: 0.16s; }
+  .lp-hero__content > *:nth-child(4) { animation-delay: 0.22s; }
+  .lp-hero__content > *:nth-child(5) { animation-delay: 0.28s; }
+
+  .lp-hero__visual {
+    animation: lp-fade 0.7s ease-out 0.18s both;
+  }
+}
+
+@keyframes lp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lp-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 992px) {
+  .lp-hero {
+    padding-block: clamp(2.5rem, 6vh, 4rem);
+  }
+
+  .lp-hero__inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3rem;
+  }
+
+  .lp-hero__title {
+    max-width: 24ch;
+  }
+
+  .lp-hero__visual {
+    max-width: 540px;
+  }
+}
+
+@media (max-width: 576px) {
+  .lp-header__inner {
+    min-height: 58px;
+  }
+
+  .lp-brand__name {
+    font-size: 0.88rem;
+  }
+
+  .lp-btn--compact {
+    padding: 0.42rem 0.85rem;
+    font-size: 0.86rem;
+  }
+
+  .lp-hero__title {
+    font-size: clamp(1.7rem, 1.35rem + 3vw, 2rem);
+  }
+
+  .lp-hero__lead {
+    font-size: 0.98rem;
+  }
+
+  .lp-hero__actions .lp-btn--lg {
+    width: 100%;
+  }
+
+  .lp-visual-frame {
+    padding: 1.1rem 1.1rem 1.35rem;
+  }
+
+  /* Flatten floating overlaps so nothing clips on narrow screens */
+  .lp-chip--ready {
+    position: static;
+    margin-top: 0.9rem;
+  }
+
+  .lp-capacity {
+    position: static;
+    margin-top: 0.9rem;
+    width: 100%;
+  }
+
+  .lp-session-row__time {
+    width: 2.7rem;
+    font-size: 0.76rem;
+  }
+
+  .lp-pill {
+    font-size: 0.62rem;
+  }
+}

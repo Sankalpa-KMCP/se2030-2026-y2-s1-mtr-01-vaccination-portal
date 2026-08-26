@@ -6,10 +6,12 @@ import CenterOperationsPage from '../features/center-operations/pages/CenterOper
 import SessionsPage from '../features/session-management/pages/SessionsPage';
 import { AuthProvider, useAuth } from '../auth/context/AuthContext';
 import LoginPage from '../auth/pages/LoginPage';
+import LandingPage from '../features/public-landing/pages/LandingPage';
 
 function AppContent() {
   const { isAuthenticated, isInitializing, initializationError, retryBootstrap, logout } = useAuth();
   const [activeView, setActiveView] = useState('campaigns');
+  const [publicView, setPublicView] = useState('landing');
 
   if (isInitializing) {
     return (
@@ -53,7 +55,11 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    if (publicView === 'login') {
+      return <LoginPage onBackToLanding={() => setPublicView('landing')} />;
+    }
+
+    return <LandingPage onLoginClick={() => setPublicView('login')} />;
   }
 
   return (
