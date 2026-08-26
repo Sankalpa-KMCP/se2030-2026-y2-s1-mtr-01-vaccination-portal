@@ -20,6 +20,7 @@ import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.service.SessionOperationalReadinessService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -44,6 +45,9 @@ class SessionControllerTests {
     @Mock
     private VaccinationSessionService sessionService;
 
+    @Mock
+    private SessionOperationalReadinessService readinessService;
+
     private VaccinationCampaign sampleCampaign;
     private VaccinationCenter sampleCenter;
     private VaccinationSession sampleSession;
@@ -53,7 +57,7 @@ class SessionControllerTests {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new SessionController(sessionService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new SessionController(sessionService, readinessService))
                 .setControllerAdvice(new GlobalCampaignExceptionHandler())
                 .setValidator(validator)
                 .build();
@@ -539,5 +543,130 @@ class SessionControllerTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status", is(409)))
                 .andExpect(jsonPath("$.message", containsString("Invalid session lifecycle transition from SCHEDULED to COMPLETED")));
+    }
+
+    // ==========================================
+    // 7. GET /api/v1/sessions/{id}/readiness
+    // ==========================================
+
+    @Test
+    @DisplayName("GET /api/v1/sessions/{id}/readiness for fully ready DRAFT session returns 200 OK with ready=true and empty violations")
+    void getSessionReadinessReadySuccess() throws Exception {
+        SessionOperationalReadinessService.OperationalReadinessResult result =
+                new SessionOperationalReadinessService.OperationalReadinessResult(
+                        500L,
+                        true,
+                        List.of(),
+                        2,
+                        2,
+                        2,
+                        36,
+                        30,
+                        1
+                );
+
+        when(readinessService.evaluateReadiness(500L)).thenReturn(result);
+
+        mockMvc.perform(get("/api/v1/sessions/500/readiness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId", is(500)))
+                .andExpect(jsonPath("$.ready", is(true)))
+                .andExpect(jsonPath("$.violations", hasSize(0)))
+                .andExpect(jsonPath("$.assignedVaccinators", is(2)))
+                .andExpect(jsonPath("$.availableStations", is(2)))
+                .andExpect(jsonPath("$.effectiveStations", is(2)))
+                .andExpect(jsonPath("$.recommendedThroughput", is(36)))
+                .andExpect(jsonPath("$.approvedCapacity", is(30)))
+                .andExpect(jsonPath("$.revision", is(1)));
+
+        verify(readinessService).evaluateReadiness(500L);
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/sessions/{id}/readiness for non-ready DRAFT session returns 200 OK (NOT 409) with ready=false and violations")
+    void getSessionReadinessNonReadyDraftSuccess() throws Exception {
+        SessionOperationalReadinessService.OperationalReadinessResult result =
+                new SessionOperationalReadinessService.OperationalReadinessResult(
+                        500L,
+                        false,
+                        List.of(
+                                "No active vaccination stations assigned",
+                                "No active vaccinators assigned",
+                                "No approved capacity plan exists"
+                        ),
+                        0,
+                        0,
+                        0,
+                        0,
+                        null,
+                        null
+                );
+
+        when(readinessService.evaluateReadiness(500L)).thenReturn(result);
+
+        mockMvc.perform(get("/api/v1/sessions/500/readiness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId", is(500)))
+                .andExpect(jsonPath("$.ready", is(false)))
+                .andExpect(jsonPath("$.violations", hasSize(3)))
+                .andExpect(jsonPath("$.violations[0]", is("No active vaccination stations assigned")))
+                .andExpect(jsonPath("$.violations[1]", is("No active vaccinators assigned")))
+                .andExpect(jsonPath("$.violations[2]", is("No approved capacity plan exists")))
+                .andExpect(jsonPath("$.assignedVaccinators", is(0)))
+                .andExpect(jsonPath("$.availableStations", is(0)))
+                .andExpect(jsonPath("$.effectiveStations", is(0)))
+                .andExpect(jsonPath("$.recommendedThroughput", is(0)))
+                .andExpect(jsonPath("$.approvedCapacity").doesNotExist())
+                .andExpect(jsonPath("$.revision").doesNotExist());
+
+        verify(readinessService).evaluateReadiness(500L);
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/sessions/{id}/readiness for non-DRAFT session returns 200 OK diagnostic response according to evaluator")
+    void getSessionReadinessNonDraftDiagnosticSuccess() throws Exception {
+        SessionOperationalReadinessService.OperationalReadinessResult result =
+                new SessionOperationalReadinessService.OperationalReadinessResult(
+                        500L,
+                        false,
+                        List.of("Session is not in DRAFT status (current: SCHEDULED)"),
+                        1,
+                        1,
+                        1,
+                        18,
+                        18,
+                        1
+                );
+
+        when(readinessService.evaluateReadiness(500L)).thenReturn(result);
+
+        mockMvc.perform(get("/api/v1/sessions/500/readiness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId", is(500)))
+                .andExpect(jsonPath("$.ready", is(false)))
+                .andExpect(jsonPath("$.violations", hasSize(1)))
+                .andExpect(jsonPath("$.violations[0]", is("Session is not in DRAFT status (current: SCHEDULED)")))
+                .andExpect(jsonPath("$.assignedVaccinators", is(1)))
+                .andExpect(jsonPath("$.availableStations", is(1)))
+                .andExpect(jsonPath("$.effectiveStations", is(1)))
+                .andExpect(jsonPath("$.recommendedThroughput", is(18)))
+                .andExpect(jsonPath("$.approvedCapacity", is(18)))
+                .andExpect(jsonPath("$.revision", is(1)));
+
+        verify(readinessService).evaluateReadiness(500L);
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/sessions/{id}/readiness for unknown session returns 404 Not Found")
+    void getSessionReadinessNotFound() throws Exception {
+        when(readinessService.evaluateReadiness(999L))
+                .thenThrow(new ResourceNotFoundException("Vaccination session not found with ID: 999"));
+
+        mockMvc.perform(get("/api/v1/sessions/999/readiness"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.message", containsString("Vaccination session not found with ID: 999")));
+
+        verify(readinessService).evaluateReadiness(999L);
     }
 }

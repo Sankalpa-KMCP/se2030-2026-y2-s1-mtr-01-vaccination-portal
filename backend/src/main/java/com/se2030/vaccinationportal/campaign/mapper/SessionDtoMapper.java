@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.campaign.mapper;
 
 import com.se2030.vaccinationportal.campaign.dto.response.SessionChangeEventResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionChangePreviewResponse;
+import com.se2030.vaccinationportal.campaign.dto.response.SessionOperationalReadinessResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionScheduleSnapshotResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionSummaryResponse;
@@ -9,6 +10,7 @@ import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
 import com.se2030.vaccinationportal.campaign.model.SessionScheduleSnapshot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
+import com.se2030.vaccinationportal.campaign.service.SessionOperationalReadinessService;
 
 /**
  * Pure transformation utility mapping VaccinationSession domain models to REST response DTOs.
@@ -16,6 +18,25 @@ import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
 public final class SessionDtoMapper {
 
     private SessionDtoMapper() {
+    }
+
+    public static SessionOperationalReadinessResponse toReadinessResponse(
+            SessionOperationalReadinessService.OperationalReadinessResult result
+    ) {
+        if (result == null) {
+            return null;
+        }
+        return new SessionOperationalReadinessResponse(
+                result.sessionId(),
+                result.ready(),
+                result.violations(),
+                result.assignedVaccinators(),
+                result.availableStations(),
+                result.effectiveStations(),
+                result.recommendedThroughput(),
+                result.approvedCapacity(),
+                result.revision()
+        );
     }
 
     public static SessionResponse toResponse(VaccinationSession session) {
