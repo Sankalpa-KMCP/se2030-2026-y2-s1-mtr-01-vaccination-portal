@@ -1,51 +1,46 @@
 import React from 'react';
-import { ClipboardCheckIcon, GaugeIcon, HistoryIcon, LockIcon } from './icons';
 
-const TRUST_ITEMS = [
+const ITEMS = [
   {
-    icon: LockIcon,
-    title: 'Role-based access',
-    copy: 'Access to portal features follows each user\u2019s assigned role.',
+    tag: 'Access control',
+    title: 'Role-based operational boundaries',
+    desc: 'Campaign Officers configure clinical parameters, Center Managers oversee facilities and rosters, and clinical staff execute sessions. Capabilities are bounded by assignment — no privilege bleed across domains.',
   },
   {
-    icon: HistoryIcon,
-    title: 'Auditable operational changes',
-    copy: 'Campaign decisions and session changes are recorded so teams can review what happened and when.',
+    tag: 'Audit trail',
+    title: 'Immutable operational logging',
+    desc: 'Reschedules, transfers, cancellations and capacity overrides are permanently recorded with actor, timestamp and justification for post-incident review.',
   },
   {
-    icon: ClipboardCheckIcon,
-    title: 'Readiness checks',
-    copy: 'Sessions include explicit readiness confirmation before they go live.',
+    tag: 'Verification',
+    title: 'Point-in-time readiness diagnostics',
+    desc: 'Sessions are blocked from opening until operating hours, station minimums, vaccinator assignments, closure conflicts and campaign linkage all verify at that moment.',
   },
   {
-    icon: GaugeIcon,
-    title: 'Controlled capacity adjustments',
-    copy: 'Capacity changes are deliberate, recorded revisions \u2014 not silent edits.',
+    tag: 'Capacity control',
+    title: 'Formalized throughput governance',
+    desc: 'Capacity is derived from physical stations and dwell times. Any increase above recommended throughput requires explicit manager approval with recorded rationale.',
   },
 ];
 
 export default function TrustSection() {
   return (
-    <section className="lp-section lp-section--tint lp-trust" id="trust" aria-labelledby="lp-trust-title">
+    <section className="lp-section lp-section--paper" id="governance" aria-labelledby="lp-governance-heading">
       <div className="lp-container">
-        <h2 className="lp-trust__title lp-reveal" id="lp-trust-title">
-          Built for accountable day-to-day operations
-        </h2>
-        <div className="lp-trust__grid">
-          {TRUST_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.title} className="lp-trust__item lp-reveal">
-                <span className="lp-trust__icon">
-                  <Icon width="19" height="19" />
-                </span>
-                <div>
-                  <h3 className="lp-trust__heading">{item.title}</h3>
-                  <p className="lp-trust__copy">{item.copy}</p>
-                </div>
-              </div>
-            );
-          })}
+        <div className="lp-gov-intro">
+          <p className="lp-kicker">Governance &amp; accountability</p>
+          <h2 className="lp-h2" id="lp-governance-heading">Safeguards for clinical accountability.</h2>
+          <p className="lp-lead">Operational control is verifiable — every gate, adjustment and override leaves a trace.</p>
+        </div>
+
+        <div className="lp-gov-grid" role="list">
+          {ITEMS.map((it) => (
+            <div key={it.title} className="lp-gov-item" role="listitem">
+              <span className="lp-gov-item__tag">{it.tag}</span>
+              <h3 className="lp-gov-item__title">{it.title}</h3>
+              <p className="lp-gov-item__desc">{it.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
