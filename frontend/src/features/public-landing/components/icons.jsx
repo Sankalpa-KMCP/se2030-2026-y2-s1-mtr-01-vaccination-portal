@@ -70,3 +70,43 @@ export function LockIcon(props) {
     </svg>
   );
 }
+
+export function FlagIcon(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M5 21V4" />
+      <path d="M5 4h11l-2 3.5L16 11H5" />
+    </svg>
+  );
+}
+
+export function BuildingIcon(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <rect x="4" y="3" width="12" height="18" rx="1.5" />
+      <path d="M16 9h3.5a.5.5 0 0 1 .5.5V21" />
+      <path d="M7.5 7h2M10.5 7h2M7.5 11h2M10.5 11h2M7.5 15h2M10.5 15h2M9 21v-3h2v3" />
+      <path d="M3 21h18" />
+    </svg>
+  );
+}
+
+export function CalendarClockIcon(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M15.5 4.5H5a1.5 1.5 0 0 0-1.5 1.5v13A1.5 1.5 0 0 0 5 20.5h6" />
+      <path d="M14.5 2.5v4M6.5 2.5v4M3.5 9.5h12" />
+      <circle cx="17.5" cy="17" r="4.5" />
+      <path d="M17.5 15.2V17l1.3 1" />
+    </svg>
+  );
+}
+
+export function ArrowDownIcon(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M12 4v15" />
+      <path d="M6 13l6 6 6-6" />
+    </svg>
+  );
+}

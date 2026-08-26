@@ -9,13 +9,18 @@ export default function PublicHeader({ onLoginClick }) {
           <BrandMark className="lp-brand__glyph" width="26" height="26" />
           <span className="lp-brand__name">Web-Based Vaccination Portal</span>
         </span>
-        <button
-          type="button"
-          className="lp-btn lp-btn--primary lp-btn--compact"
-          onClick={onLoginClick}
-        >
-          Sign in
-        </button>
+        <div className="lp-header__end">
+          <a className="lp-header__link" href="#capabilities">
+            Capabilities
+          </a>
+          <button
+            type="button"
+            className="lp-btn lp-btn--primary lp-btn--compact"
+            onClick={onLoginClick}
+          >
+            Sign in
+          </button>
+        </div>
       </nav>
     </header>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRightIcon, CalendarIcon, GaugeIcon, LockIcon, ShieldCheckIcon } from './icons';
+import { ArrowDownIcon, ArrowRightIcon, CalendarIcon, GaugeIcon, LockIcon, ShieldCheckIcon } from './icons';
 
 function SessionRow({ time, bars, status, tone }) {
   return (
@@ -34,6 +34,10 @@ export default function HeroSection({ onLoginClick }) {
               Sign in to the portal
               <ArrowRightIcon className="lp-btn__icon" width="17" height="17" strokeWidth={2} />
             </button>
+            <a className="lp-btn lp-btn--ghost lp-btn--lg" href="#capabilities">
+              Explore the portal
+              <ArrowDownIcon className="lp-btn__icon" width="16" height="16" strokeWidth={2} />
+            </a>
           </div>
           <p className="lp-hero__note">
             <LockIcon width="15" height="15" />

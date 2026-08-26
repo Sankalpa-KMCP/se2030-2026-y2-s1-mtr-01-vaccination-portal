@@ -1,6 +1,7 @@
 import React from 'react';
 import PublicHeader from '../components/PublicHeader';
 import HeroSection from '../components/HeroSection';
+import CapabilitiesSection from '../components/CapabilitiesSection';
 import '../public-landing.css';
 
 export default function LandingPage({ onLoginClick }) {
@@ -12,6 +13,7 @@ export default function LandingPage({ onLoginClick }) {
       <PublicHeader onLoginClick={onLoginClick} />
       <main className="lp-main" id="lp-main" tabIndex={-1}>
         <HeroSection onLoginClick={onLoginClick} />
+        <CapabilitiesSection />
       </main>
     </div>
   );
