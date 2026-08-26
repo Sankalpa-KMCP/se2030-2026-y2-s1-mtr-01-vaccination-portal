@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
 import CampaignManagementPage from '../features/campaign-management/pages/CampaignManagementPage';
@@ -12,6 +12,28 @@ function AppContent() {
   const { isAuthenticated, isInitializing, initializationError, retryBootstrap, logout } = useAuth();
   const [activeView, setActiveView] = useState('campaigns');
   const [publicView, setPublicView] = useState('landing');
+
+  // Tracks whether a real authenticated session existed, so an involuntary
+  // session end (e.g. backend 401) can be distinguished from voluntary logout.
+  const hadSessionRef = useRef(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      hadSessionRef.current = true;
+      return;
+    }
+
+    // Session ended without a voluntary logout -> ask the user to sign in again.
+    if (hadSessionRef.current && !isInitializing) {
+      setPublicView((current) => (current === 'login' ? current : 'login'));
+    }
+  }, [isAuthenticated, isInitializing]);
+
+  const handleVoluntaryLogout = useCallback(() => {
+    hadSessionRef.current = false;
+    setPublicView('landing');
+    logout();
+  }, [logout]);
 
   if (isInitializing) {
     return (
@@ -64,7 +86,7 @@ function AppContent() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      <Header activeView={activeView} onNavigate={setActiveView} />
+      <Header activeView={activeView} onNavigate={setActiveView} onLogout={handleVoluntaryLogout} />
 
       <main className="container my-4 flex-grow-1">
         {activeView === 'campaigns' && <CampaignManagementPage />}

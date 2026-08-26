@@ -15,8 +15,12 @@ function formatRole(roleCode) {
   return ROLE_LABELS[roleCode] || roleCode.replace(/^ROLE_/, '').replace(/_/g, ' ');
 }
 
-export default function Header({ activeView = 'overview', onNavigate }) {
+export default function Header({ activeView = 'overview', onNavigate, onLogout }) {
   const { user, logout } = useAuth();
+
+  // Optional override so the app shell can distinguish voluntary logout
+  // (e.g. to return to the public landing page) from session expiry.
+  const handleLogout = onLogout || logout;
 
   return (
     <header>
@@ -83,7 +87,7 @@ export default function Header({ activeView = 'overview', onNavigate }) {
                 <button
                   type="button"
                   className="btn btn-outline-light btn-sm px-3"
-                  onClick={logout}
+                  onClick={handleLogout}
                   title="Sign out of your session"
                 >
                   Logout
