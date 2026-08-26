@@ -16,14 +16,18 @@ export default function SessionReadinessTab({ session, onNavigateToTab }) {
   const [lastChecked, setLastChecked] = useState(null);
 
   const activeSessionIdRef = useRef(session?.id);
-  const activeRequestTokenRef = useRef(0);
+  const activeRequestRef = useRef(null);
   const requestSeqRef = useRef(0);
   const isMountedRef = useRef(true);
 
   const fetchReadiness = useCallback((sessionId) => {
     if (!sessionId) return;
+    if (activeRequestRef.current !== null) {
+      return; // Synchronously prevent duplicate concurrent dispatches
+    }
+
     const reqToken = ++requestSeqRef.current;
-    activeRequestTokenRef.current = reqToken;
+    activeRequestRef.current = reqToken;
     setLoading(true);
     setError(null);
 
@@ -32,9 +36,10 @@ export default function SessionReadinessTab({ session, onNavigateToTab }) {
         if (
           isMountedRef.current &&
           activeSessionIdRef.current === sessionId &&
-          activeRequestTokenRef.current === reqToken
+          activeRequestRef.current === reqToken
         ) {
           setReadiness(data);
+          setError(null);
           setLastChecked(new Date());
           setLoading(false);
         }
@@ -43,10 +48,20 @@ export default function SessionReadinessTab({ session, onNavigateToTab }) {
         if (
           isMountedRef.current &&
           activeSessionIdRef.current === sessionId &&
-          activeRequestTokenRef.current === reqToken
+          activeRequestRef.current === reqToken
         ) {
           setError(err);
+          setReadiness(null);
+          setLastChecked(null);
           setLoading(false);
+        }
+      })
+      .finally(() => {
+        if (activeRequestRef.current === reqToken) {
+          activeRequestRef.current = null;
+          if (isMountedRef.current) {
+            setLoading(false);
+          }
         }
       });
   }, []);
@@ -54,6 +69,7 @@ export default function SessionReadinessTab({ session, onNavigateToTab }) {
   useEffect(() => {
     isMountedRef.current = true;
     activeSessionIdRef.current = session?.id;
+    activeRequestRef.current = null;
     setReadiness(null);
     setError(null);
     setLastChecked(null);
@@ -64,11 +80,12 @@ export default function SessionReadinessTab({ session, onNavigateToTab }) {
 
     return () => {
       isMountedRef.current = false;
+      activeRequestRef.current = null;
     };
   }, [session?.id, fetchReadiness]);
 
   const handleRecheck = () => {
-    if (loading || !session?.id) return;
+    if (activeRequestRef.current !== null || !session?.id) return;
     fetchReadiness(session.id);
   };
 
@@ -116,8 +133,8 @@ export default function SessionReadinessTab({ session, onNavigateToTab }) {
         <LoadingSpinner message="Evaluating operational readiness diagnostics..." />
       )}
 
-      {/* Diagnostic Evaluation Content */}
-      {!loading && readiness && (
+      {/* Diagnostic Evaluation Content (Only rendered when there is no active error and readiness data is present) */}
+      {!loading && !error && readiness && (
         <div className="d-flex flex-column gap-3">
           {/* Readiness Status Banner */}
           {readiness.ready ? (
