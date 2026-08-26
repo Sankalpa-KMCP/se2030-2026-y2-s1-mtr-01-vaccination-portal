@@ -44,4 +44,12 @@ public interface SlotCapacityPort {
      * @return Scheduled start {@link Instant} of the time slot, or {@code null} if not found
      */
     Instant getSlotStartTime(Long slotId);
+
+    /**
+     * Checks whether the specified session is currently full across all its time slots (MF03-BR-06).
+     *
+     * @param sessionId Identifier of the vaccination session
+     * @return {@code true} if the session has no remaining capacity across any time slot; {@code false} otherwise
+     */
+    boolean isSessionFull(Long sessionId);
 }

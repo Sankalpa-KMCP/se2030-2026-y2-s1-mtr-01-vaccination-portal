@@ -1,8 +1,6 @@
 package com.se2030.vaccinationportal.appointment.service;
 
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityLookupPort;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
-import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
