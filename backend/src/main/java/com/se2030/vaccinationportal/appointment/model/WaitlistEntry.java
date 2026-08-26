@@ -152,6 +152,34 @@ public class WaitlistEntry {
         this.status = targetStatus;
     }
 
+    /**
+     * Marks this waitlist entry as PROMOTED (MF03-BR-08).
+     */
+    public void markPromoted() {
+        this.status = WaitlistStatus.PROMOTED;
+    }
+
+    /**
+     * Marks this waitlist entry as SKIPPED_INELIGIBLE (MF03-BR-07).
+     */
+    public void markSkippedIneligible() {
+        this.status = WaitlistStatus.SKIPPED_INELIGIBLE;
+    }
+
+    /**
+     * Marks this waitlist entry as SKIPPED_DUPLICATE_APPOINTMENT (MF03-BR-07).
+     */
+    public void markSkippedDuplicate() {
+        this.status = WaitlistStatus.SKIPPED_DUPLICATE_APPOINTMENT;
+    }
+
+    /**
+     * Cancels this waitlist entry.
+     */
+    public void cancel() {
+        this.status = WaitlistStatus.CANCELLED;
+    }
+
     @Override
     public String toString() {
         return "WaitlistEntry{" +

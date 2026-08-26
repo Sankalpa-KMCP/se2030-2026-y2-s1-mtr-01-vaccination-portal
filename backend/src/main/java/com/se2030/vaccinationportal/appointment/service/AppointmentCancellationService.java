@@ -22,14 +22,17 @@ public class AppointmentCancellationService {
 
     private final AppointmentRepository appointmentRepository;
     private final SlotCapacityPort slotCapacityPort;
+    private final WaitlistPromotionService promotionService;
 
     @Autowired
     public AppointmentCancellationService(
             AppointmentRepository appointmentRepository,
-            @Autowired(required = false) SlotCapacityPort slotCapacityPort
+            @Autowired(required = false) SlotCapacityPort slotCapacityPort,
+            @Autowired(required = false) WaitlistPromotionService promotionService
     ) {
         this.appointmentRepository = appointmentRepository;
         this.slotCapacityPort = slotCapacityPort;
+        this.promotionService = promotionService;
     }
 
     /**
@@ -101,6 +104,13 @@ public class AppointmentCancellationService {
         }
 
         appointment.cancel(effectiveNow);
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+
+        // Step 2e: Trigger automatic waitlist promotion if a waiter is queued for this freed capacity
+        if (promotionService != null) {
+            promotionService.promoteNextForSlot(appointment.getCampaignId(), appointment.getSlotId(), effectiveNow);
+        }
+
+        return saved;
     }
 }

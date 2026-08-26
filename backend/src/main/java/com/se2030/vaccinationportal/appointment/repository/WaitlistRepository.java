@@ -34,4 +34,13 @@ public interface WaitlistRepository extends JpaRepository<WaitlistEntry, Long> {
      * @return {@link List} of matching {@link WaitlistEntry} entities in FIFO order
      */
     List<WaitlistEntry> findBySessionIdAndStatusOrderByJoinedAtAsc(Long sessionId, WaitlistStatus status);
+
+    /**
+     * Finds all waitlist entries for a campaign with a specific status, ordered by joined timestamp ascending (FIFO).
+     *
+     * @param campaignId Identifier of the campaign
+     * @param status     Target {@link WaitlistStatus}
+     * @return {@link List} of matching {@link WaitlistEntry} entities in FIFO order
+     */
+    List<WaitlistEntry> findByCampaignIdAndStatusOrderByJoinedAtAsc(Long campaignId, WaitlistStatus status);
 }

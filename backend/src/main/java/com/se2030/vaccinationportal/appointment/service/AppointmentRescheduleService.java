@@ -31,16 +31,19 @@ public class AppointmentRescheduleService {
     private final AppointmentRepository appointmentRepository;
     private final CitizenCampaignBookingGuardRepository guardRepository;
     private final SlotCapacityPort slotCapacityPort;
+    private final WaitlistPromotionService promotionService;
 
     @Autowired
     public AppointmentRescheduleService(
             AppointmentRepository appointmentRepository,
             CitizenCampaignBookingGuardRepository guardRepository,
-            @Autowired(required = false) SlotCapacityPort slotCapacityPort
+            @Autowired(required = false) SlotCapacityPort slotCapacityPort,
+            @Autowired(required = false) WaitlistPromotionService promotionService
     ) {
         this.appointmentRepository = appointmentRepository;
         this.guardRepository = guardRepository;
         this.slotCapacityPort = slotCapacityPort;
+        this.promotionService = promotionService;
     }
 
     /**
@@ -145,16 +148,25 @@ public class AppointmentRescheduleService {
             throw new SlotFullException("Target time slot " + newSlotId + " capacity reservation failed with result: " + reservationResult);
         }
 
+        Long oldSlotId = appointment.getSlotId();
+
         // Step 1f: Release capacity on old slotId AFTER new slot reservation succeeds
-        boolean released = slotCapacityPort.releaseCapacity(appointment.getSlotId());
+        boolean released = slotCapacityPort.releaseCapacity(oldSlotId);
         if (!released) {
             // Note: If releasing old slot fails, throwing RuntimeException triggers Spring's default @Transactional rollback,
             // which automatically reverts the newSlot capacity reservation made in Step 1e within the same atomic boundary.
-            throw new IllegalStateException("Failed to release capacity for old slot ID: " + appointment.getSlotId() + ". Transaction rolling back.");
+            throw new IllegalStateException("Failed to release capacity for old slot ID: " + oldSlotId + ". Transaction rolling back.");
         }
 
         // Update existing Appointment entity (status remains CONFIRMED, JPA @Version increments automatically)
         appointment.reschedule(newSlotId);
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+
+        // Trigger automatic waitlist promotion for the freed old slot
+        if (promotionService != null) {
+            promotionService.promoteNextForSlot(appointment.getCampaignId(), oldSlotId, effectiveNow);
+        }
+
+        return saved;
     }
 }
