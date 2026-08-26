@@ -8,7 +8,7 @@
 **MF-02 Planned Implementation:** **COMPLETE**
 **MF-02 Implementation Milestones:** **COMPLETE / MERGED / FROZEN**
 **MF-02 Final Technical Audit:** **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY**
-**Documentation Candidate Review:** **IN PROGRESS (Prompt 304 Precision Remediation)**
+**Documentation Candidate Review:** **IN PROGRESS (Prompt 305 Surgical Remediation)**
 **US-13:** **IN PROGRESS**
 **Evidence synchronized through implementation:** PR #145
 **Latest verified implementation merge:** `122547a4a0391bc43be835300635ec97aecfc430`
@@ -21,7 +21,7 @@
 ### Final Verification / Current Baseline (develop @ `122547a4a0391bc43be835300635ec97aecfc430`)
 
 - **Full backend test suite (durable CI baseline):** **1280 backend tests** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
-- **Authoritative MySQL assurance (durable CI baseline):** **24 MySQL/Testcontainers assurance tests** across 10 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped).
+- **Authoritative MySQL assurance (durable CI baseline):** **24 executed MySQL/Testcontainers assurance tests** across 10 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped; 24 executable `@Test` methods across 10 classes; `@TestConfiguration` on `CampaignLifecycleMySqlConcurrencyIntegrationTests` accounts for the 25 raw test-annotation string matches).
 - **Local audit report suites:** During the final local audit, the representative targeted suite was reported as 446 tests across 31 classes (and 117 tests across 8 classes for F6); the durable final CI evidence retained for publication is the 1280-test full backend suite and 24-test MySQL suite.
 - **Frontend assurance:** ESLint PASS (0 errors, 0 warnings); Vite production build PASS (548.78 kB JS / 135.45 kB gzip, 230.37 kB CSS / 30.88 kB gzip; local post-merge build ~217ms, PR #145 CI build log 466ms).
 - **Frontend automated test runner:** `NOT_AVAILABLE_NO_EXISTING_RUNNER` (no runner configured in `package.json`; non-blocking technical debt).
@@ -1093,7 +1093,7 @@ Policy-Constrained / External Dependencies:
 Project-Wide Infrastructure / Follow-Ons (outside MF-02 core scope):
 - Spring Security / RBAC framework integration
 - OpenAPI documentation
-- Database migrations (`V1`–`V4` SQL files tracked in `backend/src/main/resources/db/migration` and `database/migrations`; Flyway runtime auto-runner not configured in `pom.xml`; fresh migration bootstrap unproven)
+- Database migrations (The repository contains two tracked migration locations: `backend/src/main/resources/db/migration` contains runtime sequence `V1`–`V4` [`V1__mf03_appointment_foundation.sql`, `V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql`, `V4__shared_authentication_foundation.sql`]; `database/migrations` is separate and contains only its actual files [`V1__mf03_appointment_foundation.sql`, `V002__mf01_screening_foundation.sql`, `.gitkeep`], not mirroring the complete `V1`–`V4` backend sequence; Flyway runtime auto-runner not configured in `pom.xml`; fresh migration bootstrap unproven)
 - Representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
 - MF-02 frontend web application and frontend automated tests
 - Final end-to-end / Definition-of-Done evidence
@@ -1145,11 +1145,11 @@ Do not infer completion from the size of the backend test suite.
 
 - **Planned MF-02 Implementation:** COMPLETE
 - **Planned MF-02 Milestones:** COMPLETE / MERGED / FROZEN (F4A, F4B, F4C, F4D, F5A, F5B, F6 readiness query, F6 frontend).
-- **Final Technical Audit Verdict:** `MF02_FINAL_AUDIT_PASS_SUBMISSION_READY` (The merged implementation received this verdict; documentation review is undergoing remediation in Prompt 304).
+- **Final Technical Audit Verdict:** `MF02_FINAL_AUDIT_PASS_SUBMISSION_READY` (The merged implementation received this verdict; documentation review is undergoing remediation in Prompt 305).
 - **Business Auditability & Actor Provenance:** Business audit history is database-backed (`SessionChangeEvent`, `CampaignLifecycleEvent`, `SessionCapacityPlan` revisions). Trusted server-derived actor provenance is enforced for protected F4C, F4D, and capacity-override flows; campaign lifecycle retains request-based actor provenance.
 - **Security & Authorization:** Centralized Bearer JWT authentication (`apiClient.js` / `authStorage.js` on frontend, `JwtAuthenticationFilter` on backend); capacity override (> recommended throughput) strictly restricted to `ROLE_CENTER_MANAGER` (`ROLE_ADMIN` denied).
 - **Cross-Module Contracts:** `QuestionnaireVersionPublicationPort` (owned/provided by MF-01, consumed by MF-02), `SlotCapacityPort` (implemented by MF-02 for MF-03 consumption), `SessionImpactReader` (defined/consumed by MF-02; production provider belongs to MF-03; classified as `EXTERNAL MF03 DEPENDENCY`).
-- **Database & Migrations:** SQL files `V1`–`V4` tracked in `backend/src/main/resources/db/migration` and `database/migrations`; Flyway runtime runner is not configured in `pom.xml`; fresh migration-only bootstrap is unproven (non-blocking technical debt).
+- **Database & Migrations:** The repository contains two tracked migration locations. `backend/src/main/resources/db/migration` contains the backend runtime-oriented migration sequence `V1`–`V4` (`V1__mf03_appointment_foundation.sql`, `V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql`, `V4__shared_authentication_foundation.sql`). `database/migrations` is a separate tracked migration location and currently contains only its actual files (`V1__mf03_appointment_foundation.sql`, `V002__mf01_screening_foundation.sql`, `.gitkeep`); it does not mirror the complete `V1`–`V4` backend sequence. Flyway runtime runner is not configured in `pom.xml`; fresh migration-only bootstrap is unproven (non-blocking technical debt).
 - **Monitoring & Observability:** Spring Boot Actuator `/actuator/health` present providing basic health checking; centralized Prometheus/Grafana/tracing not implemented (optional production hardening).
 - **Transactional Outbox:** Canonical v3.3 requirement for asynchronous module actions / notifications; NOT IMPLEMENTED in MF-02 sequence (PROJECT-WIDE SHARED FOLLOW-ON outside completed MF-02 sequence).
 - **Frontend Delivery:** Accessible, responsive UI across all planned milestones (F4A, F4B, F4C, F4D, F5A, F5B, F6); 0 ESLint warnings, production build PASS; no automated frontend test runner configured in `package.json` (non-blocking quality debt).

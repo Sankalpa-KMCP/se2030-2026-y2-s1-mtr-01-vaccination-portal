@@ -9,7 +9,7 @@
 **MF-02 Planned Implementation:** **COMPLETE**
 **MF-02 Implementation Milestones:** **COMPLETE / MERGED / FROZEN**
 **MF-02 Final Technical Audit:** **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY**
-**Documentation Candidate Review:** **IN PROGRESS (Prompt 304 Precision Remediation)**
+**Documentation Candidate Review:** **IN PROGRESS (Prompt 305 Surgical Remediation)**
 **US-13:** **IN PROGRESS**
 **Last synchronized implementation checkpoint:** PR #145
 **Reviewed PR #145 commits:** `5a1d1b81733c82e73aa47def9c458f2403b26afa` (`feat(mf02): add session readiness diagnostics UI`), `0db2eb2bb82c99eb8d493d2cb14073150d096ba8` (`fix(mf02): invalidate stale readiness after failed refresh`)
@@ -52,7 +52,7 @@
 **Preceding MySQL assurance milestone:** PR #84 (`ded72c17d8bb4aaf222d6e2a96b44fa93208e880` / merge `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`)
 **Current verified backend baseline:**
 - **Full backend test suite (durable CI baseline):** **1280 backend tests** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
-- **Authoritative MySQL assurance (durable CI baseline):** **24 MySQL/Testcontainers assurance tests** across 10 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped).
+- **Authoritative MySQL assurance (durable CI baseline):** **24 executed MySQL/Testcontainers assurance tests** across 10 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped; 24 executable `@Test` methods across 10 classes; `@TestConfiguration` on `CampaignLifecycleMySqlConcurrencyIntegrationTests` accounts for the 25 raw test-annotation string matches).
 - **Local audit report suites:** During the final local audit, the representative targeted suite was reported as 446 tests across 31 classes (and 117 tests across 8 classes for F6); the durable final CI evidence retained for publication is the 1280-test full backend suite and 24-test MySQL suite.
 - **Frontend assurance:** ESLint PASS (0 errors, 0 warnings); Vite production build PASS (548.78 kB JS / 135.45 kB gzip, 230.37 kB CSS / 30.88 kB gzip; local post-merge build ~217ms, PR #145 CI build log 466ms).
 - **Frontend automated test runner:** `NOT_AVAILABLE_NO_EXISTING_RUNNER` (no runner configured in `package.json`; non-blocking technical debt).
@@ -725,7 +725,7 @@ The following summarizes the current production-layer status:
 - Production MF-03 impact adapter (owned by MF-03; `SessionImpactReader` dependency)
 - Spring Security/RBAC framework integration (AUTH-1, AUTH-2, AUTH-3 integrated; capacity override restricted to ROLE_CENTER_MANAGER, ROLE_ADMIN denied)
 - OpenAPI documentation (project-wide documentation follow-on)
-- Database migrations (`V1`–`V4` SQL files exist; Flyway runtime auto-runner not configured in pom.xml; non-blocking technical debt)
+- Database migrations (The repository contains two tracked migration locations: `backend/src/main/resources/db/migration` contains the runtime sequence `V1`–`V4` [`V1__mf03_appointment_foundation.sql`, `V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql`, `V4__shared_authentication_foundation.sql`]; `database/migrations` is separate and contains only its actual files [`V1__mf03_appointment_foundation.sql`, `V002__mf01_screening_foundation.sql`, `.gitkeep`], not mirroring the complete `V1`–`V4` backend sequence; Flyway runtime auto-runner is not configured in `pom.xml`; fresh migration bootstrap unproven)
 - Representative production MySQL Testcontainers assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
 - MF-02 frontend business screens (F4A, F4B, F4C, F4D, F5A, F5B, F6 UI) — **RESOLVED in PR #137, PR #139, PR #141, PR #145**
 - Frontend automated tests runner (NOT_AVAILABLE_NO_EXISTING_RUNNER; non-blocking technical debt)
@@ -1001,7 +1001,7 @@ Current status remains:
 - Session Readiness & Diagnostics Query (PR #144): **COMPLETE**
 - Session Readiness & Diagnostics UI (PR #145): **COMPLETE**
 - Current verified backend baseline: **1280 backend tests plus 24 MySQL Testcontainers assurance tests across 10 classes** (durable CI baseline).
-- MF02_DOCUMENTATION_CLOSURE_AUDIT: **IN PROGRESS (Prompt 304 Precision Remediation)**
+- MF02_DOCUMENTATION_CLOSURE_AUDIT: **IN PROGRESS (Prompt 305 Surgical Remediation)**
 
 ## 16. Startup Procedure for the Next AI Session
 
