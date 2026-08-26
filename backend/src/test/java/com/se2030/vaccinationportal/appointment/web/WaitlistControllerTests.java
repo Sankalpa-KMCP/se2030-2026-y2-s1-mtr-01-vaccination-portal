@@ -14,7 +14,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -31,10 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * MockMvc integration tests for {@link WaitlistController}.
+ * Standalone MockMvc integration tests for {@link WaitlistController}.
  */
 @SpringBootTest
-@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(WaitlistControllerTests.TestConfig.class)
 class WaitlistControllerTests {
@@ -52,11 +51,8 @@ class WaitlistControllerTests {
         }
     }
 
-    @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private WaitlistJoinService joinService;
@@ -83,6 +79,11 @@ class WaitlistControllerTests {
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
+
+        WaitlistController waitlistController = new WaitlistController(joinService, waitlistRepository);
+        this.mockMvc = MockMvcBuilders.standaloneSetup(waitlistController)
+                .setControllerAdvice(new AppointmentExceptionHandler())
+                .build();
     }
 
     @AfterEach

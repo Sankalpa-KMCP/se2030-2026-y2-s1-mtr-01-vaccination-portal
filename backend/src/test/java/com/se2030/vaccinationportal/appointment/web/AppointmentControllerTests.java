@@ -10,6 +10,8 @@ import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository
 import com.se2030.vaccinationportal.appointment.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.appointment.service.AppointmentBookingService;
+import com.se2030.vaccinationportal.appointment.service.AppointmentCancellationService;
+import com.se2030.vaccinationportal.appointment.service.AppointmentRescheduleService;
 import com.se2030.vaccinationportal.appointment.service.CheckInService;
 import com.se2030.vaccinationportal.appointment.service.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.service.TestSlotCapacityPortDouble;
@@ -19,7 +21,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -36,11 +38,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * MockMvc integration tests for {@link AppointmentController} and {@link AppointmentExceptionHandler}.
+ * Standalone MockMvc integration tests for {@link AppointmentController} and {@link AppointmentExceptionHandler}.
  * Verifies success paths and exception HTTP status mappings (400, 403, 404, 409).
  */
 @SpringBootTest
-@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(AppointmentControllerTests.TestConfig.class)
 class AppointmentControllerTests {
@@ -58,14 +59,17 @@ class AppointmentControllerTests {
         }
     }
 
-    @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private AppointmentBookingService bookingService;
+
+    @Autowired
+    private AppointmentCancellationService cancellationService;
+
+    @Autowired
+    private AppointmentRescheduleService rescheduleService;
 
     @Autowired
     private CheckInService checkInService;
@@ -92,6 +96,12 @@ class AppointmentControllerTests {
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
+
+        AppointmentController appointmentController = new AppointmentController(
+                bookingService, cancellationService, rescheduleService, checkInService);
+        this.mockMvc = MockMvcBuilders.standaloneSetup(appointmentController)
+                .setControllerAdvice(new AppointmentExceptionHandler())
+                .build();
     }
 
     @AfterEach
