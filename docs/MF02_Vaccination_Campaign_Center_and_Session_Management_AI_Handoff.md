@@ -8,7 +8,8 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02 Planned Implementation:** **COMPLETE**
 **MF-02 Implementation Milestones:** **COMPLETE / MERGED / FROZEN**
-**MF-02 Final Independent Audit:** **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY**
+**MF-02 Final Technical Audit:** **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY**
+**Documentation Candidate Review:** **IN PROGRESS (Prompt 304 Precision Remediation)**
 **US-13:** **IN PROGRESS**
 **Last synchronized implementation checkpoint:** PR #145
 **Reviewed PR #145 commits:** `5a1d1b81733c82e73aa47def9c458f2403b26afa` (`feat(mf02): add session readiness diagnostics UI`), `0db2eb2bb82c99eb8d493d2cb14073150d096ba8` (`fix(mf02): invalidate stale readiness after failed refresh`)
@@ -50,11 +51,10 @@
 **Preceding documentation synchronization milestone:** PR #85 (`ac860a9d271daa2ecf4211571e44a93a2f2622f4` / merge `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`)
 **Preceding MySQL assurance milestone:** PR #84 (`ded72c17d8bb4aaf222d6e2a96b44fa93208e880` / merge `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`)
 **Current verified backend baseline:**
-- **Full backend test suite:** **1280 backend tests** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
-- **Representative targeted MF-02 test suite:** **446 tests across 31 classes** (0 failures, 0 errors, 0 skipped).
-- **F6 targeted regression suite:** **117 / 117 tests PASS** across 8 classes.
-- **Authoritative fresh MySQL assurance:** **24 MySQL/Testcontainers assurance tests** across 10 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped).
-- **Frontend assurance:** ESLint PASS (0 errors, 0 warnings); Vite production build PASS (548.78 kB JS / 135.45 kB gzip, 230.37 kB CSS / 30.88 kB gzip; build time ~217ms).
+- **Full backend test suite (durable CI baseline):** **1280 backend tests** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
+- **Authoritative MySQL assurance (durable CI baseline):** **24 MySQL/Testcontainers assurance tests** across 10 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped).
+- **Local audit report suites:** During the final local audit, the representative targeted suite was reported as 446 tests across 31 classes (and 117 tests across 8 classes for F6); the durable final CI evidence retained for publication is the 1280-test full backend suite and 24-test MySQL suite.
+- **Frontend assurance:** ESLint PASS (0 errors, 0 warnings); Vite production build PASS (548.78 kB JS / 135.45 kB gzip, 230.37 kB CSS / 30.88 kB gzip; local post-merge build ~217ms, PR #145 CI build log 466ms).
 - **Frontend automated test runner:** `NOT_AVAILABLE_NO_EXISTING_RUNNER` (no runner configured in `package.json`; non-blocking technical debt).
 - **Thread.sleep in tests:** 0 occurrences across `backend/src/test`.
 
@@ -98,7 +98,7 @@ Total MF-02 REST routes currently integrated: **79** ($21 	ext{ Campaign-family 
      - remediation commit: `0db2eb2bb82c99eb8d493d2cb14073150d096ba8` (`fix(mf02): invalidate stale readiness after failed refresh`)
    - candidate development base: `99e03a72c24790e2ab148e740a92b56834d10785`
    - merge: `122547a4a0391bc43be835300635ec97aecfc430`
-   - merged at: `2026-08-25T21:40:00Z`
+   - merged at: `2026-08-26T04:17:57Z`
    - merge method: normal merge commit
    - Backend CI: PASS (1280 backend tests + 24 Testcontainers MySQL tests on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 3m04s; Run 32929442329)
    - Frontend CI: PASS (11s; Run 32929442459)
@@ -344,7 +344,7 @@ Total MF-02 REST routes currently integrated: **79** ($21 	ext{ Campaign-family 
      - `approvedCapacity`: Operationally approved booking capacity. If `sessionServiceCeiling != null`, then `approvedCapacity <= sessionServiceCeiling`.
      - `overrideReason`: Mandatory when `approvedCapacity > recommendedThroughput`. The hard `sessionServiceCeiling` cannot be overridden.
      - `sessionServiceCeiling`: Configured on `VaccinationCenter`, nullable, snapshotted into `SessionCapacityPlan`; NOT calculated from throughput; NOT calculated from availableStationCount.
-     - `approvedBy`: String audit actor metadata (authenticated RBAC is not implemented).
+     - `approvedBy`: String audit actor metadata (shared Bearer JWT authentication is active; method-level authorization is enforced for capacity overrides (ROLE_CENTER_MANAGER required, ROLE_ADMIN denied)).
    - Staff Concurrency & Roster-Lock Foundation:
      - `OperationalStaffRoster` is center-scoped: `unique(center_id, user_id)`
      - `StaffAssignment` overlap detection is global by external `userId`
@@ -554,15 +554,14 @@ Critical write services are transactional. Read-only preview operations use read
 ## 6. Current Test / Verification State
 
 ### Final Verification / Current Baseline (develop @ `122547a4a0391bc43be835300635ec97aecfc430`)
-- **Full Backend Test Suite:** **1280 / 1280 PASS** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
-- **Representative Targeted MF-02 Suite:** **446 tests across 31 classes PASS** (0 failures, 0 errors, 0 skipped).
-- **F6 Targeted Regression Suite:** **117 / 117 PASS** across 8 classes.
-- **MySQL/Testcontainers Concurrency Suite:** **24 / 24 PASS** across 10 classes on `mysql:8.4.3`.
-- **Frontend Assurance:** ESLint clean (0 errors, 0 warnings); Vite production build PASS (548.78 kB JS / 135.45 kB gzip, 230.37 kB CSS / 30.88 kB gzip; build time ~217ms).
+- **Full Backend Test Suite (Durable CI Baseline):** **1280 / 1280 PASS** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
+- **MySQL/Testcontainers Concurrency Suite (Durable CI Baseline):** **24 / 24 PASS** across 10 classes on `mysql:8.4.3`.
+- **Local Audit Report Verification:** During the final local audit, the representative targeted MF-02 suite was reported as 446 tests across 31 classes (and 117 tests across 8 classes for F6); the durable final CI evidence retained for publication is the 1280-test full backend suite and 24-test MySQL suite.
+- **Frontend Assurance:** ESLint clean (0 errors, 0 warnings); Vite production build PASS (548.78 kB JS / 135.45 kB gzip, 230.37 kB CSS / 30.88 kB gzip; local post-merge build ~217ms, PR #145 CI build log 466ms).
 - **Frontend Automated Test Runner:** `NOT_AVAILABLE_NO_EXISTING_RUNNER` (no runner configured in `package.json`; non-blocking technical debt).
 
 
-### Distinct Verification Checkpoints
+### Historical Verification Checkpoints (Prior Milestones)
 
 1. **Historical Checkpoints:**
    - Pre-Remediation Checkpoint (Base `1b90e2ee...`): **790 functional H2 tests** across 81 XML reports + **3 MySQL assurance tests** (793 logical executions).
@@ -839,15 +838,16 @@ MF-02 may read aggregate impact/readiness information through ports. It must not
 
 ## 13. Immediate Engineering Order
 
-Recommended next direction (classified as **RECOMMENDATION_ONLY**; implementation not started):
-1. acknowledge completion of the operational-model program: Milestones M1, M2A, M2B, M2C, M3, and M4 are fully integrated and verified;
-2. acknowledge external MF-03 `SessionImpactReader` dependency (owned by MF-03; required for non-fail-closed scheduled session modifications);
-3. analyze and resolve remaining campaign lifecycle policy gaps (completion algorithm, cancellation impact integration, archive retention policy);
-4. evaluate/decompose `VaccinationSessionService` maintainability only if justified (`DEFER`);
-5. project-wide follow-ons (outside MF-02 core scope): Spring Security / RBAC framework, OpenAPI documentation, Flyway application startup runtime, and React frontend UI.
+Recommended next direction (classified as **RECOMMENDATION_ONLY**; planned MF-02 implementation is complete):
+1. Acknowledge completion of all planned MF-02 implementation milestones (F4A, F4B, F4C, F4D, F5A, F5B, F6 readiness query, F6 frontend);
+2. Acknowledge external MF-03 `SessionImpactReader` dependency (owned by MF-03; required for non-fail-closed scheduled session modifications);
+3. Complete independent Codex review for the final documentation/evidence package;
+4. Project-wide follow-ons outside MF-02 core scope: MF-03 appointment booking consumer, project-wide transactional outbox runner, Flyway runtime startup runner, OpenAPI documentation exposure.
 
 
 ## 14. Historical Milestone Summary
+
+Selected MF-02 chronology spans early PR #12-era work through PR #118, with subsequent reviewed milestones through PR #145:
 
 | PR | Milestone |
 |---|---|
@@ -972,17 +972,18 @@ Key full merge checkpoints:
 ## 15. Status Discipline
 
 Never claim:
-- Whole project complete (MF-03, MF-04, MF-05 remain);
+- Whole project complete (MF-03, MF-04, MF-05, and project-wide transactional outbox remain);
 - Sprint 1 complete;
 - US-13 complete;
 - Production Flyway runtime auto-migration complete without configuration in `pom.xml`;
-- Centralized ELK/Loki logging or Prometheus monitoring complete when only basic Actuator health is present.
+- Centralized ELK/Loki logging or Prometheus monitoring complete when only basic Actuator health is present;
+- Universal server-derived actor provenance across 100% of endpoints (campaign lifecycle retains request-based actor provenance).
 
 Current status remains:
 - Sprint 1: **IN PROGRESS**
 - MF-02 Planned Implementation: **COMPLETE**
 - MF-02 Implementation Milestones: **COMPLETE / MERGED / FROZEN** (F4A, F4B, F4C, F4D, F5A, F5B, F6 readiness query, F6 frontend)
-- MF-02 Final Independent Audit: **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY**
+- MF-02 Final Technical Audit: **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY** (The merged MF-02 implementation received this final technical audit verdict; the documentation/evidence package is separately reviewed and must not be treated as approved until its own review passes)
 - US-13: **IN PROGRESS**
 - Campaign Management REST API: **COMPLETE**
 - Vaccination Center Management REST API: **COMPLETE**
@@ -999,8 +1000,8 @@ Current status remains:
 - MF02/MF03 Slot Capacity Integration: **COMPLETE**
 - Session Readiness & Diagnostics Query (PR #144): **COMPLETE**
 - Session Readiness & Diagnostics UI (PR #145): **COMPLETE**
-- current verified backend baseline: **1280 backend tests plus 24 MySQL Testcontainers assurance tests across 10 classes** across separate validation paths.
-- MF02_DOCUMENTATION_CLOSURE_AUDIT: **COMPLETE**
+- Current verified backend baseline: **1280 backend tests plus 24 MySQL Testcontainers assurance tests across 10 classes** (durable CI baseline).
+- MF02_DOCUMENTATION_CLOSURE_AUDIT: **IN PROGRESS (Prompt 304 Precision Remediation)**
 
 ## 16. Startup Procedure for the Next AI Session
 
