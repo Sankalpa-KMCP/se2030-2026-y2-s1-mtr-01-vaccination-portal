@@ -183,6 +183,27 @@ public class Appointment {
         this.slotId = newSlotId;
     }
 
+    /**
+     * Checks in this appointment (MF03-BR-09, MF03-BR-10).
+     */
+    public void checkIn() {
+        this.status = AppointmentStatus.CHECKED_IN;
+    }
+
+    /**
+     * Reverts check-in status back to CONFIRMED (MF03-BR-15).
+     */
+    public void reverseCheckIn() {
+        this.status = AppointmentStatus.CONFIRMED;
+    }
+
+    /**
+     * Marks this appointment as NO_SHOW.
+     */
+    public void markNoShow() {
+        this.status = AppointmentStatus.NO_SHOW;
+    }
+
     @Override
     public String toString() {
         return "Appointment{" +

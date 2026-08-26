@@ -41,4 +41,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             Long slotId,
             Collection<AppointmentStatus> statuses
     );
+
+    /**
+     * Find appointments for a collection of slot IDs filtered by status collection.
+     * Supports vaccinator queue queries across all slots of a session (US-26 / US-27).
+     *
+     * @param slotIds  Collection of time slot IDs
+     * @param statuses Collection of statuses to include
+     * @return List of matching appointments
+     */
+    List<Appointment> findBySlotIdInAndStatusIn(
+            Collection<Long> slotIds,
+            Collection<AppointmentStatus> statuses
+    );
 }
