@@ -94,6 +94,7 @@
 
 .lp-btn--compact {
   padding: 0.5rem 1.05rem;
+  min-height: 40px;
   font-size: 0.9rem;
 }
 
@@ -191,7 +192,7 @@
   font-weight: 600;
   color: var(--lp-text-secondary);
   text-decoration: none;
-  padding: 0.35rem 0.15rem;
+  padding: 0.45rem 0.15rem;
   transition: color 0.15s ease;
 }
 
@@ -904,6 +905,8 @@
 
   .lp-hero__visual {
     max-width: 540px;
+    margin-inline: auto;
+    width: 100%;
   }
 }
 
@@ -978,6 +981,15 @@
 
   .lp-hero__actions .lp-btn--lg {
     width: 100%;
+  }
+
+  .lp-hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lp-hero__note {
+    justify-content: center;
   }
 
   .lp-visual-frame {

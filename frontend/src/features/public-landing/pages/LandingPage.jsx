@@ -6,9 +6,12 @@ import HowItWorksSection from '../components/HowItWorksSection';
 import TrustSection from '../components/TrustSection';
 import PublicFooter from '../components/PublicFooter';
 import { ArrowRightIcon } from '../components/icons';
+import { useRevealOnScroll } from '../hooks/useRevealOnScroll';
 import '../public-landing.css';
 
 export default function LandingPage({ onLoginClick }) {
+  useRevealOnScroll();
+
   return (
     <div className="lp-page">
       <a className="lp-skip-link" href="#lp-main">
