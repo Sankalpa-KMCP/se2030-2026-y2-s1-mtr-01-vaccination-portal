@@ -2,60 +2,43 @@ import React from 'react';
 
 const STEPS = [
   {
-    n: '01',
-    kicker: 'Step one',
+    num: '1',
     title: 'Sign in securely',
-    desc: 'Authorized personnel authenticate into their assigned operational role. Permissions are isolated by assignment and enforced on every action.',
-    checks: ['JWT session', 'Role boundary', 'Cross-center guard'],
+    desc: 'Each team member signs in with an authenticated account tied to their assigned operational role.',
   },
   {
-    n: '02',
-    kicker: 'Step two',
+    num: '2',
     title: 'Configure campaigns and centers',
-    desc: 'Define dose programmes, target locations and lifecycle states. Set center hours, closures, stations and staffing rosters for delivery.',
-    checks: ['Programme intervals', 'Operating hours', 'Staff rosters'],
+    desc: 'Define campaign parameters, dose programmes, target locations, staffing rosters, and physical center resources.',
   },
   {
-    n: '03',
-    kicker: 'Step three',
-    title: 'Plan and operate sessions',
-    desc: 'Generate single or recurring sessions, calculate throughput capacity, apply manager-approved overrides and pass readiness diagnostics before opening.',
-    checks: ['Capacity planning', 'Recurrence', 'Readiness gate'],
+    num: '3',
+    title: 'Plan and operate vaccination sessions',
+    desc: 'Schedule single or recurring sessions, plan throughput capacity, and confirm operational readiness.',
   },
 ];
 
 export default function HowItWorksSection() {
   return (
-    <section className="lp-section lp-section--tint" id="workflow" aria-labelledby="lp-workflow-heading">
+    <section className="lp-section lp-section--subtle" id="how-it-works" aria-labelledby="lp-workflow-title">
       <div className="lp-container">
-        <div className="lp-flow">
-          <div className="lp-flow__side">
-            <p className="lp-kicker">How it works</p>
-            <h2 className="lp-h2" id="lp-workflow-heading">From authentication to verified session execution.</h2>
-            <p className="lp-lead" style={{ marginTop: 10 }}>
-              Every session moves through the same administrative gates — so resourcing, readiness and approvals are verifiable
-              rather than assumed.
-            </p>
-          </div>
+        <p className="lp-section__eyebrow">Workflow</p>
+        <h2 className="lp-section__title" id="lp-workflow-title">
+          How It Works
+        </h2>
+        <p className="lp-section__lead">
+          A structured sequence from user authentication to session readiness.
+        </p>
 
-          <div className="lp-flow__list" role="list">
-            {STEPS.map((s) => (
-              <div key={s.n} className="lp-flow__step" role="listitem">
-                <span className="lp-flow__n" aria-hidden="true">{s.n}</span>
-                <div>
-                  <p className="lp-flow__kicker">{s.kicker}</p>
-                  <h3 className="lp-flow__title">{s.title}</h3>
-                  <p className="lp-flow__desc">{s.desc}</p>
-                  <div className="lp-flow__check" aria-label={`Checks for ${s.title}`}>
-                    {s.checks.map((c) => (
-                      <span key={c}><span className="lp-flow__dot" aria-hidden="true" />{c}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ol className="lp-workflow-list">
+          {STEPS.map((step) => (
+            <li key={step.num} className="lp-workflow-item">
+              <span className="lp-workflow-item__num">{step.num}</span>
+              <h3 className="lp-workflow-item__title">{step.title}</h3>
+              <p className="lp-workflow-item__desc">{step.desc}</p>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );

@@ -15,7 +15,7 @@ export default function LandingPage({ onLoginClick }) {
         Skip to main content
       </a>
       <PublicHeader onLoginClick={onLoginClick} />
-      <main className="lp-main" id="lp-main" tabIndex={-1}>
+      <main id="lp-main" tabIndex={-1}>
         <HeroSection onLoginClick={onLoginClick} />
         <CapabilitiesSection />
         <HowItWorksSection />
