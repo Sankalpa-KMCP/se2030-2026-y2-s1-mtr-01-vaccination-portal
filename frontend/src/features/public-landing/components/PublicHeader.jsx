@@ -13,6 +13,9 @@ export default function PublicHeader({ onLoginClick }) {
           <a className="lp-header__link" href="#capabilities">
             Capabilities
           </a>
+          <a className="lp-header__link" href="#how-it-works">
+            How it works
+          </a>
           <button
             type="button"
             className="lp-btn lp-btn--primary lp-btn--compact"
