@@ -110,3 +110,23 @@ export function ArrowDownIcon(props) {
     </svg>
   );
 }
+
+export function HistoryIcon(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.3" />
+      <path d="M3.5 3.5v4.8h4.8" />
+      <path d="M12 7.5V12l3 1.8" />
+    </svg>
+  );
+}
+
+export function ClipboardCheckIcon(props) {
+  return (
+    <svg {...baseProps} {...props}>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4a3 3 0 0 1 6 0" />
+      <path d="M9.2 13.4l1.9 1.9 3.7-4" />
+    </svg>
+  );
+}
