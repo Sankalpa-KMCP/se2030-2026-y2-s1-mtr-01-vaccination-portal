@@ -8,7 +8,7 @@
 **MF-02 Planned Implementation:** **COMPLETE**
 **MF-02 Implementation Milestones:** **COMPLETE / MERGED / FROZEN**
 **MF-02 Final Technical Audit:** **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY**
-**Documentation Candidate Review:** **IN PROGRESS (Prompt 305 Surgical Remediation)**
+**Documentation Candidate Review:** **IN PROGRESS — final publication review pending**
 **US-13:** **IN PROGRESS**
 **Evidence synchronized through implementation:** PR #145
 **Latest verified implementation merge:** `122547a4a0391bc43be835300635ec97aecfc430`
@@ -523,7 +523,7 @@ The value **575** was a non-authoritative arithmetic result derived from a super
 Build the MF-02 backend foundations required to create, validate, schedule, and safely change campaigns, centers, recurrence definitions, concrete vaccination sessions, and operational resources/capacity plans without violating configuration history or silently mutating MF-03 appointment/waitlist data.
 
 ### Current outcome
-The Sprint has delivered substantial backend foundations, REST APIs (78 endpoints across campaigns, campaign configuration, centers, center operational resources/staff roster, sessions, session operational assignments, session capacity plans, and recurrence rules), lifecycle/change-control behavior, the Session Operational Core Model & Calculation Engine (PR #106), the Center Operational Resource & Staff Roster REST API (PR #108; Milestone 2A), the Session Operational Assignments REST API (PR #110; Milestone 2B), and the Session Capacity Plan REST API (PR #112; Milestone 2C), concluding Milestone 2 (Session Operational Configuration REST API). Sprint 1 remains open because operational readiness integration & scheduling guard replacement (Milestone 3), slot capacity integration (Milestone 4), remaining lifecycle/integration work, security, Flyway, and frontend remain pending.
+The Sprint has delivered all planned MF-02 implementation milestones, including 79 MF-02 REST routes across campaigns, campaign configuration, centers, center operational resources/staff rosters, sessions, session operational assignments, session capacity plans, recurrence rules, and session readiness diagnostics; the Session Operational Core Model & Calculation Engine (Milestone 1 / PR #106); the Center Operational Resource & Staff Roster REST API (Milestone 2A / PR #108); the Session Operational Assignments REST API (Milestone 2B / PR #110); the Session Capacity Plan REST API (Milestone 2C / PR #112); Session Operational Readiness & Scheduling Enforcement (Milestone 3 / PR #114); Slot Capacity Integration with Booking Port (Milestone 4 / PR #117); shared authentication / trusted-actor authorization foundation (AUTH-1–AUTH-3); and complete accessible frontend business screens (F4A, F4B, F4C, F4D, F5A, F5B, and F6 session readiness diagnostics UI via PR #145). Planned MF-02 implementation is complete and frozen (technical audit verdict: MF02_FINAL_AUDIT_PASS_SUBMISSION_READY). Sprint 1 remains open because project-wide and cross-module follow-ons remain pending (project-wide transactional outbox runner, Flyway runtime startup runner / migration bootstrap hardening, frontend automated test runner, and functions owned outside MF-02 such as MF-03, MF-04, and MF-05).
 
 ## 4. Completed MF-02 Evidence
 
@@ -857,10 +857,10 @@ Representative established lock orders:
 - staff roster cross-center lock query: `findByUserIdForUpdateOrderByIdAsc(userId)` (PESSIMISTIC_WRITE across all roster rows for the user in ascending ID order)
 - session capacity plan revision creation: `VaccinationSession` via `findByIdForUpdate` -> server-evaluated calculations -> save
 
-### Test Database Architecture and Concurrency Assurance
-- **Fast Functional In-Memory Suite:** Standard backend tests run against H2 in MySQL compatibility mode (1103 tests).
-- **Representative Production-Equivalent MySQL Assurance (PR #84, PR #97, PR #110, & PR #112):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`), parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`), series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`), session resource assignment and cross-center staff assignment serialization (`SessionOperationalAssignmentMySqlConcurrencyIntegrationTests`), and session capacity plan revision creation serialization (`SessionCapacityPlanMySqlConcurrencyIntegrationTests`). Total suite in CI: 7 tests across 5 classes on `mysql:8.4.3`.
-- **Scope Boundary:** *Representative single-row lifecycle, parent/child reverse-impact, series concurrency, operational assignment concurrency, and capacity plan revision concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.* Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3.
+### Test Database Architecture and Concurrency Assurance (Historical checkpoint at PR #112 / Milestone 2C)
+- **Fast Functional In-Memory Suite (Historical PR #112 checkpoint):** Standard backend tests run against H2 in MySQL compatibility mode (1103 tests at PR #112).
+- **Representative Production-Equivalent MySQL Assurance (Historical PR #112 checkpoint — PR #84, PR #97, PR #110, & PR #112):** Dedicated MySQL Testcontainers test suite executed in CI under the `-Pmysql-concurrency` profile against a pinned `mysql:8.4.3` InnoDB container image. Validates single-row duplicate-command race serialization (`CampaignLifecycleMySqlConcurrencyIntegrationTests`), parent/child reverse-impact locking (`CampaignReverseImpactMySqlConcurrencyIntegrationTests`), series confirmation vs occurrence generation (`SessionSeriesMySqlConcurrencyIntegrationTests`), session resource assignment and cross-center staff assignment serialization (`SessionOperationalAssignmentMySqlConcurrencyIntegrationTests`), and session capacity plan revision creation serialization (`SessionCapacityPlanMySqlConcurrencyIntegrationTests`). Total suite in CI at PR #112: 7 tests across 5 classes on `mysql:8.4.3`. (Subsequent milestones M3, M4, and AUTH expanded this suite to 24 executed tests across 10 classes).
+- **Scope Boundary (Historical PR #112 checkpoint):** *Representative single-row lifecycle, parent/child reverse-impact, series concurrency, operational assignment concurrency, and capacity plan revision concurrency pessimistic-locking behavior is validated against real MySQL/InnoDB in CI; exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.* Dedicated MySQL concurrency proof for concurrent roster registration versus future staff scheduling was subsequently delivered in Milestone 3 (PR #114).
 
 ## 21. Historical Milestone Chronology
 
@@ -1041,7 +1041,7 @@ Resolved confirmed P1 audit finding MF02-003 (Campaign Configuration API Blocker
 - **Milestone 3 Completion:** Closes Milestone 3 (Session Operational Readiness & Guard Replacement).
 
 ### MF-02 / MF-03 Capacity & Impact Integration — COMPLETE_WITH_EXTERNAL_MF03_DEPENDENCY (Shared Dependency)
-`SessionImpactReader` production adapter is MF-03-owned (currently missing; SCHEDULED changes fail closed with 409). `SlotCapacityPort` production adapter is expected to be MF-02-owned after an authoritative slot/capacity model is built.
+`SessionImpactReader` production adapter is MF-03-owned (currently missing; SCHEDULED changes fail closed with 409). `SlotCapacityPort` is fully implemented by MF-02 via `TimeSlotCapacityService` (Milestone 4 / PR #117), providing authoritative capacity booking/reservation contracts consumed by MF-03.
 
 ### Session Completion Policy — SPECIFICATION_PARTIAL
 Canonical mentions attendance and operational-close checks but does not define a complete decision algorithm. Not a confirmed code defect; completion implementation preserved without changes.
@@ -1082,7 +1082,7 @@ Completed MF-02 Capabilities:
 - Session Operational Configuration REST API (Milestone 2 Overall: COMPLETE)
 - Session Operational Readiness & Guard Replacement (Milestone 3: COMPLETE)
 - MF02/MF03 Slot Capacity Integration (Milestone 4: COMPLETE)
-- All 78 MF-02 REST endpoints integrated and verified across campaigns, centers, operational assignments, capacity plans, recurrence rules, and sessions.
+- All 79 MF-02 REST endpoints integrated and verified across campaigns, centers, operational assignments, capacity plans, recurrence rules, sessions, and session readiness diagnostics.
 
 Policy-Constrained / External Dependencies:
 - Blocked campaign lifecycle transitions: completion (`SPECIFICATION_PARTIAL`), campaign cancellation (`MF03_BLOCKED`), archival (`AMBIGUOUS_REQUIRES_POLICY / USER_DATA_REQUIRED`)
@@ -1091,11 +1091,11 @@ Policy-Constrained / External Dependencies:
 - Evaluation/decomposition of `VaccinationSessionService` maintainability only if justified (`DEFER`)
 
 Project-Wide Infrastructure / Follow-Ons (outside MF-02 core scope):
-- Spring Security / RBAC framework integration
-- OpenAPI documentation
+- OpenAPI documentation exposure
 - Database migrations (The repository contains two tracked migration locations: `backend/src/main/resources/db/migration` contains runtime sequence `V1`–`V4` [`V1__mf03_appointment_foundation.sql`, `V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql`, `V4__shared_authentication_foundation.sql`]; `database/migrations` is separate and contains only its actual files [`V1__mf03_appointment_foundation.sql`, `V002__mf01_screening_foundation.sql`, `.gitkeep`], not mirroring the complete `V1`–`V4` backend sequence; Flyway runtime auto-runner not configured in `pom.xml`; fresh migration bootstrap unproven)
 - Representative production MySQL concurrency assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
-- MF-02 frontend web application and frontend automated tests
+- Project-wide transactional outbox / reliable asynchronous event delivery
+- Frontend automated test runner (`NOT_AVAILABLE_NO_EXISTING_RUNNER`; non-blocking technical debt)
 - Final end-to-end / Definition-of-Done evidence
 
 ## 24. Sprint Status
@@ -1124,8 +1124,10 @@ Current status remains:
 - Session Operational Readiness (Milestone 3): **COMPLETE**
 - Session Scheduling Guard Replacement (Milestone 3): **COMPLETE**
 - MF02/MF03 Slot Capacity Integration (Milestone 4): **COMPLETE**
-- current verified backend baseline: **1160 functional H2 tests plus 23 MySQL Testcontainers assurance tests across 9 classes** across separate validation paths.
-- MF02_DOCUMENTATION_CLOSURE_AUDIT: **COMPLETE**
+- Session Readiness & Diagnostics Query (PR #144): **COMPLETE**
+- Session Readiness & Diagnostics UI (PR #145): **COMPLETE**
+- Current verified backend baseline: **1280 backend tests plus 24 MySQL Testcontainers assurance tests across 10 classes** on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`; durable CI baseline).
+- MF02_DOCUMENTATION_CLOSURE_AUDIT: **IN PROGRESS — final publication review pending**
 
 Do not infer completion from the size of the backend test suite.
 
@@ -1145,7 +1147,7 @@ Do not infer completion from the size of the backend test suite.
 
 - **Planned MF-02 Implementation:** COMPLETE
 - **Planned MF-02 Milestones:** COMPLETE / MERGED / FROZEN (F4A, F4B, F4C, F4D, F5A, F5B, F6 readiness query, F6 frontend).
-- **Final Technical Audit Verdict:** `MF02_FINAL_AUDIT_PASS_SUBMISSION_READY` (The merged implementation received this verdict; documentation review is undergoing remediation in Prompt 305).
+- **Final Technical Audit Verdict:** `MF02_FINAL_AUDIT_PASS_SUBMISSION_READY` (The merged implementation received this verdict; documentation closure review is in progress pending final publication verification).
 - **Business Auditability & Actor Provenance:** Business audit history is database-backed (`SessionChangeEvent`, `CampaignLifecycleEvent`, `SessionCapacityPlan` revisions). Trusted server-derived actor provenance is enforced for protected F4C, F4D, and capacity-override flows; campaign lifecycle retains request-based actor provenance.
 - **Security & Authorization:** Centralized Bearer JWT authentication (`apiClient.js` / `authStorage.js` on frontend, `JwtAuthenticationFilter` on backend); capacity override (> recommended throughput) strictly restricted to `ROLE_CENTER_MANAGER` (`ROLE_ADMIN` denied).
 - **Cross-Module Contracts:** `QuestionnaireVersionPublicationPort` (owned/provided by MF-01, consumed by MF-02), `SlotCapacityPort` (implemented by MF-02 for MF-03 consumption), `SessionImpactReader` (defined/consumed by MF-02; production provider belongs to MF-03; classified as `EXTERNAL MF03 DEPENDENCY`).

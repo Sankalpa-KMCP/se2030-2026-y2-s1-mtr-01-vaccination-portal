@@ -9,7 +9,7 @@
 **MF-02 Planned Implementation:** **COMPLETE**
 **MF-02 Implementation Milestones:** **COMPLETE / MERGED / FROZEN**
 **MF-02 Final Technical Audit:** **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY**
-**Documentation Candidate Review:** **IN PROGRESS (Prompt 305 Surgical Remediation)**
+**Documentation Candidate Review:** **IN PROGRESS — final publication review pending**
 **US-13:** **IN PROGRESS**
 **Last synchronized implementation checkpoint:** PR #145
 **Reviewed PR #145 commits:** `5a1d1b81733c82e73aa47def9c458f2403b26afa` (`feat(mf02): add session readiness diagnostics UI`), `0db2eb2bb82c99eb8d493d2cb14073150d096ba8` (`fix(mf02): invalidate stale readiness after failed refresh`)
@@ -88,7 +88,7 @@ All planned implementation milestones for MF-02 are integrated and frozen:
 7. **F6 Readiness Query Prerequisite (PR #144):** COMPLETE / MERGED / FROZEN
 8. **F6 Session Readiness and Diagnostics Frontend (PR #145):** COMPLETE / MERGED / FROZEN
 
-Total MF-02 REST routes currently integrated: **79** ($21 	ext{ Campaign-family [9 Core + 12 Configuration]} + 22 	ext{ Center-family [14 Core + 8 Operational Resource/Staff Roster]} + 27 	ext{ Session-family [6 Core + 7 Change + 8 Operational Assignments + 5 Capacity Plans + 1 Readiness Query]} + 9 	ext{ Recurrence/Series} = 79$). Total Campaign-family routes: **21**. Total Center-family routes: **22**. Total Session routes: **27**. Total Recurrence/Series routes: **9**.
+Total MF-02 REST routes currently integrated: **79** (21 Campaign-family [9 Core + 12 Configuration] + 22 Center-family [14 Core + 8 Operational Resource/Staff Roster] + 27 Session-family [6 Core + 7 Change + 8 Operational Assignments + 5 Capacity Plans + 1 Readiness Query] + 9 Recurrence/Series = 79). Total Campaign-family routes: **21**. Total Center-family routes: **22**. Total Session routes: **27**. Total Recurrence/Series routes: **9**.
 
 ### Current verified integrations
 
@@ -685,8 +685,8 @@ Verified component sizes after PR #112:
 - `SessionCapacityCalculationService.java`: ~122 lines
 - `SessionCapacityPlan.java`: ~423 lines
 
-Current MF-02 production Java files under the campaign module: 175.
-Current MF-02 test Java files in the campaign test package: 107.
+Current MF-02 production Java files under backend/src/main/java/com/se2030/vaccinationportal/campaign: 185.
+Current MF-02 test Java files under backend/src/test/java/com/se2030/vaccinationportal/campaign: 120.
 
 Verified frontend component sizes after PR #145:
 - `SessionRecurrencePanel.jsx`: ~1,670 lines (MEDIUM complexity; recurrence management and series preview-confirm)
@@ -1001,7 +1001,7 @@ Current status remains:
 - Session Readiness & Diagnostics Query (PR #144): **COMPLETE**
 - Session Readiness & Diagnostics UI (PR #145): **COMPLETE**
 - Current verified backend baseline: **1280 backend tests plus 24 MySQL Testcontainers assurance tests across 10 classes** (durable CI baseline).
-- MF02_DOCUMENTATION_CLOSURE_AUDIT: **IN PROGRESS (Prompt 305 Surgical Remediation)**
+- MF02_DOCUMENTATION_CLOSURE_AUDIT: **IN PROGRESS — final publication review pending**
 
 ## 16. Startup Procedure for the Next AI Session
 
