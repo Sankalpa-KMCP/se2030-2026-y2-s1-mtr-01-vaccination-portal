@@ -1,37 +1,374 @@
 /* ==========================================================================
-   Public Landing Page — Minimal Foundation
-   Clean, neutral structure designed for straightforward manual extension.
+   Public Landing Page — Visual System Foundation (Stage S1)
+   Header + Hero Redesign with Editorial Healthcare Architecture
    Scoped strictly under .lp-page to prevent any style leakage into the app.
    ========================================================================== */
 
 .lp-page {
+  --lp-ink-900: #0b132b;
+  --lp-ink-800: #1c2541;
+  --lp-ink-700: #334155;
+  --lp-ink-600: #475569;
+  --lp-ink-500: #64748b;
+  --lp-ink-400: #94a3b8;
+
   --lp-bg: #ffffff;
   --lp-bg-subtle: #f8fafc;
-  --lp-text: #0f172a;
-  --lp-text-muted: #64748b;
+  --lp-bg-muted: #f1f5f9;
+
   --lp-border: #e2e8f0;
+  --lp-border-subtle: #f1f5f9;
+  --lp-border-strong: #cbd5e1;
+
   --lp-accent: #0e7490;
   --lp-accent-hover: #155e75;
+  --lp-accent-subtle: #ecfeff;
+  --lp-accent-border: #cffafe;
+
+  --lp-radius-sm: 4px;
+  --lp-radius-md: 6px;
 
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background-color: var(--lp-bg);
-  color: var(--lp-text);
+  color: var(--lp-ink-700);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* --------------------------------------------------------------------------
-   Container & Layout
+   Container & Global Primitives
    -------------------------------------------------------------------------- */
 .lp-container {
   width: 100%;
-  max-width: 1140px;
+  max-width: 1180px;
   margin-inline: auto;
-  padding-inline: 1.5rem;
+  padding-inline: clamp(1.25rem, 4vw, 2.25rem);
 }
 
+.lp-skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background-color: var(--lp-ink-900);
+  color: #ffffff;
+  border-radius: 0 0 var(--lp-radius-sm) var(--lp-radius-sm);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.lp-skip-link:focus {
+  top: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.35rem;
+  font-size: 0.925rem;
+  font-weight: 600;
+  line-height: 1.25;
+  border-radius: var(--lp-radius-md);
+  border: 1px solid transparent;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.lp-btn:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+
+.lp-btn--header {
+  background-color: var(--lp-ink-900);
+  border-color: var(--lp-ink-900);
+  color: #ffffff;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+}
+
+.lp-btn--header:hover {
+  background-color: var(--lp-accent);
+  border-color: var(--lp-accent);
+  color: #ffffff;
+}
+
+.lp-btn--primary {
+  background-color: var(--lp-ink-900);
+  border-color: var(--lp-ink-900);
+  color: #ffffff;
+  padding: 0.75rem 1.6rem;
+  font-size: 0.95rem;
+}
+
+.lp-btn--primary:hover {
+  background-color: var(--lp-accent);
+  border-color: var(--lp-accent);
+  color: #ffffff;
+}
+
+.lp-btn--secondary {
+  background-color: transparent;
+  border-color: var(--lp-border-strong);
+  color: var(--lp-ink-800);
+  padding: 0.75rem 1.6rem;
+  font-size: 0.95rem;
+}
+
+.lp-btn--secondary:hover {
+  background-color: var(--lp-bg-subtle);
+  border-color: var(--lp-ink-600);
+  color: var(--lp-ink-900);
+}
+
+/* --------------------------------------------------------------------------
+   Public Header
+   -------------------------------------------------------------------------- */
+.lp-header {
+  border-bottom: 1px solid var(--lp-border);
+  background-color: var(--lp-bg);
+  position: relative;
+  z-index: 50;
+}
+
+.lp-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+}
+
+.lp-header__brand-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.lp-header__brand {
+  font-size: 0.975rem;
+  font-weight: 750;
+  color: var(--lp-ink-900);
+  letter-spacing: -0.015em;
+}
+
+.lp-header__badge {
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--lp-ink-500);
+  background-color: var(--lp-bg-muted);
+  border: 1px solid var(--lp-border);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--lp-radius-sm);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.lp-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+.lp-header__link {
+  font-size: 0.875rem;
+  font-weight: 550;
+  color: var(--lp-ink-600);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.lp-header__link:hover {
+  color: var(--lp-ink-900);
+}
+
+/* --------------------------------------------------------------------------
+   Hero Section — Editorial Asymmetric Layout
+   -------------------------------------------------------------------------- */
+.lp-hero {
+  padding-block: clamp(3.5rem, 6vw, 5.5rem);
+  border-bottom: 1px solid var(--lp-border);
+  background: linear-gradient(180deg, #ffffff 0%, var(--lp-bg-subtle) 100%);
+}
+
+.lp-hero__grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
+  align-items: start;
+}
+
+.lp-hero__content {
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-hero__eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.lp-hero__eyebrow {
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--lp-accent);
+}
+
+.lp-hero__eyebrow-line {
+  height: 1px;
+  width: 40px;
+  background-color: var(--lp-border-strong);
+}
+
+.lp-hero__headline {
+  font-size: clamp(2.2rem, 3.8vw, 3.1rem);
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.03em;
+  color: var(--lp-ink-900);
+  margin-bottom: 1.25rem;
+}
+
+.lp-hero__lead {
+  font-size: clamp(1.05rem, 1.6vw, 1.18rem);
+  color: var(--lp-ink-600);
+  line-height: 1.65;
+  margin-bottom: 2rem;
+  max-width: 600px;
+}
+
+.lp-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 2.25rem;
+}
+
+.lp-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--lp-ink-500);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--lp-border);
+}
+
+.lp-hero__meta-dot {
+  color: var(--lp-ink-400);
+}
+
+/* Hero System Scope Sidebar Panel */
+.lp-hero__sidebar {
+  background-color: var(--lp-bg);
+  border: 1px solid var(--lp-border);
+  border-radius: var(--lp-radius-md);
+  box-shadow: 0 1px 3px rgba(11, 19, 43, 0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-hero__sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+  background-color: var(--lp-bg-muted);
+  border-bottom: 1px solid var(--lp-border);
+}
+
+.lp-hero__sidebar-tag {
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  color: var(--lp-ink-700);
+  text-transform: uppercase;
+}
+
+.lp-hero__sidebar-badge {
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--lp-accent);
+  background-color: var(--lp-accent-subtle);
+  border: 1px solid var(--lp-accent-border);
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--lp-radius-sm);
+}
+
+.lp-hero__sidebar-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-hero__sidebar-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 0.85rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--lp-border-subtle);
+  transition: background-color 0.15s ease;
+}
+
+.lp-hero__sidebar-row:last-child {
+  border-bottom: none;
+}
+
+.lp-hero__sidebar-num {
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: var(--lp-accent);
+  padding-top: 0.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-hero__sidebar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.lp-hero__sidebar-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--lp-ink-900);
+}
+
+.lp-hero__sidebar-desc {
+  font-size: 0.78rem;
+  color: var(--lp-ink-500);
+  line-height: 1.4;
+}
+
+.lp-hero__sidebar-footer {
+  padding: 0.75rem 1.25rem;
+  background-color: var(--lp-bg-subtle);
+  border-top: 1px solid var(--lp-border);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--lp-ink-500);
+}
+
+/* --------------------------------------------------------------------------
+   Sections (Capabilities, Workflow, Trust, CTA, Footer)
+   -------------------------------------------------------------------------- */
 .lp-section {
   padding-block: 5rem;
   border-bottom: 1px solid var(--lp-border);
@@ -43,172 +380,29 @@
 
 .lp-section__eyebrow {
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--lp-text-muted);
+  color: var(--lp-accent);
   margin-bottom: 0.5rem;
 }
 
 .lp-section__title {
   font-size: 2rem;
-  font-weight: 700;
-  color: var(--lp-text);
+  font-weight: 750;
+  color: var(--lp-ink-900);
   margin-bottom: 0.75rem;
   line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 
 .lp-section__lead {
   font-size: 1.0625rem;
-  color: var(--lp-text-muted);
+  color: var(--lp-ink-600);
   max-width: 640px;
   margin-bottom: 2.5rem;
 }
 
-/* --------------------------------------------------------------------------
-   Buttons & Links
-   -------------------------------------------------------------------------- */
-.lp-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  text-decoration: none;
-  cursor: pointer;
-  line-height: 1.25;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.lp-btn:focus-visible {
-  outline: 2px solid var(--lp-accent);
-  outline-offset: 2px;
-}
-
-.lp-btn--primary {
-  background-color: var(--lp-accent);
-  border-color: var(--lp-accent);
-  color: #ffffff;
-}
-
-.lp-btn--primary:hover {
-  background-color: var(--lp-accent-hover);
-  border-color: var(--lp-accent-hover);
-  color: #ffffff;
-}
-
-.lp-btn--secondary {
-  background-color: transparent;
-  border-color: var(--lp-border);
-  color: var(--lp-text);
-}
-
-.lp-btn--secondary:hover {
-  background-color: var(--lp-bg-subtle);
-  border-color: #cbd5e1;
-}
-
-.lp-skip-link {
-  position: absolute;
-  top: -100px;
-  left: 1rem;
-  z-index: 100;
-  padding: 0.5rem 1rem;
-  background-color: var(--lp-text);
-  color: #ffffff;
-  border-radius: 0 0 4px 4px;
-  text-decoration: none;
-}
-
-.lp-skip-link:focus {
-  top: 0;
-}
-
-/* --------------------------------------------------------------------------
-   Header
-   -------------------------------------------------------------------------- */
-.lp-header {
-  border-bottom: 1px solid var(--lp-border);
-  background-color: var(--lp-bg);
-}
-
-.lp-header__inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 64px;
-}
-
-.lp-header__brand {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--lp-text);
-  text-decoration: none;
-}
-
-.lp-header__nav {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.lp-header__link {
-  font-size: 0.9375rem;
-  color: var(--lp-text-muted);
-  text-decoration: none;
-}
-
-.lp-header__link:hover {
-  color: var(--lp-text);
-}
-
-/* --------------------------------------------------------------------------
-   Hero
-   -------------------------------------------------------------------------- */
-.lp-hero {
-  padding-block: 5.5rem 5rem;
-  border-bottom: 1px solid var(--lp-border);
-}
-
-.lp-hero__eyebrow {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--lp-text-muted);
-  margin-bottom: 1rem;
-}
-
-.lp-hero__title {
-  font-size: 2.75rem;
-  font-weight: 750;
-  line-height: 1.2;
-  color: var(--lp-text);
-  margin-bottom: 1.25rem;
-  max-width: 780px;
-  letter-spacing: -0.02em;
-}
-
-.lp-hero__lead {
-  font-size: 1.125rem;
-  color: var(--lp-text-muted);
-  max-width: 680px;
-  margin-bottom: 2rem;
-  line-height: 1.6;
-}
-
-.lp-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-/* --------------------------------------------------------------------------
-   Capabilities (Clean Numbered List)
-   -------------------------------------------------------------------------- */
 .lp-capabilities-list {
   display: flex;
   flex-direction: column;
@@ -226,27 +420,24 @@
 
 .lp-capability-item__num {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--lp-text-muted);
+  font-weight: 700;
+  color: var(--lp-accent);
 }
 
 .lp-capability-item__title {
   font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--lp-text);
+  font-weight: 700;
+  color: var(--lp-ink-900);
   margin-bottom: 0.35rem;
 }
 
 .lp-capability-item__desc {
   font-size: 0.9375rem;
-  color: var(--lp-text-muted);
+  color: var(--lp-ink-600);
   margin: 0;
   max-width: 760px;
 }
 
-/* --------------------------------------------------------------------------
-   How It Works (Simple Ordered Sequence)
-   -------------------------------------------------------------------------- */
 .lp-workflow-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -263,27 +454,24 @@
 
 .lp-workflow-item__num {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 750;
   color: var(--lp-accent);
   margin-bottom: 0.5rem;
 }
 
 .lp-workflow-item__title {
   font-size: 1.0625rem;
-  font-weight: 600;
-  color: var(--lp-text);
+  font-weight: 700;
+  color: var(--lp-ink-900);
   margin-bottom: 0.35rem;
 }
 
 .lp-workflow-item__desc {
   font-size: 0.9375rem;
-  color: var(--lp-text-muted);
+  color: var(--lp-ink-600);
   margin: 0;
 }
 
-/* --------------------------------------------------------------------------
-   Accountability (Simple 2-Column Grid)
-   -------------------------------------------------------------------------- */
 .lp-trust-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -293,20 +481,17 @@
 
 .lp-trust-item__title {
   font-size: 1.0625rem;
-  font-weight: 600;
-  color: var(--lp-text);
+  font-weight: 700;
+  color: var(--lp-ink-900);
   margin-bottom: 0.35rem;
 }
 
 .lp-trust-item__desc {
   font-size: 0.9375rem;
-  color: var(--lp-text-muted);
+  color: var(--lp-ink-600);
   margin: 0;
 }
 
-/* --------------------------------------------------------------------------
-   Sign-In CTA (Simple Centered Section)
-   -------------------------------------------------------------------------- */
 .lp-cta-section {
   padding-block: 5rem;
   text-align: center;
@@ -315,27 +500,24 @@
 
 .lp-cta-section__title {
   font-size: 1.875rem;
-  font-weight: 700;
-  color: var(--lp-text);
+  font-weight: 750;
+  color: var(--lp-ink-900);
   margin-bottom: 0.75rem;
 }
 
 .lp-cta-section__text {
   font-size: 1.0625rem;
-  color: var(--lp-text-muted);
+  color: var(--lp-ink-600);
   max-width: 560px;
   margin-inline: auto;
   margin-bottom: 1.75rem;
 }
 
-/* --------------------------------------------------------------------------
-   Footer
-   -------------------------------------------------------------------------- */
 .lp-footer {
   padding-block: 2.5rem;
   background-color: var(--lp-bg);
   font-size: 0.875rem;
-  color: var(--lp-text-muted);
+  color: var(--lp-ink-500);
 }
 
 .lp-footer__inner {
@@ -347,8 +529,8 @@
 }
 
 .lp-footer__brand {
-  font-weight: 600;
-  color: var(--lp-text);
+  font-weight: 700;
+  color: var(--lp-ink-900);
 }
 
 .lp-footer__nav {
@@ -358,7 +540,7 @@
 }
 
 .lp-footer__link {
-  color: var(--lp-text-muted);
+  color: var(--lp-ink-600);
   text-decoration: none;
   background: none;
   border: none;
@@ -368,13 +550,36 @@
 }
 
 .lp-footer__link:hover {
-  color: var(--lp-text);
+  color: var(--lp-ink-900);
 }
 
 /* --------------------------------------------------------------------------
-   Responsive
+   Responsive Layout
    -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .lp-hero__grid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .lp-hero__sidebar {
+    max-width: 540px;
+  }
+}
+
 @media (max-width: 768px) {
+  .lp-header__nav {
+    gap: 0.75rem;
+  }
+
+  .lp-header__link {
+    display: none;
+  }
+
+  .lp-header__badge {
+    display: none;
+  }
+
   .lp-section {
     padding-block: 3.5rem;
   }
@@ -383,8 +588,18 @@
     padding-block: 3.5rem 3rem;
   }
 
-  .lp-hero__title {
-    font-size: 2rem;
+  .lp-hero__headline {
+    font-size: 2.1rem;
+  }
+
+  .lp-hero__meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .lp-hero__meta-dot {
+    display: none;
   }
 
   .lp-workflow-list {
@@ -401,5 +616,18 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .lp-hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .lp-hero__actions .lp-btn {
+    width: 100%;
+    text-align: center;
   }
 }

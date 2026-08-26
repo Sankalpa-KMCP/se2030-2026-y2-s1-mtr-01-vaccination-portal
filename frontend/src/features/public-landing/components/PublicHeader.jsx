@@ -4,7 +4,10 @@ export default function PublicHeader({ onLoginClick }) {
   return (
     <header className="lp-header">
       <div className="lp-container lp-header__inner">
-        <span className="lp-header__brand">Web-Based Vaccination Portal</span>
+        <div className="lp-header__brand-group">
+          <span className="lp-header__brand">Web-Based Vaccination Portal</span>
+          <span className="lp-header__badge">Operational System</span>
+        </div>
 
         <nav className="lp-header__nav" aria-label="Main navigation">
           <a className="lp-header__link" href="#capabilities">
@@ -15,7 +18,7 @@ export default function PublicHeader({ onLoginClick }) {
           </a>
           <button
             type="button"
-            className="lp-btn lp-btn--primary"
+            className="lp-btn lp-btn--header"
             onClick={onLoginClick}
           >
             Sign in
