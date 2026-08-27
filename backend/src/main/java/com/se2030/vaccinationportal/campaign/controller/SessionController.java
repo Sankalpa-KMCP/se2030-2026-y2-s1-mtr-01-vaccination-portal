@@ -18,11 +18,14 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
 import com.se2030.vaccinationportal.campaign.service.SessionOperationalReadinessService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,6 +53,7 @@ public class SessionController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionResponse> createSession(@Valid @RequestBody CreateSessionRequest request) {
         VaccinationSession created = sessionService.createOneOffDraftSession(
                 request.campaignId(),
@@ -70,6 +74,7 @@ public class SessionController {
     }
 
     @GetMapping("/{id}/readiness")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<SessionOperationalReadinessResponse> getSessionReadiness(@PathVariable Long id) {
         SessionOperationalReadinessService.OperationalReadinessResult result = readinessService.evaluateReadiness(id);
         return ResponseEntity.ok(SessionDtoMapper.toReadinessResponse(result));
@@ -89,34 +94,39 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/schedule")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionResponse> scheduleSession(@PathVariable Long id) {
         VaccinationSession scheduled = sessionService.scheduleSession(id);
         return ResponseEntity.ok(SessionDtoMapper.toResponse(scheduled));
     }
 
     @PostMapping("/{id}/start")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<SessionResponse> startSession(@PathVariable Long id) {
         VaccinationSession started = sessionService.startSession(id);
         return ResponseEntity.ok(SessionDtoMapper.toResponse(started));
     }
 
     @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<SessionResponse> completeSession(@PathVariable Long id) {
         VaccinationSession completed = sessionService.completeSession(id);
         return ResponseEntity.ok(SessionDtoMapper.toResponse(completed));
     }
 
     @PostMapping("/{id}/cancellation-preview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionChangePreviewResponse> previewCancellation(@PathVariable Long id) {
         SessionChangePreview preview = sessionService.previewCancellation(id);
         return ResponseEntity.ok(SessionDtoMapper.toPreviewResponse(preview));
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionResponse> confirmCancellation(
             @PathVariable Long id,
             @Valid @RequestBody ConfirmSessionCancellationRequest request,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         if (principal == null) {
             return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
@@ -132,6 +142,7 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/reschedule-preview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionChangePreviewResponse> previewReschedule(
             @PathVariable Long id,
             @Valid @RequestBody PreviewSessionRescheduleRequest request
@@ -146,10 +157,11 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/reschedule")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionResponse> confirmReschedule(
             @PathVariable Long id,
             @Valid @RequestBody ConfirmSessionRescheduleRequest request,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         if (principal == null) {
             return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
@@ -168,6 +180,7 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/transfer-preview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionChangePreviewResponse> previewCenterTransfer(
             @PathVariable Long id,
             @Valid @RequestBody PreviewSessionTransferRequest request
@@ -183,10 +196,11 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/transfer")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionResponse> confirmCenterTransfer(
             @PathVariable Long id,
             @Valid @RequestBody ConfirmSessionTransferRequest request,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         if (principal == null) {
             return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
@@ -206,6 +220,7 @@ public class SessionController {
     }
 
     @GetMapping("/{id}/change-events")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<SessionChangeEventResponse>> getSessionChangeEvents(@PathVariable Long id) {
         List<SessionChangeEvent> events = sessionService.getSessionChangeEvents(id);
         List<SessionChangeEventResponse> response = events.stream()
