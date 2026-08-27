@@ -2,6 +2,8 @@ package com.se2030.vaccinationportal.testcontainers;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,5 +69,20 @@ public abstract class AbstractMySqlTestContainersIntegrationTest {
                     "Expected MySQL 8.x/9.x but connected to version: " + productVersion
             );
         }
+    }
+
+    /**
+     * Creates an independent test-only observer connection with administrative access to query
+     * performance_schema lock metadata in the running MySQL Testcontainer.
+     */
+    protected Connection createObserverConnection() throws SQLException {
+        if (MYSQL_CONTAINER != null && MYSQL_CONTAINER.isRunning()) {
+            return DriverManager.getConnection(
+                    MYSQL_CONTAINER.getJdbcUrl(),
+                    "root",
+                    MYSQL_CONTAINER.getPassword()
+            );
+        }
+        return dataSource.getConnection();
     }
 }

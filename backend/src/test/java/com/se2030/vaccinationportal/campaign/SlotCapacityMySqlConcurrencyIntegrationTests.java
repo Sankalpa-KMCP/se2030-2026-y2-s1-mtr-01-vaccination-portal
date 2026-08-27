@@ -12,45 +12,32 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
+import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffIdentityRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.service.OccupancyEvaluationResult;
+import com.se2030.vaccinationportal.campaign.service.OccupancyInterval;
+import com.se2030.vaccinationportal.campaign.service.SessionCapacityCalculationService;
 import com.se2030.vaccinationportal.campaign.service.TimeSlotCapacityService;
 import com.se2030.vaccinationportal.campaign.service.TimeSlotService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCenterService;
 import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
-import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
-import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
-import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
-import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperationalStaffIdentityRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
-import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
-import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
-import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
-import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
-import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
-import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
-import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
-import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperationalStaffIdentityRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
-import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
-import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
-import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
-import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -80,6 +67,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Production-equivalent MySQL Testcontainers concurrency tests verifying deterministic pessimistic locking,
+ * atomic reservation counters, capacity floor preservation, and overbooking prevention on real MySQL/InnoDB.
  */
 class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
 
@@ -88,6 +79,9 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
 
     @Autowired
     private TimeSlotService timeSlotService;
+
+    @Autowired
+    private SessionCapacityCalculationService calculationService;
 
     @Autowired
     private VaccinationCenterService centerService;
@@ -144,10 +138,10 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
     private VaccinationCenterRepository centerRepository;
 
     @Autowired
-    private VaccineTypeRepository vaccineTypeRepository;
+    private TargetGroupRepository targetGroupRepository;
 
     @Autowired
-    private TargetGroupRepository targetGroupRepository;
+    private VaccineTypeRepository vaccineTypeRepository;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -623,7 +617,7 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
             });
 
             // Deterministically prove that the lowering transaction is blocked in MySQL on the center row lock
-            awaitCenterLockWait(center.getId(), 10000);
+            awaitCenterLockWait(10000);
 
             // Now release the slot creation transaction to commit
             releaseSlotTx.countDown();
@@ -642,6 +636,17 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         }
 
         assertEquals(10, centerRepository.findById(center.getId()).orElseThrow().getSafeConcurrentOccupancy());
+        List<TimeSlot> slots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(session.getId());
+        assertEquals(1, slots.size(), "Target created slot must be persisted");
+        assertEquals(8, slots.get(0).getCapacity(), "Target slot capacity must be 8");
+
+        SessionCapacityPlan plan = capacityPlanRepository.findTopBySessionIdOrderByRevisionDesc(session.getId()).orElse(null);
+        int expectedDwell = plan != null ? plan.getExpectedDwellMinutes() : SessionCapacityPlan.DEFAULT_EXPECTED_DWELL_MINUTES;
+        double accompanyingRatio = plan != null ? plan.getExpectedAccompanyingPersonsPerBooking() : SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO;
+        List<OccupancyInterval> intervals = calculationService.mapSlotsToOccupancyIntervals(slots, expectedDwell, accompanyingRatio);
+        OccupancyEvaluationResult occupancyResult = calculationService.evaluateConcurrentOccupancy(intervals, 10);
+        assertEquals(8.0, occupancyResult.peakOccupancyUnits(), 0.001, "Resulting configured peak occupancy must be 8.0");
+        assertTrue(occupancyResult.peakOccupancyUnits() <= 10, "Peak occupancy must remain <= center safeConcurrentOccupancy");
     }
 
     @Test
@@ -672,7 +677,7 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
             });
 
             // Deterministically prove that the slot creation transaction is blocked in MySQL on the center row lock
-            awaitCenterLockWait(center.getId(), 10000);
+            awaitCenterLockWait(10000);
 
             // Now release the lowering transaction to commit
             releaseLoweringTx.countDown();
@@ -723,7 +728,7 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
             });
 
             // Deterministically prove that the lowering transaction is blocked in MySQL on the center row lock
-            awaitCenterLockWait(center.getId(), 10000);
+            awaitCenterLockWait(10000);
 
             // Now release the slot update transaction to commit
             releaseUpdateTx.countDown();
@@ -796,7 +801,7 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         }
     }
 
-    private void awaitCenterLockWait(Long centerId, long timeoutMillis) {
+    private void awaitCenterLockWait(long timeoutMillis) {
         Instant deadline = Instant.now().plusMillis(timeoutMillis);
         String sql = """
                 SELECT count(*)
@@ -806,7 +811,7 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
                   AND req.LOCK_STATUS = 'WAITING'
                 """;
         while (Instant.now().isBefore(deadline)) {
-            try (Connection conn = dataSource.getConnection();
+            try (Connection conn = createObserverConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql);
                  ResultSet rs = stmt.executeQuery()) {
                 if (rs.next() && rs.getInt(1) > 0) {
