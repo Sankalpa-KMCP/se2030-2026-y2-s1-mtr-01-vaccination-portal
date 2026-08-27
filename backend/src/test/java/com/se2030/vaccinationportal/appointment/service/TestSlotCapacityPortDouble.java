@@ -70,4 +70,15 @@ public class TestSlotCapacityPortDouble implements SlotCapacityPort {
     public Instant getSlotStartTime(Long slotId) {
         return slotStartTimeMap.get(slotId);
     }
+
+    private final ConcurrentMap<Long, Boolean> sessionFullMap = new ConcurrentHashMap<>();
+
+    public void setSessionFull(Long sessionId, boolean full) {
+        sessionFullMap.put(sessionId, full);
+    }
+
+    @Override
+    public boolean isSessionFull(Long sessionId) {
+        return sessionFullMap.getOrDefault(sessionId, true);
+    }
 }

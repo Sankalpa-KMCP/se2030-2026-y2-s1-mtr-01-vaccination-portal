@@ -171,6 +171,39 @@ public class Appointment {
         this.status = AppointmentStatus.COMPLETED;
     }
 
+    /**
+     * Reschedules this appointment to a new time slot (MF03-BR-06).
+     *
+     * @param newSlotId Identifier of the target time slot
+     */
+    public void reschedule(Long newSlotId) {
+        if (newSlotId == null) {
+            throw new IllegalArgumentException("New slot ID is required for rescheduling");
+        }
+        this.slotId = newSlotId;
+    }
+
+    /**
+     * Checks in this appointment (MF03-BR-09, MF03-BR-10).
+     */
+    public void checkIn() {
+        this.status = AppointmentStatus.CHECKED_IN;
+    }
+
+    /**
+     * Reverts check-in status back to CONFIRMED (MF03-BR-15).
+     */
+    public void reverseCheckIn() {
+        this.status = AppointmentStatus.CONFIRMED;
+    }
+
+    /**
+     * Marks this appointment as NO_SHOW.
+     */
+    public void markNoShow() {
+        this.status = AppointmentStatus.NO_SHOW;
+    }
+
     @Override
     public String toString() {
         return "Appointment{" +
