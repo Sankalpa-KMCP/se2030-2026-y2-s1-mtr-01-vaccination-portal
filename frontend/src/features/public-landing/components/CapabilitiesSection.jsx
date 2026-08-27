@@ -2,7 +2,7 @@ import React from 'react';
 
 const PRIMARY_CAPABILITY = {
   num: '01',
-  tag: 'Core Governance',
+  tag: 'Campaign Operations',
   title: 'Vaccination Campaign Management',
   desc: 'Define target populations, configure multi-dose vaccination programmes, set geographic locations, and guide campaigns through their formal operational lifecycle from draft to completion.',
   highlights: ['Dose interval rules', 'Geographic targeting', 'Lifecycle status transitions'],
@@ -25,17 +25,17 @@ const SECONDARY_CAPABILITIES = [
   },
   {
     num: '04',
-    tag: 'Quality & Verification',
+    tag: 'Capacity & Readiness',
     title: 'Operational Capacity & Readiness',
-    desc: 'Plan daily session throughput capacity in advance and verify operational readiness through automated pre-session validation.',
-    highlights: ['Throughput calculation', '6-point readiness gate'],
+    desc: 'Plan daily session throughput capacity in advance and verify operational readiness through pre-session checks.',
+    highlights: ['Throughput calculation', 'Operational readiness checks'],
   },
   {
     num: '05',
     tag: 'Security & Access',
     title: 'Secure Role-Based Access',
-    desc: 'Restrict portal operations to authenticated accounts with functional access shaped by assigned healthcare and administrative roles.',
-    highlights: ['Role-scoped permissions', 'Verified session audit'],
+    desc: 'Restrict portal operations to authenticated accounts with functional access shaped by assigned operational roles.',
+    highlights: ['Role-scoped permissions', 'Session change records'],
   },
 ];
 

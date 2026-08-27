@@ -5,13 +5,13 @@ const PRINCIPLES = [
     num: '01',
     tag: 'Access Control',
     title: 'Role-based access',
-    desc: 'Access to portal functions follows each authenticated user’s assigned role, ensuring strict boundaries across clinical and administrative workflows.',
+    desc: 'Access to portal functions follows each authenticated user’s assigned role, ensuring strict boundaries across authorized operational workflows.',
   },
   {
     num: '02',
-    tag: 'Audit Traceability',
+    tag: 'Operational History',
     title: 'Recorded operational changes',
-    desc: 'Campaign decisions, staffing revisions, and session changes are recorded with administrative metadata so operational actions can be audited.',
+    desc: 'Campaign decisions, staffing revisions, and session changes are recorded with administrative metadata so operational actions can be reviewed.',
   },
   {
     num: '03',
@@ -21,7 +21,7 @@ const PRINCIPLES = [
   },
   {
     num: '04',
-    tag: 'Capacity Governance',
+    tag: 'Capacity Management',
     title: 'Controlled capacity adjustments',
     desc: 'Capacity changes are deliberate, recorded plan revisions based on available physical stations and calculated throughput rather than silent edits.',
   },
@@ -42,12 +42,12 @@ export default function TrustSection() {
               Built for operational accountability
             </h2>
             <p className="lp-section__lead">
-              Every critical action—from capacity planning to session scheduling—is governed by clear role boundaries, pre-session validation, and traceable operational records.
+              Every critical action—from capacity planning to session scheduling—is governed by clear role boundaries, operational readiness checks, and traceable operational records.
             </p>
             <div className="lp-trust__badge-box">
-              <span className="lp-trust__badge">Operational Integrity</span>
+              <span className="lp-trust__badge">Operational Accountability</span>
               <p className="lp-trust__badge-text">
-                Designed for clinical governance and transparent administrative oversight.
+                Designed around role-scoped access and recorded operational changes.
               </p>
             </div>
           </div>

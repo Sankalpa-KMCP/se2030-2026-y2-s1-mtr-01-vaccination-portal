@@ -5,8 +5,8 @@ const STAGES = [
     stageNum: 'STAGE 01',
     phase: 'Identity & Access',
     title: 'Sign in securely',
-    desc: 'Each team member signs in through an authenticated account associated with their assigned clinical, administrative, or operational role.',
-    points: ['Role-scoped permissions', 'Verified session context'],
+    desc: 'Each team member signs in through an authenticated account associated with their assigned operational role.',
+    points: ['Role-scoped permissions', 'Authenticated session access'],
   },
   {
     stageNum: 'STAGE 02',
@@ -19,7 +19,7 @@ const STAGES = [
     stageNum: 'STAGE 03',
     phase: 'Planning & Execution',
     title: 'Plan and operate vaccination sessions',
-    desc: 'Schedule single or recurring sessions, plan throughput capacity, execute pre-session readiness verification, and manage recorded schedule revisions.',
+    desc: 'Schedule single or recurring sessions, plan throughput capacity, execute pre-session readiness checks, and manage recorded schedule revisions.',
     points: ['Throughput & recurrence rules', 'Operational readiness checks'],
   },
 ];
@@ -37,7 +37,7 @@ export default function HowItWorksSection() {
             How programme operations work
           </h2>
           <p className="lp-section__lead">
-            A structured operational sequence from user authentication to verified session readiness.
+            A structured operational sequence from user authentication to operational session readiness.
           </p>
         </div>
 

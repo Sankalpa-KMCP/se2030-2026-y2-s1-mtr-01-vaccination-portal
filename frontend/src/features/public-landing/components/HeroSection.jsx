@@ -76,13 +76,13 @@ export default function HeroSection({ onLoginClick }) {
               <span className="lp-hero__sidebar-num">04</span>
               <div className="lp-hero__sidebar-body">
                 <span className="lp-hero__sidebar-title">Readiness Gate</span>
-                <span className="lp-hero__sidebar-desc">6-point automated pre-opening validation</span>
+                <span className="lp-hero__sidebar-desc">Pre-opening operational readiness checks</span>
               </div>
             </div>
           </div>
 
           <div className="lp-hero__sidebar-footer">
-            <span>Authorized healthcare and operations personnel only</span>
+            <span>Authorized operational portal accounts only</span>
           </div>
         </aside>
       </div>

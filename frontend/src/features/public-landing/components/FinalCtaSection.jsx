@@ -17,7 +17,7 @@ export default function FinalCtaSection({ onLoginClick }) {
               Sign in with your authorized account to manage campaigns, centers, and vaccination sessions.
             </p>
             <span className="lp-cta-panel__note">
-              Restricted to verified healthcare and operational personnel.
+              Access is based on your assigned portal role.
             </span>
           </div>
 
