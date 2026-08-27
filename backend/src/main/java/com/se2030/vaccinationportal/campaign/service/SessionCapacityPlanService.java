@@ -239,7 +239,7 @@ public class SessionCapacityPlanService {
 
         Integer ceiling = lockedCenter.getSessionServiceCeiling();
 
-        Optional<SessionCapacityPlan> latestPlan = planRepository.findTopBySessionIdOrderByRevisionDesc(sessionId);
+        Optional<SessionCapacityPlan> latestPlan = planRepository.findFirstBySessionIdOrderByRevisionDesc(sessionId);
         int nextRevision = latestPlan.map(p -> p.getRevision() + 1).orElse(1);
 
         String approvedBy = actor != null ? String.valueOf(actor.userId()) : null;
