@@ -391,4 +391,60 @@ class SessionOperationalReadinessServiceIntegrationTests {
         assertThat(result.ready()).isFalse();
         assertThat(result.violations()).anyMatch(v -> v.contains("Configured time slots exceed safe concurrent occupancy"));
     }
+
+    @Test
+    @DisplayName("readiness: when center safe occupancy is lowered below plan snapshot, readiness fails and reports violation")
+    void readiness_whenCenterSafeOccupancyLoweredBelowPlan_failsAndReportsViolation() {
+        configureFullReadiness();
+
+        // Center safe occupancy was 50, plan was created with 50.
+        // Center safe occupancy is later lowered to 20.
+        center.updateDetails("Readiness Center", "123 Center Road", "+1234567890", 20, null);
+        centerRepository.saveAndFlush(center);
+        entityManager.flush();
+        entityManager.clear();
+
+        VaccinationCampaign lockedCampaign = campaignRepository.findByIdForUpdate(campaign.getId()).orElseThrow();
+        VaccinationSession lockedSession = sessionRepository.findByIdForUpdate(session.getId()).orElseThrow();
+
+        // 1. assertReadyForScheduling must throw IllegalStateException
+        assertThatThrownBy(() -> readinessService.assertReadyForScheduling(lockedCampaign, lockedSession))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("exceeds current center safety limit (20)");
+
+        // 2. evaluateReadiness must report violation
+        SessionOperationalReadinessService.OperationalReadinessResult result =
+                readinessService.evaluateReadiness(session.getId());
+        assertThat(result.ready()).isFalse();
+        assertThat(result.violations()).anyMatch(v -> v.contains("exceeds current center safety limit (20)"));
+    }
+
+    @Test
+    @DisplayName("readiness: partial staff or station coverage fails readiness checks")
+    void readiness_withPartialCoverage_fails() {
+        resourceAssignmentService.createAssignment(
+                session.getId(), stationResource.getId(), SESSION_START, SESSION_END
+        );
+        // Only assign first hour of 3-hour session
+        staffAssignmentService.createAssignment(
+                session.getId(), vaccinatorRoster.getId(), StaffRole.VACCINATOR, SESSION_START, SESSION_START.plus(1, ChronoUnit.HOURS)
+        );
+        capacityPlanService.createCapacityPlan(
+                session.getId(),
+                new CreateSessionCapacityPlanRequest(0, 0, 50, 15, 0.0, null, "Planner")
+        );
+        entityManager.flush();
+        entityManager.clear();
+
+        VaccinationCampaign lockedCampaign = campaignRepository.findByIdForUpdate(campaign.getId()).orElseThrow();
+        VaccinationSession lockedSession = sessionRepository.findByIdForUpdate(session.getId()).orElseThrow();
+
+        assertThatThrownBy(() -> readinessService.assertReadyForScheduling(lockedCampaign, lockedSession))
+                .isInstanceOf(IllegalStateException.class);
+
+        SessionOperationalReadinessService.OperationalReadinessResult result =
+                readinessService.evaluateReadiness(session.getId());
+        assertThat(result.ready()).isFalse();
+        assertThat(result.violations()).anyMatch(v -> v.contains("No active vaccinators assigned"));
+    }
 }

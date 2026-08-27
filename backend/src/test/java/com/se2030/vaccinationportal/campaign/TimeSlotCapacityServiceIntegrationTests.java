@@ -640,4 +640,47 @@ class TimeSlotCapacityServiceIntegrationTests {
         );
         assertTrue(ex.getMessage().contains("Peak concurrent occupancy (30.0) exceeds safe concurrent occupancy limit (20)"));
     }
+
+    @Test
+    @DisplayName("createSlot: enforces lowered current center safety limit over stale higher plan snapshot")
+    void createSlot_enforcesLoweredCenterSafetyLimit_overStaleHigherPlanSnapshot() {
+        // Plan snapshot has safe occupancy = 40
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 100, 40, 15, 0.0, null, "Override", "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        // Center safe occupancy is later lowered to 20
+        testCenter.updateDetails("Capacity Center", "123 Main St", "+1234567890", 20, null);
+        centerRepository.saveAndFlush(testCenter);
+
+        // Slot 1: [baseStart, baseStart + 60m), cap = 15 <= 20
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 15);
+
+        // Slot 2 overlapping: [baseStart + 30m, baseStart + 90m), cap = 10.
+        // Peak = 15 + 10 = 25. Under stale plan (40), it would pass. Under current center (20), it must fail!
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 10)
+        );
+        assertTrue(ex.getMessage().contains("exceeds safe concurrent occupancy limit (20)"));
+    }
+
+    @Test
+    @DisplayName("createSlot: respects conservative plan snapshot when center limit is higher")
+    void createSlot_respectsConservativePlanSnapshot_whenCenterLimitIsHigher() {
+        // Plan snapshot has conservative safe occupancy = 15 (center is 50)
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 100, 15, 15, 0.0, null, "Override", "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        // Slot 1: [baseStart, baseStart + 60m), cap = 10
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 10);
+
+        // Slot 2 overlapping: [baseStart + 30m, baseStart + 90m), cap = 10. Peak = 20 > conservative plan (15).
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 10)
+        );
+        assertTrue(ex.getMessage().contains("exceeds safe concurrent occupancy limit (15)"));
+    }
 }

@@ -78,8 +78,8 @@ public class SessionCapacityPlanService {
 
         int durationMinutes = calculateDurationMinutes(session);
         int expectedServiceMinutes = resolveExpectedServiceMinutes(session);
-        int assignedVaccinators = countAssignedVaccinators(sessionId);
-        int availableStations = countAvailableStations(sessionId);
+        int assignedVaccinators = countAssignedVaccinators(session);
+        int availableStations = countAvailableStations(session);
 
         int fullyEquipped = request.fullyEquippedStationCount();
         if (fullyEquipped < 0) {
@@ -182,8 +182,8 @@ public class SessionCapacityPlanService {
 
         int durationMinutes = calculateDurationMinutes(session);
         int expectedServiceMinutes = resolveExpectedServiceMinutes(session);
-        int assignedVaccinators = countAssignedVaccinators(sessionId);
-        int availableStations = countAvailableStations(sessionId);
+        int assignedVaccinators = countAssignedVaccinators(session);
+        int availableStations = countAvailableStations(session);
 
         int fullyEquipped = request.fullyEquippedStationCount();
         if (fullyEquipped < 0) {
@@ -315,13 +315,21 @@ public class SessionCapacityPlanService {
                 .orElse(CampaignDoseProgramme.DEFAULT_EXPECTED_SERVICE_MINUTES);
     }
 
-    private int countAssignedVaccinators(Long sessionId) {
-        List<StaffAssignment> assignments = staffAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(sessionId);
-        return (int) assignments.stream()
+    private int countAssignedVaccinators(VaccinationSession session) {
+        List<StaffAssignment> assignments = staffAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(session.getId());
+        List<StaffAssignment> qualifying = assignments.stream()
                 .filter(a -> a.getRole() == StaffRole.VACCINATOR
                         && a.getStaffRoster() != null
                         && a.getStaffRoster().getStatus() == OperationalStaffStatus.ACTIVE)
-                .count();
+                .toList();
+        return calculationService.calculateMinimumConcurrentIdentities(
+                session.getStartAt(),
+                session.getEndAt(),
+                qualifying,
+                StaffAssignment::getUserId,
+                StaffAssignment::getStartAt,
+                StaffAssignment::getEndAt
+        );
     }
 
     private int resolveSafeConcurrentOccupancy(Integer requestedSafeOccupancy, int centerSafeLimit) {
@@ -339,12 +347,20 @@ public class SessionCapacityPlanService {
         return requestedSafeOccupancy;
     }
 
-    private int countAvailableStations(Long sessionId) {
-        List<SessionResourceAssignment> assignments = resourceAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(sessionId);
-        return (int) assignments.stream()
+    private int countAvailableStations(VaccinationSession session) {
+        List<SessionResourceAssignment> assignments = resourceAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(session.getId());
+        List<SessionResourceAssignment> qualifying = assignments.stream()
                 .filter(a -> a.getResource() != null
                         && a.getResource().getResourceType() == ResourceType.VACCINATION_STATION
                         && a.getResource().getStatus() == OperationalResourceStatus.ACTIVE)
-                .count();
+                .toList();
+        return calculationService.calculateMinimumConcurrentIdentities(
+                session.getStartAt(),
+                session.getEndAt(),
+                qualifying,
+                a -> a.getResource().getId(),
+                SessionResourceAssignment::getStartAt,
+                SessionResourceAssignment::getEndAt
+        );
     }
 }

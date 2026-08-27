@@ -437,4 +437,78 @@ class SessionCapacityPlanServiceIntegrationTests {
         List<SessionCapacityPlan> plans = planRepository.findBySessionIdOrderByRevisionAsc(session.getId());
         assertTrue(plans.isEmpty());
     }
+
+    @Test
+    @DisplayName("interval-aware staff capacity calculates minimum concurrent distinct vaccinators")
+    void intervalAwareStaffCapacity_scenarios() {
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        Instant midSession = Instant.parse("2026-10-01T10:00:00Z"); // 2 hours in
+        Instant threeQuarter = Instant.parse("2026-10-01T11:00:00Z"); // 3 hours in
+
+        // 1. Partial coverage (roster1 assigned only 08:00-10:00) -> whole session capacity = 0
+        StaffAssignment partial = staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, midSession));
+        PreviewCapacityPlanRequest req1 = new PreviewCapacityPlanRequest(0, null, null, null, 0, null);
+        CapacityPlanPreviewResponse prev1 = capacityPlanService.previewCapacityPlan(session.getId(), req1);
+        assertEquals(0, prev1.assignedVaccinatorCount());
+        assertEquals(0, prev1.effectiveStationCount());
+        assertEquals(0, prev1.recommendedThroughput());
+
+        // 2. Same vaccinator with adjacent rows spanning session (08:00-10:00, 10:00-12:00) -> 1 (not 2)
+        StaffAssignment adjacent = staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, midSession, sessionEnd));
+        CapacityPlanPreviewResponse prev2 = capacityPlanService.previewCapacityPlan(session.getId(), req1);
+        assertEquals(1, prev2.assignedVaccinatorCount());
+        assertEquals(1, prev2.availableStationCount());
+
+        // Clean up staff assignments for next scenario
+        staffAssignmentRepository.delete(partial);
+        staffAssignmentRepository.delete(adjacent);
+        staffAssignmentRepository.flush();
+
+        // 3. Staggered overlapping vaccinators (v1: 08:00-11:00, v2: 10:00-12:00) -> min concurrent = 1
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, threeQuarter));
+        staffAssignmentRepository.save(new StaffAssignment(session, roster2, StaffRole.VACCINATOR, midSession, sessionEnd));
+        CapacityPlanPreviewResponse prev3 = capacityPlanService.previewCapacityPlan(session.getId(), req1);
+        assertEquals(1, prev3.assignedVaccinatorCount());
+    }
+
+    @Test
+    @DisplayName("interval-aware station capacity calculates minimum concurrent distinct stations and bounds fully equipped")
+    void intervalAwareStationCapacity_scenarios() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        staffAssignmentRepository.save(new StaffAssignment(session, roster2, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+
+        Instant midSession = Instant.parse("2026-10-01T10:00:00Z");
+        Instant threeQuarter = Instant.parse("2026-10-01T11:00:00Z");
+
+        // 1. Partial station assignment (station1 08:00-10:00) -> availableStationCount = 0
+        SessionResourceAssignment partial = resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, midSession));
+        PreviewCapacityPlanRequest req0 = new PreviewCapacityPlanRequest(0, null, null, null, 0, null);
+        CapacityPlanPreviewResponse prev1 = capacityPlanService.previewCapacityPlan(session.getId(), req0);
+        assertEquals(0, prev1.availableStationCount());
+
+        // 2. Same station with adjacent rows (08:00-10:00, 10:00-12:00) -> 1 (not 2)
+        SessionResourceAssignment adjacent = resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, midSession, sessionEnd));
+        CapacityPlanPreviewResponse prev2 = capacityPlanService.previewCapacityPlan(session.getId(), req0);
+        assertEquals(1, prev2.availableStationCount());
+
+        // Clean up
+        resourceAssignmentRepository.delete(partial);
+        resourceAssignmentRepository.delete(adjacent);
+        resourceAssignmentRepository.flush();
+
+        // 3. Staggered overlapping stations (s1: 08:00-11:00, s2: 10:00-12:00) -> sustainable availableStationCount = 1
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, threeQuarter));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station2, sessionStart, sessionEnd)); // s2 full
+        // Here s2 is full (08:00-12:00), s1 is 08:00-11:00.
+        // Segments: [08:00, 11:00) -> {s1, s2} (2), [11:00, 12:00) -> {s2} (1). Min concurrent = 1.
+        CapacityPlanPreviewResponse prev3 = capacityPlanService.previewCapacityPlan(session.getId(), req0);
+        assertEquals(1, prev3.availableStationCount());
+
+        // 4. Request fullyEquipped = 2 when sustainable available stations = 1 -> rejected
+        CreateSessionCapacityPlanRequest invalidEquipped = new CreateSessionCapacityPlanRequest(2, 24, null, null, null, null, "admin");
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), invalidEquipped));
+        assertTrue(ex.getMessage().contains("cannot exceed available station count (1)"));
+    }
 }

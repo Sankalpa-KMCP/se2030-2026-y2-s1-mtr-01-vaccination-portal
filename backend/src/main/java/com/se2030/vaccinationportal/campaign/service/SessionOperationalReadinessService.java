@@ -204,20 +204,37 @@ public class SessionOperationalReadinessService {
         }
 
         // 5. Evaluate qualifying counts
-        int availableStations = (int) resourceAssignments.stream()
+        List<SessionResourceAssignment> qualifyingStations = resourceAssignments.stream()
                 .filter(a -> a.getResource() != null
                         && a.getResource().getResourceType() == ResourceType.VACCINATION_STATION
                         && a.getResource().getStatus() == OperationalResourceStatus.ACTIVE)
-                .count();
+                .toList();
+        int availableStations = calculationService.calculateMinimumConcurrentIdentities(
+                lockedSession.getStartAt(),
+                lockedSession.getEndAt(),
+                qualifyingStations,
+                a -> a.getResource().getId(),
+                SessionResourceAssignment::getStartAt,
+                SessionResourceAssignment::getEndAt
+        );
 
         if (availableStations <= 0) {
             throw new IllegalStateException("Session has no active vaccination station resources assigned");
         }
 
-        int assignedVaccinators = (int) staffAssignments.stream()
+        List<StaffAssignment> qualifyingVaccinators = staffAssignments.stream()
                 .filter(a -> a.getRole() == StaffRole.VACCINATOR
+                        && a.getStaffRoster() != null
                         && a.getStaffRoster().getStatus() == OperationalStaffStatus.ACTIVE)
-                .count();
+                .toList();
+        int assignedVaccinators = calculationService.calculateMinimumConcurrentIdentities(
+                lockedSession.getStartAt(),
+                lockedSession.getEndAt(),
+                qualifyingVaccinators,
+                StaffAssignment::getUserId,
+                StaffAssignment::getStartAt,
+                StaffAssignment::getEndAt
+        );
 
         if (assignedVaccinators <= 0) {
             throw new IllegalStateException("Session has no active vaccinator staff assigned");
@@ -291,9 +308,22 @@ public class SessionOperationalReadinessService {
                     + ") exceeds center session service ceiling (" + ceiling + ")");
         }
 
+        int centerSafeLimit = lockedSession.getCenter().getSafeConcurrentOccupancy();
         if (latestPlan.getSafeConcurrentOccupancy() <= 0) {
             throw new IllegalStateException("Safe concurrent occupancy must be positive");
         }
+        if (latestPlan.getSafeConcurrentOccupancy() > centerSafeLimit) {
+            throw new IllegalStateException(String.format(
+                    "Latest capacity plan safe concurrent occupancy (%d) exceeds current center safety limit (%d)",
+                    latestPlan.getSafeConcurrentOccupancy(),
+                    centerSafeLimit
+            ));
+        }
+
+        int effectiveSafeOccupancy = calculationService.resolveEffectiveSafeConcurrentOccupancy(
+                latestPlan.getSafeConcurrentOccupancy(),
+                centerSafeLimit
+        );
 
         // 7. Evaluate exact concurrent occupancy across configured time slots under session lock
         List<TimeSlot> slots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
@@ -305,7 +335,7 @@ public class SessionOperationalReadinessService {
             );
             OccupancyEvaluationResult occupancyResult = calculationService.evaluateConcurrentOccupancy(
                     intervals,
-                    latestPlan.getSafeConcurrentOccupancy()
+                    effectiveSafeOccupancy
             );
             if (!occupancyResult.safe()) {
                 throw new IllegalStateException(String.format(
@@ -373,19 +403,36 @@ public class SessionOperationalReadinessService {
             }
         }
 
-        int availableStations = (int) resourceAssignments.stream()
+        List<SessionResourceAssignment> qualifyingStations = resourceAssignments.stream()
                 .filter(a -> a.getResource() != null
                         && a.getResource().getResourceType() == ResourceType.VACCINATION_STATION
                         && a.getResource().getStatus() == OperationalResourceStatus.ACTIVE)
-                .count();
+                .toList();
+        int availableStations = calculationService.calculateMinimumConcurrentIdentities(
+                session.getStartAt(),
+                session.getEndAt(),
+                qualifyingStations,
+                a -> a.getResource().getId(),
+                SessionResourceAssignment::getStartAt,
+                SessionResourceAssignment::getEndAt
+        );
         if (availableStations <= 0) {
             violations.add("No active vaccination stations assigned");
         }
 
-        int assignedVaccinators = (int) staffAssignments.stream()
+        List<StaffAssignment> qualifyingVaccinators = staffAssignments.stream()
                 .filter(a -> a.getRole() == StaffRole.VACCINATOR
+                        && a.getStaffRoster() != null
                         && a.getStaffRoster().getStatus() == OperationalStaffStatus.ACTIVE)
-                .count();
+                .toList();
+        int assignedVaccinators = calculationService.calculateMinimumConcurrentIdentities(
+                session.getStartAt(),
+                session.getEndAt(),
+                qualifyingVaccinators,
+                StaffAssignment::getUserId,
+                StaffAssignment::getStartAt,
+                StaffAssignment::getEndAt
+        );
         if (assignedVaccinators <= 0) {
             violations.add("No active vaccinators assigned");
         }
@@ -448,9 +495,21 @@ public class SessionOperationalReadinessService {
             violations.add("Approved capacity exceeds center service ceiling");
         }
 
+        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
         if (plan.getSafeConcurrentOccupancy() <= 0) {
             violations.add("Safe concurrent occupancy must be positive");
+        } else if (plan.getSafeConcurrentOccupancy() > centerSafeLimit) {
+            violations.add(String.format(
+                    "Capacity plan safe concurrent occupancy (%d) exceeds current center safety limit (%d)",
+                    plan.getSafeConcurrentOccupancy(),
+                    centerSafeLimit
+            ));
         }
+
+        int effectiveSafeOccupancy = calculationService.resolveEffectiveSafeConcurrentOccupancy(
+                plan.getSafeConcurrentOccupancy(),
+                centerSafeLimit
+        );
 
         List<TimeSlot> slots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(sessionId);
         if (!slots.isEmpty()) {
@@ -461,7 +520,7 @@ public class SessionOperationalReadinessService {
             );
             OccupancyEvaluationResult occupancyResult = calculationService.evaluateConcurrentOccupancy(
                     intervals,
-                    plan.getSafeConcurrentOccupancy()
+                    effectiveSafeOccupancy
             );
             if (!occupancyResult.safe()) {
                 violations.add(String.format(

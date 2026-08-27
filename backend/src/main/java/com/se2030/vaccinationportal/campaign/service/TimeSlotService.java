@@ -72,8 +72,11 @@ public class TimeSlotService {
             }
         });
 
-        int safeConcurrentOccupancy = planOpt.map(SessionCapacityPlan::getSafeConcurrentOccupancy)
-                .orElseGet(() -> session.getCenter().getSafeConcurrentOccupancy());
+        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
+        int safeConcurrentOccupancy = calculationService.resolveEffectiveSafeConcurrentOccupancy(
+                planOpt.map(SessionCapacityPlan::getSafeConcurrentOccupancy).orElse(null),
+                centerSafeLimit
+        );
         int expectedDwellMinutes = planOpt.map(SessionCapacityPlan::getExpectedDwellMinutes)
                 .orElse(SessionCapacityPlan.DEFAULT_EXPECTED_DWELL_MINUTES);
         double accompanyingRatio = planOpt.map(SessionCapacityPlan::getExpectedAccompanyingPersonsPerBooking)
@@ -137,8 +140,11 @@ public class TimeSlotService {
             }
         });
 
-        int safeConcurrentOccupancy = planOpt.map(SessionCapacityPlan::getSafeConcurrentOccupancy)
-                .orElseGet(() -> session.getCenter().getSafeConcurrentOccupancy());
+        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
+        int safeConcurrentOccupancy = calculationService.resolveEffectiveSafeConcurrentOccupancy(
+                planOpt.map(SessionCapacityPlan::getSafeConcurrentOccupancy).orElse(null),
+                centerSafeLimit
+        );
         int expectedDwellMinutes = planOpt.map(SessionCapacityPlan::getExpectedDwellMinutes)
                 .orElse(SessionCapacityPlan.DEFAULT_EXPECTED_DWELL_MINUTES);
         double accompanyingRatio = planOpt.map(SessionCapacityPlan::getExpectedAccompanyingPersonsPerBooking)

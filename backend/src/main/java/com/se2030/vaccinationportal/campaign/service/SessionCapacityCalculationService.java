@@ -139,4 +139,94 @@ public class SessionCapacityCalculationService {
 
         return OccupancyEvaluationResult.safe(peakOccupancy, safeConcurrentOccupancy, peakStart);
     }
+
+    /**
+     * Resolves the effective runtime safe concurrent occupancy as the minimum of the plan's
+     * conservative snapshot (if specified) and the center's current authoritative safety limit.
+     * Canonical MF02-M01 / MF02-H03 runtime safety boundary.
+     */
+    public int resolveEffectiveSafeConcurrentOccupancy(Integer planSafeOccupancy, int centerSafeLimit) {
+        if (centerSafeLimit <= 0) {
+            throw new IllegalArgumentException("Center safe concurrent occupancy limit must be positive");
+        }
+        if (planSafeOccupancy == null || planSafeOccupancy <= 0) {
+            return centerSafeLimit;
+        }
+        return Math.min(planSafeOccupancy, centerSafeLimit);
+    }
+
+    /**
+     * Calculates the minimum number of distinct qualifying identities concurrently available
+     * across the entire session window {@code [sessionStart, sessionEnd)}.
+     * Uses half-open segment evaluation {@code [boundary_i, boundary_{i+1})}.
+     */
+    public <T, K> int calculateMinimumConcurrentIdentities(
+            Instant sessionStart,
+            Instant sessionEnd,
+            Collection<T> items,
+            java.util.function.Function<T, K> identityExtractor,
+            java.util.function.Function<T, Instant> startExtractor,
+            java.util.function.Function<T, Instant> endExtractor) {
+
+        if (sessionStart == null || sessionEnd == null || !sessionStart.isBefore(sessionEnd)) {
+            return 0;
+        }
+        if (items == null || items.isEmpty()) {
+            return 0;
+        }
+
+        record ClampedItem<K>(K identity, Instant start, Instant end) {}
+        List<ClampedItem<K>> clampedItems = new java.util.ArrayList<>();
+        TreeSet<Instant> boundaries = new TreeSet<>();
+        boundaries.add(sessionStart);
+        boundaries.add(sessionEnd);
+
+        for (T item : items) {
+            K identity = identityExtractor.apply(item);
+            Instant rawStart = startExtractor.apply(item);
+            Instant rawEnd = endExtractor.apply(item);
+
+            if (identity == null || rawStart == null || rawEnd == null || !rawStart.isBefore(rawEnd)) {
+                continue;
+            }
+
+            Instant clampedStart = rawStart.isBefore(sessionStart) ? sessionStart : rawStart;
+            Instant clampedEnd = rawEnd.isAfter(sessionEnd) ? sessionEnd : rawEnd;
+
+            if (clampedStart.isBefore(clampedEnd)) {
+                clampedItems.add(new ClampedItem<>(identity, clampedStart, clampedEnd));
+                boundaries.add(clampedStart);
+                boundaries.add(clampedEnd);
+            }
+        }
+
+        if (clampedItems.isEmpty()) {
+            return 0;
+        }
+
+        List<Instant> sortedBoundaries = new java.util.ArrayList<>(boundaries);
+        int minConcurrent = Integer.MAX_VALUE;
+
+        for (int i = 0; i < sortedBoundaries.size() - 1; i++) {
+            Instant segStart = sortedBoundaries.get(i);
+            Instant segEnd = sortedBoundaries.get(i + 1);
+            if (!segStart.isBefore(segEnd)) {
+                continue;
+            }
+
+            java.util.Set<K> distinctInSegment = new java.util.HashSet<>();
+            for (ClampedItem<K> item : clampedItems) {
+                if (!item.start().isAfter(segStart) && !item.end().isBefore(segEnd)) {
+                    distinctInSegment.add(item.identity());
+                }
+            }
+
+            minConcurrent = Math.min(minConcurrent, distinctInSegment.size());
+            if (minConcurrent == 0) {
+                return 0;
+            }
+        }
+
+        return minConcurrent == Integer.MAX_VALUE ? 0 : minConcurrent;
+    }
 }
