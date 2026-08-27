@@ -47,9 +47,14 @@ public interface SlotCapacityPort {
 
     /**
      * Checks whether the specified session is currently full across all its time slots (MF03-BR-06).
+     * Must execute concurrency-safe capacity inspection within the caller's transaction by acquiring
+     * pessimistic locks on the session's time slots.
      *
      * @param sessionId Identifier of the vaccination session
-     * @return {@code true} if the session has no remaining capacity across any time slot; {@code false} otherwise
+     * @return {@code true} if the session is scheduled and has zero remaining capacity across all time slots;
+     *         {@code false} if at least one time slot has available booking capacity
+     * @throws IllegalArgumentException if {@code sessionId} is {@code null} or does not exist
+     * @throws IllegalStateException if the session is not in {@code SCHEDULED} status or has no configured time slots
      */
     boolean isSessionFull(Long sessionId);
 }
