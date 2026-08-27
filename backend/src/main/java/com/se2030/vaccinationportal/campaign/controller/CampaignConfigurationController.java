@@ -26,6 +26,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -68,6 +69,7 @@ public class CampaignConfigurationController {
     // ---------------------------------------------------------------------------------------------
 
     @PostMapping("/{id}/dose-programmes")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignDoseProgrammeResponse> createInitialDoseProgramme(
             @PathVariable Long id,
             @Valid @RequestBody CreateDoseProgrammeRequest request
@@ -87,6 +89,7 @@ public class CampaignConfigurationController {
     }
 
     @PostMapping("/{id}/dose-programmes/versions")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignDoseProgrammeResponse> createNewDoseProgrammeVersion(
             @PathVariable Long id,
             @Valid @RequestBody CreateDoseProgrammeVersionRequest request
@@ -106,6 +109,7 @@ public class CampaignConfigurationController {
     }
 
     @GetMapping("/{id}/dose-programmes")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignDoseProgrammeResponse>> getDoseProgrammeHistory(@PathVariable Long id) {
         campaignService.getRequiredCampaignById(id);
         List<CampaignDoseProgramme> history = doseProgrammeService.getProgrammeHistory(id);
@@ -120,6 +124,7 @@ public class CampaignConfigurationController {
     // ---------------------------------------------------------------------------------------------
 
     @PostMapping("/{id}/questionnaire-assignments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignQuestionnaireAssignmentResponse> assignQuestionnaireVersion(
             @PathVariable Long id,
             @Valid @RequestBody AssignQuestionnaireRequest request
@@ -135,6 +140,7 @@ public class CampaignConfigurationController {
     }
 
     @GetMapping("/{id}/questionnaire-assignments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignQuestionnaireAssignmentResponse>> getQuestionnaireAssignmentHistory(
             @PathVariable Long id
     ) {
@@ -151,6 +157,7 @@ public class CampaignConfigurationController {
     // ---------------------------------------------------------------------------------------------
 
     @PostMapping("/{id}/center-assignments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignCenterAssignmentResponse> createCenterAssignment(
             @PathVariable Long id,
             @Valid @RequestBody CreateCenterAssignmentRequest request
@@ -167,6 +174,7 @@ public class CampaignConfigurationController {
     }
 
     @GetMapping("/{id}/center-assignments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignCenterAssignmentResponse>> getCenterAssignments(@PathVariable Long id) {
         campaignService.getRequiredCampaignById(id);
         List<CampaignCenterAssignment> assignments = centerAssignmentService.getAssignmentsForCampaign(id);
@@ -177,6 +185,7 @@ public class CampaignConfigurationController {
     }
 
     @PutMapping("/{id}/center-assignments/{assignmentId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignCenterAssignmentResponse> updateFutureCenterAssignment(
             @PathVariable Long id,
             @PathVariable Long assignmentId,
@@ -192,6 +201,7 @@ public class CampaignConfigurationController {
     }
 
     @PostMapping("/{id}/center-assignments/{assignmentId}/end-date")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignCenterAssignmentResponse> endCenterAssignment(
             @PathVariable Long id,
             @PathVariable Long assignmentId,
@@ -206,6 +216,7 @@ public class CampaignConfigurationController {
     }
 
     @PostMapping("/{id}/center-assignments/{assignmentId}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignCenterAssignmentResponse> cancelFutureCenterAssignment(
             @PathVariable Long id,
             @PathVariable Long assignmentId
@@ -219,6 +230,7 @@ public class CampaignConfigurationController {
     // ---------------------------------------------------------------------------------------------
 
     @PostMapping("/{id}/location-targets")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignLocationTargetResponse> addLocationTarget(
             @PathVariable Long id,
             @Valid @RequestBody CreateLocationTargetRequest request
@@ -234,6 +246,7 @@ public class CampaignConfigurationController {
     }
 
     @GetMapping("/{id}/location-targets")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignLocationTargetResponse>> getLocationTargets(
             @PathVariable Long id,
             @RequestParam(required = false) LocationTargetType type

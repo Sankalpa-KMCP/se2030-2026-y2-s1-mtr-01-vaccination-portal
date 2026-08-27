@@ -20,10 +20,13 @@ import com.se2030.vaccinationportal.campaign.service.SessionRecurrenceRuleServic
 import com.se2030.vaccinationportal.campaign.service.SessionSeriesChangeService;
 import com.se2030.vaccinationportal.campaign.service.SeriesChangePreview;
 import com.se2030.vaccinationportal.campaign.service.SeriesChangeResult;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -56,6 +59,7 @@ public class RecurrenceRuleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionRecurrenceRuleResponse> createRule(
             @Valid @RequestBody CreateSessionRecurrenceRuleRequest request
     ) {
@@ -75,12 +79,14 @@ public class RecurrenceRuleController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionRecurrenceRuleResponse> getRuleById(@PathVariable Long id) {
         SessionRecurrenceRule rule = recurrenceRuleService.getRequiredRuleById(id);
         return ResponseEntity.ok(RecurrenceRuleDtoMapper.toResponse(rule));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<List<SessionRecurrenceRuleResponse>> getRules(
             @RequestParam(required = false) Long campaignId,
             @RequestParam(required = false) Long centerId,
@@ -94,6 +100,7 @@ public class RecurrenceRuleController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionRecurrenceRuleResponse> updateFutureRule(
             @PathVariable Long id,
             @Valid @RequestBody UpdateSessionRecurrenceRuleRequest request
@@ -111,6 +118,7 @@ public class RecurrenceRuleController {
     }
 
     @PostMapping("/{id}/generate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<RecurrenceGenerationResponse> generateOccurrences(
             @PathVariable Long id,
             @RequestBody(required = false) GenerateOccurrencesRequest request
@@ -126,6 +134,7 @@ public class RecurrenceRuleController {
     }
 
     @PostMapping("/{id}/change-preview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SeriesChangePreviewResponse> previewSeriesChange(
             @PathVariable Long id,
             @Valid @RequestBody PreviewSeriesChangeRequest request
@@ -136,10 +145,11 @@ public class RecurrenceRuleController {
     }
 
     @PostMapping("/{id}/change")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SeriesChangeResultResponse> confirmSeriesChange(
             @PathVariable Long id,
             @Valid @RequestBody ConfirmSeriesChangeRequest request,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         if (principal == null) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
@@ -157,16 +167,18 @@ public class RecurrenceRuleController {
     }
 
     @PostMapping("/{id}/cancellation-preview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SeriesChangePreviewResponse> previewSeriesCancellation(@PathVariable Long id) {
         SeriesChangePreview preview = seriesChangeService.previewSeriesCancellation(id);
         return ResponseEntity.ok(RecurrenceRuleDtoMapper.toPreviewResponse(preview));
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SeriesChangeResultResponse> confirmSeriesCancellation(
             @PathVariable Long id,
             @Valid @RequestBody ConfirmSeriesCancellationRequest request,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal com.se2030.vaccinationportal.shared.auth.security.UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         if (principal == null) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();

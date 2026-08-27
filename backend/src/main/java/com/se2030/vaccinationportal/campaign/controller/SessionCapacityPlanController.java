@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +38,7 @@ public class SessionCapacityPlanController {
     }
 
     @PostMapping("/preview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<CapacityPlanPreviewResponse> previewCapacityPlan(
             @PathVariable("sessionId") Long sessionId,
             @Valid @RequestBody PreviewCapacityPlanRequest request
@@ -46,6 +48,7 @@ public class SessionCapacityPlanController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<SessionCapacityPlanResponse> createCapacityPlan(
             @PathVariable("sessionId") Long sessionId,
             @Valid @RequestBody CreateSessionCapacityPlanRequest request,
@@ -61,6 +64,7 @@ public class SessionCapacityPlanController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<List<SessionCapacityPlanResponse>> listCapacityPlans(
             @PathVariable("sessionId") Long sessionId
     ) {
@@ -72,6 +76,7 @@ public class SessionCapacityPlanController {
     }
 
     @GetMapping("/latest")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<SessionCapacityPlanResponse> getLatestCapacityPlan(
             @PathVariable("sessionId") Long sessionId
     ) {
@@ -80,6 +85,7 @@ public class SessionCapacityPlanController {
     }
 
     @GetMapping("/{revision:[0-9]+}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<SessionCapacityPlanResponse> getCapacityPlanByRevision(
             @PathVariable("sessionId") Long sessionId,
             @PathVariable("revision") int revision

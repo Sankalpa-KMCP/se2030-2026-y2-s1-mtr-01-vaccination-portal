@@ -122,8 +122,8 @@ class SessionCapacityPlanSecurityIntegrationTests {
     }
 
     @Test
-    @DisplayName("Anonymous normal capacity plan within recommended throughput succeeds with 201 and null approvedBy")
-    void normalCapacityPlan_anonymous_succeeds() throws Exception {
+    @DisplayName("Anonymous normal capacity plan is rejected with 403 Forbidden under H01 method security")
+    void normalCapacityPlan_anonymous_rejected403() throws Exception {
         String payload = """
                 {
                     "fullyEquippedStationCount": 2,
@@ -135,20 +135,40 @@ class SessionCapacityPlanSecurityIntegrationTests {
         mockMvc.perform(post("/api/v1/sessions/" + session.getId() + "/capacity-plans")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status", is(403)));
+    }
+
+    @Test
+    @DisplayName("ROLE_ADMIN normal capacity plan within recommended throughput succeeds with 201 and trusted user ID audit")
+    void normalCapacityPlan_adminRole_succeeds() throws Exception {
+        String token = createBearerToken(1L, "admin@portal.local", List.of("ROLE_ADMIN"));
+        String payload = """
+                {
+                    "fullyEquippedStationCount": 2,
+                    "approvedCapacity": 48,
+                    "approvedBy": "client-spoof-ignored"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/" + session.getId() + "/capacity-plans")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/sessions/" + session.getId() + "/capacity-plans/1"))
                 .andExpect(jsonPath("$.revision", is(1)))
                 .andExpect(jsonPath("$.recommendedThroughput", is(48)))
                 .andExpect(jsonPath("$.approvedCapacity", is(48)))
-                .andExpect(jsonPath("$.approvedBy").doesNotExist());
+                .andExpect(jsonPath("$.approvedBy", is("1")));
 
         SessionCapacityPlan plan = planRepository.findTopBySessionIdOrderByRevisionDesc(session.getId()).orElseThrow();
-        assertNull(plan.getApprovedBy());
+        assertEquals("1", plan.getApprovedBy());
     }
 
     @Test
-    @DisplayName("Anonymous capacity override (> recommended) is rejected with 401 Unauthorized")
-    void overrideCapacityPlan_anonymous_rejected401() throws Exception {
+    @DisplayName("Anonymous capacity override (> recommended) is rejected with 403 Forbidden under H01 method security")
+    void overrideCapacityPlan_anonymous_rejected403() throws Exception {
         String payload = """
                 {
                     "fullyEquippedStationCount": 2,
@@ -161,9 +181,8 @@ class SessionCapacityPlanSecurityIntegrationTests {
         mockMvc.perform(post("/api/v1/sessions/" + session.getId() + "/capacity-plans")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status", is(401)))
-                .andExpect(jsonPath("$.message", containsString("Full authentication is required")));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status", is(403)));
     }
 
     @Test
@@ -183,8 +202,7 @@ class SessionCapacityPlanSecurityIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status", is(403)))
-                .andExpect(jsonPath("$.message", containsString("ROLE_CENTER_MANAGER is required")));
+                .andExpect(jsonPath("$.status", is(403)));
     }
 
     @Test
@@ -341,8 +359,8 @@ class SessionCapacityPlanSecurityIntegrationTests {
     }
 
     @Test
-    @DisplayName("POST /preview remains unauthenticated and calculates preview accurately")
-    void previewCapacityPlan_unauthenticated_succeeds() throws Exception {
+    @DisplayName("POST /preview is rejected 403 for unauthenticated caller")
+    void previewCapacityPlan_unauthenticated_rejected403() throws Exception {
         String payload = """
                 {
                     "fullyEquippedStationCount": 2,
@@ -354,6 +372,26 @@ class SessionCapacityPlanSecurityIntegrationTests {
         mockMvc.perform(post("/api/v1/sessions/" + session.getId() + "/capacity-plans/preview")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status", is(403)));
+    }
+
+    @Test
+    @DisplayName("POST /preview with ROLE_CENTER_MANAGER calculates preview accurately")
+    void previewCapacityPlan_centerManager_succeeds() throws Exception {
+        String token = createBearerToken(42L, "manager@portal.local", List.of("ROLE_CENTER_MANAGER"));
+        String payload = """
+                {
+                    "fullyEquippedStationCount": 2,
+                    "approvedCapacity": 60,
+                    "overrideReason": "Previewing surge"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/" + session.getId() + "/capacity-plans/preview")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.recommendedThroughput", is(48)))
                 .andExpect(jsonPath("$.projectedApprovedCapacity", is(60)))
@@ -362,8 +400,9 @@ class SessionCapacityPlanSecurityIntegrationTests {
     }
 
     @Test
-    @DisplayName("GET history endpoints remain accessible under staged rollout")
+    @DisplayName("GET history endpoints remain accessible with authorized role")
     void getHistory_endpointsAccessible() throws Exception {
+        String token = createBearerToken(42L, "manager@portal.local", List.of("ROLE_CENTER_MANAGER"));
         // Create revision 1
         String payload = """
                 {
@@ -372,20 +411,24 @@ class SessionCapacityPlanSecurityIntegrationTests {
                 }
                 """;
         mockMvc.perform(post("/api/v1/sessions/" + session.getId() + "/capacity-plans")
+                        .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/capacity-plans"))
+        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/capacity-plans")
+                        .header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].revision", is(1)))
                 .andExpect(jsonPath("$[0].approvedCapacity", is(48)));
 
-        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/capacity-plans/latest"))
+        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/capacity-plans/latest")
+                        .header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.revision", is(1)));
 
-        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/capacity-plans/1"))
+        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/capacity-plans/1")
+                        .header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.revision", is(1)));
     }

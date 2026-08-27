@@ -45,6 +45,7 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@org.springframework.security.test.context.support.WithMockUser(roles = "CENTER_MANAGER")
 class SessionReadinessQueryIntegrationTests {
 
     @Autowired private MockMvc mockMvc;
@@ -96,6 +98,7 @@ class SessionReadinessQueryIntegrationTests {
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
     @Autowired private CampaignDoseProgrammeRepository doseProgrammeRepository;
     @Autowired private EntityManager entityManager;
+    @Autowired private com.se2030.vaccinationportal.shared.auth.security.JwtTokenService jwtTokenService;
 
     private VaccinationCampaign campaign;
     private VaccinationCenter center;
@@ -108,6 +111,10 @@ class SessionReadinessQueryIntegrationTests {
     private final Instant SESSION_START = Instant.parse("2026-10-15T09:00:00Z");
     private final Instant SESSION_END = Instant.parse("2026-10-15T12:00:00Z"); // 180 min
     private final Instant BOOKING_CLOSE = Instant.parse("2026-10-15T08:00:00Z");
+
+    private String authHeader() {
+        return "Bearer " + jwtTokenService.generateToken(102L, "manager@portal.gov", List.of("ROLE_CENTER_MANAGER"));
+    }
 
     @BeforeEach
     void setUp() {
@@ -128,44 +135,49 @@ class SessionReadinessQueryIntegrationTests {
         campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
                 "CMP-RDY-INT", "Readiness Test Campaign", "Description", vaccine, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,
-                Instant.parse("2026-10-01T00:00:00Z"),
-                Instant.parse("2026-10-31T23:59:59Z")
-        ));
-        campaign.publish();
-        campaign = campaignRepository.saveAndFlush(campaign);
-
-        centerAssignmentRepository.saveAndFlush(new CampaignCenterAssignment(
-                campaign, center, CAMPAIGN_START, CAMPAIGN_END.plusDays(1)
-        ));
-
-        doseProgrammeRepository.saveAndFlush(new CampaignDoseProgramme(
-                campaign, 1, DoseCategory.PRIMARY, "1", 0, false, 10, CAMPAIGN_START, null
+                Instant.parse("2026-09-01T00:00:00Z"),
+                Instant.parse("2026-10-31T00:00:00Z")
         ));
 
         session = sessionRepository.saveAndFlush(new VaccinationSession(
                 campaign, center, SESSION_START, SESSION_END, BOOKING_CLOSE, "UTC"
         ));
 
-        stationResource = resourceService.createResource(
-                center.getId(), "STATION-01", ResourceType.VACCINATION_STATION, "Station 1", OperationalResourceStatus.ACTIVE
-        );
+        stationResource = resourceRepository.saveAndFlush(new OperationalResource(
+                center, "STATION-RDY-01", ResourceType.VACCINATION_STATION, "Readiness Station 1", OperationalResourceStatus.ACTIVE
+        ));
 
-        vaccinatorRoster = rosterService.registerStaffMember(
-                center.getId(), 6001L, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE
-        );
+        vaccinatorRoster = rosterRepository.saveAndFlush(new OperationalStaffRoster(
+                center, 101L, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE
+        ));
     }
 
     private void configureFullReadiness() {
-        resourceAssignmentService.createAssignment(
-                session.getId(), stationResource.getId(), SESSION_START, SESSION_END
-        );
-        staffAssignmentService.createAssignment(
-                session.getId(), vaccinatorRoster.getId(), StaffRole.VACCINATOR, SESSION_START, SESSION_END
-        );
-        capacityPlanService.createCapacityPlan(
-                session.getId(),
-                new CreateSessionCapacityPlanRequest(1, 18, 50, 15, 0.0, null, "Planner")
-        );
+        // 1. Assign center to campaign
+        centerAssignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                campaign, center, CAMPAIGN_START, CAMPAIGN_END
+        ));
+
+        // 2. Add dose programme
+        doseProgrammeRepository.saveAndFlush(new CampaignDoseProgramme(
+                campaign, 1, DoseCategory.PRIMARY, "1", 0, false, 10, CAMPAIGN_START, null
+        ));
+
+        // 3. Assign resource to session
+        sessionResourceAssignmentRepository.saveAndFlush(new com.se2030.vaccinationportal.campaign.model.SessionResourceAssignment(
+                session, stationResource, SESSION_START, SESSION_END
+        ));
+
+        // 4. Assign staff to session
+        staffAssignmentRepository.saveAndFlush(new com.se2030.vaccinationportal.campaign.model.StaffAssignment(
+                session, vaccinatorRoster, StaffRole.VACCINATOR, SESSION_START, SESSION_END
+        ));
+
+        // 5. Create capacity plan
+        capacityPlanService.createCapacityPlan(session.getId(), new CreateSessionCapacityPlanRequest(
+                1, 18, 50, 15, 0.0, null, "ACTOR-RDY"
+        ));
+
         entityManager.flush();
         entityManager.clear();
     }
@@ -182,7 +194,8 @@ class SessionReadinessQueryIntegrationTests {
         assertThat(directResult.violations()).isEmpty();
 
         // 2. REST query evaluation
-        MvcResult mvcResult = mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness"))
+        MvcResult mvcResult = mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness")
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId", is(session.getId().intValue())))
                 .andExpect(jsonPath("$.ready", is(true)))
@@ -221,7 +234,8 @@ class SessionReadinessQueryIntegrationTests {
         assertThat(directResult.ready()).isFalse();
         assertThat(directResult.violations()).isNotEmpty();
 
-        MvcResult mvcResult = mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness"))
+        MvcResult mvcResult = mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness")
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId", is(session.getId().intValue())))
                 .andExpect(jsonPath("$.ready", is(false)))
@@ -261,7 +275,8 @@ class SessionReadinessQueryIntegrationTests {
         session = sessionRepository.saveAndFlush(session);
         assertThat(session.getLifecycleStatus()).isEqualTo(SessionLifecycleStatus.SCHEDULED);
 
-        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness"))
+        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness")
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId", is(session.getId().intValue())))
                 .andExpect(jsonPath("$.ready", is(false)))
@@ -271,7 +286,8 @@ class SessionReadinessQueryIntegrationTests {
     @Test
     @DisplayName("GET /api/v1/sessions/{id}/readiness for unknown session returns 404 Not Found ApiErrorResponse")
     void getSessionReadiness_unknownSession_returns404() throws Exception {
-        mockMvc.perform(get("/api/v1/sessions/999999/readiness"))
+        mockMvc.perform(get("/api/v1/sessions/999999/readiness")
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(jsonPath("$.message", containsString("Vaccination session not found with ID: 999999")));
@@ -292,7 +308,8 @@ class SessionReadinessQueryIntegrationTests {
         long initialStaff = staffAssignmentRepository.count();
 
         // Perform GET readiness query
-        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness"))
+        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness")
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ready", is(true)));
 
@@ -313,11 +330,13 @@ class SessionReadinessQueryIntegrationTests {
     void getSessionReadiness_repeatedQueryStability() throws Exception {
         configureFullReadiness();
 
-        MvcResult firstCall = mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness"))
+        MvcResult firstCall = mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness")
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        MvcResult secondCall = mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness"))
+        MvcResult secondCall = mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/readiness")
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader()))
                 .andExpect(status().isOk())
                 .andReturn();
 

@@ -57,6 +57,22 @@ class CampaignControllerTests {
         mockMvc = MockMvcBuilders.standaloneSetup(new CampaignController(campaignService))
                 .setControllerAdvice(new GlobalCampaignExceptionHandler())
                 .setValidator(validator)
+                .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    @Override
+                    public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
+                    }
+
+                    @Override
+                    public Object resolveArgument(
+                            org.springframework.core.MethodParameter parameter,
+                            org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                            org.springframework.web.context.request.NativeWebRequest webRequest,
+                            org.springframework.web.bind.support.WebDataBinderFactory binderFactory
+                    ) {
+                        return null;
+                    }
+                })
                 .build();
 
         sampleVaccineType = new VaccineType("VT-COVID-01", "COVID-19 mRNA Vaccine", "dose", true);

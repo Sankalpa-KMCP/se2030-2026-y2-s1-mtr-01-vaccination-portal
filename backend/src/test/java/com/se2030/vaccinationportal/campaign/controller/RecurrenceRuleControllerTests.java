@@ -83,7 +83,7 @@ class RecurrenceRuleControllerTests {
         samplePrincipal = com.se2030.vaccinationportal.shared.auth.security.UserPrincipal.fromClaims(
                 42L,
                 "officer-01@vaccination.gov",
-                List.of("ROLE_USER")
+                List.of("ROLE_CENTER_MANAGER")
         );
         sampleAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                 samplePrincipal,

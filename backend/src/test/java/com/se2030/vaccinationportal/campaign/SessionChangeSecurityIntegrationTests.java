@@ -131,7 +131,9 @@ class SessionChangeSecurityIntegrationTests {
     }
 
     private String obtainCancellationPreviewToken(Long sessionId) throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/v1/sessions/" + sessionId + "/cancellation-preview"))
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
+        MvcResult result = mockMvc.perform(post("/api/v1/sessions/" + sessionId + "/cancellation-preview")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode json = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -139,6 +141,7 @@ class SessionChangeSecurityIntegrationTests {
     }
 
     private String obtainReschedulePreviewToken(Long sessionId, Instant start, Instant end, Instant bookingClose) throws Exception {
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
         String payload = String.format("""
                 {
                     "newStartAt": "%s",
@@ -147,6 +150,7 @@ class SessionChangeSecurityIntegrationTests {
                 }
                 """, start, end, bookingClose);
         MvcResult result = mockMvc.perform(post("/api/v1/sessions/" + sessionId + "/reschedule-preview")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
@@ -156,6 +160,7 @@ class SessionChangeSecurityIntegrationTests {
     }
 
     private String obtainTransferPreviewToken(Long sessionId, Long targetCenterId, Instant start, Instant end, Instant bookingClose) throws Exception {
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
         String payload = String.format("""
                 {
                     "newCenterId": %d,
@@ -165,6 +170,7 @@ class SessionChangeSecurityIntegrationTests {
                 }
                 """, targetCenterId, start, end, bookingClose);
         MvcResult result = mockMvc.perform(post("/api/v1/sessions/" + sessionId + "/transfer-preview")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
@@ -257,7 +263,7 @@ class SessionChangeSecurityIntegrationTests {
     @DisplayName("Authenticated cancel persists principal userId string as actorId")
     void authenticatedCancelPersistsPrincipalUserId() throws Exception {
         String token = obtainCancellationPreviewToken(session.getId());
-        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -286,7 +292,7 @@ class SessionChangeSecurityIntegrationTests {
     @DisplayName("Authenticated cancel ignores spoofed body actorId and persists principal userId string")
     void authenticatedCancelIgnoresSpoofedActorId() throws Exception {
         String token = obtainCancellationPreviewToken(session.getId());
-        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -320,7 +326,7 @@ class SessionChangeSecurityIntegrationTests {
         Instant newEnd = Instant.parse("2026-10-11T13:00:00Z");
         Instant newClose = Instant.parse("2026-10-11T09:00:00Z");
         String token = obtainReschedulePreviewToken(session.getId(), newStart, newEnd, newClose);
-        String authHeader = createBearerToken(77L, "coordinator77@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(77L, "coordinator77@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -357,7 +363,7 @@ class SessionChangeSecurityIntegrationTests {
         Instant newEnd = Instant.parse("2026-10-11T13:00:00Z");
         Instant newClose = Instant.parse("2026-10-11T09:00:00Z");
         String token = obtainReschedulePreviewToken(session.getId(), newStart, newEnd, newClose);
-        String authHeader = createBearerToken(77L, "coordinator77@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(77L, "coordinator77@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -391,7 +397,7 @@ class SessionChangeSecurityIntegrationTests {
         Instant newEnd = Instant.parse("2026-10-11T13:00:00Z");
         Instant newClose = Instant.parse("2026-10-11T09:00:00Z");
         String token = obtainTransferPreviewToken(session.getId(), centerB.getId(), newStart, newEnd, newClose);
-        String authHeader = createBearerToken(99L, "director99@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(99L, "director99@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -428,7 +434,7 @@ class SessionChangeSecurityIntegrationTests {
         Instant newEnd = Instant.parse("2026-10-11T13:00:00Z");
         Instant newClose = Instant.parse("2026-10-11T09:00:00Z");
         String token = obtainTransferPreviewToken(session.getId(), centerB.getId(), newStart, newEnd, newClose);
-        String authHeader = createBearerToken(99L, "director99@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(99L, "director99@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -462,7 +468,7 @@ class SessionChangeSecurityIntegrationTests {
     @DisplayName("GET /change-events returns server-derived actor ID in event list")
     void getChangeEventsReturnsServerDerivedActorId() throws Exception {
         String token = obtainCancellationPreviewToken(session.getId());
-        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -478,7 +484,8 @@ class SessionChangeSecurityIntegrationTests {
                         .content(payload))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/change-events"))
+        mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/change-events")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].sessionId", is(session.getId().intValue())))
