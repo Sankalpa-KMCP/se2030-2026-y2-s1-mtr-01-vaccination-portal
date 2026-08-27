@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -94,5 +95,23 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         return timeSlotRepository.findById(slotId)
                 .map(TimeSlot::getStartTime)
                 .orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isSessionFull(Long sessionId) {
+        if (sessionId == null) {
+            return true;
+        }
+        List<TimeSlot> slots = timeSlotRepository.findBySessionId(sessionId);
+        if (slots.isEmpty()) {
+            return true;
+        }
+        return slots.stream().noneMatch(slot -> {
+            VaccinationSession session = slot.getSession();
+            return session != null
+                    && session.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED
+                    && slot.hasAvailableCapacity();
+        });
     }
 }

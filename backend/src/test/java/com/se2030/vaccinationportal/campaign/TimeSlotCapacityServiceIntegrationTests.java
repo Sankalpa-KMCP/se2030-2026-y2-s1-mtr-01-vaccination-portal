@@ -278,6 +278,67 @@ class TimeSlotCapacityServiceIntegrationTests {
     }
 
     @Test
+    @DisplayName("isSessionFull returns false when at least one slot has available capacity")
+    void isSessionFull_falseWhenAtLeastOneSlotHasCapacity() {
+        TimeSlot slotA = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 5);
+        slotA.setReservedCount(5);
+        timeSlotRepository.save(slotA);
+
+        TimeSlot slotB = new TimeSlot(scheduledSession, baseStart.plus(1, ChronoUnit.HOURS), baseStart.plus(2, ChronoUnit.HOURS), 5);
+        slotB.setReservedCount(3);
+        timeSlotRepository.save(slotB);
+
+        assertFalse(slotCapacityService.isSessionFull(scheduledSession.getId()));
+    }
+
+    @Test
+    @DisplayName("isSessionFull returns true when all slots in session are fully booked")
+    void isSessionFull_trueWhenAllSlotsFullyBooked() {
+        TimeSlot slotA = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 5);
+        slotA.setReservedCount(5);
+        timeSlotRepository.save(slotA);
+
+        TimeSlot slotB = new TimeSlot(scheduledSession, baseStart.plus(1, ChronoUnit.HOURS), baseStart.plus(2, ChronoUnit.HOURS), 3);
+        slotB.setReservedCount(3);
+        timeSlotRepository.save(slotB);
+
+        assertTrue(slotCapacityService.isSessionFull(scheduledSession.getId()));
+    }
+
+    @Test
+    @DisplayName("isSessionFull returns true when slot occupancy exceeds capacity")
+    void isSessionFull_trueWhenOccupancyExceedsCapacity() {
+        TimeSlot slot = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+        slot.setReservedCount(5);
+        timeSlotRepository.save(slot);
+
+        assertTrue(slotCapacityService.isSessionFull(scheduledSession.getId()));
+    }
+
+    @Test
+    @DisplayName("isSessionFull returns true when session has no slots configured")
+    void isSessionFull_trueWhenNoSlotsConfigured() {
+        assertTrue(slotCapacityService.isSessionFull(scheduledSession.getId()));
+    }
+
+    @Test
+    @DisplayName("isSessionFull returns true when session is not in SCHEDULED lifecycle status")
+    void isSessionFull_trueWhenSessionNotScheduled() {
+        TimeSlot slot = new TimeSlot(draftSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+        slot.setReservedCount(0);
+        timeSlotRepository.save(slot);
+
+        assertTrue(slotCapacityService.isSessionFull(draftSession.getId()));
+    }
+
+    @Test
+    @DisplayName("isSessionFull returns true when sessionId is null or does not exist")
+    void isSessionFull_trueWhenInvalidOrNotFound() {
+        assertTrue(slotCapacityService.isSessionFull(null));
+        assertTrue(slotCapacityService.isSessionFull(999999L));
+    }
+
+    @Test
     @DisplayName("createSlot creates slot within session window and enforces approved capacity bound")
     void createSlot_enforcesBounds() {
         SessionCapacityPlan plan = new SessionCapacityPlan(
