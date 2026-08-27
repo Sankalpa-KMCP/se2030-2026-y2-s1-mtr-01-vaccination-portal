@@ -13,6 +13,8 @@ import com.se2030.vaccinationportal.campaign.model.OperationalResourceStatus;
 import com.se2030.vaccinationportal.campaign.model.OperationalStaffRoster;
 import com.se2030.vaccinationportal.campaign.model.OperationalStaffStatus;
 import com.se2030.vaccinationportal.campaign.model.ResourceType;
+import com.se2030.vaccinationportal.campaign.model.SessionBookingStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
@@ -34,11 +36,14 @@ import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import jakarta.persistence.EntityManager;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,6 +67,7 @@ class SessionOperationalReadinessServiceIntegrationTests {
     @Autowired private StaffAssignmentService staffAssignmentService;
     @Autowired private OperationalResourceService resourceService;
     @Autowired private OperationalStaffRosterService rosterService;
+    @Autowired private TimeSlotService timeSlotService;
 
     @Autowired private VaccinationCampaignRepository campaignRepository;
     @Autowired private VaccinationCenterRepository centerRepository;
@@ -77,6 +83,7 @@ class SessionOperationalReadinessServiceIntegrationTests {
     @Autowired private StaffAssignmentRepository staffAssignmentRepository;
     @Autowired private SessionCapacityPlanRepository capacityPlanRepository;
     @Autowired private CampaignDoseProgrammeRepository doseProgrammeRepository;
+    @Autowired private TimeSlotRepository timeSlotRepository;
     @Autowired private EntityManager entityManager;
 
     private VaccinationCampaign campaign;
@@ -331,5 +338,57 @@ class SessionOperationalReadinessServiceIntegrationTests {
         entityManager.clear();
         VaccinationSession reloaded = sessionRepository.findById(session.getId()).orElseThrow();
         assertThat(reloaded.getLifecycleStatus()).isEqualTo(SessionLifecycleStatus.SCHEDULED);
+    }
+
+    @Test
+    @DisplayName("assertReadyForScheduling and evaluateReadiness succeed when configured time slots are within safe concurrent occupancy")
+    void readiness_withValidTimeSlots_succeeds() {
+        configureFullReadiness();
+
+        // Safe concurrent occupancy in configureFullReadiness is 50, approvedCapacity is 18
+        timeSlotService.createSlot(session.getId(), SESSION_START, SESSION_START.plus(1, ChronoUnit.HOURS), 9);
+        timeSlotService.createSlot(session.getId(), SESSION_START.plus(1, ChronoUnit.HOURS), SESSION_START.plus(2, ChronoUnit.HOURS), 9);
+
+        VaccinationCampaign lockedCampaign = campaignRepository.findByIdForUpdate(campaign.getId()).orElseThrow();
+        VaccinationSession lockedSession = sessionRepository.findByIdForUpdate(session.getId()).orElseThrow();
+
+        readinessService.assertReadyForScheduling(lockedCampaign, lockedSession);
+
+        SessionOperationalReadinessService.OperationalReadinessResult result =
+                readinessService.evaluateReadiness(session.getId());
+        assertThat(result.ready()).isTrue();
+        assertThat(result.violations()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("assertReadyForScheduling and evaluateReadiness fail when configured time slots exceed safe concurrent occupancy")
+    void readiness_withUnsafeTimeSlots_failsAndReportsViolation() {
+        configureFullReadiness();
+
+        // Create 2 overlapping slots that together have peak capacity 18
+        timeSlotService.createSlot(session.getId(), SESSION_START, SESSION_START.plus(2, ChronoUnit.HOURS), 9);
+        timeSlotService.createSlot(session.getId(), SESSION_START.plus(1, ChronoUnit.HOURS), SESSION_START.plus(3, ChronoUnit.HOURS), 9);
+
+        // Update capacity plan to set safeConcurrentOccupancy = 10 (less than peak occupancy 18)
+        // With approvedCapacity = 18 and safeConcurrentOccupancy = 10
+        capacityPlanRepository.save(new SessionCapacityPlan(
+                session, 2, 180, 10, 1, 1, 1, 1, 18, 18, 10, 15, 0.0, null, null, "Planner"
+        ));
+        entityManager.flush();
+        entityManager.clear();
+
+        VaccinationCampaign lockedCampaign = campaignRepository.findByIdForUpdate(campaign.getId()).orElseThrow();
+        VaccinationSession lockedSession = sessionRepository.findByIdForUpdate(session.getId()).orElseThrow();
+
+        // 1. assertReadyForScheduling must throw IllegalStateException
+        assertThatThrownBy(() -> readinessService.assertReadyForScheduling(lockedCampaign, lockedSession))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Session time slots exceed safe concurrent occupancy");
+
+        // 2. evaluateReadiness must report violation
+        SessionOperationalReadinessService.OperationalReadinessResult result =
+                readinessService.evaluateReadiness(session.getId());
+        assertThat(result.ready()).isFalse();
+        assertThat(result.violations()).anyMatch(v -> v.contains("Configured time slots exceed safe concurrent occupancy"));
     }
 }

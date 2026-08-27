@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
@@ -9,12 +10,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Service for managing MF-02 TimeSlots within vaccination sessions.
- * Enforces session approved capacity bounds and booking floor validation.
+ * Enforces session approved capacity bounds, exact concurrent occupancy, and booking floor validation.
  */
 @Service
 public class TimeSlotService {
@@ -22,35 +25,73 @@ public class TimeSlotService {
     private final TimeSlotRepository timeSlotRepository;
     private final VaccinationSessionRepository sessionRepository;
     private final SessionCapacityPlanRepository capacityPlanRepository;
+    private final SessionCapacityCalculationService calculationService;
 
     public TimeSlotService(
             TimeSlotRepository timeSlotRepository,
             VaccinationSessionRepository sessionRepository,
-            SessionCapacityPlanRepository capacityPlanRepository
+            SessionCapacityPlanRepository capacityPlanRepository,
+            SessionCapacityCalculationService calculationService
     ) {
         this.timeSlotRepository = Objects.requireNonNull(timeSlotRepository, "TimeSlotRepository must not be null");
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "VaccinationSessionRepository must not be null");
         this.capacityPlanRepository = Objects.requireNonNull(capacityPlanRepository, "SessionCapacityPlanRepository must not be null");
+        this.calculationService = Objects.requireNonNull(calculationService, "SessionCapacityCalculationService must not be null");
     }
 
     @Transactional
     public TimeSlot createSlot(Long sessionId, Instant startTime, Instant endTime, int capacity) {
+        if (sessionId == null) {
+            throw new IllegalArgumentException("Session ID must not be null");
+        }
+        if (startTime == null || endTime == null) {
+            throw new IllegalArgumentException("Slot start and end times must not be null");
+        }
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("Slot capacity must be strictly positive");
+        }
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found with ID: " + sessionId));
 
         if (startTime.isBefore(session.getStartAt()) || endTime.isAfter(session.getEndAt())) {
             throw new IllegalArgumentException("Slot interval must fall within session operating window");
         }
+        if (!startTime.isBefore(endTime)) {
+            throw new IllegalArgumentException("Slot start time must be strictly before end time");
+        }
 
         List<TimeSlot> existingSlots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
         int currentSum = existingSlots.stream().mapToInt(TimeSlot::getCapacity).sum();
         int newTotal = currentSum + capacity;
 
-        capacityPlanRepository.findTopBySessionIdOrderByRevisionDesc(sessionId).ifPresent(plan -> {
+        Optional<SessionCapacityPlan> planOpt = capacityPlanRepository.findTopBySessionIdOrderByRevisionDesc(sessionId);
+        planOpt.ifPresent(plan -> {
             if (newTotal > plan.getApprovedCapacity()) {
                 throw new IllegalStateException("Total slot capacity (" + newTotal + ") cannot exceed approved session capacity (" + plan.getApprovedCapacity() + ")");
             }
         });
+
+        int safeConcurrentOccupancy = planOpt.map(SessionCapacityPlan::getSafeConcurrentOccupancy)
+                .orElseGet(() -> session.getCenter().getSafeConcurrentOccupancy());
+        int expectedDwellMinutes = planOpt.map(SessionCapacityPlan::getExpectedDwellMinutes)
+                .orElse(SessionCapacityPlan.DEFAULT_EXPECTED_DWELL_MINUTES);
+        double accompanyingRatio = planOpt.map(SessionCapacityPlan::getExpectedAccompanyingPersonsPerBooking)
+                .orElse(SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO);
+
+        List<OccupancyInterval> candidateIntervals = new ArrayList<>(existingSlots.size() + 1);
+        candidateIntervals.addAll(calculationService.mapSlotsToOccupancyIntervals(existingSlots, expectedDwellMinutes, accompanyingRatio));
+        candidateIntervals.add(new OccupancyInterval(startTime, endTime, capacity, expectedDwellMinutes, accompanyingRatio));
+
+        OccupancyEvaluationResult occupancyResult = calculationService.evaluateConcurrentOccupancy(candidateIntervals, safeConcurrentOccupancy);
+        if (!occupancyResult.safe()) {
+            throw new IllegalStateException(String.format(
+                    "Peak concurrent occupancy (%.1f) exceeds safe concurrent occupancy limit (%d) at %s",
+                    occupancyResult.peakOccupancyUnits(),
+                    occupancyResult.safeConcurrentOccupancy(),
+                    occupancyResult.peakIntervalStart()
+            ));
+        }
 
         TimeSlot slot = new TimeSlot(session, startTime, endTime, capacity);
         return timeSlotRepository.save(slot);
@@ -60,6 +101,9 @@ public class TimeSlotService {
     public TimeSlot updateSlotCapacity(Long slotId, int newCapacity) {
         if (slotId == null) {
             throw new IllegalArgumentException("Slot ID must not be null");
+        }
+        if (newCapacity <= 0) {
+            throw new IllegalArgumentException("Slot capacity must be strictly positive");
         }
         TimeSlot initialSlot = timeSlotRepository.findById(slotId)
                 .orElseThrow(() -> new IllegalArgumentException("TimeSlot not found with ID: " + slotId));
@@ -86,11 +130,39 @@ public class TimeSlotService {
         int diff = newCapacity - slot.getCapacity();
         int newTotal = currentSum + diff;
 
-        capacityPlanRepository.findTopBySessionIdOrderByRevisionDesc(sessionId).ifPresent(plan -> {
+        Optional<SessionCapacityPlan> planOpt = capacityPlanRepository.findTopBySessionIdOrderByRevisionDesc(sessionId);
+        planOpt.ifPresent(plan -> {
             if (newTotal > plan.getApprovedCapacity()) {
                 throw new IllegalStateException("Total slot capacity (" + newTotal + ") cannot exceed approved session capacity (" + plan.getApprovedCapacity() + ")");
             }
         });
+
+        int safeConcurrentOccupancy = planOpt.map(SessionCapacityPlan::getSafeConcurrentOccupancy)
+                .orElseGet(() -> session.getCenter().getSafeConcurrentOccupancy());
+        int expectedDwellMinutes = planOpt.map(SessionCapacityPlan::getExpectedDwellMinutes)
+                .orElse(SessionCapacityPlan.DEFAULT_EXPECTED_DWELL_MINUTES);
+        double accompanyingRatio = planOpt.map(SessionCapacityPlan::getExpectedAccompanyingPersonsPerBooking)
+                .orElse(SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO);
+
+        List<OccupancyInterval> candidateIntervals = sessionSlots.stream()
+                .map(s -> new OccupancyInterval(
+                        s.getStartTime(),
+                        s.getEndTime(),
+                        s.getId().equals(slotId) ? newCapacity : s.getCapacity(),
+                        expectedDwellMinutes,
+                        accompanyingRatio
+                ))
+                .toList();
+
+        OccupancyEvaluationResult occupancyResult = calculationService.evaluateConcurrentOccupancy(candidateIntervals, safeConcurrentOccupancy);
+        if (!occupancyResult.safe()) {
+            throw new IllegalStateException(String.format(
+                    "Peak concurrent occupancy (%.1f) exceeds safe concurrent occupancy limit (%d) at %s",
+                    occupancyResult.peakOccupancyUnits(),
+                    occupancyResult.safeConcurrentOccupancy(),
+                    occupancyResult.peakIntervalStart()
+            ));
+        }
 
         slot.setCapacity(newCapacity);
         return timeSlotRepository.save(slot);

@@ -75,6 +75,26 @@ public class SessionCapacityCalculationService {
     }
 
     /**
+     * Maps time slots and capacity plan parameters to occupancy intervals.
+     */
+    public List<OccupancyInterval> mapSlotsToOccupancyIntervals(Collection<com.se2030.vaccinationportal.campaign.model.TimeSlot> slots,
+                                                               int expectedDwellMinutes,
+                                                               double accompanyingRatio) {
+        if (slots == null || slots.isEmpty()) {
+            return List.of();
+        }
+        return slots.stream()
+                .map(s -> new OccupancyInterval(
+                        s.getStartTime(),
+                        s.getEndTime(),
+                        s.getCapacity(),
+                        expectedDwellMinutes,
+                        accompanyingRatio
+                ))
+                .toList();
+    }
+
+    /**
      * Evaluates concurrent occupancy across a collection of intervals at every start/dwell boundary.
      * Half-open interval semantics {@code [startAt, max(endAt, startAt + expectedDwellMinutes))}.
      * Canonical Section 6.4 and MF02-BR-22.

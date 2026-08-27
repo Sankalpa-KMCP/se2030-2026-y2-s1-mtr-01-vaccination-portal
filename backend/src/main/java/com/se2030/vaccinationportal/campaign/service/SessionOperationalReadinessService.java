@@ -15,12 +15,14 @@ import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.validation.VaccinationSessionValidator;
 import java.time.Duration;
@@ -50,6 +52,7 @@ public class SessionOperationalReadinessService {
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final SessionCapacityCalculationService calculationService;
     private final OperationalStaffIdentityLockService identityLockService;
+    private final TimeSlotRepository timeSlotRepository;
 
     public SessionOperationalReadinessService(
             VaccinationSessionValidator sessionValidator,
@@ -61,7 +64,8 @@ public class SessionOperationalReadinessService {
             SessionCapacityPlanRepository planRepository,
             CampaignDoseProgrammeRepository doseProgrammeRepository,
             SessionCapacityCalculationService calculationService,
-            OperationalStaffIdentityLockService identityLockService
+            OperationalStaffIdentityLockService identityLockService,
+            TimeSlotRepository timeSlotRepository
     ) {
         this.sessionValidator = Objects.requireNonNull(sessionValidator, "sessionValidator must not be null");
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "sessionRepository must not be null");
@@ -73,6 +77,7 @@ public class SessionOperationalReadinessService {
         this.doseProgrammeRepository = Objects.requireNonNull(doseProgrammeRepository, "doseProgrammeRepository must not be null");
         this.calculationService = Objects.requireNonNull(calculationService, "calculationService must not be null");
         this.identityLockService = Objects.requireNonNull(identityLockService, "identityLockService must not be null");
+        this.timeSlotRepository = Objects.requireNonNull(timeSlotRepository, "timeSlotRepository must not be null");
     }
 
     /**
@@ -289,6 +294,28 @@ public class SessionOperationalReadinessService {
         if (latestPlan.getSafeConcurrentOccupancy() <= 0) {
             throw new IllegalStateException("Safe concurrent occupancy must be positive");
         }
+
+        // 7. Evaluate exact concurrent occupancy across configured time slots under session lock
+        List<TimeSlot> slots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
+        if (!slots.isEmpty()) {
+            List<OccupancyInterval> intervals = calculationService.mapSlotsToOccupancyIntervals(
+                    slots,
+                    latestPlan.getExpectedDwellMinutes(),
+                    latestPlan.getExpectedAccompanyingPersonsPerBooking()
+            );
+            OccupancyEvaluationResult occupancyResult = calculationService.evaluateConcurrentOccupancy(
+                    intervals,
+                    latestPlan.getSafeConcurrentOccupancy()
+            );
+            if (!occupancyResult.safe()) {
+                throw new IllegalStateException(String.format(
+                        "Session time slots exceed safe concurrent occupancy (peak: %.1f, limit: %d at %s)",
+                        occupancyResult.peakOccupancyUnits(),
+                        occupancyResult.safeConcurrentOccupancy(),
+                        occupancyResult.peakIntervalStart()
+                ));
+            }
+        }
     }
 
     /**
@@ -419,6 +446,31 @@ public class SessionOperationalReadinessService {
         Integer ceiling = session.getCenter().getSessionServiceCeiling();
         if (ceiling != null && plan.getApprovedCapacity() > ceiling) {
             violations.add("Approved capacity exceeds center service ceiling");
+        }
+
+        if (plan.getSafeConcurrentOccupancy() <= 0) {
+            violations.add("Safe concurrent occupancy must be positive");
+        }
+
+        List<TimeSlot> slots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(sessionId);
+        if (!slots.isEmpty()) {
+            List<OccupancyInterval> intervals = calculationService.mapSlotsToOccupancyIntervals(
+                    slots,
+                    plan.getExpectedDwellMinutes(),
+                    plan.getExpectedAccompanyingPersonsPerBooking()
+            );
+            OccupancyEvaluationResult occupancyResult = calculationService.evaluateConcurrentOccupancy(
+                    intervals,
+                    plan.getSafeConcurrentOccupancy()
+            );
+            if (!occupancyResult.safe()) {
+                violations.add(String.format(
+                        "Configured time slots exceed safe concurrent occupancy (peak: %.1f, limit: %d at %s)",
+                        occupancyResult.peakOccupancyUnits(),
+                        occupancyResult.safeConcurrentOccupancy(),
+                        occupancyResult.peakIntervalStart()
+                ));
+            }
         }
 
         return new OperationalReadinessResult(
