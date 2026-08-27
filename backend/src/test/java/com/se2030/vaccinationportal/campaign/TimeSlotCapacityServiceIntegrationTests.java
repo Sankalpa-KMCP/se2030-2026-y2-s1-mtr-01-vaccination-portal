@@ -316,26 +316,79 @@ class TimeSlotCapacityServiceIntegrationTests {
     }
 
     @Test
-    @DisplayName("isSessionFull returns true when session has no slots configured")
-    void isSessionFull_trueWhenNoSlotsConfigured() {
-        assertTrue(slotCapacityService.isSessionFull(scheduledSession.getId()));
+    @DisplayName("isSessionFull throws IllegalStateException when session has no slots configured")
+    void isSessionFull_throwsWhenNoSlotsConfigured() {
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                slotCapacityService.isSessionFull(scheduledSession.getId())
+        );
+        assertTrue(ex.getMessage().contains("has no configured time slots"));
     }
 
     @Test
-    @DisplayName("isSessionFull returns true when session is not in SCHEDULED lifecycle status")
-    void isSessionFull_trueWhenSessionNotScheduled() {
+    @DisplayName("isSessionFull throws IllegalStateException when session is in DRAFT lifecycle status")
+    void isSessionFull_throwsWhenSessionInDraftStatus() {
+        // Without slots
+        IllegalStateException ex1 = assertThrows(IllegalStateException.class, () ->
+                slotCapacityService.isSessionFull(draftSession.getId())
+        );
+        assertTrue(ex1.getMessage().contains("DRAFT"));
+
+        // With slots configured on draft session
         TimeSlot slot = new TimeSlot(draftSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
         slot.setReservedCount(0);
         timeSlotRepository.save(slot);
 
-        assertTrue(slotCapacityService.isSessionFull(draftSession.getId()));
+        IllegalStateException ex2 = assertThrows(IllegalStateException.class, () ->
+                slotCapacityService.isSessionFull(draftSession.getId())
+        );
+        assertTrue(ex2.getMessage().contains("DRAFT"));
     }
 
     @Test
-    @DisplayName("isSessionFull returns true when sessionId is null or does not exist")
-    void isSessionFull_trueWhenInvalidOrNotFound() {
-        assertTrue(slotCapacityService.isSessionFull(null));
-        assertTrue(slotCapacityService.isSessionFull(999999L));
+    @DisplayName("isSessionFull throws IllegalStateException when session is in CANCELLED lifecycle status")
+    void isSessionFull_throwsWhenSessionInCancelledStatus() {
+        VaccinationSession cancelledSession = new VaccinationSession(
+                testCampaign, testCenter, baseStart, baseEnd, baseStart.minus(2, ChronoUnit.HOURS), "UTC");
+        cancelledSession.cancel();
+        cancelledSession = sessionRepository.save(cancelledSession);
+
+        final Long cancelledId = cancelledSession.getId();
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                slotCapacityService.isSessionFull(cancelledId)
+        );
+        assertTrue(ex.getMessage().contains("CANCELLED"));
+    }
+
+    @Test
+    @DisplayName("isSessionFull throws IllegalStateException when session is IN_PROGRESS or COMPLETED")
+    void isSessionFull_throwsWhenSessionInProgressOrCompleted() {
+        VaccinationSession activeSession = new VaccinationSession(
+                testCampaign, testCenter, baseStart, baseEnd, baseStart.minus(2, ChronoUnit.HOURS), "UTC");
+        activeSession.schedule();
+        activeSession.start();
+        activeSession = sessionRepository.save(activeSession);
+
+        final Long activeId = activeSession.getId();
+        IllegalStateException ex1 = assertThrows(IllegalStateException.class, () ->
+                slotCapacityService.isSessionFull(activeId)
+        );
+        assertTrue(ex1.getMessage().contains("IN_PROGRESS"));
+
+        activeSession.complete();
+        activeSession = sessionRepository.save(activeSession);
+
+        final Long completedId = activeSession.getId();
+        IllegalStateException ex2 = assertThrows(IllegalStateException.class, () ->
+                slotCapacityService.isSessionFull(completedId)
+        );
+        assertTrue(ex2.getMessage().contains("COMPLETED"));
+    }
+
+    @Test
+    @DisplayName("isSessionFull throws IllegalArgumentException when sessionId is null or does not exist")
+    void isSessionFull_throwsWhenSessionIdNullOrNotFound() {
+        assertThrows(IllegalArgumentException.class, () -> slotCapacityService.isSessionFull(null));
+        assertThrows(IllegalArgumentException.class, () -> slotCapacityService.isSessionFull(999999L));
     }
 
     @Test

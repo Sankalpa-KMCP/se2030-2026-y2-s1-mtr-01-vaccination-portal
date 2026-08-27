@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,9 +24,14 @@ import java.util.Optional;
 public class TimeSlotCapacityService implements SlotCapacityPort {
 
     private final TimeSlotRepository timeSlotRepository;
+    private final VaccinationSessionRepository sessionRepository;
 
-    public TimeSlotCapacityService(TimeSlotRepository timeSlotRepository) {
+    public TimeSlotCapacityService(
+            TimeSlotRepository timeSlotRepository,
+            VaccinationSessionRepository sessionRepository
+    ) {
         this.timeSlotRepository = Objects.requireNonNull(timeSlotRepository, "TimeSlotRepository must not be null");
+        this.sessionRepository = Objects.requireNonNull(sessionRepository, "VaccinationSessionRepository must not be null");
     }
 
     @Override
@@ -98,20 +104,31 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public boolean isSessionFull(Long sessionId) {
         if (sessionId == null) {
-            return true;
+            throw new IllegalArgumentException("Session ID is required");
         }
-        List<TimeSlot> slots = timeSlotRepository.findBySessionId(sessionId);
+
+        List<TimeSlot> slots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
+
         if (slots.isEmpty()) {
-            return true;
+            VaccinationSession session = sessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Session not found with ID: " + sessionId));
+            if (session.getLifecycleStatus() != SessionLifecycleStatus.SCHEDULED) {
+                throw new IllegalStateException("Cannot check capacity or join waitlist for session in "
+                        + session.getLifecycleStatus() + " status: " + sessionId);
+            }
+            throw new IllegalStateException("Session " + sessionId + " has no configured time slots");
         }
-        return slots.stream().noneMatch(slot -> {
-            VaccinationSession session = slot.getSession();
-            return session != null
-                    && session.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED
-                    && slot.hasAvailableCapacity();
-        });
+
+        VaccinationSession session = slots.get(0).getSession();
+        if (session == null || session.getLifecycleStatus() != SessionLifecycleStatus.SCHEDULED) {
+            SessionLifecycleStatus status = (session != null) ? session.getLifecycleStatus() : null;
+            throw new IllegalStateException("Cannot check capacity or join waitlist for session in "
+                    + status + " status: " + sessionId);
+        }
+
+        return slots.stream().noneMatch(TimeSlot::hasAvailableCapacity);
     }
 }
