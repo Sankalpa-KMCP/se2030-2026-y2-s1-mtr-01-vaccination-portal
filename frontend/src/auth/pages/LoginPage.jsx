@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function LoginPage() {
+export default function LoginPage({ onBackToLanding }) {
   const { login, loginError, clearLoginError } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -57,6 +57,17 @@ export default function LoginPage() {
     <div className="container py-5">
       <div className="row justify-content-center">
         <div className="col-12 col-sm-10 col-md-8 col-lg-5">
+          {onBackToLanding && (
+            <div className="mb-3">
+              <button
+                type="button"
+                className="btn btn-link btn-sm text-decoration-none p-0"
+                onClick={onBackToLanding}
+              >
+                &larr; Back to portal home
+              </button>
+            </div>
+          )}
           <div className="card shadow-sm border-0">
             <div className="card-body p-4 p-md-5">
               <div className="text-center mb-4">
