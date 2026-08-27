@@ -1,0 +1,97 @@
+package com.se2030.vaccinationportal.vaccination.controller;
+
+import com.se2030.vaccinationportal.vaccination.dto.VaccinationApiErrorResponse;
+import com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.Instant;
+import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+/**
+ * Module-scoped HTTP exception translation for MF-05 vaccination endpoints.
+ */
+@RestControllerAdvice(basePackages = "com.se2030.vaccinationportal.vaccination.controller")
+public class VaccinationExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleValidation(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request
+    ) {
+        List<VaccinationApiErrorResponse.FieldErrorItem> fieldErrors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(this::mapFieldError)
+                .toList();
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "Validation failed for request payload",
+                request,
+                fieldErrors
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleMalformedRequest(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "Malformed JSON request body or invalid field type", request, null);
+    }
+
+    @ExceptionHandler(VaccinationDraftNotFoundException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleNotFound(
+            VaccinationDraftNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(DuplicateVaccinationDraftException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleDuplicate(
+            DuplicateVaccinationDraftException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidVaccinationDraftException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleInvalidDraft(
+            InvalidVaccinationDraftException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    private ResponseEntity<VaccinationApiErrorResponse> response(
+            HttpStatus status,
+            String message,
+            HttpServletRequest request,
+            List<VaccinationApiErrorResponse.FieldErrorItem> fieldErrors
+    ) {
+        VaccinationApiErrorResponse body = new VaccinationApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                message,
+                request.getRequestURI(),
+                fieldErrors
+        );
+        return ResponseEntity.status(status).body(body);
+    }
+
+    private VaccinationApiErrorResponse.FieldErrorItem mapFieldError(FieldError fieldError) {
+        return new VaccinationApiErrorResponse.FieldErrorItem(
+                fieldError.getField(),
+                fieldError.getDefaultMessage()
+        );
+    }
+}
