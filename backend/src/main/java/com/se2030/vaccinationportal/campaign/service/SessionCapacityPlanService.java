@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.campaign.dto.response.CapacityPlanPreviewRes
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
 import com.se2030.vaccinationportal.campaign.model.OperationalResourceStatus;
+import com.se2030.vaccinationportal.campaign.model.OperationalStaffStatus;
 import com.se2030.vaccinationportal.campaign.model.ResourceType;
 import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -13,12 +14,14 @@ import com.se2030.vaccinationportal.campaign.model.SessionResourceAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -37,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SessionCapacityPlanService {
 
     private final VaccinationSessionRepository sessionRepository;
+    private final VaccinationCenterRepository centerRepository;
     private final SessionCapacityPlanRepository planRepository;
     private final StaffAssignmentRepository staffAssignmentRepository;
     private final SessionResourceAssignmentRepository resourceAssignmentRepository;
@@ -45,6 +49,7 @@ public class SessionCapacityPlanService {
     private final TimeSlotRepository timeSlotRepository;
 
     public SessionCapacityPlanService(VaccinationSessionRepository sessionRepository,
+                                      VaccinationCenterRepository centerRepository,
                                       SessionCapacityPlanRepository planRepository,
                                       StaffAssignmentRepository staffAssignmentRepository,
                                       SessionResourceAssignmentRepository resourceAssignmentRepository,
@@ -52,6 +57,7 @@ public class SessionCapacityPlanService {
                                       SessionCapacityCalculationService calculationService,
                                       TimeSlotRepository timeSlotRepository) {
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "sessionRepository must not be null");
+        this.centerRepository = Objects.requireNonNull(centerRepository, "centerRepository must not be null");
         this.planRepository = Objects.requireNonNull(planRepository, "planRepository must not be null");
         this.staffAssignmentRepository = Objects.requireNonNull(staffAssignmentRepository, "staffAssignmentRepository must not be null");
         this.resourceAssignmentRepository = Objects.requireNonNull(resourceAssignmentRepository, "resourceAssignmentRepository must not be null");
@@ -77,8 +83,8 @@ public class SessionCapacityPlanService {
 
         int durationMinutes = calculateDurationMinutes(session);
         int expectedServiceMinutes = resolveExpectedServiceMinutes(session);
-        int assignedVaccinators = countAssignedVaccinators(sessionId);
-        int availableStations = countAvailableStations(sessionId);
+        int assignedVaccinators = countAssignedVaccinators(session);
+        int availableStations = countAvailableStations(session);
 
         int fullyEquipped = request.fullyEquippedStationCount();
         if (fullyEquipped < 0) {
@@ -94,9 +100,8 @@ public class SessionCapacityPlanService {
         int recommendedThroughput = calculationService.calculateRecommendedThroughput(
                 effectiveStations, durationMinutes, expectedServiceMinutes);
 
-        int safeOccupancy = (request.safeConcurrentOccupancy() != null && request.safeConcurrentOccupancy() > 0)
-                ? request.safeConcurrentOccupancy()
-                : session.getCenter().getSafeConcurrentOccupancy();
+        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
+        int safeOccupancy = resolveSafeConcurrentOccupancy(request.safeConcurrentOccupancy(), centerSafeLimit);
 
         int dwellMinutes = (request.expectedDwellMinutes() != null && request.expectedDwellMinutes() > 0)
                 ? request.expectedDwellMinutes()
@@ -164,9 +169,17 @@ public class SessionCapacityPlanService {
             throw new IllegalArgumentException("Create request must not be null");
         }
 
-        // Lock session to serialize concurrent revision increments
+        Long centerId = sessionRepository.findCenterIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        VaccinationCenter lockedCenter = centerRepository.findByIdForUpdate(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
+
+        // Center -> session -> slots is the canonical safety-sensitive lock order.
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        if (!session.getCenter().getId().equals(centerId)) {
+            throw new IllegalStateException("Authoritative session parent center changed concurrently");
+        }
 
         if (session.getLifecycleStatus() != SessionLifecycleStatus.DRAFT) {
             throw new IllegalStateException("Session capacity plans can only be created for sessions in DRAFT status");
@@ -182,8 +195,8 @@ public class SessionCapacityPlanService {
 
         int durationMinutes = calculateDurationMinutes(session);
         int expectedServiceMinutes = resolveExpectedServiceMinutes(session);
-        int assignedVaccinators = countAssignedVaccinators(sessionId);
-        int availableStations = countAvailableStations(sessionId);
+        int assignedVaccinators = countAssignedVaccinators(session);
+        int availableStations = countAvailableStations(session);
 
         int fullyEquipped = request.fullyEquippedStationCount();
         if (fullyEquipped < 0) {
@@ -213,9 +226,8 @@ public class SessionCapacityPlanService {
             }
         }
 
-        int safeOccupancy = (request.safeConcurrentOccupancy() != null && request.safeConcurrentOccupancy() > 0)
-                ? request.safeConcurrentOccupancy()
-                : session.getCenter().getSafeConcurrentOccupancy();
+        int centerSafeLimit = lockedCenter.getSafeConcurrentOccupancy();
+        int safeOccupancy = resolveSafeConcurrentOccupancy(request.safeConcurrentOccupancy(), centerSafeLimit);
 
         int dwellMinutes = (request.expectedDwellMinutes() != null && request.expectedDwellMinutes() > 0)
                 ? request.expectedDwellMinutes()
@@ -225,9 +237,9 @@ public class SessionCapacityPlanService {
                 ? request.expectedAccompanyingPersonsPerBooking()
                 : SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO;
 
-        Integer ceiling = session.getCenter().getSessionServiceCeiling();
+        Integer ceiling = lockedCenter.getSessionServiceCeiling();
 
-        Optional<SessionCapacityPlan> latestPlan = planRepository.findTopBySessionIdOrderByRevisionDesc(sessionId);
+        Optional<SessionCapacityPlan> latestPlan = planRepository.findFirstBySessionIdOrderByRevisionDesc(sessionId);
         int nextRevision = latestPlan.map(p -> p.getRevision() + 1).orElse(1);
 
         String approvedBy = actor != null ? String.valueOf(actor.userId()) : null;
@@ -316,19 +328,52 @@ public class SessionCapacityPlanService {
                 .orElse(CampaignDoseProgramme.DEFAULT_EXPECTED_SERVICE_MINUTES);
     }
 
-    private int countAssignedVaccinators(Long sessionId) {
-        List<StaffAssignment> assignments = staffAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(sessionId);
-        return (int) assignments.stream()
-                .filter(a -> a.getRole() == StaffRole.VACCINATOR)
-                .count();
+    private int countAssignedVaccinators(VaccinationSession session) {
+        List<StaffAssignment> assignments = staffAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(session.getId());
+        List<StaffAssignment> qualifying = assignments.stream()
+                .filter(a -> a.getRole() == StaffRole.VACCINATOR
+                        && a.getStaffRoster() != null
+                        && a.getStaffRoster().getStatus() == OperationalStaffStatus.ACTIVE)
+                .toList();
+        return calculationService.calculateMinimumConcurrentIdentities(
+                session.getStartAt(),
+                session.getEndAt(),
+                qualifying,
+                StaffAssignment::getUserId,
+                StaffAssignment::getStartAt,
+                StaffAssignment::getEndAt
+        );
     }
 
-    private int countAvailableStations(Long sessionId) {
-        List<SessionResourceAssignment> assignments = resourceAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(sessionId);
-        return (int) assignments.stream()
+    private int resolveSafeConcurrentOccupancy(Integer requestedSafeOccupancy, int centerSafeLimit) {
+        if (requestedSafeOccupancy == null) {
+            return centerSafeLimit;
+        }
+        if (requestedSafeOccupancy <= 0) {
+            throw new IllegalArgumentException("Safe concurrent occupancy must be positive if specified");
+        }
+        if (requestedSafeOccupancy > centerSafeLimit) {
+            throw new IllegalArgumentException(String.format(
+                    "Requested safe concurrent occupancy (%d) cannot exceed center safety limit (%d)",
+                    requestedSafeOccupancy, centerSafeLimit));
+        }
+        return requestedSafeOccupancy;
+    }
+
+    private int countAvailableStations(VaccinationSession session) {
+        List<SessionResourceAssignment> assignments = resourceAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(session.getId());
+        List<SessionResourceAssignment> qualifying = assignments.stream()
                 .filter(a -> a.getResource() != null
                         && a.getResource().getResourceType() == ResourceType.VACCINATION_STATION
                         && a.getResource().getStatus() == OperationalResourceStatus.ACTIVE)
-                .count();
+                .toList();
+        return calculationService.calculateMinimumConcurrentIdentities(
+                session.getStartAt(),
+                session.getEndAt(),
+                qualifying,
+                a -> a.getResource().getId(),
+                SessionResourceAssignment::getStartAt,
+                SessionResourceAssignment::getEndAt
+        );
     }
 }

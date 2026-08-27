@@ -217,15 +217,20 @@ public class VaccinationSessionService {
         requireId(sessionId, "Session ID is required");
         Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        Long centerId = sessionRepository.findCenterIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
+        VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
 
-        if (!session.getCampaign().getId().equals(campaignId)) {
-            throw new IllegalStateException("Authoritative session parent campaign changed concurrently");
+        if (!session.getCampaign().getId().equals(campaignId) || !session.getCenter().getId().equals(center.getId())) {
+            throw new IllegalStateException("Authoritative session parent relationship changed concurrently");
         }
 
         operationalReadinessService.assertReadyForScheduling(campaign, session);

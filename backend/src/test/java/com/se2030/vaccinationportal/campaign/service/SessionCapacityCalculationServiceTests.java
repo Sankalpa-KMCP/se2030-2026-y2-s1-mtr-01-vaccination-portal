@@ -178,4 +178,102 @@ class SessionCapacityCalculationServiceTests {
         assertThrows(IllegalArgumentException.class, () -> calculationService.evaluateConcurrentOccupancy(List.of(), 0));
         assertThrows(IllegalArgumentException.class, () -> calculationService.evaluateConcurrentOccupancy(List.of(), -10));
     }
+
+    @Test
+    void resolveEffectiveSafeConcurrentOccupancy_rules() {
+        // null or non-positive plan safe occupancy -> uses center limit
+        assertEquals(10, calculationService.resolveEffectiveSafeConcurrentOccupancy(null, 10));
+        assertEquals(10, calculationService.resolveEffectiveSafeConcurrentOccupancy(0, 10));
+        assertEquals(10, calculationService.resolveEffectiveSafeConcurrentOccupancy(-5, 10));
+
+        // plan safe occupancy lower than center limit -> uses plan (conservative snapshot)
+        assertEquals(8, calculationService.resolveEffectiveSafeConcurrentOccupancy(8, 10));
+
+        // plan safe occupancy higher than center limit (e.g. center limit lowered) -> clamped to center limit
+        assertEquals(5, calculationService.resolveEffectiveSafeConcurrentOccupancy(10, 5));
+
+        // both equal -> returns value
+        assertEquals(10, calculationService.resolveEffectiveSafeConcurrentOccupancy(10, 10));
+
+        // Non-positive center limit -> throws IllegalArgumentException
+        assertThrows(IllegalArgumentException.class, () -> calculationService.resolveEffectiveSafeConcurrentOccupancy(8, 0));
+        assertThrows(IllegalArgumentException.class, () -> calculationService.resolveEffectiveSafeConcurrentOccupancy(8, -1));
+    }
+
+    @Test
+    void calculateMinimumConcurrentIdentities_intervalScenarios() {
+        Instant t0900 = Instant.parse("2026-10-01T09:00:00Z");
+        Instant t0930 = Instant.parse("2026-10-01T09:30:00Z");
+        Instant t1000 = Instant.parse("2026-10-01T10:00:00Z");
+        Instant t1100 = Instant.parse("2026-10-01T11:00:00Z");
+        Instant t1200 = Instant.parse("2026-10-01T12:00:00Z");
+        Instant t1230 = Instant.parse("2026-10-01T12:30:00Z");
+        Instant t1300 = Instant.parse("2026-10-01T13:00:00Z");
+
+        record Assignment(Long id, Instant start, Instant end) {}
+
+        // Case A: 1 identity covering full session (09:00-13:00) -> 1
+        List<Assignment> caseA = List.of(new Assignment(1L, t0900, t1300));
+        assertEquals(1, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, caseA, Assignment::id, Assignment::start, Assignment::end));
+
+        // Case B: 1 identity covering only part (09:00-10:00) -> 0
+        List<Assignment> caseB = List.of(new Assignment(1L, t0900, t1000));
+        assertEquals(0, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, caseB, Assignment::id, Assignment::start, Assignment::end));
+
+        // Case C: Same identity with adjacent rows (09:00-11:00, 11:00-13:00) -> 1 (not 2)
+        List<Assignment> caseC = List.of(
+                new Assignment(1L, t0900, t1100),
+                new Assignment(1L, t1100, t1300)
+        );
+        assertEquals(1, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, caseC, Assignment::id, Assignment::start, Assignment::end));
+
+        // Case D: Distinct identities with adjacent rows (A: 09:00-11:00, B: 11:00-13:00) -> 1
+        List<Assignment> caseD = List.of(
+                new Assignment(1L, t0900, t1100),
+                new Assignment(2L, t1100, t1300)
+        );
+        assertEquals(1, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, caseD, Assignment::id, Assignment::start, Assignment::end));
+
+        // Case E: Overlapping staggered (A: 09:00-12:00, B: 10:00-13:00) -> min concurrent = 1
+        List<Assignment> caseE = List.of(
+                new Assignment(1L, t0900, t1200),
+                new Assignment(2L, t1000, t1300)
+        );
+        assertEquals(1, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, caseE, Assignment::id, Assignment::start, Assignment::end));
+
+        // Case F: Full coverage A (09:00-13:00) and partial coverage B (09:30-12:30) -> min concurrent = 1
+        List<Assignment> caseF = List.of(
+                new Assignment(1L, t0900, t1300),
+                new Assignment(2L, t0930, t1230)
+        );
+        assertEquals(1, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, caseF, Assignment::id, Assignment::start, Assignment::end));
+
+        // Case G: Two identities both covering full session (09:00-13:00) -> 2
+        List<Assignment> caseG = List.of(
+                new Assignment(1L, t0900, t1300),
+                new Assignment(2L, t0900, t1300)
+        );
+        assertEquals(2, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, caseG, Assignment::id, Assignment::start, Assignment::end));
+
+        // Case H: Same identity with duplicate overlapping rows (09:00-13:00 and 10:00-12:00) -> 1
+        List<Assignment> caseH = List.of(
+                new Assignment(1L, t0900, t1300),
+                new Assignment(1L, t1000, t1200)
+        );
+        assertEquals(1, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, caseH, Assignment::id, Assignment::start, Assignment::end));
+
+        // Empty / null handling
+        assertEquals(0, calculationService.calculateMinimumConcurrentIdentities(
+                t0900, t1300, List.of(), Assignment::id, Assignment::start, Assignment::end));
+        assertEquals(0, calculationService.calculateMinimumConcurrentIdentities(
+                null, t1300, caseA, Assignment::id, Assignment::start, Assignment::end));
+    }
 }

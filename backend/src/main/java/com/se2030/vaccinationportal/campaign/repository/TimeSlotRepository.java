@@ -14,6 +14,9 @@ import java.util.Optional;
 @Repository
 public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
 
+    @Query(value = "SELECT session_id FROM time_slots WHERE id = :id", nativeQuery = true)
+    Optional<Long> findSessionIdBySlotId(@Param("id") Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT ts FROM TimeSlot ts WHERE ts.id = :id")
     Optional<TimeSlot> findByIdForUpdate(@Param("id") Long id);
