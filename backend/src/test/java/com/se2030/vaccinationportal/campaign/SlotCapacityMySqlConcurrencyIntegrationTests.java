@@ -520,6 +520,59 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         assertTrue(total <= 10, "Total configured slot capacity (" + total + ") must not exceed approved capacity (10)");
     }
 
+    @Test
+    @Timeout(30)
+    @DisplayName("Task 34: Concurrent overlapping slot creation - Serialized by parent session lock preventing concurrent occupancy breach")
+    void concurrentOverlappingSlotCreation_enforcesConcurrentOccupancyUnderSessionLock() throws Exception {
+        // safeConcurrentOccupancy = 10, approvedCapacity = 100
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                session, 1, 240, 10, 2, 2, 2, 2, 48, 100, 10, 15, 0.0, null, null, "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        // T1: create slot 1 from baseStart to baseStart + 60m with capacity 8 (8 <= 10)
+        Future<Boolean> f1 = executor.submit(() -> {
+            readyLatch.countDown();
+            startLatch.await(10, TimeUnit.SECONDS);
+            try {
+                timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 8);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+
+        // T2: create slot 2 from baseStart + 30m to baseStart + 90m with capacity 8 (8 <= 10, but overlap would be 16 > 10)
+        Future<Boolean> f2 = executor.submit(() -> {
+            readyLatch.countDown();
+            startLatch.await(10, TimeUnit.SECONDS);
+            try {
+                timeSlotService.createSlot(session.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 8);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        boolean r1 = f1.get(10, TimeUnit.SECONDS);
+        boolean r2 = f2.get(10, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Exactly one should succeed and one should fail due to concurrent occupancy serialization
+        assertTrue((r1 && !r2) || (!r1 && r2), "Exactly one overlapping slot creation should succeed without exceeding safe concurrent occupancy");
+
+        List<TimeSlot> slots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(session.getId());
+        assertEquals(1, slots.size(), "Only one slot must be persisted");
+        assertEquals(8, slots.get(0).getCapacity());
+    }
+
     @AfterEach
     void tearDown() {
         if (transactionTemplate != null) {

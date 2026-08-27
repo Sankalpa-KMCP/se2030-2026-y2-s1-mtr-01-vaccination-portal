@@ -32,6 +32,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import com.se2030.vaccinationportal.campaign.dto.request.CreateSessionCapacityPlanRequest;
 import com.se2030.vaccinationportal.campaign.service.SessionCapacityPlanService;
@@ -525,5 +526,118 @@ class TimeSlotCapacityServiceIntegrationTests {
         assertNotNull(plan2);
         assertEquals(25, plan2.getApprovedCapacity());
         assertEquals("42", plan2.getApprovedBy());
+    }
+
+    @Test
+    @DisplayName("createSlot: overlapping slots within safe concurrent occupancy succeeds")
+    void createSlot_overlappingSlotsWithinSafeOccupancy_succeeds() {
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 100, 30, 15, 0.0, null, "Capacity override", "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        TimeSlot slot1 = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 15);
+        TimeSlot slot2 = timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 15);
+
+        assertNotNull(slot1);
+        assertNotNull(slot2);
+        List<TimeSlot> slots = timeSlotService.getSlotsForSession(scheduledSession.getId());
+        assertEquals(2, slots.size());
+    }
+
+    @Test
+    @DisplayName("createSlot: overlapping slot exceeding safe concurrent occupancy fails and rolls back")
+    void createSlot_overlappingSlotsExceedingSafeOccupancy_failsAndRollsBack() {
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 100, 25, 15, 0.0, null, "Capacity override", "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 15);
+
+        // Slot 2 overlaps by 30 mins, total peak = 15 + 15 = 30 > safe limit 25 -> must throw IllegalStateException
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 15)
+        );
+        assertTrue(ex.getMessage().contains("exceeds safe concurrent occupancy limit (25)"));
+
+        List<TimeSlot> slots = timeSlotService.getSlotsForSession(scheduledSession.getId());
+        assertEquals(1, slots.size(), "Failed slot creation must not persist partial records");
+    }
+
+    @Test
+    @DisplayName("updateSlotCapacity: updating overlapping slot within safe concurrent occupancy succeeds")
+    void updateSlotCapacity_overlappingSlotsWithinSafeOccupancy_succeeds() {
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 100, 40, 15, 0.0, null, "Capacity override", "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        TimeSlot slot1 = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 15);
+        TimeSlot slot2 = timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 15);
+
+        // Peak becomes 15 + 25 = 40 <= 40 -> succeeds
+        TimeSlot updated = timeSlotService.updateSlotCapacity(slot2.getId(), 25);
+        assertEquals(25, updated.getCapacity());
+    }
+
+    @Test
+    @DisplayName("updateSlotCapacity: updating overlapping slot exceeding safe limit fails and preserves original capacity")
+    void updateSlotCapacity_overlappingSlotsExceedingSafeOccupancy_failsAndPreservesOriginalCapacity() {
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 100, 30, 15, 0.0, null, "Capacity override", "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        TimeSlot slot1 = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 15);
+        TimeSlot slot2 = timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 15);
+
+        // Attempting to update slot2 to 20 -> Peak = 15 + 20 = 35 > 30 -> rejected
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                timeSlotService.updateSlotCapacity(slot2.getId(), 20)
+        );
+        assertTrue(ex.getMessage().contains("exceeds safe concurrent occupancy limit (30)"));
+
+        TimeSlot persistedSlot2 = timeSlotRepository.findById(slot2.getId()).orElseThrow();
+        assertEquals(15, persistedSlot2.getCapacity(), "Original slot capacity must be preserved on rejection");
+    }
+
+    @Test
+    @DisplayName("createSlot: dwell time extension causing overlap on adjacent slots exceeding safe limit is rejected")
+    void createSlot_dwellTimeExtensionCausingOverlap_exceedingSafeOccupancy_rejected() {
+        // Slot duration = 15 min, but expectedDwellMinutes = 30 min -> effective occupancy lasts 30 min from start
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 100, 25, 30, 0.0, null, "Capacity override", "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        // Slot 1: [baseStart, baseStart + 15m), effective dwell until baseStart + 30m, cap = 15
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(15, ChronoUnit.MINUTES), 15);
+
+        // Slot 2: [baseStart + 15m, baseStart + 30m), cap = 15.
+        // At boundary baseStart + 15m, slot 1 is still dwelling (effective dwell end = baseStart + 30m), so peak = 15 + 15 = 30 > 25
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(15, ChronoUnit.MINUTES), baseStart.plus(30, ChronoUnit.MINUTES), 15)
+        );
+        assertTrue(ex.getMessage().contains("exceeds safe concurrent occupancy limit (25)"));
+    }
+
+    @Test
+    @DisplayName("createSlot: accompanying persons multiplier breaching safe concurrent occupancy is rejected")
+    void createSlot_accompanyingPersonsMultiplierBreachingSafeOccupancy_rejected() {
+        // Accompanying ratio = 0.5 -> 1.5x occupancy multiplier per booking
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                scheduledSession, 1, 240, 10, 2, 2, 2, 2, 48, 100, 20, 15, 0.5, null, "Capacity override", "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        // Slot 1: cap = 10 -> expected units = 10 * 1.5 = 15.0 <= 20
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 10);
+
+        // Slot 2 overlapping: cap = 10 -> expected units = 15.0. Peak = 15.0 + 15.0 = 30.0 > 20
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 10)
+        );
+        assertTrue(ex.getMessage().contains("Peak concurrent occupancy (30.0) exceeds safe concurrent occupancy limit (20)"));
     }
 }
