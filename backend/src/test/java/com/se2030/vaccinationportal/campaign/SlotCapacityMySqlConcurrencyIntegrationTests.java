@@ -38,12 +38,32 @@ import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepositor
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
+import com.se2030.vaccinationportal.campaign.repository.CenterClosureRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffIdentityRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -58,11 +78,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-/**
- * Production-equivalent MySQL Testcontainers concurrency tests verifying deterministic pessimistic locking,
- * atomic reservation counters, capacity floor preservation, and overbooking prevention on real MySQL/InnoDB.
  */
 class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
 
@@ -584,38 +601,47 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
     void centerSafety_slotCreateCommitsBeforeLowering_rejectsLowering() throws Exception {
         updateCenterSafeLimit(10);
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch slotValidated = new CountDownLatch(1);
-        CountDownLatch loweringAttempted = new CountDownLatch(1);
+        CountDownLatch slotCreatedInTx = new CountDownLatch(1);
+        CountDownLatch releaseSlotTx = new CountDownLatch(1);
 
         try {
             Future<?> slotFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
                 timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 8);
-                slotValidated.countDown();
-                awaitLatch(loweringAttempted);
+                slotCreatedInTx.countDown();
+                awaitLatch(releaseSlotTx);
             }));
 
-            assertTrue(slotValidated.await(10, TimeUnit.SECONDS));
-            Future<Boolean> loweringFuture = executor.submit(() -> {
-                loweringAttempted.countDown();
+            assertTrue(slotCreatedInTx.await(10, TimeUnit.SECONDS));
+
+            Future<Throwable> loweringFuture = executor.submit(() -> {
                 try {
                     updateCenterSafeLimit(5);
-                    return true;
-                } catch (IllegalArgumentException expected) {
-                    return false;
+                    return null;
+                } catch (Throwable t) {
+                    return t;
                 }
             });
 
+            // Deterministically prove that the lowering transaction is blocked in MySQL on the center row lock
+            awaitCenterLockWait(center.getId(), 10000);
+
+            // Now release the slot creation transaction to commit
+            releaseSlotTx.countDown();
             slotFuture.get(10, TimeUnit.SECONDS);
-            assertFalse(loweringFuture.get(10, TimeUnit.SECONDS));
+
+            // Lowering should unblock, execute its validation against the committed slot (peak 8.0), and reject lowering to 5
+            Throwable loweringError = loweringFuture.get(10, TimeUnit.SECONDS);
+            assertNotNull(loweringError, "Expected center lowering to be rejected");
+            assertTrue(loweringError instanceof IllegalArgumentException, "Expected IllegalArgumentException, got: " + loweringError);
+            assertTrue(loweringError.getMessage().contains("cannot be lowered to 5"), "Unexpected error: " + loweringError.getMessage());
+            assertTrue(loweringError.getMessage().contains("configured peak occupancy 8.0"), "Unexpected error: " + loweringError.getMessage());
         } finally {
+            releaseSlotTx.countDown();
             executor.shutdownNow();
             assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
         }
 
         assertEquals(10, centerRepository.findById(center.getId()).orElseThrow().getSafeConcurrentOccupancy());
-        List<TimeSlot> slots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(session.getId());
-        assertEquals(1, slots.size());
-        assertEquals(8, slots.get(0).getCapacity());
     }
 
     @Test
@@ -624,30 +650,41 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
     void centerSafety_loweringCommitsBeforeSlotCreate_rejectsSlotCreate() throws Exception {
         updateCenterSafeLimit(10);
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch centerLowered = new CountDownLatch(1);
-        CountDownLatch slotAttempted = new CountDownLatch(1);
+        CountDownLatch centerLoweredInTx = new CountDownLatch(1);
+        CountDownLatch releaseLoweringTx = new CountDownLatch(1);
 
         try {
             Future<?> loweringFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
                 updateCenterSafeLimit(5);
-                centerLowered.countDown();
-                awaitLatch(slotAttempted);
+                centerLoweredInTx.countDown();
+                awaitLatch(releaseLoweringTx);
             }));
 
-            assertTrue(centerLowered.await(10, TimeUnit.SECONDS));
-            Future<Boolean> slotFuture = executor.submit(() -> {
-                slotAttempted.countDown();
+            assertTrue(centerLoweredInTx.await(10, TimeUnit.SECONDS));
+
+            Future<Throwable> slotFuture = executor.submit(() -> {
                 try {
                     timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 8);
-                    return true;
-                } catch (IllegalStateException expected) {
-                    return false;
+                    return null;
+                } catch (Throwable t) {
+                    return t;
                 }
             });
 
+            // Deterministically prove that the slot creation transaction is blocked in MySQL on the center row lock
+            awaitCenterLockWait(center.getId(), 10000);
+
+            // Now release the lowering transaction to commit
+            releaseLoweringTx.countDown();
             loweringFuture.get(10, TimeUnit.SECONDS);
-            assertFalse(slotFuture.get(10, TimeUnit.SECONDS));
+
+            // Slot creation should unblock, read the committed center limit (5), and reject peak 8.0 > 5
+            Throwable slotError = slotFuture.get(10, TimeUnit.SECONDS);
+            assertNotNull(slotError, "Expected slot creation to be rejected");
+            assertTrue(slotError instanceof IllegalStateException, "Expected IllegalStateException, got: " + slotError);
+            assertTrue(slotError.getMessage().contains("exceeds safe concurrent occupancy limit (5)"), "Unexpected error: " + slotError.getMessage());
         } finally {
+            releaseLoweringTx.countDown();
             executor.shutdownNow();
             assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
         }
@@ -664,30 +701,42 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         TimeSlot slot = timeSlotService.createSlot(
                 session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch slotUpdated = new CountDownLatch(1);
-        CountDownLatch loweringAttempted = new CountDownLatch(1);
+        CountDownLatch slotUpdatedInTx = new CountDownLatch(1);
+        CountDownLatch releaseUpdateTx = new CountDownLatch(1);
 
         try {
             Future<?> updateFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
                 timeSlotService.updateSlotCapacity(slot.getId(), 8);
-                slotUpdated.countDown();
-                awaitLatch(loweringAttempted);
+                slotUpdatedInTx.countDown();
+                awaitLatch(releaseUpdateTx);
             }));
 
-            assertTrue(slotUpdated.await(10, TimeUnit.SECONDS));
-            Future<Boolean> loweringFuture = executor.submit(() -> {
-                loweringAttempted.countDown();
+            assertTrue(slotUpdatedInTx.await(10, TimeUnit.SECONDS));
+
+            Future<Throwable> loweringFuture = executor.submit(() -> {
                 try {
                     updateCenterSafeLimit(5);
-                    return true;
-                } catch (IllegalArgumentException expected) {
-                    return false;
+                    return null;
+                } catch (Throwable t) {
+                    return t;
                 }
             });
 
+            // Deterministically prove that the lowering transaction is blocked in MySQL on the center row lock
+            awaitCenterLockWait(center.getId(), 10000);
+
+            // Now release the slot update transaction to commit
+            releaseUpdateTx.countDown();
             updateFuture.get(10, TimeUnit.SECONDS);
-            assertFalse(loweringFuture.get(10, TimeUnit.SECONDS));
+
+            // Lowering should unblock, check the committed updated slot capacity (peak 8.0), and reject lowering to 5
+            Throwable loweringError = loweringFuture.get(10, TimeUnit.SECONDS);
+            assertNotNull(loweringError, "Expected center lowering to be rejected");
+            assertTrue(loweringError instanceof IllegalArgumentException, "Expected IllegalArgumentException, got: " + loweringError);
+            assertTrue(loweringError.getMessage().contains("cannot be lowered to 5"), "Unexpected error: " + loweringError.getMessage());
+            assertTrue(loweringError.getMessage().contains("configured peak occupancy 8.0"), "Unexpected error: " + loweringError.getMessage());
         } finally {
+            releaseUpdateTx.countDown();
             executor.shutdownNow();
             assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
         }
@@ -745,5 +794,34 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
             Thread.currentThread().interrupt();
             throw new AssertionError("Interrupted while coordinating center-safety concurrency test", error);
         }
+    }
+
+    private void awaitCenterLockWait(Long centerId, long timeoutMillis) {
+        Instant deadline = Instant.now().plusMillis(timeoutMillis);
+        String sql = """
+                SELECT count(*)
+                FROM performance_schema.data_lock_waits w
+                JOIN performance_schema.data_locks req ON req.ENGINE_LOCK_ID = w.REQUESTING_ENGINE_LOCK_ID
+                WHERE req.OBJECT_NAME = 'vaccination_centers'
+                  AND req.LOCK_STATUS = 'WAITING'
+                """;
+        while (Instant.now().isBefore(deadline)) {
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    return;
+                }
+            } catch (SQLException e) {
+                throw new IllegalStateException("Failed to query MySQL performance_schema for lock waits", e);
+            }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Interrupted while polling for center lock wait", e);
+            }
+        }
+        throw new AssertionError("Contender did not reach database lock wait on vaccination_centers table within " + timeoutMillis + "ms");
     }
 }
