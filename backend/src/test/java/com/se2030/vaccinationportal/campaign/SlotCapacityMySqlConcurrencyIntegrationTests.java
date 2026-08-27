@@ -524,9 +524,9 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
     @Timeout(30)
     @DisplayName("Task 34: Concurrent overlapping slot creation - Serialized by parent session lock preventing concurrent occupancy breach")
     void concurrentOverlappingSlotCreation_enforcesConcurrentOccupancyUnderSessionLock() throws Exception {
-        // safeConcurrentOccupancy = 10, approvedCapacity = 100
+        // safeConcurrentOccupancy = 10, approvedCapacity = 48 (matching recommended throughput, no override required)
         SessionCapacityPlan plan = new SessionCapacityPlan(
-                session, 1, 240, 10, 2, 2, 2, 2, 48, 100, 10, 15, 0.0, null, null, "admin"
+                session, 1, 240, 10, 2, 2, 2, 2, 48, 48, 10, 15, 0.0, null, null, "admin"
         );
         capacityPlanRepository.save(plan);
 
