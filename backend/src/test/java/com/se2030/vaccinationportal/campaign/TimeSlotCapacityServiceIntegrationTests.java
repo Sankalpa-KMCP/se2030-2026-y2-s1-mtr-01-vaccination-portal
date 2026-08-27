@@ -21,6 +21,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionReposi
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.TimeSlotCapacityService;
 import com.se2030.vaccinationportal.campaign.service.TimeSlotService;
+import com.se2030.vaccinationportal.campaign.service.VaccinationCenterService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -56,6 +57,9 @@ class TimeSlotCapacityServiceIntegrationTests {
 
     @Autowired
     private SessionCapacityPlanService planService;
+
+    @Autowired
+    private VaccinationCenterService centerService;
 
     @Autowired
     private TimeSlotRepository timeSlotRepository;
@@ -682,5 +686,95 @@ class TimeSlotCapacityServiceIntegrationTests {
                 timeSlotService.createSlot(scheduledSession.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 10)
         );
         assertTrue(ex.getMessage().contains("exceeds safe concurrent occupancy limit (15)"));
+    }
+
+    @Test
+    @DisplayName("Center safety lowering accepts configured peak below proposed limit")
+    void updateCenter_safeOccupancyLoweringBelowConfiguredPeakAccepted() {
+        setCenterSafeLimit(10);
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+
+        setCenterSafeLimit(5);
+
+        assertEquals(5, centerRepository.findById(testCenter.getId()).orElseThrow().getSafeConcurrentOccupancy());
+    }
+
+    @Test
+    @DisplayName("Center safety lowering rejects configured peak above proposed limit atomically")
+    void updateCenter_safeOccupancyLoweringAboveConfiguredPeakRejected() {
+        setCenterSafeLimit(10);
+        TimeSlot slot = timeSlotService.createSlot(
+                scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 8);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> setCenterSafeLimit(5));
+
+        assertTrue(error.getMessage().contains("cannot be lowered to 5"));
+        assertTrue(error.getMessage().contains("configured peak occupancy 8.0"));
+        assertEquals(10, centerRepository.findById(testCenter.getId()).orElseThrow().getSafeConcurrentOccupancy());
+        assertEquals(8, timeSlotRepository.findById(slot.getId()).orElseThrow().getCapacity());
+    }
+
+    @Test
+    @DisplayName("Center safety lowering accepts configured peak equal to proposed limit")
+    void updateCenter_safeOccupancyLoweringEqualBoundaryAccepted() {
+        setCenterSafeLimit(10);
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 5);
+
+        setCenterSafeLimit(5);
+
+        assertEquals(5, centerRepository.findById(testCenter.getId()).orElseThrow().getSafeConcurrentOccupancy());
+    }
+
+    @Test
+    @DisplayName("Center safety lowering evaluates all operational sessions")
+    void updateCenter_safeOccupancyLoweringEvaluatesAllOperationalSessions() {
+        setCenterSafeLimit(10);
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+        timeSlotService.createSlot(draftSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 7);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> setCenterSafeLimit(5));
+
+        assertTrue(error.getMessage().contains("session " + draftSession.getId()));
+        assertEquals(10, centerRepository.findById(testCenter.getId()).orElseThrow().getSafeConcurrentOccupancy());
+    }
+
+    @Test
+    @DisplayName("Center safety lowering excludes terminal cancelled sessions")
+    void updateCenter_safeOccupancyLoweringExcludesCancelledSessions() {
+        setCenterSafeLimit(10);
+        timeSlotService.createSlot(draftSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 8);
+        draftSession.cancel();
+        sessionRepository.saveAndFlush(draftSession);
+
+        setCenterSafeLimit(5);
+
+        assertEquals(5, centerRepository.findById(testCenter.getId()).orElseThrow().getSafeConcurrentOccupancy());
+    }
+
+    @Test
+    @DisplayName("Center safety lowering reuses latest plan occupancy parameters")
+    void updateCenter_safeOccupancyLoweringUsesLatestPlanOccupancyParameters() {
+        setCenterSafeLimit(10);
+        capacityPlanRepository.save(new SessionCapacityPlan(
+                scheduledSession, 1, 480, 10, 1, 1, 1, 1, 48, 48,
+                10, 15, 0.5, null, null, "admin"
+        ));
+        timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> setCenterSafeLimit(5));
+
+        assertTrue(error.getMessage().contains("configured peak occupancy 6.0"));
+        assertEquals(10, centerRepository.findById(testCenter.getId()).orElseThrow().getSafeConcurrentOccupancy());
+    }
+
+    private void setCenterSafeLimit(int safeConcurrentOccupancy) {
+        testCenter = centerService.updateCenter(
+                testCenter.getId(),
+                testCenter.getName(),
+                testCenter.getAddress(),
+                testCenter.getContact(),
+                safeConcurrentOccupancy,
+                testCenter.getSessionServiceCeiling()
+        );
     }
 }

@@ -14,12 +14,14 @@ import com.se2030.vaccinationportal.campaign.model.SessionResourceAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -38,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SessionCapacityPlanService {
 
     private final VaccinationSessionRepository sessionRepository;
+    private final VaccinationCenterRepository centerRepository;
     private final SessionCapacityPlanRepository planRepository;
     private final StaffAssignmentRepository staffAssignmentRepository;
     private final SessionResourceAssignmentRepository resourceAssignmentRepository;
@@ -46,6 +49,7 @@ public class SessionCapacityPlanService {
     private final TimeSlotRepository timeSlotRepository;
 
     public SessionCapacityPlanService(VaccinationSessionRepository sessionRepository,
+                                      VaccinationCenterRepository centerRepository,
                                       SessionCapacityPlanRepository planRepository,
                                       StaffAssignmentRepository staffAssignmentRepository,
                                       SessionResourceAssignmentRepository resourceAssignmentRepository,
@@ -53,6 +57,7 @@ public class SessionCapacityPlanService {
                                       SessionCapacityCalculationService calculationService,
                                       TimeSlotRepository timeSlotRepository) {
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "sessionRepository must not be null");
+        this.centerRepository = Objects.requireNonNull(centerRepository, "centerRepository must not be null");
         this.planRepository = Objects.requireNonNull(planRepository, "planRepository must not be null");
         this.staffAssignmentRepository = Objects.requireNonNull(staffAssignmentRepository, "staffAssignmentRepository must not be null");
         this.resourceAssignmentRepository = Objects.requireNonNull(resourceAssignmentRepository, "resourceAssignmentRepository must not be null");
@@ -164,9 +169,17 @@ public class SessionCapacityPlanService {
             throw new IllegalArgumentException("Create request must not be null");
         }
 
-        // Lock session to serialize concurrent revision increments
+        Long centerId = sessionRepository.findCenterIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        VaccinationCenter lockedCenter = centerRepository.findByIdForUpdate(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
+
+        // Center -> session -> slots is the canonical safety-sensitive lock order.
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        if (!session.getCenter().getId().equals(centerId)) {
+            throw new IllegalStateException("Authoritative session parent center changed concurrently");
+        }
 
         if (session.getLifecycleStatus() != SessionLifecycleStatus.DRAFT) {
             throw new IllegalStateException("Session capacity plans can only be created for sessions in DRAFT status");
@@ -213,7 +226,7 @@ public class SessionCapacityPlanService {
             }
         }
 
-        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
+        int centerSafeLimit = lockedCenter.getSafeConcurrentOccupancy();
         int safeOccupancy = resolveSafeConcurrentOccupancy(request.safeConcurrentOccupancy(), centerSafeLimit);
 
         int dwellMinutes = (request.expectedDwellMinutes() != null && request.expectedDwellMinutes() > 0)
@@ -224,7 +237,7 @@ public class SessionCapacityPlanService {
                 ? request.expectedAccompanyingPersonsPerBooking()
                 : SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO;
 
-        Integer ceiling = session.getCenter().getSessionServiceCeiling();
+        Integer ceiling = lockedCenter.getSessionServiceCeiling();
 
         Optional<SessionCapacityPlan> latestPlan = planRepository.findTopBySessionIdOrderByRevisionDesc(sessionId);
         int nextRevision = latestPlan.map(p -> p.getRevision() + 1).orElse(1);

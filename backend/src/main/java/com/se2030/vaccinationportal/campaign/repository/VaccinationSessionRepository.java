@@ -33,9 +33,21 @@ public interface VaccinationSessionRepository extends JpaRepository<VaccinationS
     @Query(value = "SELECT campaign_id FROM vaccination_sessions WHERE id = :id", nativeQuery = true)
     Optional<Long> findCampaignIdBySessionId(@Param("id") Long id);
 
+    @Query(value = "SELECT center_id FROM vaccination_sessions WHERE id = :id", nativeQuery = true)
+    Optional<Long> findCenterIdBySessionId(@Param("id") Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM VaccinationSession s WHERE s.id = :id")
     Optional<VaccinationSession> findByIdForUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM VaccinationSession s " +
+            "WHERE s.center.id = :centerId AND s.lifecycleStatus IN :statuses " +
+            "ORDER BY s.id ASC")
+    List<VaccinationSession> findOperationalSessionsForCenterForUpdate(
+            @Param("centerId") Long centerId,
+            @Param("statuses") Collection<SessionLifecycleStatus> statuses
+    );
 
     @Query("SELECT s FROM VaccinationSession s WHERE s.campaign.id = :campaignId " +
             "AND s.lifecycleStatus IN :statuses AND s.endAt > :now")

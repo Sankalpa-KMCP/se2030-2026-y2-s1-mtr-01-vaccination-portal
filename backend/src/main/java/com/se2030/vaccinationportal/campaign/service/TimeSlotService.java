@@ -2,9 +2,11 @@ package com.se2030.vaccinationportal.campaign.service;
 
 import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,17 +26,20 @@ public class TimeSlotService {
 
     private final TimeSlotRepository timeSlotRepository;
     private final VaccinationSessionRepository sessionRepository;
+    private final VaccinationCenterRepository centerRepository;
     private final SessionCapacityPlanRepository capacityPlanRepository;
     private final SessionCapacityCalculationService calculationService;
 
     public TimeSlotService(
             TimeSlotRepository timeSlotRepository,
             VaccinationSessionRepository sessionRepository,
+            VaccinationCenterRepository centerRepository,
             SessionCapacityPlanRepository capacityPlanRepository,
             SessionCapacityCalculationService calculationService
     ) {
         this.timeSlotRepository = Objects.requireNonNull(timeSlotRepository, "TimeSlotRepository must not be null");
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "VaccinationSessionRepository must not be null");
+        this.centerRepository = Objects.requireNonNull(centerRepository, "VaccinationCenterRepository must not be null");
         this.capacityPlanRepository = Objects.requireNonNull(capacityPlanRepository, "SessionCapacityPlanRepository must not be null");
         this.calculationService = Objects.requireNonNull(calculationService, "SessionCapacityCalculationService must not be null");
     }
@@ -51,8 +56,15 @@ public class TimeSlotService {
             throw new IllegalArgumentException("Slot capacity must be strictly positive");
         }
 
+        Long centerId = sessionRepository.findCenterIdBySessionId(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found with ID: " + sessionId));
+        VaccinationCenter lockedCenter = centerRepository.findByIdForUpdate(centerId)
+                .orElseThrow(() -> new IllegalStateException("Vaccination center not found with ID: " + centerId));
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found with ID: " + sessionId));
+        if (!session.getCenter().getId().equals(centerId)) {
+            throw new IllegalStateException("Authoritative session parent center changed concurrently");
+        }
 
         if (startTime.isBefore(session.getStartAt()) || endTime.isAfter(session.getEndAt())) {
             throw new IllegalArgumentException("Slot interval must fall within session operating window");
@@ -72,7 +84,7 @@ public class TimeSlotService {
             }
         });
 
-        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
+        int centerSafeLimit = lockedCenter.getSafeConcurrentOccupancy();
         int safeConcurrentOccupancy = calculationService.resolveEffectiveSafeConcurrentOccupancy(
                 planOpt.map(SessionCapacityPlan::getSafeConcurrentOccupancy).orElse(null),
                 centerSafeLimit
@@ -108,12 +120,17 @@ public class TimeSlotService {
         if (newCapacity <= 0) {
             throw new IllegalArgumentException("Slot capacity must be strictly positive");
         }
-        TimeSlot initialSlot = timeSlotRepository.findById(slotId)
+        Long sessionId = timeSlotRepository.findSessionIdBySlotId(slotId)
                 .orElseThrow(() -> new IllegalArgumentException("TimeSlot not found with ID: " + slotId));
-
-        Long sessionId = initialSlot.getSession().getId();
+        Long centerId = sessionRepository.findCenterIdBySessionId(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found with ID: " + sessionId));
+        VaccinationCenter lockedCenter = centerRepository.findByIdForUpdate(centerId)
+                .orElseThrow(() -> new IllegalStateException("Vaccination center not found with ID: " + centerId));
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found with ID: " + sessionId));
+        if (!session.getCenter().getId().equals(centerId)) {
+            throw new IllegalStateException("Authoritative session parent center changed concurrently");
+        }
 
         List<TimeSlot> sessionSlots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
         TimeSlot slot = sessionSlots.stream()
@@ -140,7 +157,7 @@ public class TimeSlotService {
             }
         });
 
-        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
+        int centerSafeLimit = lockedCenter.getSafeConcurrentOccupancy();
         int safeConcurrentOccupancy = calculationService.resolveEffectiveSafeConcurrentOccupancy(
                 planOpt.map(SessionCapacityPlan::getSafeConcurrentOccupancy).orElse(null),
                 centerSafeLimit

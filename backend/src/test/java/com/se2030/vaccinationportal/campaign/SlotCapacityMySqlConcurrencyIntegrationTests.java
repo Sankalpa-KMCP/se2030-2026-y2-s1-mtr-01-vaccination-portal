@@ -21,6 +21,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionReposi
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.TimeSlotCapacityService;
 import com.se2030.vaccinationportal.campaign.service.TimeSlotService;
+import com.se2030.vaccinationportal.campaign.service.VaccinationCenterService;
 import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
@@ -56,6 +57,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -69,6 +71,9 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
 
     @Autowired
     private TimeSlotService timeSlotService;
+
+    @Autowired
+    private VaccinationCenterService centerService;
 
     @Autowired
     private TimeSlotRepository timeSlotRepository;
@@ -573,6 +578,124 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         assertEquals(8, slots.get(0).getCapacity());
     }
 
+    @Test
+    @Timeout(30)
+    @DisplayName("Center safety: slot create then lowering serializes and rejects unsafe lowering")
+    void centerSafety_slotCreateCommitsBeforeLowering_rejectsLowering() throws Exception {
+        updateCenterSafeLimit(10);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch slotValidated = new CountDownLatch(1);
+        CountDownLatch loweringAttempted = new CountDownLatch(1);
+
+        try {
+            Future<?> slotFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 8);
+                slotValidated.countDown();
+                awaitLatch(loweringAttempted);
+            }));
+
+            assertTrue(slotValidated.await(10, TimeUnit.SECONDS));
+            Future<Boolean> loweringFuture = executor.submit(() -> {
+                loweringAttempted.countDown();
+                try {
+                    updateCenterSafeLimit(5);
+                    return true;
+                } catch (IllegalArgumentException expected) {
+                    return false;
+                }
+            });
+
+            slotFuture.get(10, TimeUnit.SECONDS);
+            assertFalse(loweringFuture.get(10, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
+
+        assertEquals(10, centerRepository.findById(center.getId()).orElseThrow().getSafeConcurrentOccupancy());
+        List<TimeSlot> slots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(session.getId());
+        assertEquals(1, slots.size());
+        assertEquals(8, slots.get(0).getCapacity());
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("Center safety: lowering then slot create serializes and rejects unsafe slot")
+    void centerSafety_loweringCommitsBeforeSlotCreate_rejectsSlotCreate() throws Exception {
+        updateCenterSafeLimit(10);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch centerLowered = new CountDownLatch(1);
+        CountDownLatch slotAttempted = new CountDownLatch(1);
+
+        try {
+            Future<?> loweringFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                updateCenterSafeLimit(5);
+                centerLowered.countDown();
+                awaitLatch(slotAttempted);
+            }));
+
+            assertTrue(centerLowered.await(10, TimeUnit.SECONDS));
+            Future<Boolean> slotFuture = executor.submit(() -> {
+                slotAttempted.countDown();
+                try {
+                    timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 8);
+                    return true;
+                } catch (IllegalStateException expected) {
+                    return false;
+                }
+            });
+
+            loweringFuture.get(10, TimeUnit.SECONDS);
+            assertFalse(slotFuture.get(10, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
+
+        assertEquals(5, centerRepository.findById(center.getId()).orElseThrow().getSafeConcurrentOccupancy());
+        assertTrue(timeSlotRepository.findBySessionIdOrderByStartTimeAsc(session.getId()).isEmpty());
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("Center safety: slot capacity update serializes before unsafe lowering")
+    void centerSafety_slotUpdateCommitsBeforeLowering_rejectsLowering() throws Exception {
+        updateCenterSafeLimit(10);
+        TimeSlot slot = timeSlotService.createSlot(
+                session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch slotUpdated = new CountDownLatch(1);
+        CountDownLatch loweringAttempted = new CountDownLatch(1);
+
+        try {
+            Future<?> updateFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                timeSlotService.updateSlotCapacity(slot.getId(), 8);
+                slotUpdated.countDown();
+                awaitLatch(loweringAttempted);
+            }));
+
+            assertTrue(slotUpdated.await(10, TimeUnit.SECONDS));
+            Future<Boolean> loweringFuture = executor.submit(() -> {
+                loweringAttempted.countDown();
+                try {
+                    updateCenterSafeLimit(5);
+                    return true;
+                } catch (IllegalArgumentException expected) {
+                    return false;
+                }
+            });
+
+            updateFuture.get(10, TimeUnit.SECONDS);
+            assertFalse(loweringFuture.get(10, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
+
+        assertEquals(10, centerRepository.findById(center.getId()).orElseThrow().getSafeConcurrentOccupancy());
+        assertEquals(8, timeSlotRepository.findById(slot.getId()).orElseThrow().getCapacity());
+    }
+
     @AfterEach
     void tearDown() {
         if (transactionTemplate != null) {
@@ -602,5 +725,25 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
             targetGroupRepository.deleteAllInBatch();
             vaccineTypeRepository.deleteAllInBatch();
         });
+    }
+
+    private void updateCenterSafeLimit(int safeConcurrentOccupancy) {
+        center = centerService.updateCenter(
+                center.getId(),
+                center.getName(),
+                center.getAddress(),
+                center.getContact(),
+                safeConcurrentOccupancy,
+                center.getSessionServiceCeiling()
+        );
+    }
+
+    private void awaitLatch(CountDownLatch latch) {
+        try {
+            assertTrue(latch.await(10, TimeUnit.SECONDS));
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while coordinating center-safety concurrency test", error);
+        }
     }
 }
