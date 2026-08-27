@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.campaign.dto.response.CapacityPlanPreviewRes
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
 import com.se2030.vaccinationportal.campaign.model.OperationalResourceStatus;
+import com.se2030.vaccinationportal.campaign.model.OperationalStaffStatus;
 import com.se2030.vaccinationportal.campaign.model.ResourceType;
 import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -94,9 +95,8 @@ public class SessionCapacityPlanService {
         int recommendedThroughput = calculationService.calculateRecommendedThroughput(
                 effectiveStations, durationMinutes, expectedServiceMinutes);
 
-        int safeOccupancy = (request.safeConcurrentOccupancy() != null && request.safeConcurrentOccupancy() > 0)
-                ? request.safeConcurrentOccupancy()
-                : session.getCenter().getSafeConcurrentOccupancy();
+        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
+        int safeOccupancy = resolveSafeConcurrentOccupancy(request.safeConcurrentOccupancy(), centerSafeLimit);
 
         int dwellMinutes = (request.expectedDwellMinutes() != null && request.expectedDwellMinutes() > 0)
                 ? request.expectedDwellMinutes()
@@ -213,9 +213,8 @@ public class SessionCapacityPlanService {
             }
         }
 
-        int safeOccupancy = (request.safeConcurrentOccupancy() != null && request.safeConcurrentOccupancy() > 0)
-                ? request.safeConcurrentOccupancy()
-                : session.getCenter().getSafeConcurrentOccupancy();
+        int centerSafeLimit = session.getCenter().getSafeConcurrentOccupancy();
+        int safeOccupancy = resolveSafeConcurrentOccupancy(request.safeConcurrentOccupancy(), centerSafeLimit);
 
         int dwellMinutes = (request.expectedDwellMinutes() != null && request.expectedDwellMinutes() > 0)
                 ? request.expectedDwellMinutes()
@@ -319,8 +318,25 @@ public class SessionCapacityPlanService {
     private int countAssignedVaccinators(Long sessionId) {
         List<StaffAssignment> assignments = staffAssignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(sessionId);
         return (int) assignments.stream()
-                .filter(a -> a.getRole() == StaffRole.VACCINATOR)
+                .filter(a -> a.getRole() == StaffRole.VACCINATOR
+                        && a.getStaffRoster() != null
+                        && a.getStaffRoster().getStatus() == OperationalStaffStatus.ACTIVE)
                 .count();
+    }
+
+    private int resolveSafeConcurrentOccupancy(Integer requestedSafeOccupancy, int centerSafeLimit) {
+        if (requestedSafeOccupancy == null) {
+            return centerSafeLimit;
+        }
+        if (requestedSafeOccupancy <= 0) {
+            throw new IllegalArgumentException("Safe concurrent occupancy must be positive if specified");
+        }
+        if (requestedSafeOccupancy > centerSafeLimit) {
+            throw new IllegalArgumentException(String.format(
+                    "Requested safe concurrent occupancy (%d) cannot exceed center safety limit (%d)",
+                    requestedSafeOccupancy, centerSafeLimit));
+        }
+        return requestedSafeOccupancy;
     }
 
     private int countAvailableStations(Long sessionId) {

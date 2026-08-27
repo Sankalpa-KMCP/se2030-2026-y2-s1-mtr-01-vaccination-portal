@@ -342,4 +342,99 @@ class SessionCapacityPlanServiceIntegrationTests {
         assertThrows(ResourceNotFoundException.class,
                 () -> capacityPlanService.getCapacityPlansForSession(9999L));
     }
+
+    @Test
+    @DisplayName("countAssignedVaccinators excludes inactive staff roster entries and non-vaccinators")
+    void countAssignedVaccinators_excludesInactiveRosterStaffAndNonVaccinators() {
+        // Create an inactive vaccinator roster
+        OperationalStaffRoster inactiveVaccinatorRoster = staffRosterRepository.save(
+                new OperationalStaffRoster(center, 104L, StaffRole.VACCINATOR, OperationalStaffStatus.INACTIVE)
+        );
+
+        // Assign 1 active vaccinator (roster1), 1 inactive vaccinator, 1 active check-in staff (roster3)
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        staffAssignmentRepository.save(new StaffAssignment(session, inactiveVaccinatorRoster, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        staffAssignmentRepository.save(new StaffAssignment(session, roster3, StaffRole.CHECK_IN_STAFF, sessionStart, sessionEnd));
+
+        // Assign 2 stations
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station2, sessionStart, sessionEnd));
+
+        // Preview with fullyEquipped = 2
+        PreviewCapacityPlanRequest previewReq = new PreviewCapacityPlanRequest(2, null, null, null, 24, null);
+        CapacityPlanPreviewResponse preview = capacityPlanService.previewCapacityPlan(session.getId(), previewReq);
+
+        // assignedVaccinatorCount must be 1 (excluding inactive roster staff)
+        assertEquals(1, preview.assignedVaccinatorCount());
+        assertEquals(2, preview.availableStationCount());
+        assertEquals(2, preview.fullyEquippedStationCount());
+        assertEquals(1, preview.effectiveStationCount()); // min(1 vaccinator, 2 stations, 2 equipped) = 1
+        assertEquals(24, preview.recommendedThroughput());
+
+        // Create plan
+        CreateSessionCapacityPlanRequest createReq = new CreateSessionCapacityPlanRequest(2, 24, null, null, null, null, "admin");
+        SessionCapacityPlan plan = capacityPlanService.createCapacityPlan(session.getId(), createReq);
+
+        assertEquals(1, plan.getAssignedVaccinatorCount());
+        assertEquals(2, plan.getAvailableStationCount());
+        assertEquals(1, plan.getEffectiveStationCount());
+        assertEquals(24, plan.getRecommendedThroughput());
+    }
+
+    @Test
+    @DisplayName("safeConcurrentOccupancy accepts null, equal to center limit, and conservative lower value")
+    void safeConcurrentOccupancy_validInputs() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        // 1. Null occupancy -> resolves to center default (60)
+        PreviewCapacityPlanRequest previewNull = new PreviewCapacityPlanRequest(1, null, null, null, 24, null);
+        CapacityPlanPreviewResponse prevRespNull = capacityPlanService.previewCapacityPlan(session.getId(), previewNull);
+        assertEquals(60, prevRespNull.safeConcurrentOccupancy());
+
+        CreateSessionCapacityPlanRequest createNull = new CreateSessionCapacityPlanRequest(1, 24, null, null, null, null, "admin");
+        SessionCapacityPlan planNull = capacityPlanService.createCapacityPlan(session.getId(), createNull);
+        assertEquals(60, planNull.getSafeConcurrentOccupancy());
+
+        // 2. Equal to center limit (60) -> accepted
+        PreviewCapacityPlanRequest previewEqual = new PreviewCapacityPlanRequest(1, 60, null, null, 24, null);
+        CapacityPlanPreviewResponse prevRespEqual = capacityPlanService.previewCapacityPlan(session.getId(), previewEqual);
+        assertEquals(60, prevRespEqual.safeConcurrentOccupancy());
+
+        CreateSessionCapacityPlanRequest createEqual = new CreateSessionCapacityPlanRequest(1, 24, 60, null, null, null, "admin");
+        SessionCapacityPlan planEqual = capacityPlanService.createCapacityPlan(session.getId(), createEqual);
+        assertEquals(60, planEqual.getSafeConcurrentOccupancy());
+
+        // 3. Conservative lower value (25 < 60) -> accepted
+        PreviewCapacityPlanRequest previewLower = new PreviewCapacityPlanRequest(1, 25, null, null, 24, null);
+        CapacityPlanPreviewResponse prevRespLower = capacityPlanService.previewCapacityPlan(session.getId(), previewLower);
+        assertEquals(25, prevRespLower.safeConcurrentOccupancy());
+
+        CreateSessionCapacityPlanRequest createLower = new CreateSessionCapacityPlanRequest(1, 24, 25, null, null, null, "admin");
+        SessionCapacityPlan planLower = capacityPlanService.createCapacityPlan(session.getId(), createLower);
+        assertEquals(25, planLower.getSafeConcurrentOccupancy());
+    }
+
+    @Test
+    @DisplayName("safeConcurrentOccupancy rejects values exceeding center safe limit and persists no plan")
+    void safeConcurrentOccupancy_rejectsAboveCenterLimit() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        // Center safe limit is 60. Request with 65 -> rejected in preview
+        PreviewCapacityPlanRequest previewOver = new PreviewCapacityPlanRequest(1, 65, null, null, 24, null);
+        IllegalArgumentException previewEx = assertThrows(IllegalArgumentException.class,
+                () -> capacityPlanService.previewCapacityPlan(session.getId(), previewOver));
+        assertTrue(previewEx.getMessage().contains("cannot exceed center safety limit (60)"));
+
+        // Request with 100 -> rejected in create
+        CreateSessionCapacityPlanRequest createOver = new CreateSessionCapacityPlanRequest(1, 24, 100, null, null, null, "admin");
+        IllegalArgumentException createEx = assertThrows(IllegalArgumentException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), createOver));
+        assertTrue(createEx.getMessage().contains("cannot exceed center safety limit (60)"));
+
+        // Verify no plan was persisted
+        List<SessionCapacityPlan> plans = planRepository.findBySessionIdOrderByRevisionAsc(session.getId());
+        assertTrue(plans.isEmpty());
+    }
 }
