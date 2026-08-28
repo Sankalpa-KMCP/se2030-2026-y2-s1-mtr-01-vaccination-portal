@@ -690,3 +690,52 @@ export async function confirmSeriesCancellation(ruleId, payload) {
   });
   return handleResponse(response);
 }
+
+// -------------------------------------------------------------------------------------------------
+// Session Time-Slot Management API (H04-S2)
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * List all operational time slots configured for a vaccination session.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @returns {Promise<Array>} List of TimeSlotResponse objects
+ */
+export async function listTimeSlots(sessionId) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/time-slots`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Create a new operational time slot in a vaccination session.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - CreateTimeSlotRequest { startTime: string, endTime: string, capacity: number }
+ * @returns {Promise<Object>} Created TimeSlotResponse object
+ */
+export async function createTimeSlot(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/time-slots`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update the capacity of an existing time slot in a vaccination session.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {number|string} slotId - TimeSlot identifier
+ * @param {Object} payload - UpdateTimeSlotCapacityRequest { capacity: number }
+ * @returns {Promise<Object>} Updated TimeSlotResponse object
+ */
+export async function updateTimeSlotCapacity(sessionId, slotId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/time-slots/${slotId}/capacity`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+

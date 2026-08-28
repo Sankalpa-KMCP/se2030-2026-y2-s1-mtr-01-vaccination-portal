@@ -191,6 +191,22 @@ public class TimeSlotService {
         return timeSlotRepository.save(slot);
     }
 
+    @Transactional
+    public TimeSlot updateSlotCapacity(Long sessionId, Long slotId, int newCapacity) {
+        if (sessionId == null) {
+            throw new IllegalArgumentException("Session ID must not be null");
+        }
+        if (slotId == null) {
+            throw new IllegalArgumentException("Slot ID must not be null");
+        }
+        Long actualSessionId = timeSlotRepository.findSessionIdBySlotId(slotId)
+                .orElseThrow(() -> new IllegalArgumentException("TimeSlot not found with ID: " + slotId));
+        if (!actualSessionId.equals(sessionId)) {
+            throw new IllegalArgumentException("TimeSlot " + slotId + " does not belong to session " + sessionId);
+        }
+        return updateSlotCapacity(slotId, newCapacity);
+    }
+
     @Transactional(readOnly = true)
     public List<TimeSlot> getSlotsForSession(Long sessionId) {
         return timeSlotRepository.findBySessionIdOrderByStartTimeAsc(sessionId);
