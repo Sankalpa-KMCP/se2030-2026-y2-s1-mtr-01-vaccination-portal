@@ -65,12 +65,14 @@ public class OperationalAnalyticsService {
             throw new IllegalArgumentException("Vaccination campaign not found: " + campaignId);
         }
 
-        // 1. Campaign count by status
+        // 1. Campaign count by status (scoped to center if centerId is provided, otherwise portal-wide)
         Map<CampaignStatus, Long> campaignCountByStatus = new EnumMap<>(CampaignStatus.class);
         for (CampaignStatus status : CampaignStatus.values()) {
             campaignCountByStatus.put(status, 0L);
         }
-        List<Object[]> campaignStatusRows = campaignRepository.countCampaignsByStatus(campaignId);
+        List<Object[]> campaignStatusRows = (centerId != null)
+                ? sessionRepository.countDistinctCampaignsByStatusForCenter(centerId, campaignId)
+                : campaignRepository.countCampaignsByStatus(campaignId);
         for (Object[] row : campaignStatusRows) {
             if (row != null && row.length >= 2 && row[0] instanceof CampaignStatus status && row[1] instanceof Number count) {
                 campaignCountByStatus.put(status, count.longValue());
@@ -136,9 +138,9 @@ public class OperationalAnalyticsService {
         long cancelledSessionCount = sessionRepository.countCancelledSessions(
                 campaignId, centerId, SessionLifecycleStatus.CANCELLED
         );
-        long cancelledCampaignCount = campaignRepository.countCancelledCampaigns(
-                campaignId, CampaignStatus.CANCELLED
-        );
+        long cancelledCampaignCount = (centerId != null)
+                ? sessionRepository.countDistinctCancelledCampaignsForCenter(centerId, campaignId, CampaignStatus.CANCELLED)
+                : campaignRepository.countCancelledCampaigns(campaignId, CampaignStatus.CANCELLED);
 
         // 6. Resource load
         long assignedStationCount = resourceAssignmentRepository.countAssignedStations(

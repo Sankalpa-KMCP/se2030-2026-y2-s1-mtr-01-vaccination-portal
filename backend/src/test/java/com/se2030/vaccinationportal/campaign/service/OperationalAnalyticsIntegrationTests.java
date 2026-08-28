@@ -246,4 +246,44 @@ class OperationalAnalyticsIntegrationTests {
         assertEquals(1L, center1Response.sessionCountByLifecycleStatus().get(SessionLifecycleStatus.SCHEDULED));
         assertEquals(0L, center1Response.sessionCountByLifecycleStatus().get(SessionLifecycleStatus.IN_PROGRESS));
     }
+
+    @Test
+    @DisplayName("Center filter scopes distinct campaign counts to campaigns represented at that center")
+    void getOperationalAnalytics_centerFilterScopingForCampaigns() {
+        // Campaign 1 has sessions at Center 1 (session1) and Center 2 (session2).
+        // Campaign 2 has a session ONLY at Center 2.
+        Instant startCamp2 = Instant.parse("2026-11-15T08:00:00Z");
+        Instant endCamp2 = Instant.parse("2026-11-15T12:00:00Z");
+        VaccinationSession sessionCamp2Center2 = sessionRepository.save(
+                new VaccinationSession(campaign2, center2, startCamp2, endCamp2, startCamp2, "UTC")
+        );
+
+        // Center 1 filter: Campaign 1 is present, Campaign 2 is NOT present
+        OperationalAnalyticsResponse center1Response = analyticsService.getOperationalAnalytics(center1.getId(), null);
+        assertEquals(1L, center1Response.campaignCountByStatus().get(CampaignStatus.ACTIVE));
+        assertEquals(0L, center1Response.campaignCountByStatus().get(CampaignStatus.CANCELLED));
+        assertEquals(0L, center1Response.cancelledCampaignCount());
+
+        // Center 2 filter: Both Campaign 1 and Campaign 2 are present
+        OperationalAnalyticsResponse center2Response = analyticsService.getOperationalAnalytics(center2.getId(), null);
+        assertEquals(1L, center2Response.campaignCountByStatus().get(CampaignStatus.ACTIVE));
+        assertEquals(1L, center2Response.campaignCountByStatus().get(CampaignStatus.CANCELLED));
+        assertEquals(1L, center2Response.cancelledCampaignCount());
+    }
+
+    @Test
+    @DisplayName("Intersection semantics: centerId and campaignId applied simultaneously")
+    void getOperationalAnalytics_centerAndCampaignIntersection() {
+        // Query Center 1 + Campaign 1
+        OperationalAnalyticsResponse intersectionResponse = analyticsService.getOperationalAnalytics(center1.getId(), campaign1.getId());
+        assertEquals(1L, intersectionResponse.campaignCountByStatus().get(CampaignStatus.ACTIVE));
+        assertEquals(0L, intersectionResponse.campaignCountByStatus().get(CampaignStatus.CANCELLED));
+        assertEquals(0L, intersectionResponse.cancelledCampaignCount());
+
+        // Only session1 (SCHEDULED) and sessionCancelled (CANCELLED) are in Center 1 for Campaign 1
+        assertEquals(1L, intersectionResponse.sessionCountByLifecycleStatus().get(SessionLifecycleStatus.SCHEDULED));
+        assertEquals(0L, intersectionResponse.sessionCountByLifecycleStatus().get(SessionLifecycleStatus.IN_PROGRESS));
+        assertEquals(1L, intersectionResponse.sessionCountByLifecycleStatus().get(SessionLifecycleStatus.CANCELLED));
+        assertEquals(1L, intersectionResponse.cancelledSessionCount());
+    }
 }

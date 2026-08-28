@@ -65,7 +65,7 @@ class OperationalAnalyticsServiceTests {
     void getOperationalAnalytics_emptyData_returnsSafeZeroes() {
         when(campaignRepository.countCampaignsByStatus(null)).thenReturn(new ArrayList<>());
         when(sessionRepository.countSessionsByLifecycleStatus(null, null)).thenReturn(new ArrayList<>());
-        
+
         List<Object[]> capacityRows = new ArrayList<>();
         capacityRows.add(new Object[]{0L, 0L});
         when(capacityPlanRepository.sumLatestApprovedCapacityAndRecommendedThroughput(null, null, SessionLifecycleStatus.CANCELLED))
@@ -176,6 +176,43 @@ class OperationalAnalyticsServiceTests {
         assertEquals(15L, response.assignedResourceCountsByType().get(ResourceType.VACCINATION_STATION));
         assertEquals(12L, response.assignedResourceCountsByType().get(ResourceType.EQUIPMENT));
         assertEquals(5L, response.assignedResourceCountsByType().get(ResourceType.ROOM));
+    }
+
+    @Test
+    @DisplayName("When centerId is provided, campaign metrics are queried through session repository for center scope")
+    void getOperationalAnalytics_centerScopedCampaigns_queriesSessionRepository() {
+        when(centerRepository.existsById(10L)).thenReturn(true);
+
+        List<Object[]> distinctCampaignRows = new ArrayList<>();
+        distinctCampaignRows.add(new Object[]{CampaignStatus.ACTIVE, 2L});
+        when(sessionRepository.countDistinctCampaignsByStatusForCenter(10L, null)).thenReturn(distinctCampaignRows);
+        when(sessionRepository.countSessionsByLifecycleStatus(null, 10L)).thenReturn(new ArrayList<>());
+
+        List<Object[]> capacityRows = new ArrayList<>();
+        capacityRows.add(new Object[]{500L, 600L});
+        when(capacityPlanRepository.sumLatestApprovedCapacityAndRecommendedThroughput(null, 10L, SessionLifecycleStatus.CANCELLED))
+                .thenReturn(capacityRows);
+
+        List<Object[]> slotRows = new ArrayList<>();
+        slotRows.add(new Object[]{400L, 200L});
+        when(timeSlotRepository.sumCapacityAndReservedCount(null, 10L, SessionLifecycleStatus.CANCELLED))
+                .thenReturn(slotRows);
+
+        when(sessionRepository.countCancelledSessions(null, 10L, SessionLifecycleStatus.CANCELLED)).thenReturn(0L);
+        when(sessionRepository.countDistinctCancelledCampaignsForCenter(10L, null, CampaignStatus.CANCELLED)).thenReturn(0L);
+        when(resourceAssignmentRepository.countAssignedStations(null, 10L, ResourceType.VACCINATION_STATION, OperationalResourceStatus.ACTIVE, SessionLifecycleStatus.CANCELLED))
+                .thenReturn(4L);
+        when(staffAssignmentRepository.countAssignedVaccinators(null, 10L, StaffRole.VACCINATOR, OperationalStaffStatus.ACTIVE, SessionLifecycleStatus.CANCELLED))
+                .thenReturn(6L);
+        when(resourceAssignmentRepository.countAssignedResourcesByType(null, 10L, OperationalResourceStatus.ACTIVE, SessionLifecycleStatus.CANCELLED))
+                .thenReturn(new ArrayList<>());
+
+        OperationalAnalyticsResponse response = analyticsService.getOperationalAnalytics(10L, null);
+
+        assertNotNull(response);
+        assertEquals(2L, response.campaignCountByStatus().get(CampaignStatus.ACTIVE));
+        assertEquals(0L, response.campaignCountByStatus().get(CampaignStatus.CANCELLED));
+        assertEquals(0L, response.cancelledCampaignCount());
     }
 
     @Test
