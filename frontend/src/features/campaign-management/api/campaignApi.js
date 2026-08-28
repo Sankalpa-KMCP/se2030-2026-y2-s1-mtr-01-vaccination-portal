@@ -136,3 +136,23 @@ export async function resumeCampaign(id, payload) {
   });
   return handleResponse(response);
 }
+
+/**
+ * Fetch list of active vaccine types for campaign configuration.
+ *
+ * @returns {Promise<Array>} List of VaccineTypeSummaryResponse objects
+ */
+export async function listVaccineTypes() {
+  const response = await apiRequest('/v1/vaccine-types', { method: 'GET' });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch list of active target demographic groups for campaign configuration.
+ *
+ * @returns {Promise<Array>} List of TargetGroupSummaryResponse objects
+ */
+export async function listTargetGroups() {
+  const response = await apiRequest('/v1/target-groups', { method: 'GET' });
+  return handleResponse(response);
+}

@@ -1,5 +1,10 @@
 import React from 'react';
 import { useAuth } from '../../auth/context/AuthContext';
+import {
+  canViewCampaigns,
+  canViewCenters,
+  canViewSessions,
+} from '../../auth/utils/roleUtils';
 
 const ROLE_LABELS = {
   ROLE_ADMIN: 'Administrator',
@@ -22,6 +27,10 @@ export default function Header({ activeView = 'overview', onNavigate, onLogout }
   // (e.g. to return to the public landing page) from session expiry.
   const handleLogout = onLogout || logout;
 
+  const showCampaigns = canViewCampaigns(user);
+  const showCenters = canViewCenters(user);
+  const showSessions = canViewSessions(user);
+
   return (
     <header>
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm" aria-label="Main Navigation">
@@ -41,33 +50,42 @@ export default function Header({ activeView = 'overview', onNavigate, onLogout }
                   Overview
                 </button>
               </li>
-              <li className="nav-item">
-                <button
-                  type="button"
-                  className={`btn btn-sm ${activeView === 'campaigns' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
-                  onClick={() => onNavigate && onNavigate('campaigns')}
-                >
-                  Campaigns
-                </button>
-              </li>
-              <li className="nav-item">
-                <button
-                  type="button"
-                  className={`btn btn-sm ${activeView === 'center-operations' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
-                  onClick={() => onNavigate && onNavigate('center-operations')}
-                >
-                  Center Operations
-                </button>
-              </li>
-              <li className="nav-item">
-                <button
-                  type="button"
-                  className={`btn btn-sm ${activeView === 'sessions' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
-                  onClick={() => onNavigate && onNavigate('sessions')}
-                >
-                  Sessions
-                </button>
-              </li>
+
+              {showCampaigns && (
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${activeView === 'campaigns' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
+                    onClick={() => onNavigate && onNavigate('campaigns')}
+                  >
+                    Campaigns
+                  </button>
+                </li>
+              )}
+
+              {showCenters && (
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${activeView === 'center-operations' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
+                    onClick={() => onNavigate && onNavigate('center-operations')}
+                  >
+                    Center Operations
+                  </button>
+                </li>
+              )}
+
+              {showSessions && (
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${activeView === 'sessions' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
+                    onClick={() => onNavigate && onNavigate('sessions')}
+                  >
+                    Sessions
+                  </button>
+                </li>
+              )}
             </ul>
 
             {user && (

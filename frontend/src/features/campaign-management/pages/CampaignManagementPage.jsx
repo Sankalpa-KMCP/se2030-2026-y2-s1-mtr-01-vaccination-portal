@@ -16,8 +16,13 @@ import CampaignDetailsModal from '../components/CampaignDetailsModal';
 import CampaignActionModal from '../components/CampaignActionModal';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { canManageCampaigns } from '../../../auth/utils/roleUtils';
 
 export default function CampaignManagementPage() {
+  const { user } = useAuth();
+  const isManager = canManageCampaigns(user);
+
   const [campaigns, setCampaigns] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -173,7 +178,7 @@ export default function CampaignManagementPage() {
       <ApiErrorAlert error={error} onDismiss={() => setError(null)} />
 
       {/* Create Campaign Form Card */}
-      {showCreateForm && (
+      {isManager && showCreateForm && (
         <CampaignForm
           onSubmit={handleCreateSubmit}
           onCancel={() => {

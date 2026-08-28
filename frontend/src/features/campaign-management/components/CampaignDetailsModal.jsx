@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { canManageCampaigns } from '../../../auth/utils/roleUtils';
 import DoseProgrammeTab from './DoseProgrammeTab';
 import DoseProgrammeFormModal from './DoseProgrammeFormModal';
 import QuestionnaireTab from './QuestionnaireTab';
@@ -69,6 +71,9 @@ export default function CampaignDetailsModal({
   onClose,
   onInitiateAction,
 }) {
+  const { user } = useAuth();
+  const isManager = canManageCampaigns(user);
+
   const [activeTab, setActiveTab] = useState('overview');
 
   // Dose Programme State
@@ -544,54 +549,56 @@ export default function CampaignDetailsModal({
                       </div>
                     </div>
 
-                    <div className="d-flex flex-wrap gap-2 pt-2 border-top">
-                      <span className="text-muted small align-self-center me-2">Lifecycle Actions:</span>
-                      {campaign.status === 'DRAFT' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-info text-dark"
-                          onClick={() => onInitiateAction('SCHEDULE', campaign)}
-                        >
-                          Schedule Campaign
-                        </button>
-                      )}
-                      {campaign.status === 'SCHEDULED' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-primary"
-                          onClick={() => onInitiateAction('PUBLISH', campaign)}
-                        >
-                          Publish Campaign
-                        </button>
-                      )}
-                      {campaign.status === 'PUBLISHED' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-success"
-                          onClick={() => onInitiateAction('ACTIVATE', campaign)}
-                        >
-                          Activate Campaign
-                        </button>
-                      )}
-                      {campaign.status === 'ACTIVE' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-warning text-dark"
-                          onClick={() => onInitiateAction('SUSPEND', campaign)}
-                        >
-                          Suspend Campaign
-                        </button>
-                      )}
-                      {campaign.status === 'SUSPENDED' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-success"
-                          onClick={() => onInitiateAction('RESUME', campaign)}
-                        >
-                          Resume Campaign
-                        </button>
-                      )}
-                    </div>
+                    {isManager && (
+                      <div className="d-flex flex-wrap gap-2 pt-2 border-top">
+                        <span className="text-muted small align-self-center me-2">Lifecycle Actions:</span>
+                        {campaign.status === 'DRAFT' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-info text-dark"
+                            onClick={() => onInitiateAction('SCHEDULE', campaign)}
+                          >
+                            Schedule Campaign
+                          </button>
+                        )}
+                        {campaign.status === 'SCHEDULED' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            onClick={() => onInitiateAction('PUBLISH', campaign)}
+                          >
+                            Publish Campaign
+                          </button>
+                        )}
+                        {campaign.status === 'PUBLISHED' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-success"
+                            onClick={() => onInitiateAction('ACTIVATE', campaign)}
+                          >
+                            Activate Campaign
+                          </button>
+                        )}
+                        {campaign.status === 'ACTIVE' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-warning text-dark"
+                            onClick={() => onInitiateAction('SUSPEND', campaign)}
+                          >
+                            Suspend Campaign
+                          </button>
+                        )}
+                        {campaign.status === 'SUSPENDED' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-success"
+                            onClick={() => onInitiateAction('RESUME', campaign)}
+                          >
+                            Resume Campaign
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

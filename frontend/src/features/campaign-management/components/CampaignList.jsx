@@ -1,4 +1,6 @@
 import React from 'react';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { canManageCampaigns } from '../../../auth/utils/roleUtils';
 
 /**
  * Returns a Bootstrap badge class based on the CampaignStatus enum value.
@@ -57,6 +59,9 @@ export default function CampaignList({
   onInitiateAction,
   onCreateNew,
 }) {
+  const { user } = useAuth();
+  const isManager = canManageCampaigns(user);
+
   const statusOptions = [
     { label: 'All Statuses', value: '' },
     { label: 'DRAFT', value: 'DRAFT' },
@@ -91,13 +96,15 @@ export default function CampaignList({
           </select>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-primary btn-sm fw-semibold shadow-sm"
-          onClick={onCreateNew}
-        >
-          + New Campaign
-        </button>
+        {isManager && (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm fw-semibold shadow-sm"
+            onClick={onCreateNew}
+          >
+            + New Campaign
+          </button>
+        )}
       </div>
 
       <div className="card-body p-0">
@@ -109,13 +116,15 @@ export default function CampaignList({
                 ? `No campaigns match the filter '${selectedStatus}'.`
                 : 'No campaigns have been created yet.'}
             </p>
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm"
-              onClick={onCreateNew}
-            >
-              Create First Campaign
-            </button>
+            {isManager && (
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm"
+                onClick={onCreateNew}
+              >
+                Create First Campaign
+              </button>
+            )}
           </div>
         ) : (
           <div className="table-responsive">
@@ -123,10 +132,10 @@ export default function CampaignList({
               <thead className="table-light text-secondary small">
                 <tr>
                   <th scope="col">Code</th>
-                  <th scope="col">Campaign Name</th>
+                  <th scope="col">Name</th>
                   <th scope="col">Vaccine</th>
                   <th scope="col">Target Group</th>
-                  <th scope="col">Service Window</th>
+                  <th scope="col">Service Period</th>
                   <th scope="col">Booking Window</th>
                   <th scope="col">Status</th>
                   <th scope="col" className="text-end pe-3">Actions</th>
@@ -135,9 +144,9 @@ export default function CampaignList({
               <tbody>
                 {campaigns.map((camp) => (
                   <tr key={camp.id}>
-                    <td className="fw-semibold font-monospace small">{camp.code}</td>
+                    <td className="fw-semibold text-primary">{camp.code}</td>
                     <td>
-                      <div className="fw-semibold text-dark">{camp.name}</div>
+                      <div className="fw-semibold">{camp.name}</div>
                     </td>
                     <td>
                       <span className="badge bg-light text-dark border">
@@ -145,7 +154,9 @@ export default function CampaignList({
                       </span>
                     </td>
                     <td>
-                      <span className="small text-muted">{camp.targetGroupName || 'N/A'}</span>
+                      <span className="badge bg-light text-dark border">
+                        {camp.targetGroupCode || 'N/A'}
+                      </span>
                     </td>
                     <td className="small">
                       <div>{formatDate(camp.serviceStartDate)}</div>
@@ -173,7 +184,7 @@ export default function CampaignList({
                           Details
                         </button>
 
-                        {camp.status === 'DRAFT' && (
+                        {isManager && camp.status === 'DRAFT' && (
                           <button
                             type="button"
                             className="btn btn-outline-info text-dark"
@@ -183,7 +194,7 @@ export default function CampaignList({
                           </button>
                         )}
 
-                        {camp.status === 'SCHEDULED' && (
+                        {isManager && camp.status === 'SCHEDULED' && (
                           <button
                             type="button"
                             className="btn btn-outline-primary"
@@ -193,7 +204,7 @@ export default function CampaignList({
                           </button>
                         )}
 
-                        {camp.status === 'PUBLISHED' && (
+                        {isManager && camp.status === 'PUBLISHED' && (
                           <button
                             type="button"
                             className="btn btn-outline-success"
@@ -203,7 +214,7 @@ export default function CampaignList({
                           </button>
                         )}
 
-                        {camp.status === 'ACTIVE' && (
+                        {isManager && camp.status === 'ACTIVE' && (
                           <button
                             type="button"
                             className="btn btn-outline-warning text-dark"
@@ -213,7 +224,7 @@ export default function CampaignList({
                           </button>
                         )}
 
-                        {camp.status === 'SUSPENDED' && (
+                        {isManager && camp.status === 'SUSPENDED' && (
                           <button
                             type="button"
                             className="btn btn-outline-success"
