@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../auth/context/AuthContext';
 import {
+  canViewAnalytics,
   canViewCampaigns,
   canViewCenters,
   canViewSessions,
@@ -30,6 +31,7 @@ export default function Header({ activeView = 'overview', onNavigate, onLogout }
   const showCampaigns = canViewCampaigns(user);
   const showCenters = canViewCenters(user);
   const showSessions = canViewSessions(user);
+  const showAnalytics = canViewAnalytics(user);
 
   return (
     <header>
@@ -83,6 +85,18 @@ export default function Header({ activeView = 'overview', onNavigate, onLogout }
                     onClick={() => onNavigate && onNavigate('sessions')}
                   >
                     Sessions
+                  </button>
+                </li>
+              )}
+
+              {showAnalytics && (
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${activeView === 'analytics' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
+                    onClick={() => onNavigate && onNavigate('analytics')}
+                  >
+                    Analytics
                   </button>
                 </li>
               )}

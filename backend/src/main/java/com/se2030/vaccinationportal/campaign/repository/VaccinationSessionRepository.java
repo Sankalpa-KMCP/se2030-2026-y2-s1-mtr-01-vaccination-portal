@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.repository;
 
+import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import jakarta.persistence.LockModeType;
@@ -83,5 +84,55 @@ public interface VaccinationSessionRepository extends JpaRepository<VaccinationS
             @Param("campaignId") Long campaignId,
             @Param("centerId") Long centerId,
             @Param("status") SessionLifecycleStatus status
+    );
+
+    /**
+     * Aggregate session count grouped by lifecycle status, optionally filtered by campaignId and centerId.
+     */
+    @Query("SELECT s.lifecycleStatus, COUNT(s) FROM VaccinationSession s " +
+            "WHERE (:campaignId IS NULL OR s.campaign.id = :campaignId) " +
+            "AND (:centerId IS NULL OR s.center.id = :centerId) " +
+            "GROUP BY s.lifecycleStatus")
+    List<Object[]> countSessionsByLifecycleStatus(
+            @Param("campaignId") Long campaignId,
+            @Param("centerId") Long centerId
+    );
+
+    /**
+     * Count cancelled sessions, optionally filtered by campaignId and centerId.
+     */
+    @Query("SELECT COUNT(s) FROM VaccinationSession s " +
+            "WHERE s.lifecycleStatus = :cancelledStatus " +
+            "AND (:campaignId IS NULL OR s.campaign.id = :campaignId) " +
+            "AND (:centerId IS NULL OR s.center.id = :centerId)")
+    long countCancelledSessions(
+            @Param("campaignId") Long campaignId,
+            @Param("centerId") Long centerId,
+            @Param("cancelledStatus") SessionLifecycleStatus cancelledStatus
+    );
+
+    /**
+     * Aggregate distinct campaign count grouped by campaign status represented by sessions at a specific center, optionally filtered by campaignId.
+     */
+    @Query("SELECT s.campaign.status, COUNT(DISTINCT s.campaign.id) FROM VaccinationSession s " +
+            "WHERE s.center.id = :centerId " +
+            "AND (:campaignId IS NULL OR s.campaign.id = :campaignId) " +
+            "GROUP BY s.campaign.status")
+    List<Object[]> countDistinctCampaignsByStatusForCenter(
+            @Param("centerId") Long centerId,
+            @Param("campaignId") Long campaignId
+    );
+
+    /**
+     * Count distinct cancelled campaigns represented by sessions at a specific center, optionally filtered by campaignId.
+     */
+    @Query("SELECT COUNT(DISTINCT s.campaign.id) FROM VaccinationSession s " +
+            "WHERE s.center.id = :centerId " +
+            "AND s.campaign.status = :cancelledStatus " +
+            "AND (:campaignId IS NULL OR s.campaign.id = :campaignId)")
+    long countDistinctCancelledCampaignsForCenter(
+            @Param("centerId") Long centerId,
+            @Param("campaignId") Long campaignId,
+            @Param("cancelledStatus") CampaignStatus cancelledStatus
     );
 }

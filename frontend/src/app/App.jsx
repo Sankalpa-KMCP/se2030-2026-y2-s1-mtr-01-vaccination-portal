@@ -4,6 +4,7 @@ import Footer from '../components/common/Footer';
 import CampaignManagementPage from '../features/campaign-management/pages/CampaignManagementPage';
 import CenterOperationsPage from '../features/center-operations/pages/CenterOperationsPage';
 import SessionsPage from '../features/session-management/pages/SessionsPage';
+import OperationalAnalyticsView from '../features/analytics/components/OperationalAnalyticsView';
 import { AuthProvider, useAuth } from '../auth/context/AuthContext';
 import LoginPage from '../auth/pages/LoginPage';
 import LandingPage from '../features/public-landing/pages/LandingPage';
@@ -92,6 +93,7 @@ function AppContent() {
         {activeView === 'campaigns' && <CampaignManagementPage />}
         {activeView === 'center-operations' && <CenterOperationsPage />}
         {activeView === 'sessions' && <SessionsPage />}
+        {activeView === 'analytics' && <OperationalAnalyticsView />}
 
         {activeView === 'overview' && (
           <section className="row justify-content-center">

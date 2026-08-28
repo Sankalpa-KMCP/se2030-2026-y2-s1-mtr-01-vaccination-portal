@@ -1,7 +1,9 @@
 package com.se2030.vaccinationportal.campaign.repository;
 
+import com.se2030.vaccinationportal.campaign.model.OperationalStaffStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
+import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
@@ -66,4 +68,21 @@ public interface StaffAssignmentRepository extends JpaRepository<StaffAssignment
     default boolean existsOverlappingAssignment(Long userId, Long excludeAssignmentId, Instant startAt, Instant endAt) {
         return existsOverlappingAssignment(userId, excludeAssignmentId, startAt, endAt, SessionLifecycleStatus.CANCELLED);
     }
+
+    /**
+     * Count distinct active vaccinators assigned to non-cancelled sessions.
+     */
+    @Query("SELECT COUNT(DISTINCT a.userId) FROM StaffAssignment a " +
+            "WHERE a.session.lifecycleStatus <> :cancelledStatus " +
+            "AND a.role = :vaccinatorRole " +
+            "AND a.staffRoster.status = :activeStatus " +
+            "AND (:campaignId IS NULL OR a.session.campaign.id = :campaignId) " +
+            "AND (:centerId IS NULL OR a.session.center.id = :centerId)")
+    long countAssignedVaccinators(
+            @Param("campaignId") Long campaignId,
+            @Param("centerId") Long centerId,
+            @Param("vaccinatorRole") StaffRole vaccinatorRole,
+            @Param("activeStatus") OperationalStaffStatus activeStatus,
+            @Param("cancelledStatus") SessionLifecycleStatus cancelledStatus
+    );
 }
