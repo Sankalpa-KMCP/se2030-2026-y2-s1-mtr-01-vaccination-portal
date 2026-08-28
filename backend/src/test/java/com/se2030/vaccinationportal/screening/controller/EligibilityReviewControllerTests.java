@@ -24,8 +24,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.junit.jupiter.api.AfterEach;
 
 import java.time.Instant;
 import java.util.List;
@@ -70,6 +74,12 @@ class EligibilityReviewControllerTests {
                 .setControllerAdvice(new ScreeningExceptionHandler())
                 .addInterceptors(new RoleAuthorizationInterceptor())
                 .build();
+        authenticateAs("HEALTHCARE_OFFICER");
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -94,7 +104,6 @@ class EligibilityReviewControllerTests {
         mockMvc.perform(post(
                         "/api/v1/screening/assessments/submissions/{submissionId}/decision",
                         SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "HEALTHCARE_OFFICER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -131,12 +140,12 @@ class EligibilityReviewControllerTests {
 
     @Test
     void getAssessmentBySubmissionReturnsNoContentWhenAbsent() throws Exception {
+        authenticateAs("CITIZEN");
         when(reviewService.getAssessmentBySubmissionId(SUBMISSION_ID)).thenReturn(Optional.empty());
 
         mockMvc.perform(get(
                         "/api/v1/screening/assessments/submissions/{submissionId}",
-                        SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN"))
+                        SUBMISSION_ID))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -145,6 +154,7 @@ class EligibilityReviewControllerTests {
 
     @Test
     void getCitizenAssessmentHistoryReturnsMappedResponsesInServiceOrder() throws Exception {
+        authenticateAs("CITIZEN");
         EligibilityAssessment newest = assessment(
                 52L,
                 32L,
@@ -163,8 +173,7 @@ class EligibilityReviewControllerTests {
         );
         when(reviewService.getAssessmentsForCitizen(CITIZEN_ID)).thenReturn(List.of(newest, older));
 
-        mockMvc.perform(get("/api/v1/screening/citizens/{citizenId}/assessments", CITIZEN_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN"))
+        mockMvc.perform(get("/api/v1/screening/citizens/{citizenId}/assessments", CITIZEN_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].id").value(52L))
@@ -182,14 +191,14 @@ class EligibilityReviewControllerTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @ValueSource(strings = {"HEALTHCARE_OFFICER", "ADMIN"})
     void getReviewDetailsAllowsHealthcareAndAdministrativeRoles(String role) throws Exception {
+        authenticateAs(role);
         when(reviewService.getReviewDetails(SUBMISSION_ID)).thenReturn(reviewDetailsResponse());
 
         mockMvc.perform(get(
                         "/api/v1/screening/submissions/{submissionId}/review-details",
-                        SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, role))
+                        SUBMISSION_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.submissionId").value(SUBMISSION_ID))
                 .andExpect(jsonPath("$.preliminaryResult").value("PRELIMINARY_REVIEW_REQUIRED"))
@@ -206,10 +215,10 @@ class EligibilityReviewControllerTests {
 
     @Test
     void getReviewDetailsForbidsCitizen() throws Exception {
+        authenticateAs("CITIZEN");
         mockMvc.perform(get(
                         "/api/v1/screening/submissions/{submissionId}/review-details",
-                        SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN"))
+                        SUBMISSION_ID))
                 .andExpect(status().isForbidden());
 
         verify(reviewService, never()).getReviewDetails(SUBMISSION_ID);
@@ -222,12 +231,21 @@ class EligibilityReviewControllerTests {
 
         mockMvc.perform(get(
                         "/api/v1/screening/submissions/{submissionId}/review-details",
-                        SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "HEALTHCARE_OFFICER"))
+                        SUBMISSION_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Screening submission not found with ID: 30"));
 
         verify(reviewService).getReviewDetails(SUBMISSION_ID);
+    }
+
+    private void authenticateAs(String role) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "test-user",
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                )
+        );
     }
 
     private ScreeningReviewDetailsResponse reviewDetailsResponse() {

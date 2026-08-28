@@ -9,11 +9,15 @@ import com.se2030.vaccinationportal.screening.service.ScreeningSubmissionService
 import com.se2030.vaccinationportal.screening.validation.RoleAuthorizationInterceptor;
 import com.se2030.vaccinationportal.screening.validation.ScreeningExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -54,6 +58,12 @@ class ScreeningSubmissionResubmissionControllerTests {
                 .setControllerAdvice(new ScreeningExceptionHandler())
                 .addInterceptors(new RoleAuthorizationInterceptor())
                 .build();
+        authenticateAs("CITIZEN");
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -86,7 +96,6 @@ class ScreeningSubmissionResubmissionControllerTests {
         lenient().when(submissionMapper.toResponse(submission)).thenReturn(response);
 
         mockMvc.perform(post(RESUBMIT_PATH, SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -112,7 +121,6 @@ class ScreeningSubmissionResubmissionControllerTests {
     @Test
     void resubmitCorrectionsRejectsDuplicateQuestionKeys() throws Exception {
         mockMvc.perform(post(RESUBMIT_PATH, SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -132,7 +140,6 @@ class ScreeningSubmissionResubmissionControllerTests {
     @Test
     void resubmitCorrectionsRejectsNumericEquivalentDuplicateQuestionKeys() throws Exception {
         mockMvc.perform(post(RESUBMIT_PATH, SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -152,7 +159,6 @@ class ScreeningSubmissionResubmissionControllerTests {
     @Test
     void resubmitCorrectionsRejectsMissingAnswers() throws Exception {
         mockMvc.perform(post(RESUBMIT_PATH, SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
@@ -169,7 +175,6 @@ class ScreeningSubmissionResubmissionControllerTests {
                         "Corrections can only be resubmitted for submissions in CORRECTIONS_REQUIRED status"));
 
         mockMvc.perform(post(RESUBMIT_PATH, SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -184,8 +189,8 @@ class ScreeningSubmissionResubmissionControllerTests {
 
     @Test
     void resubmitCorrectionsRejectsRoleOutsideCitizenFacingBoundary() throws Exception {
+        authenticateAs("HEALTHCARE_OFFICER");
         mockMvc.perform(post(RESUBMIT_PATH, SUBMISSION_ID)
-                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "HEALTHCARE_OFFICER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -197,5 +202,15 @@ class ScreeningSubmissionResubmissionControllerTests {
                 .andExpect(status().isForbidden());
 
         verify(submissionService, never()).resubmitCorrections(any(), anyMap());
+    }
+
+    private void authenticateAs(String role) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "test-user",
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                )
+        );
     }
 }
