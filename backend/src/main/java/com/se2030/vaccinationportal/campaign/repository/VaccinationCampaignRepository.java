@@ -114,4 +114,16 @@ public interface VaccinationCampaignRepository extends JpaRepository<Vaccination
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    /**
+     * Aggregate campaign count grouped by lifecycle status, optionally filtered by campaignId.
+     */
+    @Query("SELECT c.status, COUNT(c) FROM VaccinationCampaign c WHERE (:campaignId IS NULL OR c.id = :campaignId) GROUP BY c.status")
+    List<Object[]> countCampaignsByStatus(@Param("campaignId") Long campaignId);
+
+    /**
+     * Count cancelled campaigns, optionally filtered by campaignId.
+     */
+    @Query("SELECT COUNT(c) FROM VaccinationCampaign c WHERE c.status = :cancelledStatus AND (:campaignId IS NULL OR c.id = :campaignId)")
+    long countCancelledCampaigns(@Param("campaignId") Long campaignId, @Param("cancelledStatus") CampaignStatus cancelledStatus);
 }

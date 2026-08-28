@@ -84,4 +84,29 @@ public interface VaccinationSessionRepository extends JpaRepository<VaccinationS
             @Param("centerId") Long centerId,
             @Param("status") SessionLifecycleStatus status
     );
+
+    /**
+     * Aggregate session count grouped by lifecycle status, optionally filtered by campaignId and centerId.
+     */
+    @Query("SELECT s.lifecycleStatus, COUNT(s) FROM VaccinationSession s " +
+            "WHERE (:campaignId IS NULL OR s.campaign.id = :campaignId) " +
+            "AND (:centerId IS NULL OR s.center.id = :centerId) " +
+            "GROUP BY s.lifecycleStatus")
+    List<Object[]> countSessionsByLifecycleStatus(
+            @Param("campaignId") Long campaignId,
+            @Param("centerId") Long centerId
+    );
+
+    /**
+     * Count cancelled sessions, optionally filtered by campaignId and centerId.
+     */
+    @Query("SELECT COUNT(s) FROM VaccinationSession s " +
+            "WHERE s.lifecycleStatus = :cancelledStatus " +
+            "AND (:campaignId IS NULL OR s.campaign.id = :campaignId) " +
+            "AND (:centerId IS NULL OR s.center.id = :centerId)")
+    long countCancelledSessions(
+            @Param("campaignId") Long campaignId,
+            @Param("centerId") Long centerId,
+            @Param("cancelledStatus") SessionLifecycleStatus cancelledStatus
+    );
 }

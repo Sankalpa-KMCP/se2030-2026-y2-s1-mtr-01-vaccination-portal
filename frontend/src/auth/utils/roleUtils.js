@@ -135,3 +135,11 @@ export function canManageTimeSlots(user) {
 export function canManageSessionBooking(user) {
   return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
 }
+
+/**
+ * Whether user can view MF-02 Operational Analytics.
+ * Authorized: ADMIN, CAMPAIGN_OFFICER, CENTER_MANAGER
+ */
+export function canViewAnalytics(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER', 'ROLE_CENTER_MANAGER');
+}
