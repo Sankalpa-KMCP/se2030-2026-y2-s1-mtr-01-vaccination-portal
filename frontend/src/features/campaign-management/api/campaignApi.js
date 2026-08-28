@@ -193,11 +193,141 @@ export async function listVaccineTypes() {
 }
 
 /**
+ * Fetch all vaccine types including inactive records for master data management.
+ *
+ * @returns {Promise<Array>} List of VaccineTypeSummaryResponse objects
+ */
+export async function listAllVaccineTypes() {
+  const response = await apiRequest('/v1/vaccine-types?includeInactive=true', { method: 'GET' });
+  return handleResponse(response);
+}
+
+/**
+ * Create a new vaccine type.
+ *
+ * @param {Object} payload { code, name, doseUnit }
+ * @returns {Promise<Object>} Created VaccineTypeSummaryResponse
+ */
+export async function createVaccineType(payload) {
+  const response = await apiRequest('/v1/vaccine-types', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update an existing vaccine type.
+ *
+ * @param {number|string} id Vaccine type ID
+ * @param {Object} payload { name, doseUnit }
+ * @returns {Promise<Object>} Updated VaccineTypeSummaryResponse
+ */
+export async function updateVaccineType(id, payload) {
+  const response = await apiRequest(`/v1/vaccine-types/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Activate a vaccine type.
+ *
+ * @param {number|string} id Vaccine type ID
+ * @returns {Promise<Object>} Updated VaccineTypeSummaryResponse
+ */
+export async function activateVaccineType(id) {
+  const response = await apiRequest(`/v1/vaccine-types/${id}/activate`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Deactivate a vaccine type.
+ *
+ * @param {number|string} id Vaccine type ID
+ * @returns {Promise<Object>} Updated VaccineTypeSummaryResponse
+ */
+export async function deactivateVaccineType(id) {
+  const response = await apiRequest(`/v1/vaccine-types/${id}/deactivate`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
  * Fetch list of active target demographic groups for campaign configuration.
  *
  * @returns {Promise<Array>} List of TargetGroupSummaryResponse objects
  */
 export async function listTargetGroups() {
   const response = await apiRequest('/v1/target-groups', { method: 'GET' });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch all target demographic groups including inactive records for master data management.
+ *
+ * @returns {Promise<Array>} List of TargetGroupSummaryResponse objects
+ */
+export async function listAllTargetGroups() {
+  const response = await apiRequest('/v1/target-groups?includeInactive=true', { method: 'GET' });
+  return handleResponse(response);
+}
+
+/**
+ * Create a new target demographic group.
+ *
+ * @param {Object} payload { code, description }
+ * @returns {Promise<Object>} Created TargetGroupSummaryResponse
+ */
+export async function createTargetGroup(payload) {
+  const response = await apiRequest('/v1/target-groups', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update an existing target demographic group.
+ *
+ * @param {number|string} id Target group ID
+ * @param {Object} payload { description }
+ * @returns {Promise<Object>} Updated TargetGroupSummaryResponse
+ */
+export async function updateTargetGroup(id, payload) {
+  const response = await apiRequest(`/v1/target-groups/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Activate a target demographic group.
+ *
+ * @param {number|string} id Target group ID
+ * @returns {Promise<Object>} Updated TargetGroupSummaryResponse
+ */
+export async function activateTargetGroup(id) {
+  const response = await apiRequest(`/v1/target-groups/${id}/activate`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Deactivate a target demographic group.
+ *
+ * @param {number|string} id Target group ID
+ * @returns {Promise<Object>} Updated TargetGroupSummaryResponse
+ */
+export async function deactivateTargetGroup(id) {
+  const response = await apiRequest(`/v1/target-groups/${id}/deactivate`, {
+    method: 'POST',
+  });
   return handleResponse(response);
 }

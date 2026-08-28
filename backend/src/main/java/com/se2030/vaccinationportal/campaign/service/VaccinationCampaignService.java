@@ -631,6 +631,13 @@ public class VaccinationCampaignService {
             Instant bookingOpenAt,
             Instant bookingCloseAt
     ) {
+        if (vaccineType != null && !vaccineType.isActive()) {
+            throw new IllegalArgumentException("Cannot create campaign with inactive VaccineType: " + vaccineType.getCode());
+        }
+        if (targetGroup != null && !targetGroup.isActive()) {
+            throw new IllegalArgumentException("Cannot create campaign with inactive TargetGroup: " + targetGroup.getCode());
+        }
+
         String normalizedCode = code != null ? code.trim() : null;
         if (campaignRepository.existsByCode(normalizedCode)) {
             throw new IllegalArgumentException("Campaign already exists with code: " + normalizedCode);
