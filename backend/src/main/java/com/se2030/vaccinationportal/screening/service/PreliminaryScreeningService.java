@@ -29,8 +29,20 @@ public class PreliminaryScreeningService {
 
     public static record RuleEvaluationResult(
             PreliminaryScreeningResult overallResult,
-            List<String> triggeredRuleCodes,
-            List<String> guidanceMessages
+            List<TriggeredRuleResult> triggeredRules
+    ) {
+        public RuleEvaluationResult {
+            triggeredRules = List.copyOf(triggeredRules);
+        }
+    }
+
+    public static record TriggeredRuleResult(
+            Long sourceRuleId,
+            String ruleCode,
+            String message,
+            PreliminaryScreeningResult preliminaryResult,
+            int priority,
+            int evaluationOrder
     ) {}
 
     /**
@@ -59,15 +71,20 @@ public class PreliminaryScreeningService {
                         (existing, replacement) -> replacement
                 ));
 
-        List<String> triggeredCodes = new ArrayList<>();
-        List<String> guidanceMessages = new ArrayList<>();
+        List<TriggeredRuleResult> triggeredRules = new ArrayList<>();
         boolean requiresReview = false;
 
         for (EligibilityRule rule : rules) {
             boolean conditionMet = evaluateCondition(rule.getConditionExpression(), answerMap);
             if (conditionMet) {
-                triggeredCodes.add(rule.getRuleCode());
-                guidanceMessages.add(rule.getMessage());
+                triggeredRules.add(new TriggeredRuleResult(
+                        rule.getId(),
+                        rule.getRuleCode(),
+                        rule.getMessage(),
+                        rule.getPreliminaryResult(),
+                        rule.getPriority(),
+                        triggeredRules.size() + 1
+                ));
 
                 if (rule.getPreliminaryResult() == PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED) {
                     requiresReview = true;
@@ -79,7 +96,7 @@ public class PreliminaryScreeningService {
                 ? PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED
                 : PreliminaryScreeningResult.PRELIMINARY_PASS;
 
-        return new RuleEvaluationResult(overallResult, triggeredCodes, guidanceMessages);
+        return new RuleEvaluationResult(overallResult, triggeredRules);
     }
 
     /**

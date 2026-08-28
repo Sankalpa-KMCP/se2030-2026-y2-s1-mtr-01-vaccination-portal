@@ -5,6 +5,7 @@ import com.se2030.vaccinationportal.screening.dto.EligibilityDecisionRequest;
 import com.se2030.vaccinationportal.screening.dto.RequestCorrectionsRequest;
 import com.se2030.vaccinationportal.screening.dto.RevokeAssessmentRequest;
 import com.se2030.vaccinationportal.screening.dto.response.EligibilityAssessmentResponse;
+import com.se2030.vaccinationportal.screening.dto.response.ScreeningReviewDetailsResponse;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningSubmissionResponse;
 import com.se2030.vaccinationportal.screening.mapper.EligibilityAssessmentMapper;
 import com.se2030.vaccinationportal.screening.mapper.ScreeningSubmissionMapper;
@@ -53,6 +54,14 @@ public class EligibilityReviewController {
             @RequestParam(name = "campaignId", required = false) Long campaignId
     ) {
         return ResponseEntity.ok(submissionMapper.toResponses(reviewService.getReviewQueue(campaignId)));
+    }
+
+    @GetMapping("/submissions/{submissionId}/review-details")
+    @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
+    public ResponseEntity<ScreeningReviewDetailsResponse> getReviewDetails(
+            @PathVariable("submissionId") Long submissionId
+    ) {
+        return ResponseEntity.ok(reviewService.getReviewDetails(submissionId));
     }
 
     @GetMapping("/assessments/submissions/{submissionId}")

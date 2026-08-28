@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
@@ -41,9 +43,10 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
 
     private static final String V5_MIGRATION = "db/migration/V5__mf01_screening_foundation.sql";
     private static final String V6_MIGRATION = "db/migration/V6__mf01_screening_corrections.sql";
+    private static final String V8_MIGRATION = "db/migration/V8__mf01_screening_triggered_rule_evidence.sql";
     private static final Pattern MIGRATION_FILENAME = Pattern.compile("^V(\\d+)__.+\\.sql$");
 
-    private static final Set<String> MF01_TABLES = Set.of(
+    private static final Set<String> MF01_FOUNDATION_TABLES = Set.of(
             "consent_notice_version",
             "screening_question",
             "answer_option",
@@ -56,7 +59,13 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
             "eligibility_assessment"
     );
 
+    private static final Set<String> MF01_TABLES = Stream.concat(
+            MF01_FOUNDATION_TABLES.stream(),
+            Stream.of("screening_triggered_rule_evidence")
+    ).collect(java.util.stream.Collectors.toUnmodifiableSet());
+
     private static final List<String> MF01_TABLES_IN_DELETE_ORDER = List.of(
+            "screening_triggered_rule_evidence",
             "eligibility_assessment",
             "screening_answer",
             "screening_submission",
@@ -96,7 +105,7 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
 
             executeMigration(connection, V5_MIGRATION);
 
-            assertEquals(MF01_TABLES, existingMf01Tables(connection));
+            assertEquals(MF01_FOUNDATION_TABLES, existingMf01Tables(connection));
             assertFalse(columnExists(connection, "screening_submission", "correction_instructions"));
             assertFalse(columnExists(connection, "screening_submission", "correction_requested_at"));
 
@@ -182,7 +191,88 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
     }
 
     @Test
-    void classpathMigrationVersionsAreUniqueAndIncludeV1ThroughV6() throws Exception {
+    @Timeout(30)
+    void mf01TriggeredRuleEvidenceMigrationCreatesHistoricallySafeSnapshotTable() throws Exception {
+        try (Connection connection = connection()) {
+            executeMigration(connection, V5_MIGRATION);
+            executeMigration(connection, V6_MIGRATION);
+            insertSubmissionFixture(connection);
+            insertEligibilityRuleFixture(connection);
+
+            executeMigration(connection, V8_MIGRATION);
+
+            assertEquals(MF01_TABLES, existingMf01Tables(connection));
+            for (String column : List.of(
+                    "id",
+                    "submission_id",
+                    "source_rule_id",
+                    "rule_code",
+                    "message",
+                    "preliminary_result",
+                    "priority",
+                    "evaluation_order",
+                    "created_at"
+            )) {
+                assertTrue(columnExists(connection, "screening_triggered_rule_evidence", column),
+                        "Missing triggered-rule evidence column: " + column);
+                assertColumnNotNullable(connection, "screening_triggered_rule_evidence", column);
+            }
+            assertUniqueIndexColumns(
+                    connection,
+                    "screening_triggered_rule_evidence",
+                    List.of("submission_id", "source_rule_id")
+            );
+            assertIndexColumns(
+                    connection,
+                    "screening_triggered_rule_evidence",
+                    List.of("submission_id", "evaluation_order")
+            );
+            assertForeignKey(
+                    connection,
+                    "screening_triggered_rule_evidence",
+                    "fk_triggered_rule_evidence_submission",
+                    "screening_submission",
+                    DatabaseMetaData.importedKeyCascade
+            );
+            assertRestrictiveForeignKey(
+                    connection,
+                    "screening_triggered_rule_evidence",
+                    "fk_triggered_rule_evidence_rule",
+                    "eligibility_rule"
+            );
+
+            insertTriggeredRuleEvidenceFixture(connection, 801L);
+            assertEquals(
+                    new EvidenceSnapshot(
+                            801L,
+                            401L,
+                            701L,
+                            "REVIEW-MIG",
+                            "Migration evidence requires review",
+                            "PRELIMINARY_REVIEW_REQUIRED",
+                            10,
+                            1
+                    ),
+                    readEvidence(connection, 801L)
+            );
+
+            assertThrows(SQLException.class, () -> insertTriggeredRuleEvidenceFixture(connection, 802L));
+            assertThrows(SQLException.class, () -> {
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate("DELETE FROM eligibility_rule WHERE id = 701");
+                }
+            });
+
+            try (Statement statement = connection.createStatement()) {
+                assertEquals(1, statement.executeUpdate("DELETE FROM screening_submission WHERE id = 401"));
+            }
+            assertEquals(0, evidenceCount(connection, 801L));
+            assertEquals(1, ruleCount(connection, 701L));
+        }
+    }
+
+    @Test
+    void classpathMigrationVersionsAreUniqueAndIncludeV1ThroughV8() throws Exception {
         Path migrationDirectory = Path.of("src", "main", "resources", "db", "migration");
         assertTrue(Files.isDirectory(migrationDirectory), "Classpath migration directory must exist");
 
@@ -205,7 +295,7 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
                 .toList();
         assertTrue(duplicates.isEmpty(), "Duplicate classpath migration versions found: " + duplicates);
 
-        for (int version = 1; version <= 6; version++) {
+        for (int version = 1; version <= 8; version++) {
             assertTrue(filenamesByVersion.containsKey(version), "Missing classpath migration V" + version);
         }
     }
@@ -261,6 +351,22 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
         }
     }
 
+    private void assertColumnNotNullable(Connection connection, String tableName, String columnName) throws Exception {
+        try (ResultSet columns = connection.getMetaData().getColumns(
+                connection.getCatalog(),
+                null,
+                tableName,
+                columnName
+        )) {
+            assertTrue(columns.next(), "Missing column " + tableName + "." + columnName);
+            assertEquals(
+                    DatabaseMetaData.columnNoNulls,
+                    columns.getInt("NULLABLE"),
+                    "Column must be required: " + tableName + "." + columnName
+            );
+        }
+    }
+
     private void assertUniqueIndexColumns(
             Connection connection,
             String tableName,
@@ -290,6 +396,38 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
         assertTrue(
                 matchingIndexExists,
                 "Expected unique index on " + tableName + expectedColumns + ", found " + indexes
+        );
+    }
+
+    private void assertIndexColumns(
+            Connection connection,
+            String tableName,
+            List<String> expectedColumns
+    ) throws Exception {
+        Map<String, SortedMap<Short, String>> indexes = new HashMap<>();
+        try (ResultSet indexInfo = connection.getMetaData().getIndexInfo(
+                connection.getCatalog(),
+                null,
+                tableName,
+                false,
+                false
+        )) {
+            while (indexInfo.next()) {
+                String indexName = indexInfo.getString("INDEX_NAME");
+                String columnName = indexInfo.getString("COLUMN_NAME");
+                if (indexName != null && columnName != null) {
+                    indexes.computeIfAbsent(indexName, ignored -> new TreeMap<>())
+                            .put(indexInfo.getShort("ORDINAL_POSITION"), columnName.toLowerCase());
+                }
+            }
+        }
+
+        boolean matchingIndexExists = indexes.values().stream()
+                .map(index -> List.copyOf(index.values()))
+                .anyMatch(expectedColumns::equals);
+        assertTrue(
+                matchingIndexExists,
+                "Expected index on " + tableName + expectedColumns + ", found " + indexes
         );
     }
 
@@ -370,6 +508,74 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
         }
     }
 
+    private void insertEligibilityRuleFixture(Connection connection) throws Exception {
+        try (Statement statement = connection.createStatement()) {
+            assertEquals(1, statement.executeUpdate("""
+                    INSERT INTO eligibility_rule
+                        (id, rule_code, version_id, rule_name, condition_expression,
+                         preliminary_result, priority, message)
+                    VALUES
+                        (701, 'REVIEW-MIG', 301, 'Migration review rule', 'DETAILS == yes',
+                         'PRELIMINARY_REVIEW_REQUIRED', 10, 'Migration evidence requires review')
+                    """));
+        }
+    }
+
+    private void insertTriggeredRuleEvidenceFixture(Connection connection, long evidenceId) throws Exception {
+        try (Statement statement = connection.createStatement()) {
+            assertEquals(1, statement.executeUpdate("""
+                    INSERT INTO screening_triggered_rule_evidence
+                        (id, submission_id, source_rule_id, rule_code, message,
+                         preliminary_result, priority, evaluation_order)
+                    VALUES
+                        (%d, 401, 701, 'REVIEW-MIG', 'Migration evidence requires review',
+                         'PRELIMINARY_REVIEW_REQUIRED', 10, 1)
+                    """.formatted(evidenceId)));
+        }
+    }
+
+    private EvidenceSnapshot readEvidence(Connection connection, long evidenceId) throws Exception {
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("""
+                     SELECT id, submission_id, source_rule_id, rule_code, message,
+                            preliminary_result, priority, evaluation_order
+                     FROM screening_triggered_rule_evidence
+                     WHERE id = %d
+                     """.formatted(evidenceId))) {
+            assertTrue(resultSet.next(), "Expected triggered-rule evidence " + evidenceId);
+            EvidenceSnapshot snapshot = new EvidenceSnapshot(
+                    resultSet.getLong("id"),
+                    resultSet.getLong("submission_id"),
+                    resultSet.getLong("source_rule_id"),
+                    resultSet.getString("rule_code"),
+                    resultSet.getString("message"),
+                    resultSet.getString("preliminary_result"),
+                    resultSet.getInt("priority"),
+                    resultSet.getInt("evaluation_order")
+            );
+            assertFalse(resultSet.next(), "Evidence ID must remain unique");
+            return snapshot;
+        }
+    }
+
+    private int evidenceCount(Connection connection, long evidenceId) throws Exception {
+        return rowCount(connection, "screening_triggered_rule_evidence", evidenceId);
+    }
+
+    private int ruleCount(Connection connection, long ruleId) throws Exception {
+        return rowCount(connection, "eligibility_rule", ruleId);
+    }
+
+    private int rowCount(Connection connection, String tableName, long id) throws Exception {
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(
+                     "SELECT COUNT(*) FROM " + tableName + " WHERE id = " + id
+             )) {
+            assertTrue(resultSet.next());
+            return resultSet.getInt(1);
+        }
+    }
+
     private SubmissionSnapshot readSubmission(Connection connection, long submissionId) throws Exception {
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("""
@@ -405,6 +611,18 @@ class Mf01ScreeningMigrationMySqlIntegrationTests {
             String preliminaryResult,
             Timestamp consentAt,
             Timestamp submittedAt
+    ) {
+    }
+
+    private record EvidenceSnapshot(
+            long id,
+            long submissionId,
+            long sourceRuleId,
+            String ruleCode,
+            String message,
+            String preliminaryResult,
+            int priority,
+            int evaluationOrder
     ) {
     }
 }
