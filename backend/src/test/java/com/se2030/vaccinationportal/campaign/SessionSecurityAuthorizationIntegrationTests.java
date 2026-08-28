@@ -470,4 +470,112 @@ public class SessionSecurityAuthorizationIntegrationTests {
                     .andExpect(jsonPath("$.overrideReason", is("Emergency surge demand approved by Center Manager")));
         }
     }
+
+    @Nested
+    @DisplayName("Booking Suspend and Resume Authorization Tests")
+    class BookingSuspensionSecurityTests {
+
+        private final String suspendPayload = """
+                {
+                    "reason": "Operational shortage of nursing staff"
+                }
+                """;
+
+        private final String resumePayload = """
+                {
+                    "reason": "Staff restored, resuming citizen booking intake"
+                }
+                """;
+
+        @Test
+        @DisplayName("ROLE_ADMIN is authorized for booking suspend (200) and resume (200)")
+        void adminCanSuspendAndResumeBooking() throws Exception {
+            String adminAuth = token(101L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-suspend")
+                            .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(suspendPayload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingSuspended", is(true)));
+
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-resume")
+                            .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(resumePayload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingSuspended", is(false)));
+        }
+
+        @Test
+        @DisplayName("ROLE_CENTER_MANAGER is authorized for booking suspend (200) and resume (200)")
+        void centerManagerCanSuspendAndResumeBooking() throws Exception {
+            String managerAuth = token(102L, "manager@portal.gov", List.of("ROLE_CENTER_MANAGER"));
+
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-suspend")
+                            .header(HttpHeaders.AUTHORIZATION, managerAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(suspendPayload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingSuspended", is(true)));
+
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-resume")
+                            .header(HttpHeaders.AUTHORIZATION, managerAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(resumePayload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingSuspended", is(false)));
+        }
+
+        @Test
+        @DisplayName("ROLE_CAMPAIGN_OFFICER is forbidden (403) from suspending or resuming booking")
+        void campaignOfficerIsForbiddenFromBookingSuspension() throws Exception {
+            String officerAuth = token(103L, "officer@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-suspend")
+                            .header(HttpHeaders.AUTHORIZATION, officerAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(suspendPayload))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-resume")
+                            .header(HttpHeaders.AUTHORIZATION, officerAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(resumePayload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_HEALTHCARE_OFFICER is forbidden (403) from suspending or resuming booking")
+        void healthcareOfficerIsForbiddenFromBookingSuspension() throws Exception {
+            String healthcareAuth = token(104L, "nurse@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-suspend")
+                            .header(HttpHeaders.AUTHORIZATION, healthcareAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(suspendPayload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN is forbidden (403) from suspending or resuming booking")
+        void citizenIsForbiddenFromBookingSuspension() throws Exception {
+            String citizenAuth = token(105L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-suspend")
+                            .header(HttpHeaders.AUTHORIZATION, citizenAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(suspendPayload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Unauthenticated request is rejected (403)")
+        void unauthenticatedRequestIsRejected() throws Exception {
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/booking-suspend")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(suspendPayload))
+                    .andExpect(status().isForbidden());
+        }
+    }
 }

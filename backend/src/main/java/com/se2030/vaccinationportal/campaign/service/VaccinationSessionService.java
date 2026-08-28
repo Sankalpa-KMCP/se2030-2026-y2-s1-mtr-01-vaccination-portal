@@ -281,6 +281,84 @@ public class VaccinationSessionService {
     }
 
     /**
+     * Authoritatively suspends booking intake for a SCHEDULED vaccination session with pessimistic locking
+     * and append-only SessionChangeEvent audit logging.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @param reason    Non-blank reason for the suspension (max 500 characters)
+     * @param actorId   Authenticated principal actor ID
+     * @return Saved VaccinationSession in suspended booking state
+     */
+    public VaccinationSession suspendBooking(Long sessionId, String reason, String actorId) {
+        requireId(sessionId, "Session ID is required");
+        String validatedReason = SessionChangeEvent.validateReason(reason);
+        String validatedActorId = SessionChangeEvent.validateActorId(actorId);
+
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+
+        session.suspendBooking();
+        VaccinationSession saved = sessionRepository.save(session);
+
+        SessionScheduleSnapshot snapshot = SessionScheduleSnapshot.from(saved);
+        SessionChangeEvent event = new SessionChangeEvent(
+                saved,
+                SessionChangeType.BOOKING_SUSPENDED,
+                snapshot,
+                snapshot,
+                validatedReason,
+                0,
+                0,
+                validatedActorId
+        );
+        sessionChangeEventRepository.save(event);
+
+        return saved;
+    }
+
+    /**
+     * Authoritatively resumes booking intake for a previously suspended SCHEDULED vaccination session
+     * with pessimistic locking and append-only SessionChangeEvent audit logging.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @param reason    Non-blank reason for resuming booking (max 500 characters)
+     * @param actorId   Authenticated principal actor ID
+     * @return Saved VaccinationSession with booking resumed
+     */
+    public VaccinationSession resumeBooking(Long sessionId, String reason, String actorId) {
+        requireId(sessionId, "Session ID is required");
+        String validatedReason = SessionChangeEvent.validateReason(reason);
+        String validatedActorId = SessionChangeEvent.validateActorId(actorId);
+
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+
+        session.resumeBooking();
+        VaccinationSession saved = sessionRepository.save(session);
+
+        SessionScheduleSnapshot snapshot = SessionScheduleSnapshot.from(saved);
+        SessionChangeEvent event = new SessionChangeEvent(
+                saved,
+                SessionChangeType.BOOKING_RESUMED,
+                snapshot,
+                snapshot,
+                validatedReason,
+                0,
+                0,
+                validatedActorId
+        );
+        sessionChangeEventRepository.save(event);
+
+        return saved;
+    }
+
+    /**
      * Previews a proposed same-center reschedule of a vaccination session without mutating state.
      *
      * @param sessionId         ID of the target VaccinationSession

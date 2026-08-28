@@ -73,6 +73,23 @@ export default function SessionListPanel({
     }
   };
 
+  const getBookingStatusBadge = (bookingStatus) => {
+    switch (bookingStatus) {
+      case 'OPEN':
+        return <span className="badge bg-success text-white" title="Booking Intake Open">OPEN</span>;
+      case 'FULL':
+        return <span className="badge bg-warning text-dark" title="Fully Booked (Waitlist Available)">FULL</span>;
+      case 'SUSPENDED':
+        return <span className="badge bg-danger text-white" title="Booking Intake Suspended">SUSPENDED</span>;
+      case 'NOT_OPEN':
+        return <span className="badge bg-info text-dark" title="Booking Window Not Open Yet">NOT_OPEN</span>;
+      case 'CLOSED':
+      default:
+        return <span className="badge bg-secondary text-white" title="Booking Closed">CLOSED</span>;
+    }
+  };
+
+
   return (
     <div className="card shadow-sm border-0">
       <div className="card-body p-4">
@@ -286,7 +303,15 @@ export default function SessionListPanel({
                             {tz}
                           </span>
                         </td>
-                        <td>{getStatusBadge(s.lifecycleStatus)}</td>
+                        <td>
+                          <div className="d-flex flex-column gap-1">
+                            <div>{getStatusBadge(s.lifecycleStatus)}</div>
+                            {s.bookingStatus && (
+                              <div>{getBookingStatusBadge(s.bookingStatus)}</div>
+                            )}
+                          </div>
+                        </td>
+
                         <td className="text-end">
                           <button
                             type="button"
