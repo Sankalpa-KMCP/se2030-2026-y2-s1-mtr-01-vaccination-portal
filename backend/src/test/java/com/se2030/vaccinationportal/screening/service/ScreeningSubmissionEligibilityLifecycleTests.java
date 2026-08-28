@@ -15,12 +15,16 @@ import com.se2030.vaccinationportal.screening.model.ScreeningAnswer;
 import com.se2030.vaccinationportal.screening.model.ScreeningQuestion;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmissionStatus;
+import com.se2030.vaccinationportal.screening.mapper.ScreeningReviewDetailsMapper;
+import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
 import com.se2030.vaccinationportal.screening.repository.ConsentNoticeVersionRepository;
 import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
+import com.se2030.vaccinationportal.screening.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireVersionRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningAnswerRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
+import com.se2030.vaccinationportal.screening.repository.ScreeningTriggeredRuleEvidenceRepository;
 import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,10 +84,22 @@ class ScreeningSubmissionEligibilityLifecycleTests {
     private PreliminaryScreeningService preliminaryScreeningService;
 
     @Mock
+    private EligibilityRuleRepository eligibilityRuleRepository;
+
+    @Mock
+    private ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
+
+    @Mock
     private CampaignQuestionnaireAssignmentService assignmentService;
 
     @Mock
     private EligibilityAssessmentRepository assessmentRepository;
+
+    @Mock
+    private AnswerOptionRepository answerOptionRepository;
+
+    @Mock
+    private ScreeningReviewDetailsMapper reviewDetailsMapper;
 
     @Mock
     private VaccinationCampaignService campaignService;
@@ -97,6 +113,10 @@ class ScreeningSubmissionEligibilityLifecycleTests {
         eligibilityReviewService = new EligibilityReviewService(
                 assessmentRepository,
                 submissionRepository,
+                itemRepository,
+                answerOptionRepository,
+                evidenceRepository,
+                reviewDetailsMapper,
                 campaignService,
                 clock
         );
@@ -108,6 +128,8 @@ class ScreeningSubmissionEligibilityLifecycleTests {
                 consentRepository,
                 answerValidator,
                 preliminaryScreeningService,
+                eligibilityRuleRepository,
+                evidenceRepository,
                 assignmentService,
                 eligibilityReviewService,
                 clock
@@ -285,7 +307,6 @@ class ScreeningSubmissionEligibilityLifecycleTests {
         lenient().when(preliminaryScreeningService.evaluateAnswers(eq(VERSION_ID), anyList()))
                 .thenReturn(new PreliminaryScreeningService.RuleEvaluationResult(
                         PreliminaryScreeningResult.PRELIMINARY_PASS,
-                        List.of(),
                         List.of()
                 ));
     }

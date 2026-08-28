@@ -2,17 +2,24 @@ package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.screening.dto.response.ScreeningReviewDetailsResponse;
 import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
+import com.se2030.vaccinationportal.screening.mapper.ScreeningReviewDetailsMapper;
 import com.se2030.vaccinationportal.screening.model.*;
+import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
 import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
+import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
+import com.se2030.vaccinationportal.screening.repository.ScreeningTriggeredRuleEvidenceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -28,17 +35,29 @@ public class EligibilityReviewService {
 
     private final EligibilityAssessmentRepository assessmentRepository;
     private final ScreeningSubmissionRepository submissionRepository;
+    private final QuestionnaireItemRepository questionnaireItemRepository;
+    private final AnswerOptionRepository answerOptionRepository;
+    private final ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
+    private final ScreeningReviewDetailsMapper reviewDetailsMapper;
     private final VaccinationCampaignService campaignService;
     private final Clock clock;
 
     public EligibilityReviewService(
             EligibilityAssessmentRepository assessmentRepository,
             ScreeningSubmissionRepository submissionRepository,
+            QuestionnaireItemRepository questionnaireItemRepository,
+            AnswerOptionRepository answerOptionRepository,
+            ScreeningTriggeredRuleEvidenceRepository evidenceRepository,
+            ScreeningReviewDetailsMapper reviewDetailsMapper,
             VaccinationCampaignService campaignService,
             Clock clock
     ) {
         this.assessmentRepository = assessmentRepository;
         this.submissionRepository = submissionRepository;
+        this.questionnaireItemRepository = questionnaireItemRepository;
+        this.answerOptionRepository = answerOptionRepository;
+        this.evidenceRepository = evidenceRepository;
+        this.reviewDetailsMapper = reviewDetailsMapper;
         this.campaignService = campaignService;
         this.clock = clock;
     }
@@ -57,6 +76,51 @@ public class EligibilityReviewService {
         }
         submissions.forEach(this::initializeSubmissionResponseRelations);
         return submissions;
+    }
+
+    @Transactional(readOnly = true)
+    public ScreeningReviewDetailsResponse getReviewDetails(Long submissionId) {
+        if (submissionId == null) {
+            throw new IllegalArgumentException("Submission ID cannot be null");
+        }
+
+        ScreeningSubmission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Screening submission not found with ID: " + submissionId
+                ));
+        submission.getAnswers().size();
+
+        Long questionnaireVersionId = submission.getQuestionnaireVersion().getId();
+        List<QuestionnaireItem> questionnaireItems = questionnaireItemRepository
+                .findByQuestionnaireVersionIdOrderByDisplayOrderAsc(questionnaireVersionId);
+
+        Map<Long, List<AnswerOption>> optionsByQuestionId = new HashMap<>();
+        for (QuestionnaireItem item : questionnaireItems) {
+            Long questionId = item.getQuestion().getId();
+            boolean hasPersistedAnswer = submission.getAnswers().stream()
+                    .anyMatch(answer -> questionId.equals(answer.getQuestion().getId()));
+            QuestionType questionType = item.getQuestion().getQuestionType();
+            if (hasPersistedAnswer
+                    && (questionType == QuestionType.SINGLE_CHOICE
+                    || questionType == QuestionType.MULTI_CHOICE)) {
+                optionsByQuestionId.put(
+                        questionId,
+                        answerOptionRepository.findByQuestionIdOrderByDisplayOrderAsc(questionId)
+                );
+            }
+        }
+
+        List<ScreeningTriggeredRuleEvidence> evidence = evidenceRepository
+                .findBySubmissionIdOrderByEvaluationOrderAsc(submissionId);
+        EligibilityAssessment assessment = assessmentRepository.findBySubmissionId(submissionId).orElse(null);
+
+        return reviewDetailsMapper.toResponse(
+                submission,
+                questionnaireItems,
+                optionsByQuestionId,
+                evidence,
+                assessment
+        );
     }
 
     @Transactional(readOnly = true)

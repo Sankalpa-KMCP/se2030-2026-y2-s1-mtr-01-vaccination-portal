@@ -2,9 +2,16 @@ package com.se2030.vaccinationportal.screening.controller;
 
 import com.se2030.vaccinationportal.screening.mapper.EligibilityAssessmentMapper;
 import com.se2030.vaccinationportal.screening.mapper.ScreeningSubmissionMapper;
+import com.se2030.vaccinationportal.screening.dto.response.EligibilityAssessmentResponse;
+import com.se2030.vaccinationportal.screening.dto.response.ScreeningReviewAnswerOptionResponse;
+import com.se2030.vaccinationportal.screening.dto.response.ScreeningReviewAnswerResponse;
+import com.se2030.vaccinationportal.screening.dto.response.ScreeningReviewDetailsResponse;
+import com.se2030.vaccinationportal.screening.dto.response.TriggeredRuleEvidenceResponse;
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
+import com.se2030.vaccinationportal.screening.model.QuestionType;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
 import com.se2030.vaccinationportal.screening.validation.RoleAuthorizationInterceptor;
@@ -12,6 +19,8 @@ import com.se2030.vaccinationportal.screening.validation.ScreeningExceptionHandl
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -24,6 +33,7 @@ import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -169,6 +179,117 @@ class EligibilityReviewControllerTests {
                 .andExpect(jsonPath("$[1].submission").doesNotExist());
 
         verify(reviewService).getAssessmentsForCitizen(CITIZEN_ID);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
+    void getReviewDetailsAllowsHealthcareAndAdministrativeRoles(String role) throws Exception {
+        when(reviewService.getReviewDetails(SUBMISSION_ID)).thenReturn(reviewDetailsResponse());
+
+        mockMvc.perform(get(
+                        "/api/v1/screening/submissions/{submissionId}/review-details",
+                        SUBMISSION_ID)
+                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, role))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.submissionId").value(SUBMISSION_ID))
+                .andExpect(jsonPath("$.preliminaryResult").value("PRELIMINARY_REVIEW_REQUIRED"))
+                .andExpect(jsonPath("$.correctionInstructions").value("Clarify the allergy response"))
+                .andExpect(jsonPath("$.answers[0].questionCode").value("ALLERGY"))
+                .andExpect(jsonPath("$.answers[0].typedAnswer").value("yes"))
+                .andExpect(jsonPath("$.answers[0].selectedOptions[0].label").value("Yes"))
+                .andExpect(jsonPath("$.triggeredRuleEvidence[0].ruleCode").value("ALLERGY_REVIEW"))
+                .andExpect(jsonPath("$.triggeredRuleEvidence[0].message").value("Allergy requires review"))
+                .andExpect(jsonPath("$.assessment.status").value("INELIGIBLE"));
+
+        verify(reviewService).getReviewDetails(SUBMISSION_ID);
+    }
+
+    @Test
+    void getReviewDetailsForbidsCitizen() throws Exception {
+        mockMvc.perform(get(
+                        "/api/v1/screening/submissions/{submissionId}/review-details",
+                        SUBMISSION_ID)
+                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "CITIZEN"))
+                .andExpect(status().isForbidden());
+
+        verify(reviewService, never()).getReviewDetails(SUBMISSION_ID);
+    }
+
+    @Test
+    void getReviewDetailsReturnsNotFoundForMissingSubmission() throws Exception {
+        when(reviewService.getReviewDetails(SUBMISSION_ID))
+                .thenThrow(new ResourceNotFoundException("Screening submission not found with ID: " + SUBMISSION_ID));
+
+        mockMvc.perform(get(
+                        "/api/v1/screening/submissions/{submissionId}/review-details",
+                        SUBMISSION_ID)
+                        .header(RoleAuthorizationInterceptor.ROLE_HEADER, "HEALTHCARE_OFFICER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Screening submission not found with ID: 30"));
+
+        verify(reviewService).getReviewDetails(SUBMISSION_ID);
+    }
+
+    private ScreeningReviewDetailsResponse reviewDetailsResponse() {
+        ScreeningReviewAnswerResponse answer = new ScreeningReviewAnswerResponse(
+                70L,
+                80L,
+                90L,
+                "ALLERGY",
+                "Do you have an allergy?",
+                QuestionType.SINGLE_CHOICE,
+                1,
+                true,
+                "yes",
+                REVIEWED_AT.minusSeconds(600),
+                List.of(new ScreeningReviewAnswerOptionResponse(100L, "YES", "Yes", "yes"))
+        );
+        TriggeredRuleEvidenceResponse evidence = new TriggeredRuleEvidenceResponse(
+                110L,
+                120L,
+                "ALLERGY_REVIEW",
+                "Allergy requires review",
+                PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED,
+                10,
+                1,
+                REVIEWED_AT.minusSeconds(500)
+        );
+        EligibilityAssessmentResponse assessment = new EligibilityAssessmentResponse(
+                50L,
+                SUBMISSION_ID,
+                CITIZEN_ID,
+                CAMPAIGN_ID,
+                REVIEWER_ID,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED,
+                "Clinical review completed",
+                "Allergy confirmed",
+                REVIEWED_AT,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                REVIEWED_AT,
+                REVIEWED_AT
+        );
+        return new ScreeningReviewDetailsResponse(
+                SUBMISSION_ID,
+                CITIZEN_ID,
+                CAMPAIGN_ID,
+                60L,
+                61L,
+                com.se2030.vaccinationportal.screening.model.ScreeningSubmissionStatus.CORRECTIONS_REQUIRED,
+                PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED,
+                REVIEWED_AT.minusSeconds(3_600),
+                REVIEWED_AT.minusSeconds(1_800),
+                "Clarify the allergy response",
+                REVIEWED_AT.minusSeconds(900),
+                List.of(answer),
+                List.of(evidence),
+                assessment
+        );
     }
 
     private EligibilityAssessment assessment(

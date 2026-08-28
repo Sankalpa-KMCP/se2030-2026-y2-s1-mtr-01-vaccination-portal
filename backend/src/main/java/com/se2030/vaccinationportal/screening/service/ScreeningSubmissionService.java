@@ -41,6 +41,8 @@ public class ScreeningSubmissionService {
     private final ConsentNoticeVersionRepository consentNoticeVersionRepository;
     private final ScreeningAnswerValidator answerValidator;
     private final PreliminaryScreeningService preliminaryScreeningService;
+    private final EligibilityRuleRepository eligibilityRuleRepository;
+    private final ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
     private final CampaignQuestionnaireAssignmentService assignmentService;
     private final EligibilityReviewService eligibilityReviewService;
     private final Clock clock;
@@ -53,6 +55,8 @@ public class ScreeningSubmissionService {
             ConsentNoticeVersionRepository consentNoticeVersionRepository,
             ScreeningAnswerValidator answerValidator,
             PreliminaryScreeningService preliminaryScreeningService,
+            EligibilityRuleRepository eligibilityRuleRepository,
+            ScreeningTriggeredRuleEvidenceRepository evidenceRepository,
             CampaignQuestionnaireAssignmentService assignmentService,
             EligibilityReviewService eligibilityReviewService,
             Clock clock
@@ -64,6 +68,8 @@ public class ScreeningSubmissionService {
         this.consentNoticeVersionRepository = consentNoticeVersionRepository;
         this.answerValidator = answerValidator;
         this.preliminaryScreeningService = preliminaryScreeningService;
+        this.eligibilityRuleRepository = eligibilityRuleRepository;
+        this.evidenceRepository = evidenceRepository;
         this.assignmentService = assignmentService;
         this.eligibilityReviewService = eligibilityReviewService;
         this.clock = clock;
@@ -189,6 +195,7 @@ public class ScreeningSubmissionService {
         // 9. Evaluate Preliminary Result
         PreliminaryScreeningService.RuleEvaluationResult eval = preliminaryScreeningService.evaluateAnswers(versionId, persistedAnswers);
         savedSubmission.setPreliminaryResult(eval.overallResult());
+        persistTriggeredRuleEvidence(savedSubmission, eval.triggeredRules());
 
         return initializeResponseRelations(submissionRepository.save(savedSubmission));
     }
@@ -251,10 +258,42 @@ public class ScreeningSubmissionService {
 
         PreliminaryScreeningService.RuleEvaluationResult eval =
                 preliminaryScreeningService.evaluateAnswers(versionId, persistedAnswers);
+        replaceTriggeredRuleEvidence(submission, eval.triggeredRules());
         submission.setPreliminaryResult(eval.overallResult());
         submission.setStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
 
         return initializeResponseRelations(submissionRepository.save(submission));
+    }
+
+    private void replaceTriggeredRuleEvidence(
+            ScreeningSubmission submission,
+            List<PreliminaryScreeningService.TriggeredRuleResult> triggeredRules
+    ) {
+        evidenceRepository.deleteBySubmissionId(submission.getId());
+        evidenceRepository.flush();
+        persistTriggeredRuleEvidence(submission, triggeredRules);
+    }
+
+    private void persistTriggeredRuleEvidence(
+            ScreeningSubmission submission,
+            List<PreliminaryScreeningService.TriggeredRuleResult> triggeredRules
+    ) {
+        if (triggeredRules.isEmpty()) {
+            return;
+        }
+
+        List<ScreeningTriggeredRuleEvidence> evidenceRows = triggeredRules.stream()
+                .map(triggeredRule -> new ScreeningTriggeredRuleEvidence(
+                        submission,
+                        eligibilityRuleRepository.getReferenceById(triggeredRule.sourceRuleId()),
+                        triggeredRule.ruleCode(),
+                        triggeredRule.message(),
+                        triggeredRule.preliminaryResult(),
+                        triggeredRule.priority(),
+                        triggeredRule.evaluationOrder()
+                ))
+                .toList();
+        evidenceRepository.saveAll(evidenceRows);
     }
 
     private ScreeningSubmission initializeResponseRelations(ScreeningSubmission submission) {

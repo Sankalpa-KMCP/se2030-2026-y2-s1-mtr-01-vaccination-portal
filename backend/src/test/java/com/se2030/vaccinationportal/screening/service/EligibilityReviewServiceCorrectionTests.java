@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.screening.mapper.ScreeningReviewDetailsMapper;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
 import com.se2030.vaccinationportal.screening.model.QuestionnaireVersion;
@@ -9,7 +10,10 @@ import com.se2030.vaccinationportal.screening.model.ScreeningQuestion;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmissionStatus;
 import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
+import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
+import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
+import com.se2030.vaccinationportal.screening.repository.ScreeningTriggeredRuleEvidenceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +45,18 @@ class EligibilityReviewServiceCorrectionTests {
     private ScreeningSubmissionRepository submissionRepository;
 
     @Mock
+    private QuestionnaireItemRepository questionnaireItemRepository;
+
+    @Mock
+    private AnswerOptionRepository answerOptionRepository;
+
+    @Mock
+    private ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
+
+    @Mock
+    private ScreeningReviewDetailsMapper reviewDetailsMapper;
+
+    @Mock
     private VaccinationCampaignService campaignService;
 
     private EligibilityReviewService service;
@@ -50,6 +66,10 @@ class EligibilityReviewServiceCorrectionTests {
         service = new EligibilityReviewService(
                 assessmentRepository,
                 submissionRepository,
+                questionnaireItemRepository,
+                answerOptionRepository,
+                evidenceRepository,
+                reviewDetailsMapper,
                 campaignService,
                 Clock.fixed(CORRECTION_REQUESTED_AT, ZoneOffset.UTC)
         );
