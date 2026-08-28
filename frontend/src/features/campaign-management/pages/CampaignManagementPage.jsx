@@ -9,6 +9,9 @@ import {
   activateCampaign,
   suspendCampaign,
   resumeCampaign,
+  completeCampaign,
+  cancelCampaign,
+  archiveCampaign,
 } from '../api/campaignApi';
 import CampaignList from '../components/CampaignList';
 import CampaignForm from '../components/CampaignForm';
@@ -124,6 +127,15 @@ export default function CampaignManagementPage() {
           break;
         case 'RESUME':
           updated = await resumeCampaign(campaignId, payload);
+          break;
+        case 'COMPLETE':
+          updated = await completeCampaign(campaignId, payload);
+          break;
+        case 'CANCEL':
+          updated = await cancelCampaign(campaignId, payload);
+          break;
+        case 'ARCHIVE':
+          updated = await archiveCampaign(campaignId, payload);
           break;
         default:
           throw new Error(`Unsupported lifecycle action: ${actionType}`);

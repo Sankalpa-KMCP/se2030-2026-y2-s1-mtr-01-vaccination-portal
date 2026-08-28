@@ -138,6 +138,51 @@ export async function resumeCampaign(id, payload) {
 }
 
 /**
+ * Transition campaign to COMPLETED upon conclusion of service work.
+ *
+ * @param {number|string} id - Campaign identifier
+ * @param {Object} payload - { reason: string }
+ * @returns {Promise<Object>} Updated CampaignResponse
+ */
+export async function completeCampaign(id, payload) {
+  const response = await apiRequest(`/v1/campaigns/${id}/complete`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Transition campaign to CANCELLED.
+ *
+ * @param {number|string} id - Campaign identifier
+ * @param {Object} payload - { reason: string }
+ * @returns {Promise<Object>} Updated CampaignResponse
+ */
+export async function cancelCampaign(id, payload) {
+  const response = await apiRequest(`/v1/campaigns/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Transition completed/cancelled campaign to ARCHIVED for immutable historical retention.
+ *
+ * @param {number|string} id - Campaign identifier
+ * @param {Object} payload - { reason: string }
+ * @returns {Promise<Object>} Updated CampaignResponse
+ */
+export async function archiveCampaign(id, payload) {
+  const response = await apiRequest(`/v1/campaigns/${id}/archive`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
  * Fetch list of active vaccine types for campaign configuration.
  *
  * @returns {Promise<Array>} List of VaccineTypeSummaryResponse objects

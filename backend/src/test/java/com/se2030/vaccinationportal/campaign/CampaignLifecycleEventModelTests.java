@@ -161,6 +161,101 @@ class CampaignLifecycleEventModelTests {
     }
 
     @Test
+    void completedEventAcceptsValidStatusPairs() {
+        for (CampaignStatus prev : new CampaignStatus[]{CampaignStatus.ACTIVE, CampaignStatus.PUBLISHED, CampaignStatus.SUSPENDED}) {
+            CampaignLifecycleEvent ev = new CampaignLifecycleEvent(
+                    campaign, CampaignLifecycleChangeType.COMPLETED,
+                    prev, CampaignStatus.COMPLETED,
+                    "Campaign operations completed", "admin-1", CREATED_AT
+            );
+            assertEquals(CampaignLifecycleChangeType.COMPLETED, ev.getChangeType());
+            assertEquals(prev, ev.getPreviousStatus());
+            assertEquals(CampaignStatus.COMPLETED, ev.getNewStatus());
+        }
+    }
+
+    @Test
+    void completedEventRejectsInconsistentStatusPairs() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.COMPLETED,
+                                CampaignStatus.DRAFT, CampaignStatus.COMPLETED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.COMPLETED,
+                                CampaignStatus.SCHEDULED, CampaignStatus.COMPLETED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.COMPLETED,
+                                CampaignStatus.ACTIVE, CampaignStatus.ARCHIVED, "reason", "actor", CREATED_AT))
+        );
+    }
+
+    @Test
+    void cancelledEventAcceptsValidStatusPairs() {
+        for (CampaignStatus prev : new CampaignStatus[]{
+                CampaignStatus.DRAFT, CampaignStatus.SCHEDULED, CampaignStatus.PUBLISHED, CampaignStatus.ACTIVE, CampaignStatus.SUSPENDED
+        }) {
+            CampaignLifecycleEvent ev = new CampaignLifecycleEvent(
+                    campaign, CampaignLifecycleChangeType.CANCELLED,
+                    prev, CampaignStatus.CANCELLED,
+                    "Campaign cancelled due to change in health policy", "admin-1", CREATED_AT
+            );
+            assertEquals(CampaignLifecycleChangeType.CANCELLED, ev.getChangeType());
+            assertEquals(prev, ev.getPreviousStatus());
+            assertEquals(CampaignStatus.CANCELLED, ev.getNewStatus());
+        }
+    }
+
+    @Test
+    void cancelledEventRejectsInconsistentStatusPairs() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.CANCELLED,
+                                CampaignStatus.COMPLETED, CampaignStatus.CANCELLED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.CANCELLED,
+                                CampaignStatus.CANCELLED, CampaignStatus.CANCELLED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.CANCELLED,
+                                CampaignStatus.ARCHIVED, CampaignStatus.CANCELLED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.CANCELLED,
+                                CampaignStatus.ACTIVE, CampaignStatus.SUSPENDED, "reason", "actor", CREATED_AT))
+        );
+    }
+
+    @Test
+    void archivedEventAcceptsValidStatusPairs() {
+        for (CampaignStatus prev : new CampaignStatus[]{CampaignStatus.COMPLETED, CampaignStatus.CANCELLED}) {
+            CampaignLifecycleEvent ev = new CampaignLifecycleEvent(
+                    campaign, CampaignLifecycleChangeType.ARCHIVED,
+                    prev, CampaignStatus.ARCHIVED,
+                    "Retention period archived", "admin-1", CREATED_AT
+            );
+            assertEquals(CampaignLifecycleChangeType.ARCHIVED, ev.getChangeType());
+            assertEquals(prev, ev.getPreviousStatus());
+            assertEquals(CampaignStatus.ARCHIVED, ev.getNewStatus());
+        }
+    }
+
+    @Test
+    void archivedEventRejectsInconsistentStatusPairs() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.ARCHIVED,
+                                CampaignStatus.DRAFT, CampaignStatus.ARCHIVED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.ARCHIVED,
+                                CampaignStatus.ACTIVE, CampaignStatus.ARCHIVED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.ARCHIVED,
+                                CampaignStatus.SUSPENDED, CampaignStatus.ARCHIVED, "reason", "actor", CREATED_AT)),
+                () -> assertThrows(IllegalArgumentException.class, () ->
+                        new CampaignLifecycleEvent(campaign, CampaignLifecycleChangeType.ARCHIVED,
+                                CampaignStatus.COMPLETED, CampaignStatus.COMPLETED, "reason", "actor", CREATED_AT))
+        );
+    }
+
+    @Test
     void eventExposesNoBroadPublicSetters() {
         boolean hasPublicSetter = Arrays.stream(CampaignLifecycleEvent.class.getMethods())
                 .anyMatch(method -> Modifier.isPublic(method.getModifiers()) && method.getName().startsWith("set"));

@@ -1,5 +1,8 @@
 package com.se2030.vaccinationportal.campaign.controller;
 
+import com.se2030.vaccinationportal.campaign.dto.request.ArchiveCampaignRequest;
+import com.se2030.vaccinationportal.campaign.dto.request.CancelCampaignRequest;
+import com.se2030.vaccinationportal.campaign.dto.request.CompleteCampaignRequest;
 import com.se2030.vaccinationportal.campaign.dto.request.CreateCampaignRequest;
 import com.se2030.vaccinationportal.campaign.dto.request.ResumeCampaignRequest;
 import com.se2030.vaccinationportal.campaign.dto.request.SuspendCampaignRequest;
@@ -128,5 +131,41 @@ public class CampaignController {
         String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : request.actorId();
         VaccinationCampaign resumed = campaignService.resumeCampaign(id, request.reason(), trustedActorId);
         return ResponseEntity.ok(CampaignDtoMapper.toResponse(resumed));
+    }
+
+    @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
+    public ResponseEntity<CampaignResponse> completeCampaign(
+            @PathVariable Long id,
+            @Valid @RequestBody CompleteCampaignRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : "system";
+        VaccinationCampaign completed = campaignService.completeCampaign(id, request.reason(), trustedActorId);
+        return ResponseEntity.ok(CampaignDtoMapper.toResponse(completed));
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
+    public ResponseEntity<CampaignResponse> cancelCampaign(
+            @PathVariable Long id,
+            @Valid @RequestBody CancelCampaignRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : "system";
+        VaccinationCampaign cancelled = campaignService.cancelCampaign(id, request.reason(), trustedActorId);
+        return ResponseEntity.ok(CampaignDtoMapper.toResponse(cancelled));
+    }
+
+    @PostMapping("/{id}/archive")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
+    public ResponseEntity<CampaignResponse> archiveCampaign(
+            @PathVariable Long id,
+            @Valid @RequestBody ArchiveCampaignRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : "system";
+        VaccinationCampaign archived = campaignService.archiveCampaign(id, request.reason(), trustedActorId);
+        return ResponseEntity.ok(CampaignDtoMapper.toResponse(archived));
     }
 }

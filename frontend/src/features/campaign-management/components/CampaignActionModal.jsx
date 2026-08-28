@@ -15,7 +15,7 @@ export default function CampaignActionModal({
   if (!action) return null;
 
   const { type, campaign } = action;
-  const isReasonRequired = type === 'SUSPEND' || type === 'RESUME';
+  const isReasonRequired = type === 'SUSPEND' || type === 'RESUME' || type === 'COMPLETE' || type === 'CANCEL' || type === 'ARCHIVE';
 
   const getActionTitle = () => {
     switch (type) {
@@ -24,6 +24,9 @@ export default function CampaignActionModal({
       case 'ACTIVATE': return `Activate Campaign "${campaign.name}"`;
       case 'SUSPEND': return `Suspend Campaign "${campaign.name}"`;
       case 'RESUME': return `Resume Campaign "${campaign.name}"`;
+      case 'COMPLETE': return `Complete Campaign "${campaign.name}"`;
+      case 'CANCEL': return `Cancel Campaign "${campaign.name}"`;
+      case 'ARCHIVE': return `Archive Campaign "${campaign.name}"`;
       default: return 'Confirm Lifecycle Action';
     }
   };
@@ -40,6 +43,12 @@ export default function CampaignActionModal({
         return 'Suspending this campaign immediately freezes active session operations. A mandatory administrative justification reason is required.';
       case 'RESUME':
         return 'Resuming this campaign restores active operations. A mandatory administrative justification reason is required.';
+      case 'COMPLETE':
+        return 'Completing this campaign permanently closes operational vaccination sessions and prevents further bookings while preserving all historical records.';
+      case 'CANCEL':
+        return 'Cancelling this campaign stops all future operations and prevents further bookings. A mandatory justification reason is required.';
+      case 'ARCHIVE':
+        return 'Archiving this campaign moves it to long-term immutable historical retention. This action cannot be reversed.';
       default:
         return 'Are you sure you want to proceed with this state transition?';
     }
@@ -59,6 +68,18 @@ export default function CampaignActionModal({
       : null;
 
     onConfirm(type, campaign.id, payload);
+  };
+
+  const getConfirmButtonClass = () => {
+    switch (type) {
+      case 'CANCEL': return 'btn-danger';
+      case 'SUSPEND': return 'btn-warning';
+      case 'ACTIVATE':
+      case 'RESUME': return 'btn-success';
+      case 'COMPLETE': return 'btn-dark';
+      case 'ARCHIVE': return 'btn-secondary';
+      default: return 'btn-primary';
+    }
   };
 
   return (
@@ -136,9 +157,7 @@ export default function CampaignActionModal({
               </button>
               <button
                 type="submit"
-                className={`btn btn-sm fw-semibold ${
-                  type === 'SUSPEND' ? 'btn-warning' : type === 'ACTIVATE' || type === 'RESUME' ? 'btn-success' : 'btn-primary'
-                }`}
+                className={`btn btn-sm fw-semibold ${getConfirmButtonClass()}`}
                 disabled={loading}
               >
                 {loading ? (

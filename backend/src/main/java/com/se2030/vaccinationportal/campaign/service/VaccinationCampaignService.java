@@ -480,6 +480,146 @@ public class VaccinationCampaignService {
         return savedCampaign;
     }
 
+    /**
+     * Completes an ACTIVE, PUBLISHED, or SUSPENDED campaign and records the impact as an append-only lifecycle event.
+     * Fails if any unfinished sessions (in DRAFT, SCHEDULED, or IN_PROGRESS status) remain under the campaign.
+     * The campaign status and event are persisted atomically under the campaign pessimistic write lock.
+     *
+     * @param campaignId ID of the campaign to complete
+     * @param reason mandatory operational reason
+     * @param actorId mandatory identifier of the trusted actor
+     * @return managed campaign in COMPLETED status
+     */
+    public VaccinationCampaign completeCampaign(Long campaignId, String reason, String actorId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        String validatedReason = CampaignLifecycleEvent.validateReason(reason);
+        String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        List<VaccinationSession> sessions = sessionRepository.findByCampaignId(campaignId);
+        List<VaccinationSession> unfinishedSessions = sessions.stream()
+                .filter(s -> BLOCKING_SESSION_STATUSES.contains(s.getLifecycleStatus()))
+                .toList();
+        if (!unfinishedSessions.isEmpty()) {
+            throw new IllegalStateException(
+                    "Cannot complete campaign with ID " + campaignId + " because " + unfinishedSessions.size() +
+                            " unfinished session(s) remain in " +
+                            unfinishedSessions.stream().map(s -> s.getLifecycleStatus().name()).distinct().toList() + " status"
+            );
+        }
+
+        CampaignStatus previousStatus = campaign.getStatus();
+        campaign.complete();
+
+        VaccinationCampaign savedCampaign = campaignRepository.save(campaign);
+
+        CampaignLifecycleEvent event = new CampaignLifecycleEvent(
+                savedCampaign,
+                CampaignLifecycleChangeType.COMPLETED,
+                previousStatus,
+                savedCampaign.getStatus(),
+                validatedReason,
+                validatedActorId,
+                clock.instant()
+        );
+        campaignLifecycleEventRepository.save(event);
+
+        return savedCampaign;
+    }
+
+    /**
+     * Cancels a non-terminal campaign (in DRAFT, SCHEDULED, PUBLISHED, ACTIVE, or SUSPENDED status)
+     * and records the impact as an append-only lifecycle event.
+     * The campaign status and event are persisted atomically under the campaign pessimistic write lock.
+     *
+     * @param campaignId ID of the campaign to cancel
+     * @param reason mandatory operational reason
+     * @param actorId mandatory identifier of the trusted actor
+     * @return managed campaign in CANCELLED status
+     */
+    public VaccinationCampaign cancelCampaign(Long campaignId, String reason, String actorId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        String validatedReason = CampaignLifecycleEvent.validateReason(reason);
+        String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        CampaignStatus previousStatus = campaign.getStatus();
+        campaign.cancel();
+
+        VaccinationCampaign savedCampaign = campaignRepository.save(campaign);
+
+        CampaignLifecycleEvent event = new CampaignLifecycleEvent(
+                savedCampaign,
+                CampaignLifecycleChangeType.CANCELLED,
+                previousStatus,
+                savedCampaign.getStatus(),
+                validatedReason,
+                validatedActorId,
+                clock.instant()
+        );
+        campaignLifecycleEventRepository.save(event);
+
+        return savedCampaign;
+    }
+
+    /**
+     * Archives a COMPLETED or CANCELLED campaign and records the impact as an append-only lifecycle event.
+     * The campaign status and event are persisted atomically under the campaign pessimistic write lock.
+     *
+     * @param campaignId ID of the campaign to archive
+     * @param reason mandatory operational reason
+     * @param actorId mandatory identifier of the trusted actor
+     * @return managed campaign in ARCHIVED status
+     */
+    public VaccinationCampaign archiveCampaign(Long campaignId, String reason, String actorId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        String validatedReason = CampaignLifecycleEvent.validateReason(reason);
+        String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        CampaignStatus previousStatus = campaign.getStatus();
+        campaign.archive();
+
+        VaccinationCampaign savedCampaign = campaignRepository.save(campaign);
+
+        CampaignLifecycleEvent event = new CampaignLifecycleEvent(
+                savedCampaign,
+                CampaignLifecycleChangeType.ARCHIVED,
+                previousStatus,
+                savedCampaign.getStatus(),
+                validatedReason,
+                validatedActorId,
+                clock.instant()
+        );
+        campaignLifecycleEventRepository.save(event);
+
+        return savedCampaign;
+    }
+
     public VaccinationCampaign createCampaign(
             String code,
             String name,
