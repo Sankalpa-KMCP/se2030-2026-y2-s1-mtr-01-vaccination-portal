@@ -26,6 +26,10 @@ async function handleResponse(response) {
   return response.json();
 }
 
+// =================================================================================================
+// Vaccination Center Core API Operations
+// =================================================================================================
+
 /**
  * Fetch list of vaccination centers, optionally filtered by status.
  *
@@ -48,6 +52,191 @@ export async function getCenterById(id) {
   const response = await apiRequest(`/v1/centers/${id}`, { method: 'GET' });
   return handleResponse(response);
 }
+
+/**
+ * Create a new physical vaccination center record.
+ *
+ * @param {Object} payload - CreateCenterRequest payload ({ code, name, address, contact, safeConcurrentOccupancy, sessionServiceCeiling, timezone })
+ * @returns {Promise<Object>} Created CenterResponse object
+ */
+export async function createCenter(payload) {
+  const response = await apiRequest('/v1/centers', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update mutable details of an existing vaccination center.
+ *
+ * @param {number|string} id - Center identifier
+ * @param {Object} payload - UpdateCenterRequest payload ({ name, address, contact, safeConcurrentOccupancy, sessionServiceCeiling })
+ * @returns {Promise<Object>} Updated CenterResponse object
+ */
+export async function updateCenter(id, payload) {
+  const response = await apiRequest(`/v1/centers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Activate an inactive vaccination center.
+ *
+ * @param {number|string} id - Center identifier
+ * @returns {Promise<Object>} Updated CenterResponse object
+ */
+export async function activateCenter(id) {
+  const response = await apiRequest(`/v1/centers/${id}/activate`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Deactivate an active vaccination center.
+ *
+ * @param {number|string} id - Center identifier
+ * @returns {Promise<Object>} Updated CenterResponse object
+ */
+export async function deactivateCenter(id) {
+  const response = await apiRequest(`/v1/centers/${id}/deactivate`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+// =================================================================================================
+// Center Operating Hours API Operations
+// =================================================================================================
+
+/**
+ * Fetch all operating hours schedule shifts for a center.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @returns {Promise<Array>} List of OperatingHoursResponse objects
+ */
+export async function getOperatingHours(centerId) {
+  const response = await apiRequest(`/v1/centers/${centerId}/operating-hours`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Create a new operating hours schedule shift for a center.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {Object} payload - CreateOperatingHoursRequest ({ dayOfWeek, opening, closing, effectiveFrom, effectiveTo })
+ * @returns {Promise<Object>} Created OperatingHoursResponse object
+ */
+export async function createOperatingHours(centerId, payload) {
+  const response = await apiRequest(`/v1/centers/${centerId}/operating-hours`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update an existing operating hours schedule shift.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {number|string} hoursId - Operating hours record identifier
+ * @param {Object} payload - UpdateOperatingHoursRequest ({ dayOfWeek, opening, closing, effectiveFrom, effectiveTo })
+ * @returns {Promise<Object>} Updated OperatingHoursResponse object
+ */
+export async function updateOperatingHours(centerId, hoursId, payload) {
+  const response = await apiRequest(`/v1/centers/${centerId}/operating-hours/${hoursId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * End or shorten the effective validity of an operating hours schedule shift.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {number|string} hoursId - Operating hours record identifier
+ * @param {Object} payload - EndDateOperatingHoursRequest ({ endDate })
+ * @returns {Promise<Object>} Updated OperatingHoursResponse object
+ */
+export async function endDateOperatingHours(centerId, hoursId, payload) {
+  const response = await apiRequest(`/v1/centers/${centerId}/operating-hours/${hoursId}/end-date`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+// =================================================================================================
+// Center Temporary Closures API Operations
+// =================================================================================================
+
+/**
+ * Fetch all temporary closure records for a center.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @returns {Promise<Array>} List of CenterClosureResponse objects
+ */
+export async function getClosures(centerId) {
+  const response = await apiRequest(`/v1/centers/${centerId}/closures`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Register a new temporary closure interval for a center.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {Object} payload - CreateCenterClosureRequest ({ startAt, endAt, reason })
+ * @returns {Promise<Object>} Created CenterClosureResponse object
+ */
+export async function createClosure(centerId, payload) {
+  const response = await apiRequest(`/v1/centers/${centerId}/closures`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update an active future temporary closure interval.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {number|string} closureId - Center closure identifier
+ * @param {Object} payload - UpdateCenterClosureRequest ({ startAt, endAt, reason })
+ * @returns {Promise<Object>} Updated CenterClosureResponse object
+ */
+export async function updateClosure(centerId, closureId, payload) {
+  const response = await apiRequest(`/v1/centers/${centerId}/closures/${closureId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Cancel a future temporary closure.
+ *
+ * @param {number|string} centerId - Vaccination center identifier
+ * @param {number|string} closureId - Center closure identifier
+ * @returns {Promise<Object>} Cancelled CenterClosureResponse object
+ */
+export async function cancelClosure(centerId, closureId) {
+  const response = await apiRequest(`/v1/centers/${centerId}/closures/${closureId}/cancel`, {
+    method: 'POST',
+  });
+  return handleResponse(response);
+}
+
+// =================================================================================================
+// Operational Physical Resources API Operations
+// =================================================================================================
 
 /**
  * Fetch operational physical resources for a center, optionally filtered by resource type.
@@ -104,6 +293,10 @@ export async function updateOperationalResource(centerId, resourceId, payload) {
   });
   return handleResponse(response);
 }
+
+// =================================================================================================
+// Operational Staff Roster API Operations
+// =================================================================================================
 
 /**
  * Fetch operational staff roster for a center, optionally filtered by role and status.
