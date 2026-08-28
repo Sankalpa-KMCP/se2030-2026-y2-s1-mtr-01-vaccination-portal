@@ -17,6 +17,7 @@ import CampaignList from '../components/CampaignList';
 import CampaignForm from '../components/CampaignForm';
 import CampaignDetailsModal from '../components/CampaignDetailsModal';
 import CampaignActionModal from '../components/CampaignActionModal';
+import MasterDataManagementModal from '../components/MasterDataManagementModal';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import { useAuth } from '../../../auth/context/AuthContext';
@@ -31,6 +32,9 @@ export default function CampaignManagementPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+
+  // Master Data Modal state
+  const [showMasterDataModal, setShowMasterDataModal] = useState(false);
 
   // Create Form state
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -169,6 +173,17 @@ export default function CampaignManagementPage() {
             Define, schedule, activate, and manage vaccination campaigns and lifecycle states.
           </p>
         </div>
+        {isManager && (
+          <div className="mt-2 mt-md-0">
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-sm shadow-sm"
+              onClick={() => setShowMasterDataModal(true)}
+            >
+              Manage Master Data
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Success Notification Banner */}
@@ -216,6 +231,13 @@ export default function CampaignManagementPage() {
             setShowCreateForm(true);
             setCreateError(null);
           }}
+        />
+      )}
+
+      {/* Master Data Management Modal */}
+      {showMasterDataModal && (
+        <MasterDataManagementModal
+          onClose={() => setShowMasterDataModal(false)}
         />
       )}
 

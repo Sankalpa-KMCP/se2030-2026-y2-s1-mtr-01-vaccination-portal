@@ -210,4 +210,120 @@ public class MasterDataSecurityAuthorizationIntegrationTests {
                     .andExpect(status().is4xxClientError());
         }
     }
+
+    // =========================================================================
+    // 3. POST /api/v1/vaccine-types
+    // =========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/vaccine-types Authorization")
+    class CreateVaccineTypeSecurity {
+
+        @Test
+        @DisplayName("ROLE_ADMIN is authorized (201 Created)")
+        void adminCanCreate() throws Exception {
+            String auth = token(1L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+            String json = """
+                    {"code": "VAX-SEC-02", "name": "Sec Vaccine 2", "doseUnit": "dose"}
+                    """;
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/vaccine-types")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isCreated());
+        }
+
+        @Test
+        @DisplayName("ROLE_CAMPAIGN_OFFICER is authorized (201 Created)")
+        void campaignOfficerCanCreate() throws Exception {
+            String auth = token(2L, "campaign@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+            String json = """
+                    {"code": "VAX-SEC-03", "name": "Sec Vaccine 3", "doseUnit": "dose"}
+                    """;
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/vaccine-types")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isCreated());
+        }
+
+        @Test
+        @DisplayName("ROLE_CENTER_MANAGER is denied (403 Forbidden)")
+        void centerManagerDenied() throws Exception {
+            String auth = token(3L, "manager@portal.gov", List.of("ROLE_CENTER_MANAGER"));
+            String json = """
+                    {"code": "VAX-SEC-04", "name": "Sec Vaccine 4", "doseUnit": "dose"}
+                    """;
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/vaccine-types")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN is denied (403 Forbidden)")
+        void citizenDenied() throws Exception {
+            String auth = token(6L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+            String json = """
+                    {"code": "VAX-SEC-05", "name": "Sec Vaccine 5", "doseUnit": "dose"}
+                    """;
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/vaccine-types")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    // =========================================================================
+    // 4. POST /api/v1/target-groups
+    // =========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/target-groups Authorization")
+    class CreateTargetGroupSecurity {
+
+        @Test
+        @DisplayName("ROLE_ADMIN is authorized (201 Created)")
+        void adminCanCreate() throws Exception {
+            String auth = token(1L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+            String json = """
+                    {"code": "TG-SEC-02", "description": "Sec Target 2"}
+                    """;
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/target-groups")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isCreated());
+        }
+
+        @Test
+        @DisplayName("ROLE_CAMPAIGN_OFFICER is authorized (201 Created)")
+        void campaignOfficerCanCreate() throws Exception {
+            String auth = token(2L, "campaign@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+            String json = """
+                    {"code": "TG-SEC-03", "description": "Sec Target 3"}
+                    """;
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/target-groups")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isCreated());
+        }
+
+        @Test
+        @DisplayName("ROLE_HEALTHCARE_OFFICER is denied (403 Forbidden)")
+        void healthcareOfficerDenied() throws Exception {
+            String auth = token(4L, "officer@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+            String json = """
+                    {"code": "TG-SEC-04", "description": "Sec Target 4"}
+                    """;
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/target-groups")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isForbidden());
+        }
+    }
 }
