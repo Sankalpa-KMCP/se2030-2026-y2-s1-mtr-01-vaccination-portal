@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleChangeType;
 import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleEvent;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
@@ -332,6 +333,139 @@ public class CampaignSecurityAuthorizationIntegrationTests {
             CampaignLifecycleEvent event = events.get(0);
             assertEquals("88", event.getActorId(), "Persisted actorId must be principal userId (88), not spoofed (777)");
             assertEquals("Vaccine supply replenished", event.getReason());
+        }
+
+        @Test
+        @DisplayName("Complete derives actorId from authenticated principal and creates COMPLETED event")
+        void completeDerivesActorFromPrincipal() throws Exception {
+            String auth = token(99L, "officer99@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+            String payload = """
+                    {
+                        "reason": "Campaign completed successfully"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/campaigns/" + activeCampaign.getId() + "/complete")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status", is("COMPLETED")));
+
+            List<CampaignLifecycleEvent> events = lifecycleEventRepository.findByCampaignIdOrderByCreatedAtAscIdAsc(activeCampaign.getId());
+            assertEquals(1, events.size(), "One lifecycle event should be persisted for completion");
+            CampaignLifecycleEvent event = events.get(0);
+            assertEquals("99", event.getActorId(), "Persisted actorId must be principal userId (99)");
+            assertEquals("Campaign completed successfully", event.getReason());
+            assertEquals(CampaignLifecycleChangeType.COMPLETED, event.getChangeType());
+        }
+
+        @Test
+        @DisplayName("Cancel derives actorId from authenticated principal and creates CANCELLED event")
+        void cancelDerivesActorFromPrincipal() throws Exception {
+            String auth = token(100L, "admin100@portal.gov", List.of("ROLE_ADMIN"));
+            String payload = """
+                    {
+                        "reason": "Campaign cancelled due to strategy change"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/cancel")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status", is("CANCELLED")));
+
+            List<CampaignLifecycleEvent> events = lifecycleEventRepository.findByCampaignIdOrderByCreatedAtAscIdAsc(draftCampaign.getId());
+            assertEquals(1, events.size(), "One lifecycle event should be persisted for cancellation");
+            CampaignLifecycleEvent event = events.get(0);
+            assertEquals("100", event.getActorId(), "Persisted actorId must be principal userId (100)");
+            assertEquals("Campaign cancelled due to strategy change", event.getReason());
+            assertEquals(CampaignLifecycleChangeType.CANCELLED, event.getChangeType());
+        }
+
+        @Test
+        @DisplayName("Archive derives actorId from authenticated principal and creates ARCHIVED event")
+        void archiveDerivesActorFromPrincipal() throws Exception {
+            // First cancel draft campaign so it is in CANCELLED status (archivable)
+            draftCampaign.cancel();
+            campaignRepository.save(draftCampaign);
+
+            String auth = token(101L, "admin101@portal.gov", List.of("ROLE_ADMIN"));
+            String payload = """
+                    {
+                        "reason": "Archived after regulatory retention period"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/archive")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status", is("ARCHIVED")));
+
+            List<CampaignLifecycleEvent> events = lifecycleEventRepository.findByCampaignIdOrderByCreatedAtAscIdAsc(draftCampaign.getId());
+            assertEquals(1, events.size(), "One lifecycle event should be persisted for archival");
+            CampaignLifecycleEvent event = events.get(0);
+            assertEquals("101", event.getActorId(), "Persisted actorId must be principal userId (101)");
+            assertEquals("Archived after regulatory retention period", event.getReason());
+            assertEquals(CampaignLifecycleChangeType.ARCHIVED, event.getChangeType());
+        }
+
+        @Test
+        @DisplayName("Anonymous access to Complete, Cancel, Archive is denied 403")
+        void anonymousTerminalActionsDenied() throws Exception {
+            String payload = """
+                    {
+                        "reason": "Unauthorized attempt"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/campaigns/" + activeCampaign.getId() + "/complete")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/cancel")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/archive")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN access to Complete, Cancel, Archive is denied 403")
+        void citizenTerminalActionsDenied() throws Exception {
+            String auth = token(501L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+            String payload = """
+                    {
+                        "reason": "Citizen attempt"
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/campaigns/" + activeCampaign.getId() + "/complete")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/cancel")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/archive")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
         }
     }
 

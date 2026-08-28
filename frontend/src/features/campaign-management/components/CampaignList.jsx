@@ -185,52 +185,128 @@ export default function CampaignList({
                         </button>
 
                         {isManager && camp.status === 'DRAFT' && (
-                          <button
-                            type="button"
-                            className="btn btn-outline-info text-dark"
-                            onClick={() => onInitiateAction('SCHEDULE', camp)}
-                          >
-                            Schedule
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-outline-info text-dark"
+                              onClick={() => onInitiateAction('SCHEDULE', camp)}
+                            >
+                              Schedule
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger"
+                              onClick={() => onInitiateAction('CANCEL', camp)}
+                            >
+                              Cancel
+                            </button>
+                          </>
                         )}
 
                         {isManager && camp.status === 'SCHEDULED' && (
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary"
-                            onClick={() => onInitiateAction('PUBLISH', camp)}
-                          >
-                            Publish
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-outline-primary"
+                              onClick={() => onInitiateAction('PUBLISH', camp)}
+                            >
+                              Publish
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger"
+                              onClick={() => onInitiateAction('CANCEL', camp)}
+                            >
+                              Cancel
+                            </button>
+                          </>
                         )}
 
                         {isManager && camp.status === 'PUBLISHED' && (
-                          <button
-                            type="button"
-                            className="btn btn-outline-success"
-                            onClick={() => onInitiateAction('ACTIVATE', camp)}
-                          >
-                            Activate
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-outline-success"
+                              onClick={() => onInitiateAction('ACTIVATE', camp)}
+                            >
+                              Activate
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-dark"
+                              onClick={() => onInitiateAction('COMPLETE', camp)}
+                            >
+                              Complete
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger"
+                              onClick={() => onInitiateAction('CANCEL', camp)}
+                            >
+                              Cancel
+                            </button>
+                          </>
                         )}
 
                         {isManager && camp.status === 'ACTIVE' && (
-                          <button
-                            type="button"
-                            className="btn btn-outline-warning text-dark"
-                            onClick={() => onInitiateAction('SUSPEND', camp)}
-                          >
-                            Suspend
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-outline-warning text-dark"
+                              onClick={() => onInitiateAction('SUSPEND', camp)}
+                            >
+                              Suspend
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-dark"
+                              onClick={() => onInitiateAction('COMPLETE', camp)}
+                            >
+                              Complete
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger"
+                              onClick={() => onInitiateAction('CANCEL', camp)}
+                            >
+                              Cancel
+                            </button>
+                          </>
                         )}
 
                         {isManager && camp.status === 'SUSPENDED' && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-outline-success"
+                              onClick={() => onInitiateAction('RESUME', camp)}
+                            >
+                              Resume
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-dark"
+                              onClick={() => onInitiateAction('COMPLETE', camp)}
+                            >
+                              Complete
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger"
+                              onClick={() => onInitiateAction('CANCEL', camp)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+
+                        {isManager && (camp.status === 'COMPLETED' || camp.status === 'CANCELLED') && (
                           <button
                             type="button"
-                            className="btn btn-outline-success"
-                            onClick={() => onInitiateAction('RESUME', camp)}
+                            className="btn btn-outline-secondary"
+                            onClick={() => onInitiateAction('ARCHIVE', camp)}
                           >
-                            Resume
+                            Archive
                           </button>
                         )}
                       </div>

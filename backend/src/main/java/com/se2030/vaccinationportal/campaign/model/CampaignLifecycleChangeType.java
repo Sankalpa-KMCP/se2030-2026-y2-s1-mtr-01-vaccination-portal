@@ -5,5 +5,8 @@ package com.se2030.vaccinationportal.campaign.model;
  */
 public enum CampaignLifecycleChangeType {
     SUSPENDED,
-    RESUMED
+    RESUMED,
+    COMPLETED,
+    CANCELLED,
+    ARCHIVED
 }

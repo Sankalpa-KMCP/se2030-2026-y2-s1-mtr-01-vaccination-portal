@@ -67,5 +67,14 @@ class CampaignStatusTests {
         assertFalse(CampaignStatus.PUBLISHED.isOperationallyClosed());
         assertFalse(CampaignStatus.ACTIVE.isOperationallyClosed());
         assertFalse(CampaignStatus.SUSPENDED.isOperationallyClosed());
+
+        assertTrue(CampaignStatus.SUSPENDED.isNewSessionPlanningBlocked());
+        assertTrue(CampaignStatus.COMPLETED.isNewSessionPlanningBlocked());
+        assertTrue(CampaignStatus.CANCELLED.isNewSessionPlanningBlocked());
+        assertTrue(CampaignStatus.ARCHIVED.isNewSessionPlanningBlocked());
+        assertFalse(CampaignStatus.DRAFT.isNewSessionPlanningBlocked());
+        assertFalse(CampaignStatus.SCHEDULED.isNewSessionPlanningBlocked());
+        assertFalse(CampaignStatus.PUBLISHED.isNewSessionPlanningBlocked());
+        assertFalse(CampaignStatus.ACTIVE.isNewSessionPlanningBlocked());
     }
 }
