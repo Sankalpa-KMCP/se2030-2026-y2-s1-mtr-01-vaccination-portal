@@ -8,6 +8,7 @@ import {
 } from '../api/sessionApi';
 import SessionAssignmentsTab from './SessionAssignmentsTab';
 import SessionCapacityPlanTab from './SessionCapacityPlanTab';
+import SessionTimeSlotsTab from './SessionTimeSlotsTab';
 import SessionChangeControlTab from './SessionChangeControlTab';
 import SessionReadinessTab from './SessionReadinessTab';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
@@ -231,6 +232,15 @@ export default function SessionDetailsModal({
                     onClick={() => setActiveTab('capacity')}
                   >
                     Capacity Plan
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'time-slots' ? 'active fw-bold text-primary' : 'text-secondary'}`}
+                    onClick={() => setActiveTab('time-slots')}
+                  >
+                    Time Slots
                   </button>
                 </li>
                 <li className="nav-item">
@@ -525,6 +535,10 @@ export default function SessionDetailsModal({
 
             {!loading && session && activeTab === 'capacity' && (
               <SessionCapacityPlanTab session={session} />
+            )}
+
+            {!loading && session && activeTab === 'time-slots' && (
+              <SessionTimeSlotsTab session={session} />
             )}
 
             {!loading && session && activeTab === 'change-control' && (
