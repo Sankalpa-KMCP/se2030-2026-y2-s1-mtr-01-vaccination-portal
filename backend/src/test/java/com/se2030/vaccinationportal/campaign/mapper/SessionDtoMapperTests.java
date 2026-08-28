@@ -10,7 +10,9 @@ import com.se2030.vaccinationportal.campaign.dto.response.SessionResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionScheduleSnapshotResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionSummaryResponse;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionBookingStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
+
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.SessionScheduleSnapshot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
@@ -92,6 +94,8 @@ class SessionDtoMapperTests {
         assertEquals("Asia/Colombo", response.scheduleTimezone());
         assertEquals(SessionLifecycleStatus.DRAFT, response.lifecycleStatus());
         assertFalse(response.generated());
+        assertEquals(SessionBookingStatus.CLOSED, response.bookingStatus());
+        assertFalse(response.bookingSuspended());
         assertEquals(createdAt, response.createdAt());
         assertEquals(updatedAt, response.updatedAt());
 
@@ -106,7 +110,10 @@ class SessionDtoMapperTests {
         assertEquals("Asia/Colombo", summary.scheduleTimezone());
         assertEquals(SessionLifecycleStatus.DRAFT, summary.lifecycleStatus());
         assertFalse(summary.generated());
+        assertEquals(SessionBookingStatus.CLOSED, summary.bookingStatus());
+        assertFalse(summary.bookingSuspended());
     }
+
 
     @Test
     @DisplayName("Maps recurring generated VaccinationSession with recurrence rule fidelity")
@@ -177,6 +184,8 @@ class SessionDtoMapperTests {
         assertEquals("Asia/Colombo", response.scheduleTimezone());
         assertEquals(SessionLifecycleStatus.SCHEDULED, response.lifecycleStatus());
         assertTrue(response.generated());
+        assertEquals(SessionBookingStatus.OPEN, response.bookingStatus());
+        assertFalse(response.bookingSuspended());
         assertEquals(createdAt, response.createdAt());
         assertEquals(updatedAt, response.updatedAt());
 
@@ -191,7 +200,10 @@ class SessionDtoMapperTests {
         assertEquals("Asia/Colombo", summary.scheduleTimezone());
         assertEquals(SessionLifecycleStatus.SCHEDULED, summary.lifecycleStatus());
         assertTrue(summary.generated());
+        assertEquals(SessionBookingStatus.OPEN, summary.bookingStatus());
+        assertFalse(summary.bookingSuspended());
     }
+
 
     @Test
     @DisplayName("Maps SessionScheduleSnapshot to SessionScheduleSnapshotResponse correctly and handles null safely")

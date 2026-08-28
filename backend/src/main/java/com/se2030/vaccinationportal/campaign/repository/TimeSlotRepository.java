@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,16 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
 
     @Query("SELECT SUM(ts.reservedCount) FROM TimeSlot ts WHERE ts.session.id = :sessionId")
     Integer sumReservedCountBySessionId(@Param("sessionId") Long sessionId);
+
+    @Query("SELECT new com.se2030.vaccinationportal.campaign.repository.SessionSlotCapacitySummary(" +
+            "ts.session.id, COUNT(ts), COALESCE(SUM(ts.capacity), 0), COALESCE(SUM(ts.reservedCount), 0)) " +
+            "FROM TimeSlot ts WHERE ts.session.id = :sessionId GROUP BY ts.session.id")
+    Optional<SessionSlotCapacitySummary> summarizeCapacityBySessionId(@Param("sessionId") Long sessionId);
+
+    @Query("SELECT new com.se2030.vaccinationportal.campaign.repository.SessionSlotCapacitySummary(" +
+            "ts.session.id, COUNT(ts), COALESCE(SUM(ts.capacity), 0), COALESCE(SUM(ts.reservedCount), 0)) " +
+            "FROM TimeSlot ts WHERE ts.session.id IN :sessionIds GROUP BY ts.session.id")
+    List<SessionSlotCapacitySummary> summarizeCapacityBySessionIds(@Param("sessionIds") Collection<Long> sessionIds);
 
     void deleteBySessionId(Long sessionId);
 }

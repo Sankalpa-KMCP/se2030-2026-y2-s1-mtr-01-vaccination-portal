@@ -127,3 +127,11 @@ export function canViewTimeSlots(user) {
 export function canManageTimeSlots(user) {
   return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
 }
+
+/**
+ * Whether user can suspend or resume booking intake for a session.
+ * Authorized: ADMIN, CENTER_MANAGER (CAMPAIGN_OFFICER is strictly excluded).
+ */
+export function canManageSessionBooking(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
+}

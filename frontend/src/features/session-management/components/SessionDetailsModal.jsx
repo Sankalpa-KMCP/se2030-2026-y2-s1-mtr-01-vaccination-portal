@@ -5,6 +5,8 @@ import {
   scheduleSession,
   startSession,
   completeSession,
+  suspendSessionBooking,
+  resumeSessionBooking,
 } from '../api/sessionApi';
 import SessionAssignmentsTab from './SessionAssignmentsTab';
 import SessionCapacityPlanTab from './SessionCapacityPlanTab';
@@ -13,6 +15,8 @@ import SessionChangeControlTab from './SessionChangeControlTab';
 import SessionReadinessTab from './SessionReadinessTab';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { canManageSessionBooking } from '../../../auth/utils/roleUtils';
 
 export default function SessionDetailsModal({
   isOpen,
@@ -22,14 +26,18 @@ export default function SessionDetailsModal({
   centersMap = {},
   onSessionUpdated,
 }) {
+  const { user } = useAuth();
+  const canManageBooking = canManageSessionBooking(user);
+
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Lifecycle Action State
+  // Lifecycle & Booking Action State
   const [submittingAction, setSubmittingAction] = useState(null);
   const [pendingConfirmAction, setPendingConfirmAction] = useState(null);
+  const [bookingReason, setBookingReason] = useState('');
   const [lifecycleError, setLifecycleError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
@@ -45,6 +53,7 @@ export default function SessionDetailsModal({
     setLifecycleError(null);
     setSuccessMessage(null);
     setPendingConfirmAction(null);
+    setBookingReason('');
     setSubmittingAction(null);
     lifecycleMutexOwnerRef.current = null;
     lifecycleGenRef.current += 1;
@@ -109,19 +118,45 @@ export default function SessionDetailsModal({
     }
   };
 
+  const getBookingStatusBadge = (bookingStatus) => {
+    switch (bookingStatus) {
+      case 'OPEN':
+        return <span className="badge bg-success text-white" title="Booking Intake Open">OPEN</span>;
+      case 'FULL':
+        return <span className="badge bg-warning text-dark" title="Fully Booked (Waitlist Available)">FULL</span>;
+      case 'SUSPENDED':
+        return <span className="badge bg-danger text-white" title="Booking Intake Suspended">SUSPENDED</span>;
+      case 'NOT_OPEN':
+        return <span className="badge bg-info text-dark" title="Booking Window Not Open Yet">NOT_OPEN</span>;
+      case 'CLOSED':
+      default:
+        return <span className="badge bg-secondary text-white" title="Booking Closed">CLOSED</span>;
+    }
+  };
+
   const handleInitiateAction = (actionType) => {
     setLifecycleError(null);
     setSuccessMessage(null);
+    setBookingReason('');
     setPendingConfirmAction(actionType);
   };
 
   const handleCancelConfirm = () => {
     setPendingConfirmAction(null);
+    setBookingReason('');
     setLifecycleError(null);
   };
 
   const handleExecuteAction = async (actionType) => {
     if (lifecycleMutexOwnerRef.current !== null) {
+      return;
+    }
+
+    if (
+      (actionType === 'SUSPEND_BOOKING' || actionType === 'RESUME_BOOKING') &&
+      !bookingReason.trim()
+    ) {
+      setLifecycleError({ message: 'Reason is required and cannot be blank.' });
       return;
     }
 
@@ -142,26 +177,32 @@ export default function SessionDetailsModal({
         updated = await startSession(currentSessionId);
       } else if (actionType === 'COMPLETE') {
         updated = await completeSession(currentSessionId);
+      } else if (actionType === 'SUSPEND_BOOKING') {
+        updated = await suspendSessionBooking(currentSessionId, { reason: bookingReason.trim() });
+      } else if (actionType === 'RESUME_BOOKING') {
+        updated = await resumeSessionBooking(currentSessionId, { reason: bookingReason.trim() });
       }
 
-      // 1. Authoritative parent collection reconciliation (ALWAYS triggered on successful mutation)
+      // 1. Authoritative parent collection reconciliation
       if (updated && onSessionUpdated) {
         onSessionUpdated(updated);
       }
 
-      // 2. Guarded modal-local state update (ONLY if modal still views target session)
+      // 2. Guarded modal-local state update
       if (activeSessionIdRef.current === currentSessionId && lifecycleGenRef.current === reqGen) {
         if (updated) {
           setSession(updated);
-          const actionPast =
-            actionType === 'SCHEDULE'
-              ? 'scheduled'
-              : actionType === 'START'
-              ? 'started'
-              : 'completed';
-          setSuccessMessage(`Session #${updated.id} successfully ${actionPast}.`);
+          let message = `Session #${updated.id} action executed successfully.`;
+          if (actionType === 'SCHEDULE') message = `Session #${updated.id} successfully scheduled.`;
+          else if (actionType === 'START') message = `Session #${updated.id} successfully started.`;
+          else if (actionType === 'COMPLETE') message = `Session #${updated.id} successfully completed.`;
+          else if (actionType === 'SUSPEND_BOOKING') message = `Session #${updated.id} booking intake successfully suspended.`;
+          else if (actionType === 'RESUME_BOOKING') message = `Session #${updated.id} booking intake successfully resumed.`;
+
+          setSuccessMessage(message);
         }
         setPendingConfirmAction(null);
+        setBookingReason('');
       }
     } catch (err) {
       if (activeSessionIdRef.current === currentSessionId && lifecycleGenRef.current === reqGen) {
@@ -171,7 +212,6 @@ export default function SessionDetailsModal({
       if (activeSessionIdRef.current === currentSessionId && lifecycleGenRef.current === reqGen) {
         setSubmittingAction(null);
       }
-      // ONLY the request that currently owns the mutex may release it
       if (lifecycleMutexOwnerRef.current === reqToken) {
         lifecycleMutexOwnerRef.current = null;
       }
@@ -272,30 +312,27 @@ export default function SessionDetailsModal({
 
             {!loading && session && activeTab === 'overview' && (
               <div className="d-flex flex-column gap-3">
-                {/* Session Lifecycle Management Action Card */}
+                {/* Session Lifecycle Management & Booking Action Card */}
                 <div className="card border p-3 bg-light">
                   <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div>
-                      <span className="text-muted small d-block">Lifecycle Status & Actions</span>
-                      <div className="d-flex align-items-center gap-2 mt-1">
+                      <span className="text-muted small d-block">Lifecycle & Booking Intake Status</span>
+                      <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
                         {getStatusBadge(session.lifecycleStatus)}
-                        <span className="small text-secondary">
-                          {session.lifecycleStatus === 'DRAFT' &&
-                            'Draft session — assign stations/staff and approve a capacity plan to schedule.'}
-                          {session.lifecycleStatus === 'SCHEDULED' &&
-                            'Scheduled session — ready for operational start once start time arrives.'}
-                          {session.lifecycleStatus === 'IN_PROGRESS' &&
-                            'In progress — active vaccination session underway.'}
-                          {session.lifecycleStatus === 'COMPLETED' &&
-                            'Completed session — all vaccination operations concluded.'}
-                          {session.lifecycleStatus === 'CANCELLED' &&
-                            'Cancelled session — inactive.'}
-                        </span>
+                        {session.bookingStatus && (
+                          <div className="d-inline-flex align-items-center gap-1">
+                            <span className="small text-muted">Booking:</span>
+                            {getBookingStatusBadge(session.bookingStatus)}
+                          </div>
+                        )}
+                        {session.bookingSuspended && (
+                          <span className="badge bg-danger text-white">MANUALLY SUSPENDED</span>
+                        )}
                       </div>
                     </div>
 
                     {/* Status-dependent Action Buttons */}
-                    <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex flex-wrap align-items-center gap-2">
                       {session.lifecycleStatus === 'DRAFT' && !pendingConfirmAction && (
                         <button
                           type="button"
@@ -308,14 +345,41 @@ export default function SessionDetailsModal({
                       )}
 
                       {session.lifecycleStatus === 'SCHEDULED' && !pendingConfirmAction && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-success fw-semibold text-white"
-                          onClick={() => handleInitiateAction('START')}
-                          disabled={submittingAction !== null}
-                        >
-                          Start Session
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-success fw-semibold text-white"
+                            onClick={() => handleInitiateAction('START')}
+                            disabled={submittingAction !== null}
+                          >
+                            Start Session
+                          </button>
+
+                          {/* Suspend / Resume Booking Controls for ADMIN and CENTER_MANAGER */}
+                          {canManageBooking && !session.bookingSuspended && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger fw-semibold"
+                              onClick={() => handleInitiateAction('SUSPEND_BOOKING')}
+                              disabled={submittingAction !== null}
+                              title="Authoritatively suspend citizen booking intake"
+                            >
+                              Suspend Booking
+                            </button>
+                          )}
+
+                          {canManageBooking && session.bookingSuspended && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-success fw-semibold"
+                              onClick={() => handleInitiateAction('RESUME_BOOKING')}
+                              disabled={submittingAction !== null}
+                              title="Authoritatively resume citizen booking intake"
+                            >
+                              Resume Booking
+                            </button>
+                          )}
+                        </>
                       )}
 
                       {session.lifecycleStatus === 'IN_PROGRESS' && !pendingConfirmAction && (
@@ -348,6 +412,8 @@ export default function SessionDetailsModal({
                         {pendingConfirmAction === 'SCHEDULE' && 'Confirm Session Scheduling'}
                         {pendingConfirmAction === 'START' && 'Confirm Session Start'}
                         {pendingConfirmAction === 'COMPLETE' && 'Confirm Session Completion'}
+                        {pendingConfirmAction === 'SUSPEND_BOOKING' && 'Confirm Booking Intake Suspension'}
+                        {pendingConfirmAction === 'RESUME_BOOKING' && 'Confirm Booking Intake Resumption'}
                       </h6>
                       <p className="small text-secondary mb-3">
                         {pendingConfirmAction === 'SCHEDULE' &&
@@ -356,7 +422,38 @@ export default function SessionDetailsModal({
                           'Transitioning this session to IN_PROGRESS begins active session operations. The backend requires the current time to have reached or passed the scheduled session start time.'}
                         {pendingConfirmAction === 'COMPLETE' &&
                           'Transitioning this session to COMPLETED concludes all vaccination activities. This is a terminal lifecycle state that cannot be undone.'}
+                        {pendingConfirmAction === 'SUSPEND_BOOKING' &&
+                          'Authoritatively pauses new citizen booking intake for this scheduled session. Existing confirmed appointments and waitlists remain preserved.'}
+                        {pendingConfirmAction === 'RESUME_BOOKING' &&
+                          'Authoritatively resumes citizen booking intake for this scheduled session.'}
                       </p>
+
+                      {/* Reason input for booking suspension/resumption */}
+                      {(pendingConfirmAction === 'SUSPEND_BOOKING' || pendingConfirmAction === 'RESUME_BOOKING') && (
+                        <div className="mb-3">
+                          <label htmlFor="bookingActionReason" className="form-label small fw-semibold text-dark mb-1">
+                            Reason <span className="text-danger">*</span>
+                          </label>
+                          <textarea
+                            id="bookingActionReason"
+                            className="form-control form-control-sm"
+                            rows={3}
+                            maxLength={500}
+                            placeholder={
+                              pendingConfirmAction === 'SUSPEND_BOOKING'
+                                ? 'State the operational reason for suspending booking intake (e.g. temporary staff shortage)...'
+                                : 'State the reason for resuming booking intake...'
+                            }
+                            value={bookingReason}
+                            onChange={(e) => setBookingReason(e.target.value)}
+                            disabled={submittingAction !== null}
+                          />
+                          <div className="d-flex justify-content-between form-text text-muted small mt-1">
+                            <span>Mandatory reason (max 500 characters).</span>
+                            <span>{bookingReason.length} / 500</span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Action Error during confirmation */}
                       {lifecycleError && (
@@ -386,10 +483,18 @@ export default function SessionDetailsModal({
                               ? 'btn-primary'
                               : pendingConfirmAction === 'START'
                               ? 'btn-success text-white'
+                              : pendingConfirmAction === 'SUSPEND_BOOKING'
+                              ? 'btn-danger text-white'
+                              : pendingConfirmAction === 'RESUME_BOOKING'
+                              ? 'btn-success text-white'
                               : 'btn-dark'
                           }`}
                           onClick={() => handleExecuteAction(pendingConfirmAction)}
-                          disabled={submittingAction !== null}
+                          disabled={
+                            submittingAction !== null ||
+                            ((pendingConfirmAction === 'SUSPEND_BOOKING' || pendingConfirmAction === 'RESUME_BOOKING') &&
+                              !bookingReason.trim())
+                          }
                         >
                           {submittingAction ? (
                             <>
@@ -402,7 +507,11 @@ export default function SessionDetailsModal({
                                 ? 'Schedule'
                                 : pendingConfirmAction === 'START'
                                 ? 'Start'
-                                : 'Complete'
+                                : pendingConfirmAction === 'COMPLETE'
+                                ? 'Complete'
+                                : pendingConfirmAction === 'SUSPEND_BOOKING'
+                                ? 'Suspend'
+                                : 'Resume'
                             }`
                           )}
                         </button>

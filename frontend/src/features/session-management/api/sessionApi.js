@@ -739,3 +739,32 @@ export async function updateTimeSlotCapacity(sessionId, slotId, payload) {
   return handleResponse(response);
 }
 
+/**
+ * Authoritatively suspend booking intake on a scheduled vaccination session.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - SuspendSessionBookingRequest { reason: string }
+ * @returns {Promise<Object>} Updated SessionResponse object
+ */
+export async function suspendSessionBooking(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/booking-suspend`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Authoritatively resume booking intake on a previously suspended scheduled vaccination session.
+ *
+ * @param {number|string} sessionId - Vaccination session identifier
+ * @param {Object} payload - ResumeSessionBookingRequest { reason: string }
+ * @returns {Promise<Object>} Updated SessionResponse object
+ */
+export async function resumeSessionBooking(sessionId, payload) {
+  const response = await apiRequest(`/v1/sessions/${sessionId}/booking-resume`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}

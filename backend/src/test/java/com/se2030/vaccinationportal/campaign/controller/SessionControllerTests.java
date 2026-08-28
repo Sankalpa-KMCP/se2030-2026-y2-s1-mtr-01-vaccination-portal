@@ -20,8 +20,10 @@ import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.service.SessionBookingStatusService;
 import com.se2030.vaccinationportal.campaign.service.SessionOperationalReadinessService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -48,6 +50,9 @@ class SessionControllerTests {
     @Mock
     private SessionOperationalReadinessService readinessService;
 
+    @Mock
+    private SessionBookingStatusService bookingStatusService;
+
     private VaccinationCampaign sampleCampaign;
     private VaccinationCenter sampleCenter;
     private VaccinationSession sampleSession;
@@ -57,10 +62,11 @@ class SessionControllerTests {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new SessionController(sessionService, readinessService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new SessionController(sessionService, readinessService, bookingStatusService))
                 .setControllerAdvice(new GlobalCampaignExceptionHandler())
                 .setValidator(validator)
                 .build();
+
 
         sampleCampaign = new VaccinationCampaign(
                 "CMP-2026-AUTUMN",

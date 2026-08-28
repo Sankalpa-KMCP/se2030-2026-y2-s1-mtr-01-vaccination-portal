@@ -89,6 +89,9 @@ public class VaccinationSession {
     @Column(name = "lifecycle_status", nullable = false, length = 16)
     private SessionLifecycleStatus lifecycleStatus = SessionLifecycleStatus.DRAFT;
 
+    @Column(name = "booking_suspended", nullable = false)
+    private boolean bookingSuspended = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -304,9 +307,14 @@ public class VaccinationSession {
         return lifecycleStatus;
     }
 
+    public boolean isBookingSuspended() {
+        return bookingSuspended;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
+
 
     public Instant getUpdatedAt() {
         return updatedAt;
@@ -419,5 +427,32 @@ public class VaccinationSession {
         }
 
         this.lifecycleStatus = targetStatus;
+    }
+
+    /**
+     * Authoritatively suspends booking intake for a SCHEDULED session.
+     * Preserves existing confirmed appointments and waitlist entries.
+     */
+    public void suspendBooking() {
+        if (this.lifecycleStatus != SessionLifecycleStatus.SCHEDULED) {
+            throw new IllegalStateException("Cannot suspend booking for session in " + this.lifecycleStatus + " lifecycle status");
+        }
+        if (this.bookingSuspended) {
+            throw new IllegalStateException("Booking is already suspended for session: " + this.id);
+        }
+        this.bookingSuspended = true;
+    }
+
+    /**
+     * Authoritatively resumes booking intake for a previously suspended SCHEDULED session.
+     */
+    public void resumeBooking() {
+        if (this.lifecycleStatus != SessionLifecycleStatus.SCHEDULED) {
+            throw new IllegalStateException("Cannot resume booking for session in " + this.lifecycleStatus + " lifecycle status");
+        }
+        if (!this.bookingSuspended) {
+            throw new IllegalStateException("Booking is not suspended for session: " + this.id);
+        }
+        this.bookingSuspended = false;
     }
 }
