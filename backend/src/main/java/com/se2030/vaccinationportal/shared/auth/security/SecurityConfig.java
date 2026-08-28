@@ -59,10 +59,13 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         // Public Authentication Endpoint
-                        .requestMatchers("/api/v1/auth/login").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/login").permitAll()
 
                         // Protected Current User Profile Endpoint
                         .requestMatchers("/api/v1/auth/me").authenticated()
+
+                        // Protected Screening Endpoints (prevents unauthenticated header spoofing at HTTP boundary)
+                        .requestMatchers("/api/v1/screening/**").authenticated()
 
                         // Protected Session Change Control Confirmation Endpoints (F4C)
                         .requestMatchers(org.springframework.http.HttpMethod.POST,
@@ -82,7 +85,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
 
-                        // Staged Non-Breaking Rollout for Existing Functional Endpoints during AUTH-1
+                        // Functional REST endpoints delegate method-level security to @PreAuthorize
                         .requestMatchers("/api/v1/**").permitAll()
 
                         .anyRequest().permitAll()
