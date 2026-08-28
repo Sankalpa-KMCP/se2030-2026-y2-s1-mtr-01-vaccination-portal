@@ -8,8 +8,13 @@ import SessionDetailsModal from '../components/SessionDetailsModal';
 import SessionRecurrencePanel from '../components/SessionRecurrencePanel';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { canPlanSessions } from '../../../auth/utils/roleUtils';
 
 export default function SessionsPage() {
+  const { user } = useAuth();
+  const isPlanner = canPlanSessions(user);
+
   const [pageTab, setPageTab] = useState('sessions'); // 'sessions' | 'recurrence'
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -160,7 +165,7 @@ export default function SessionsPage() {
           </p>
         </div>
 
-        {pageTab === 'sessions' && (
+        {isPlanner && pageTab === 'sessions' && (
           <button
             type="button"
             className="btn btn-primary d-inline-flex align-items-center gap-2"
@@ -267,13 +272,15 @@ export default function SessionsPage() {
       )}
 
       {/* Create Session Modal */}
-      <CreateSessionModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleCreateSuccess}
-        campaigns={campaignsList}
-        centersMap={centersMap}
-      />
+      {isPlanner && (
+        <CreateSessionModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={handleCreateSuccess}
+          campaigns={campaignsList}
+          centersMap={centersMap}
+        />
+      )}
 
       {/* Session Details Modal */}
       <SessionDetailsModal

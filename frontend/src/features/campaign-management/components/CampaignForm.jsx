@@ -1,17 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import { listVaccineTypes, listTargetGroups } from '../api/campaignApi';
 
 export default function CampaignForm({ onSubmit, onCancel, loading, error }) {
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [vaccineTypeId, setVaccineTypeId] = useState(1);
-  const [targetGroupId, setTargetGroupId] = useState(1);
+  const [vaccineTypeId, setVaccineTypeId] = useState('');
+  const [targetGroupId, setTargetGroupId] = useState('');
   const [serviceStartDate, setServiceStartDate] = useState('');
   const [serviceEndDate, setServiceEndDate] = useState('');
   const [bookingOpenAt, setBookingOpenAt] = useState('');
   const [bookingCloseAt, setBookingCloseAt] = useState('');
   const [clientError, setClientError] = useState(null);
+
+  // Master data lookup state
+  const [vaccineTypes, setVaccineTypes] = useState([]);
+  const [targetGroups, setTargetGroups] = useState([]);
+  const [masterDataLoading, setMasterDataLoading] = useState(true);
+  const [masterDataError, setMasterDataError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setMasterDataLoading(true);
+    setMasterDataError(null);
+
+    Promise.all([listVaccineTypes(), listTargetGroups()])
+      .then(([vTypes, tGroups]) => {
+        if (!isMounted) return;
+        const validVTypes = vTypes || [];
+        const validTGroups = tGroups || [];
+        setVaccineTypes(validVTypes);
+        setTargetGroups(validTGroups);
+
+        if (validVTypes.length > 0) {
+          setVaccineTypeId(validVTypes[0].id);
+        }
+        if (validTGroups.length > 0) {
+          setTargetGroupId(validTGroups[0].id);
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setMasterDataError(err?.message || 'Failed to load master data for vaccine types and target groups.');
+      })
+      .finally(() => {
+        if (isMounted) setMasterDataLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -24,6 +64,14 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error }) {
     }
     if (!name.trim()) {
       setClientError('Campaign name is required.');
+      return;
+    }
+    if (!vaccineTypeId) {
+      setClientError('Please select a valid active Vaccine Type.');
+      return;
+    }
+    if (!targetGroupId) {
+      setClientError('Please select a valid active Target Demographic Group.');
       return;
     }
     if (!serviceStartDate || !serviceEndDate) {
@@ -65,7 +113,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error }) {
         <h5 className="mb-0 fw-bold">Create New Vaccination Campaign</h5>
       </div>
       <div className="card-body p-4">
-        <ApiErrorAlert error={clientError || error} onDismiss={() => setClientError(null)} />
+        <ApiErrorAlert error={clientError || masterDataError || error} onDismiss={() => setClientError(null)} />
 
         <form onSubmit={handleSubmit}>
           <div className="row g-3">
@@ -118,37 +166,59 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error }) {
               />
             </div>
 
-            {/* Vaccine Type & Target Group Master References */}
+            {/* Vaccine Type & Target Group Master Selectors */}
             <div className="col-md-6">
               <label htmlFor="vaccineTypeId" className="form-label fw-semibold text-secondary small">
-                Vaccine Type ID <span className="text-danger">*</span>
+                Vaccine Type <span className="text-danger">*</span>
               </label>
-              <input
+              <select
                 id="vaccineTypeId"
-                type="number"
-                min={1}
-                className="form-control"
+                className="form-select"
                 value={vaccineTypeId}
                 onChange={(e) => setVaccineTypeId(e.target.value)}
+                disabled={masterDataLoading || vaccineTypes.length === 0}
                 required
-              />
-              <div className="form-text small">Master ID corresponding to approved Vaccine Type.</div>
+              >
+                {masterDataLoading ? (
+                  <option value="">Loading vaccine types...</option>
+                ) : vaccineTypes.length === 0 ? (
+                  <option value="">No active vaccine types available</option>
+                ) : (
+                  vaccineTypes.map((vt) => (
+                    <option key={vt.id} value={vt.id}>
+                      {vt.name} ({vt.code})
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="form-text small">Select an approved active vaccine type.</div>
             </div>
 
             <div className="col-md-6">
               <label htmlFor="targetGroupId" className="form-label fw-semibold text-secondary small">
-                Target Group ID <span className="text-danger">*</span>
+                Target Demographic Group <span className="text-danger">*</span>
               </label>
-              <input
+              <select
                 id="targetGroupId"
-                type="number"
-                min={1}
-                className="form-control"
+                className="form-select"
                 value={targetGroupId}
                 onChange={(e) => setTargetGroupId(e.target.value)}
+                disabled={masterDataLoading || targetGroups.length === 0}
                 required
-              />
-              <div className="form-text small">Master ID corresponding to eligible Target Demographic Group.</div>
+              >
+                {masterDataLoading ? (
+                  <option value="">Loading target demographic groups...</option>
+                ) : targetGroups.length === 0 ? (
+                  <option value="">No active target demographic groups available</option>
+                ) : (
+                  targetGroups.map((tg) => (
+                    <option key={tg.id} value={tg.id}>
+                      {tg.code} - {tg.description}
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="form-text small">Select an eligible active target demographic group.</div>
             </div>
 
             {/* Service Period */}
@@ -224,7 +294,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error }) {
             <button
               type="submit"
               className="btn btn-primary fw-semibold px-4"
-              disabled={loading}
+              disabled={loading || masterDataLoading || vaccineTypes.length === 0 || targetGroups.length === 0}
             >
               {loading ? (
                 <>
