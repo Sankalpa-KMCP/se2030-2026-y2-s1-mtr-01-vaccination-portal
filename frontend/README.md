@@ -24,7 +24,7 @@ cp .env.example .env
 
 Default environment variables:
 
-- `VITE_API_BASE_URL`: Base URL for the backend REST API (default: `http://localhost:8080/api`)
+- `VITE_API_BASE_URL`: Optional backend REST API base override (default: `/api`). During local Vite development, `/api` is proxied to `http://localhost:8080`.
 
 *Note: Do not commit `.env` files to version control.*
 
