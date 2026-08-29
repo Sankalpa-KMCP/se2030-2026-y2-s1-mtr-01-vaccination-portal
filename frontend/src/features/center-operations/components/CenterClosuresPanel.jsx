@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import { formatInTimezone } from '../../../services/timezoneUtils';
 
-function formatDateTime(instantStr) {
+function formatDateTime(instantStr, timeZone = 'UTC') {
   if (!instantStr) return '—';
-  try {
-    const d = new Date(instantStr);
-    return isNaN(d.getTime()) ? instantStr : d.toLocaleString();
-  } catch {
-    return instantStr;
-  }
+  return formatInTimezone(instantStr, timeZone, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
 function getClosureStatusBadge(closure) {
@@ -176,7 +179,7 @@ export default function CenterClosuresPanel({
             <table className="table table-hover align-middle mb-0">
               <thead className="table-light text-secondary small">
                 <tr>
-                  <th scope="col">Closure Period</th>
+                  <th scope="col">Closure Period {center?.timezone ? `(${center.timezone})` : ''}</th>
                   <th scope="col">Reason / Justification</th>
                   <th scope="col">Status</th>
                   {canMutate && <th scope="col" className="text-end pe-3">Actions</th>}
@@ -188,15 +191,16 @@ export default function CenterClosuresPanel({
                   const isFuture = c.startAt > nowIso;
                   const canEdit = canMutate && !isCancelled && isFuture;
                   const canCancel = canMutate && !isCancelled && c.endAt > nowIso;
+                  const tz = center?.timezone || 'UTC';
 
                   return (
                     <tr key={c.id}>
                       <td className="small">
                         <div className="fw-semibold text-dark">
-                          From: {formatDateTime(c.startAt)}
+                          From: {formatDateTime(c.startAt, tz)}
                         </div>
                         <div className="text-muted">
-                          To: {formatDateTime(c.endAt)}
+                          To: {formatDateTime(c.endAt, tz)}
                         </div>
                       </td>
                       <td>
@@ -273,7 +277,7 @@ export default function CenterClosuresPanel({
                   Are you sure you want to cancel this temporary closure for <strong>{center?.name}</strong>?
                 </p>
                 <div className="card bg-light border-0 p-3 small text-muted mb-3">
-                  <div><strong>Period:</strong> {formatDateTime(confirmCancelClosure.startAt)} — {formatDateTime(confirmCancelClosure.endAt)}</div>
+                  <div><strong>Period ({center?.timezone || 'UTC'}):</strong> {formatDateTime(confirmCancelClosure.startAt, center?.timezone || 'UTC')} — {formatDateTime(confirmCancelClosure.endAt, center?.timezone || 'UTC')}</div>
                   <div><strong>Reason:</strong> {confirmCancelClosure.reason}</div>
                 </div>
                 <p className="small text-muted mb-0">
