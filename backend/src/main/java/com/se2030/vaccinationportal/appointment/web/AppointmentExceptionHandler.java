@@ -12,6 +12,7 @@ import com.se2030.vaccinationportal.appointment.exception.RequiresStaffOverrideE
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,6 +22,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice(basePackages = "com.se2030.vaccinationportal.appointment")
 public class AppointmentExceptionHandler {
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(HttpStatus.FORBIDDEN.value(), "FORBIDDEN", ex.getMessage()));
+    }
 
     @ExceptionHandler(NotEligibleException.class)
     public ResponseEntity<ErrorResponse> handleNotEligible(NotEligibleException ex) {

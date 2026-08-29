@@ -19,11 +19,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * REST endpoints for temporary vaccination draft CRUD.
  */
 @RestController
 @RequestMapping("/api/v1/vaccination/drafts")
+@PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER')")
 public class VaccinationDraftController {
 
     private final VaccinationDraftService draftService;
