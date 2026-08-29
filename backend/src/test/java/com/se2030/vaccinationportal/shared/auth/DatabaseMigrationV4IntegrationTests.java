@@ -1,13 +1,10 @@
 package com.se2030.vaccinationportal.shared.auth;
 
+import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -18,17 +15,20 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@DirtiesContext
 class DatabaseMigrationV4IntegrationTests {
 
-    @Autowired
-    private DataSource dataSource;
+    private DataSource createIsolatedDataSource() {
+        JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:v4_migration_test;MODE=MySQL;DB_CLOSE_DELAY=-1");
+        ds.setUser("sa");
+        ds.setPassword("");
+        return ds;
+    }
 
     @Test
     @DisplayName("V4 migration applies cleanly, creates tables, inserts canonical roles, and contains 0 user seeds")
     void v4Migration_executesCleanlyAndValidatesSchema() throws Exception {
+        DataSource dataSource = createIsolatedDataSource();
         try (Connection connection = dataSource.getConnection()) {
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V4__shared_authentication_foundation.sql"));
 
