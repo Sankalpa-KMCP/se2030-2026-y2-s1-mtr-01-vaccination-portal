@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/context/AuthContext';
 import {
   canViewAnalytics,
@@ -21,7 +22,11 @@ function formatRole(roleCode) {
   return ROLE_LABELS[roleCode] || roleCode.replace(/^ROLE_/, '').replace(/_/g, ' ');
 }
 
-export default function Header({ activeView = 'overview', onNavigate, onLogout }) {
+function navigationClassName({ isActive }) {
+  return `btn btn-sm ${isActive ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`;
+}
+
+export default function Header({ onLogout }) {
   const { user, logout } = useAuth();
 
   // Optional override so the app shell can distinguish voluntary logout
@@ -44,60 +49,40 @@ export default function Header({ activeView = 'overview', onNavigate, onLogout }
           <div className="d-flex align-items-center flex-grow-1">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0 flex-row gap-2">
               <li className="nav-item">
-                <button
-                  type="button"
-                  className={`btn btn-sm ${activeView === 'overview' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
-                  onClick={() => onNavigate && onNavigate('overview')}
-                >
+                <NavLink className={navigationClassName} to="/app/overview">
                   Overview
-                </button>
+                </NavLink>
               </li>
 
               {showCampaigns && (
                 <li className="nav-item">
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${activeView === 'campaigns' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
-                    onClick={() => onNavigate && onNavigate('campaigns')}
-                  >
+                  <NavLink className={navigationClassName} to="/app/campaigns">
                     Campaigns
-                  </button>
+                  </NavLink>
                 </li>
               )}
 
               {showCenters && (
                 <li className="nav-item">
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${activeView === 'center-operations' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
-                    onClick={() => onNavigate && onNavigate('center-operations')}
-                  >
+                  <NavLink className={navigationClassName} to="/app/center-operations">
                     Center Operations
-                  </button>
+                  </NavLink>
                 </li>
               )}
 
               {showSessions && (
                 <li className="nav-item">
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${activeView === 'sessions' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
-                    onClick={() => onNavigate && onNavigate('sessions')}
-                  >
+                  <NavLink className={navigationClassName} to="/app/sessions">
                     Sessions
-                  </button>
+                  </NavLink>
                 </li>
               )}
 
               {showAnalytics && (
                 <li className="nav-item">
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${activeView === 'analytics' ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`}
-                    onClick={() => onNavigate && onNavigate('analytics')}
-                  >
+                  <NavLink className={navigationClassName} to="/app/analytics">
                     Analytics
-                  </button>
+                  </NavLink>
                 </li>
               )}
             </ul>
