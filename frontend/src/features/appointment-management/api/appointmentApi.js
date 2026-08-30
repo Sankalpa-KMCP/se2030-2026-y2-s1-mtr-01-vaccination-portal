@@ -1,8 +1,28 @@
 import { apiRequest } from '../../../services/apiClient';
 
 /**
- * API client methods for appointment booking, cancellation, and rescheduling.
+ * API client methods for appointment booking, listing, cancellation, and rescheduling.
  */
+
+/**
+ * Fetches all appointments belonging to a specific citizen across all statuses (US-03).
+ *
+ * @param {number|string} citizenId
+ * @returns {Promise<Array>} List of AppointmentResponse objects
+ */
+export async function getMyAppointments(citizenId) {
+  const response = await apiRequest(`/v1/appointments/mine?citizenId=${encodeURIComponent(citizenId)}`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    const error = new Error(data.message || 'Failed to fetch citizen appointments');
+    error.status = response.status;
+    error.error = data.error || 'FETCH_FAILED';
+    throw error;
+  }
+
+  return data;
+}
 
 /**
  * Books an appointment for an eligible citizen.

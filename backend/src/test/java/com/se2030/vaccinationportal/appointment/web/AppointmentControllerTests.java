@@ -114,7 +114,7 @@ class AppointmentControllerTests {
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
 
         AppointmentController appointmentController = new AppointmentController(
-                bookingService, cancellationService, rescheduleService, checkInService, searchService);
+                bookingService, cancellationService, rescheduleService, checkInService, searchService, appointmentRepository);
         this.mockMvc = MockMvcBuilders.standaloneSetup(appointmentController)
                 .setControllerAdvice(new AppointmentExceptionHandler())
                 .build();
@@ -126,6 +126,24 @@ class AppointmentControllerTests {
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
         availabilityPortDouble.clear();
+    }
+
+    @Test
+    void getMyAppointments_returns200OkWithCitizenAppointments() throws Exception {
+        Long citizenId = 1011L;
+        Long campaignId = 2001L;
+        Long slotId = 4010L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+
+        bookingService.bookAppointment(citizenId, campaignId, slotId);
+
+        mockMvc.perform(get("/api/v1/appointments/mine").param("citizenId", citizenId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].citizenId", is(citizenId.intValue())))
+                .andExpect(jsonPath("$[0].status", is("CONFIRMED")));
     }
 
     @Test

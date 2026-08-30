@@ -15,6 +15,14 @@ import org.springframework.stereotype.Repository;
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
     /**
+     * Find appointments for a given citizen ordered by booked timestamp descending (most recent first).
+     *
+     * @param citizenId Identifier of the citizen
+     * @return List of citizen's appointments across all statuses
+     */
+    List<Appointment> findByCitizenIdOrderByBookedAtDesc(Long citizenId);
+
+    /**
      * Find appointments for a given citizen and campaign filtered by status collection.
      * Used to detect existing active appointments (e.g. CONFIRMED, CHECKED_IN).
      *

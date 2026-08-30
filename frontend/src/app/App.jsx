@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
+import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 
 function HomePage() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/appointments/book" element={<AppointmentBookingPage />} />
+            <Route path="/appointments/mine" element={<MyAppointmentsPage />} />
           </Routes>
         </main>
 

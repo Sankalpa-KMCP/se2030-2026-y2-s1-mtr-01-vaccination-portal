@@ -16,6 +16,9 @@ export default function Header() {
             <NavLink to="/appointments/book" className={({ isActive }) => `nav-link ${isActive ? 'active fw-bold' : ''}`}>
               Book Appointment
             </NavLink>
+            <NavLink to="/appointments/mine" className={({ isActive }) => `nav-link ${isActive ? 'active fw-bold' : ''}`}>
+              My Appointments
+            </NavLink>
           </div>
         </div>
       </nav>
