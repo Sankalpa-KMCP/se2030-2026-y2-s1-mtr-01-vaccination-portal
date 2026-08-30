@@ -14,9 +14,14 @@ public record WaitlistEntryResponse(
         Long sessionId,
         WaitlistStatus status,
         Instant joinedAt,
-        Long lockVersion
+        Long lockVersion,
+        Integer position
 ) {
     public static WaitlistEntryResponse fromEntity(WaitlistEntry entry) {
+        return fromEntity(entry, null);
+    }
+
+    public static WaitlistEntryResponse fromEntity(WaitlistEntry entry, Integer position) {
         if (entry == null) {
             return null;
         }
@@ -27,7 +32,8 @@ public record WaitlistEntryResponse(
                 entry.getSessionId(),
                 entry.getStatus(),
                 entry.getJoinedAt(),
-                entry.getLockVersion()
+                entry.getLockVersion(),
+                position
         );
     }
 }
