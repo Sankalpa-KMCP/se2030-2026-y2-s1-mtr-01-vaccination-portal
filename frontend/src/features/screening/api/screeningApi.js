@@ -59,3 +59,78 @@ export function updateAnswerOption(optionId, payload) {
 export function deleteAnswerOption(optionId) {
   return screeningRequest(`/options/${optionId}`, { method: 'DELETE' });
 }
+
+// Questionnaire containers
+export function listQuestionnaires() {
+  return screeningRequest('/questionnaires', { method: 'GET' });
+}
+
+export function getQuestionnaire(questionnaireId) {
+  return screeningRequest(`/questionnaires/${questionnaireId}`, { method: 'GET' });
+}
+
+export function createQuestionnaire(payload) {
+  return screeningRequest('/questionnaires', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// Questionnaire versions and their item snapshots
+export function listQuestionnaireVersions(questionnaireId) {
+  return screeningRequest(`/questionnaires/${questionnaireId}/versions`, { method: 'GET' });
+}
+
+export function getQuestionnaireVersion(versionId) {
+  return screeningRequest(`/questionnaire-versions/${versionId}`, { method: 'GET' });
+}
+
+export function createQuestionnaireVersion(questionnaireId) {
+  return screeningRequest(`/questionnaires/${questionnaireId}/versions`, { method: 'POST' });
+}
+
+export function addQuestionnaireItem(versionId, payload) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/items`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function publishQuestionnaireVersion(versionId) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/publish`, { method: 'POST' });
+}
+
+export function retireQuestionnaireVersion(versionId) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/retire`, { method: 'POST' });
+}
+
+export function deleteQuestionnaireVersion(versionId) {
+  return screeningRequest(`/questionnaire-versions/${versionId}`, { method: 'DELETE' });
+}
+
+// Eligibility rules
+export function listEligibilityRules(versionId) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/rules`, { method: 'GET' });
+}
+
+export function getEligibilityRule(ruleId) {
+  return screeningRequest(`/rules/${ruleId}`, { method: 'GET' });
+}
+
+export function createEligibilityRule(versionId, payload) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/rules`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateEligibilityRule(ruleId, payload) {
+  return screeningRequest(`/rules/${ruleId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteEligibilityRule(ruleId) {
+  return screeningRequest(`/rules/${ruleId}`, { method: 'DELETE' });
+}

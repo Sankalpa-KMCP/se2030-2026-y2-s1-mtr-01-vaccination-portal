@@ -8,15 +8,30 @@ const clientMocks = vi.hoisted(() => ({
 vi.mock('../../../services/apiClient', () => clientMocks);
 
 import {
+  addQuestionnaireItem,
   createAnswerOption,
+  createEligibilityRule,
   createQuestion,
+  createQuestionnaire,
+  createQuestionnaireVersion,
   deleteAnswerOption,
+  deleteEligibilityRule,
   deleteQuestion,
+  deleteQuestionnaireVersion,
   getAnswerOption,
+  getEligibilityRule,
   getQuestion,
+  getQuestionnaire,
+  getQuestionnaireVersion,
   listAnswerOptions,
+  listEligibilityRules,
   listQuestions,
+  listQuestionnaires,
+  listQuestionnaireVersions,
+  publishQuestionnaireVersion,
+  retireQuestionnaireVersion,
   updateAnswerOption,
+  updateEligibilityRule,
   updateQuestion,
 } from './screeningApi';
 
@@ -121,5 +136,86 @@ describe('screeningApi', () => {
     await deleteAnswerOption(44);
 
     expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/screening/options/44', { method: 'DELETE' });
+  });
+
+  it('lists, retrieves, and creates questionnaire containers through the exact backend routes', async () => {
+    await listQuestionnaires();
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaires', { method: 'GET' });
+
+    await getQuestionnaire(7);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaires/7', { method: 'GET' });
+
+    const payload = { code: 'ADULT', name: 'Adult Screening', description: null };
+    await createQuestionnaire(payload);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaires', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  });
+
+  it('uses the version list, retrieval, and bodyless draft-creation routes', async () => {
+    await listQuestionnaireVersions(7);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaires/7/versions', { method: 'GET' });
+
+    await getQuestionnaireVersion(12);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaire-versions/12', { method: 'GET' });
+
+    await createQuestionnaireVersion(7);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaires/7/versions', { method: 'POST' });
+  });
+
+  it('adds a questionnaire item using the exact backend DTO', async () => {
+    const payload = { questionId: 3, displayOrder: 2, requiredOverride: null };
+    await addQuestionnaireItem(12, payload);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/screening/questionnaire-versions/12/items', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  });
+
+  it('uses the supported questionnaire version lifecycle routes', async () => {
+    await publishQuestionnaireVersion(12);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaire-versions/12/publish', { method: 'POST' });
+
+    await retireQuestionnaireVersion(12);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaire-versions/12/retire', { method: 'POST' });
+
+    await deleteQuestionnaireVersion(12);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaire-versions/12', { method: 'DELETE' });
+  });
+
+  it('lists and retrieves eligibility rules through their exact backend routes', async () => {
+    await listEligibilityRules(12);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaire-versions/12/rules', { method: 'GET' });
+
+    await getEligibilityRule(31);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/rules/31', { method: 'GET' });
+  });
+
+  it('creates, updates, and deletes eligibility rules through supported routes', async () => {
+    const payload = {
+      ruleCode: 'AGE_REVIEW',
+      ruleName: 'Age review',
+      conditionExpression: 'AGE < 18',
+      preliminaryResult: 'PRELIMINARY_REVIEW_REQUIRED',
+      priority: 1,
+      message: 'Clinical review required',
+    };
+
+    await createEligibilityRule(12, payload);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaire-versions/12/rules', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    await updateEligibilityRule(31, payload);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/rules/31', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+
+    await deleteEligibilityRule(31);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/rules/31', { method: 'DELETE' });
   });
 });
