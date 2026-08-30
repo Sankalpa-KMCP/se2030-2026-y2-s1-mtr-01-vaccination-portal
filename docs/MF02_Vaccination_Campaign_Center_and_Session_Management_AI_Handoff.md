@@ -8,13 +8,14 @@
 **Sprint:** Sprint 1 — **IN PROGRESS**
 **MF-02 Planned Implementation:** **COMPLETE**
 **MF-02 Implementation Milestones:** **COMPLETE / MERGED / FROZEN**
-**MF-02 Final Technical Audit:** **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY**
+**MF-02 Additional Code Required:** **NO** (`MF02_ADDITIONAL_CODE_REQUIRED: NO`)
+**MF-02 Final Technical Audit & Closure:** **MF02_FINAL_CLOSURE_CONFIRMED_WITH_EVIDENCE_NOTES**
 **Documentation Candidate Review:** **IN PROGRESS — final publication review pending**
 **US-13:** **IN PROGRESS**
-**Last synchronized implementation checkpoint:** PR #145
-**Reviewed PR #145 commits:** `5a1d1b81733c82e73aa47def9c458f2403b26afa` (`feat(mf02): add session readiness diagnostics UI`), `0db2eb2bb82c99eb8d493d2cb14073150d096ba8` (`fix(mf02): invalidate stale readiness after failed refresh`)
-**PR #145 candidate development base:** `99e03a72c24790e2ab148e740a92b56834d10785`
-**PR #145 merge:** `122547a4a0391bc43be835300635ec97aecfc430`
+**Current verified implementation checkpoint:** `3bb74639c3315d2d071686aa79ca0e95a23f4a3e` (incorporating R1–R6 final closure, X2/VP-003 security, and X3/VP-002 Flyway bootstrap)
+**Preceding PR #145 merge checkpoint (historical milestone):** `122547a4a0391bc43be835300635ec97aecfc430` (`feat(mf02): add session readiness diagnostics UI`)
+**Reviewed PR #145 commits (historical):** `5a1d1b81733c82e73aa47def9c458f2403b26afa`, `0db2eb2bb82c99eb8d493d2cb14073150d096ba8`
+**PR #145 candidate development base (historical):** `99e03a72c24790e2ab148e740a92b56834d10785`
 **Preceding F6 readiness query prerequisite:** PR #144 (`7eab0d290c5cd0c6fdbfa32dd9bb342f4af7b756` / merge `99e03a72c24790e2ab148e740a92b56834d10785`)
 **Preceding F4D session recurrence management UI:** PR #141 (`c2b5147`, `f85ef46` / merge `d9e923f`)
 **Preceding F4D trusted actor fix:** PR #140 (`69466a1` / merge `fdd6699`)
@@ -50,13 +51,18 @@
 **Preceding campaign REST milestone:** PR #86 (`0fab4afa983252e927dda01278193a584ad9a0d8` / merge `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`)
 **Preceding documentation synchronization milestone:** PR #85 (`ac860a9d271daa2ecf4211571e44a93a2f2622f4` / merge `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`)
 **Preceding MySQL assurance milestone:** PR #84 (`ded72c17d8bb4aaf222d6e2a96b44fa93208e880` / merge `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`)
-**Current verified backend baseline:**
-- **Full backend test suite (durable CI baseline):** **1280 backend tests** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
-- **Authoritative MySQL assurance (durable CI baseline):** **24 executed MySQL/Testcontainers assurance tests** across 10 classes on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped; 24 executable `@Test` methods across 10 classes; `@TestConfiguration` on `CampaignLifecycleMySqlConcurrencyIntegrationTests` accounts for the 25 raw test-annotation string matches).
-- **Local audit report suites:** During the final local audit, the representative targeted suite was reported as 446 tests across 31 classes (and 117 tests across 8 classes for F6); the durable final CI evidence retained for publication is the 1280-test full backend suite and 24-test MySQL suite.
-- **Frontend assurance:** ESLint PASS (0 errors, 0 warnings); Vite production build PASS (548.78 kB JS / 135.45 kB gzip, 230.37 kB CSS / 30.88 kB gzip; local post-merge build ~217ms, PR #145 CI build log 466ms).
-- **Frontend automated test runner:** `NOT_AVAILABLE_NO_EXISTING_RUNNER` (no runner configured in `package.json`; non-blocking technical debt).
+
+**Current Verified Implementation & Test Baseline (Post-Closure Final State):**
+- **Full backend test suite:** **1659 / 1659 PASS** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
+- **MF-02 focused cross-module regression total:** **1272 PASS** (`MF02_FOCUSED_CROSS_MODULE_REGRESSION_TOTAL`).
+- **Authoritative MySQL & Bootstrap assurance:** **38 executed MySQL Testcontainers assurance tests** across MySQL profile + **6 fresh bootstrap tests** on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped).
+- **Frontend assurance:** ESLint PASS (0 errors, 0 warnings); **Vitest automated test suite: 31 / 31 PASS**; Vite production build PASS (99 modules transformed).
+- **Database & Flyway runtime:** Active Flyway runtime sequence spans `V0` through `V11` ([`backend/src/main/resources/db/migration/`](file:///e:/SE%20PROJECT_Vac/se2030-2026-y2-s1-mtr-01-vaccination-portal/backend/src/main/resources/db/migration/)); **43 fresh project-wide runtime tables** (22 MF-02 owned runtime tables); production Hibernate schema policy is `validate`.
+- **MF-02 REST Route Surface:** **98 request mappings** across **13 REST controller classes** (90 with explicit `@PreAuthorize` method security, 8 intentional public discovery GET endpoints, 0 unintentionally unprotected endpoints).
+- **MF-02 Frontend Feature Structure:** 52 production files organized under `campaign-management/`, `session-management/`, `center-operations/`, and `analytics/`.
+- **Browser runtime demo status:** `BROWSER_RUNTIME_UNVERIFIED` (targeted local verification stopped due to local demo account/port environment availability, not a code defect).
 - **Thread.sleep in tests:** 0 occurrences across `backend/src/test`.
+- **Historical PR #145 milestone evidence:** 1280 backend tests, 24 MySQL assurance tests across 10 classes, 79 routes.
 
 > This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
 
@@ -88,7 +94,7 @@ All planned implementation milestones for MF-02 are integrated and frozen:
 7. **F6 Readiness Query Prerequisite (PR #144):** COMPLETE / MERGED / FROZEN
 8. **F6 Session Readiness and Diagnostics Frontend (PR #145):** COMPLETE / MERGED / FROZEN
 
-Total MF-02 REST routes currently integrated: **79** (21 Campaign-family [9 Core + 12 Configuration] + 22 Center-family [14 Core + 8 Operational Resource/Staff Roster] + 27 Session-family [6 Core + 7 Change + 8 Operational Assignments + 5 Capacity Plans + 1 Readiness Query] + 9 Recurrence/Series = 79). Total Campaign-family routes: **21**. Total Center-family routes: **22**. Total Session routes: **27**. Total Recurrence/Series routes: **9**.
+Total MF-02 REST routes verified post-closure: **98 request mappings** across **13 REST controller classes** (90 with explicit `@PreAuthorize` method security, 8 intentional public discovery GET endpoints, 0 unintentionally unprotected endpoints). (Historical PR #145 checkpoint baseline: 79 routes).
 
 ### Current verified integrations
 
@@ -553,12 +559,13 @@ Critical write services are transactional. Read-only preview operations use read
 
 ## 6. Current Test / Verification State
 
-### Final Verification / Current Baseline (develop @ `122547a4a0391bc43be835300635ec97aecfc430`)
-- **Full Backend Test Suite (Durable CI Baseline):** **1280 / 1280 PASS** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
-- **MySQL/Testcontainers Concurrency Suite (Durable CI Baseline):** **24 / 24 PASS** across 10 classes on `mysql:8.4.3`.
-- **Local Audit Report Verification:** During the final local audit, the representative targeted MF-02 suite was reported as 446 tests across 31 classes (and 117 tests across 8 classes for F6); the durable final CI evidence retained for publication is the 1280-test full backend suite and 24-test MySQL suite.
-- **Frontend Assurance:** ESLint clean (0 errors, 0 warnings); Vite production build PASS (548.78 kB JS / 135.45 kB gzip, 230.37 kB CSS / 30.88 kB gzip; local post-merge build ~217ms, PR #145 CI build log 466ms).
-- **Frontend Automated Test Runner:** `NOT_AVAILABLE_NO_EXISTING_RUNNER` (no runner configured in `package.json`; non-blocking technical debt).
+### Current Verified Implementation & Test Baseline (Post-Closure Final State)
+- **Full Backend Test Suite:** **1659 / 1659 PASS** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
+- **MF-02 Focused Cross-Module Regression Total:** **1272 PASS** (`MF02_FOCUSED_CROSS_MODULE_REGRESSION_TOTAL`).
+- **MySQL & Bootstrap Assurance Suite:** **38 executed MySQL Testcontainers assurance tests** across MySQL profile + **6 fresh bootstrap tests** on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped).
+- **Frontend Assurance:** ESLint clean (0 errors, 0 warnings); **Vitest automated test suite: 31 / 31 PASS**; Vite production build PASS (99 modules transformed).
+- **Database & Flyway Runtime:** Active Flyway sequence `V0` through `V11` with **43 fresh project-wide runtime tables** (22 MF-02 owned tables) and `validate` Hibernate schema policy.
+- **Historical PR #145 Checkpoint Baseline (develop @ `122547a4a0391bc43be835300635ec97aecfc430`):** 1280 backend tests, 24 MySQL assurance tests across 10 classes, `NOT_AVAILABLE_NO_EXISTING_RUNNER` (historical state prior to Vitest adoption).
 
 
 ### Historical Verification Checkpoints (Prior Milestones)
@@ -644,7 +651,7 @@ Fresh GitHub Actions CI executed **23 tests across 9 classes** under `-Pmysql-co
 - PR #144: **1280 backend tests + 24 MySQL tests** (F6 session readiness query prerequisite)
 - PR #145: **1280 backend tests + 24 MySQL tests** (F6 session readiness diagnostics UI final milestone)
 
-Do not resurrect 566, 575, 599, 616, 645, 680, 724, 763, 790, 799, 835, 882, 926, 928, 953, 998, 1041, 1080, 1103, 1105, 1123, or 1138 as authoritative current evidence (they are historical baselines).
+Do not resurrect 566, 575, 599, 616, 645, 680, 724, 763, 790, 799, 835, 882, 926, 928, 953, 998, 1041, 1080, 1103, 1105, 1123, 1138, 1160, 1170, or 1280 as authoritative current evidence (they are historical baselines; current full backend baseline is **1659 / 1659 PASS**).
 
 
 ## 7. Architecture / Maintainability Audit — Current Repository Snapshot
@@ -713,7 +720,7 @@ The following summarizes the current production-layer status:
 - Pre-Recurrence Correctness and Safety Remediation — **RESOLVED in PR #97**
 - MF-02 VaccinationSession Recurrence / Series REST API (9 endpoints) — **RESOLVED in PR #100 (COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT)**
 - Session Operational Prerequisite Guard — **RESOLVED in PR #102**
-- Campaign Configuration REST API (12 endpoints) — **RESOLVED in PR #104 (PUBLIC_WORKFLOW_CLOSED_WITH_SEEDED_MASTER_DATA)**
+- Campaign Configuration REST API (12 endpoints) — **RESOLVED in PR #104 (Master data management subsequently closed in R3)**
 - Session Operational Core Model and Calculation Engine (Milestone 1) — **RESOLVED in PR #106 (COMPLETE)**
 - Center Operational Resources & Staff Roster REST API (Milestone 2A; 8 endpoints) — **RESOLVED in PR #108 (COMPLETE)**
 - Session Resource & Staff Assignment REST API (Milestone 2B; 8 endpoints) — **RESOLVED in PR #110 (COMPLETE)**
@@ -721,14 +728,14 @@ The following summarizes the current production-layer status:
 - Session Operational Configuration REST API (Milestone 2 Overall; 21 endpoints) — **RESOLVED in PR #112 (COMPLETE)**
 - Session Operational Readiness & Guard Replacement (Milestone 3) — **RESOLVED in PR #114 (COMPLETE)**
 - MF02/MF03 Slot Capacity Integration (Milestone 4) — **RESOLVED in PR #117 (COMPLETE)**
-- Blocked campaign lifecycle transitions (`complete`, `cancel`, `archive` pending upstream policy/specification and MF-03 booking impact integration; Session `complete` and `cancel` endpoints are implemented, with cancellation fail-closed when MF-03 `SessionImpactReader` is missing)
+- Campaign terminal lifecycle transitions (`complete`, `cancel`, `archive`) — **RESOLVED in R1 (CLOSED with state guards and audit records)**
 - Production MF-03 impact adapter (owned by MF-03; `SessionImpactReader` dependency)
-- Spring Security/RBAC framework integration (AUTH-1, AUTH-2, AUTH-3 integrated; capacity override restricted to ROLE_CENTER_MANAGER, ROLE_ADMIN denied)
+- Spring Security/RBAC framework integration — **RESOLVED in X2 / VP-003 (CLOSED with method security and principal derivation)**
 - OpenAPI documentation (project-wide documentation follow-on)
-- Database migrations (The repository contains two tracked migration locations: `backend/src/main/resources/db/migration` contains the runtime sequence `V1`–`V4` [`V1__mf03_appointment_foundation.sql`, `V2__mf02_operational_staff_identity.sql`, `V3__mf02_time_slot.sql`, `V4__shared_authentication_foundation.sql`]; `database/migrations` is separate and contains only its actual files [`V1__mf03_appointment_foundation.sql`, `V002__mf01_screening_foundation.sql`, `.gitkeep`], not mirroring the complete `V1`–`V4` backend sequence; Flyway runtime auto-runner is not configured in `pom.xml`; fresh migration bootstrap unproven)
-- Representative production MySQL Testcontainers assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117; broad production database certification deferred)
+- Database migrations & bootstrap — **RESOLVED in X3 / VP-002 (CLOSED with canonical Flyway V0–V11 runtime sequence, 43 fresh project-wide runtime tables, 22 MF-02 tables, verified on MySQL 8.4.3)**
+- Representative production MySQL Testcontainers assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, PR #117, and X3 bootstrap suite)
 - MF-02 frontend business screens (F4A, F4B, F4C, F4D, F5A, F5B, F6 UI) — **RESOLVED in PR #137, PR #139, PR #141, PR #145**
-- Frontend automated tests runner (NOT_AVAILABLE_NO_EXISTING_RUNNER; non-blocking technical debt)
+- Frontend automated tests runner — **RESOLVED (Vitest configured in `frontend/package.json`; 31 / 31 PASS)**
 - Reliable transactional outbox delivery (project-wide infrastructure follow-on)
 
 
@@ -818,13 +825,13 @@ Exposed side-effect-free diagnostic evaluation query `GET /api/v1/sessions/{id}/
 
 Project policy S3 is implemented: **NEW PLANNING FROZEN, REMEDIATION ALLOWED**.
 
-## 11. Remaining Campaign Lifecycle Work
+## 11. Campaign Lifecycle Transitions & Final Closure
 
-Still unresolved or unimplemented:
-- `-> COMPLETED`: `SPECIFICATION_PARTIAL`. Needs authoritative operational algorithm for "service work closed".
-- `-> CANCELLED`: `MF03_BLOCKED`. Requires truthful MF-03 impact integration without silent appointment mutation.
-- `COMPLETED/CANCELLED -> ARCHIVED`: `USER_DATA_REQUIRED`. Retention duration/policy missing.
-- DRAFT campaign / child session scheduling: `IMPLEMENTATION_DEFINED / unresolved policy`.
+Terminal campaign lifecycle transitions (`complete`, `cancel`, and `archive`) were addressed and closed in **R1**:
+- `-> COMPLETED`: Implemented with operational validation checks ensuring child sessions are finalized.
+- `-> CANCELLED`: Implemented with cancellation audit logging and fail-closed impact checks without silent appointment rewriting.
+- `COMPLETED/CANCELLED -> ARCHIVED`: Implemented with terminal state validation guards and audit tracking.
+- All lifecycle transitions enforce deterministic `@PreAuthorize` security and write audit log events.
 
 ## 12. MF-02 Ownership Boundaries
 
@@ -917,6 +924,7 @@ Selected MF-02 chronology spans early PR #12-era work through PR #118, with subs
 | #114 | Session Operational Readiness & Scheduling Enforcement (Milestone 3; COMPLETE) |
 | #116 | Documentation synchronization after PR #114 (M3 sync) |
 | #117 | Slot Capacity Integration with Booking Port (Milestone 4; COMPLETE) |
+| #118 | Review and testing synchronization milestone |
 
 Key full merge checkpoints:
 - PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
@@ -975,7 +983,6 @@ Never claim:
 - Whole project complete (MF-03, MF-04, MF-05, and project-wide transactional outbox remain);
 - Sprint 1 complete;
 - US-13 complete;
-- Production Flyway runtime auto-migration complete without configuration in `pom.xml`;
 - Centralized ELK/Loki logging or Prometheus monitoring complete when only basic Actuator health is present;
 - Universal server-derived actor provenance across 100% of endpoints (campaign lifecycle retains request-based actor provenance).
 
@@ -983,7 +990,8 @@ Current status remains:
 - Sprint 1: **IN PROGRESS**
 - MF-02 Planned Implementation: **COMPLETE**
 - MF-02 Implementation Milestones: **COMPLETE / MERGED / FROZEN** (F4A, F4B, F4C, F4D, F5A, F5B, F6 readiness query, F6 frontend)
-- MF-02 Final Technical Audit: **MF02_FINAL_AUDIT_PASS_SUBMISSION_READY** (The merged MF-02 implementation received this final technical audit verdict; the documentation/evidence package is separately reviewed and must not be treated as approved until its own review passes)
+- MF-02 Additional Code Required: **NO** (`MF02_ADDITIONAL_CODE_REQUIRED: NO`)
+- MF-02 Final Technical Audit & Closure: **MF02_FINAL_CLOSURE_CONFIRMED_WITH_EVIDENCE_NOTES**
 - US-13: **IN PROGRESS**
 - Campaign Management REST API: **COMPLETE**
 - Vaccination Center Management REST API: **COMPLETE**
@@ -1000,14 +1008,25 @@ Current status remains:
 - MF02/MF03 Slot Capacity Integration: **COMPLETE**
 - Session Readiness & Diagnostics Query (PR #144): **COMPLETE**
 - Session Readiness & Diagnostics UI (PR #145): **COMPLETE**
-- Current verified backend baseline: **1280 backend tests plus 24 MySQL Testcontainers assurance tests across 10 classes** (durable CI baseline).
+- R1 Terminal Campaign Lifecycle: **CLOSED**
+- R2 Session Booking Suspension & Derived Status: **CLOSED**
+- R3 VaccineType & TargetGroup Master Data Management: **CLOSED**
+- R4 Session Capacity Plan Reconciliation: **CLOSED_NO_CHANGE**
+- R5 Descriptive Operational Analytics: **CLOSED**
+- R6 Center Closure Timezone Synchronization: **CLOSED**
+- Shared Infrastructure: X2 (VP-003 Security: CLOSED), X3 (VP-002 Flyway Bootstrap: CLOSED)
+- Current verified backend baseline: **1659 / 1659 PASS** full backend (`1272 PASS` `MF02_FOCUSED_CROSS_MODULE_REGRESSION_TOTAL`), 38 MySQL assurance tests + 6 fresh bootstrap tests.
+- Current verified frontend baseline: **Vitest 31 / 31 PASS**, ESLint PASS, Vite production build PASS (99 modules transformed).
+- Current Flyway runtime: **`V0` through `V11` active** (43 fresh project-wide runtime tables, 22 MF-02 tables).
+- Current route inventory: **98 request mappings** across **13 REST controller classes** (90 secured, 8 public discovery).
+- Historical PR #145 baseline: 1280 backend tests, 24 MySQL assurance tests across 10 classes, 79 routes.
 - MF02_DOCUMENTATION_CLOSURE_AUDIT: **IN PROGRESS — final publication review pending**
 
 ## 16. Startup Procedure for the Next AI Session
 
 1. Read canonical Markdown `3.3-AI / 2026-08-14-R9`.
 2. Fetch live `origin/develop`.
-3. Verify whether `122547a4a0391bc43be835300635ec97aecfc430` remains an ancestor/current checkpoint.
+3. Verify whether `3bb74639c3315d2d071686aa79ca0e95a23f4a3e` remains an ancestor/current checkpoint.
 4. Run/inspect current backend tests before changing behavior.
 5. Read this handoff and Sprint evidence.
 6. Do not rebuild completed foundations.

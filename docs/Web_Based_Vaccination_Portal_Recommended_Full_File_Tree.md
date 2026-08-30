@@ -513,12 +513,19 @@ se2030-2026-y2-s1-mtr-01-vaccination-portal/
 
 | Area | Frontend | Backend | Backend tests |
 |---|---|---|---|
-| Shared access/support | `frontend/src/features/access/` | `backend/.../shared/` | `backend/src/test/.../shared/` |
+| Shared access/support | `frontend/src/features/access/` or `frontend/src/auth/` | `backend/.../shared/` | `backend/src/test/.../shared/` |
 | MF-01 | `frontend/src/features/screening/` | `backend/.../screening/` | `backend/src/test/.../screening/` |
-| MF-02 | `frontend/src/features/campaign-management/` | `backend/.../campaign/` | `backend/src/test/.../campaign/` |
+| MF-02 | `frontend/src/features/campaign-management/`, `session-management/`, `center-operations/`, `analytics/` | `backend/.../campaign/` | `backend/src/test/.../campaign/` |
 | MF-03 | `frontend/src/features/appointment-management/` | `backend/.../appointment/` | `backend/src/test/.../appointment/` |
 | MF-04 | `frontend/src/features/vaccine-inventory/` | `backend/.../inventory/` | `backend/src/test/.../inventory/` |
-| MF-05 | `frontend/src/features/vaccination-administration/` | `backend/.../administration/` | `backend/src/test/.../administration/` |
+| MF-05 | `frontend/src/features/vaccination-administration/` | `backend/.../vaccination/` (or `administration/`) | `backend/src/test/.../vaccination/` |
+
+## Live Repository Structural Reconciliation Notes
+
+1. **Frontend Feature Modularization**: MF-02 frontend components are organized into dedicated feature folders (`campaign-management/`, `session-management/`, `center-operations/`, and `analytics/`) for clear separation of concerns, alongside shared authentication in `frontend/src/auth/`.
+2. **Flyway Migration Location**: Canonical runtime Flyway migrations reside in `backend/src/main/resources/db/migration/` (numbered `V0` through `V11`), executed automatically on Spring Boot application startup. The `database/migrations/` folder is reserved for reference scripts.
+3. **Frontend Automated Testing**: Frontend automated testing is configured via Vitest (`npm test` / `vitest run`) in `frontend/package.json` covering components, routes, and API client adapters.
+4. **Implementation Authority**: The live repository is authoritative for what exists. Do not move, rename, delete, or create production files merely because this reference tree layout differs from the live implementation.
 
 ## File-Tree Rules
 
@@ -527,14 +534,14 @@ se2030-2026-y2-s1-mtr-01-vaccination-portal/
 3. Read the canonical Markdown and the relevant MF handoff before implementation. The canonical Markdown is the sole normative semantic source; no parallel binary canonical artifact is required.
 4. Keep business entities inside the owning module even when other modules reference them.
 5. `VaccineType` is owned by MF-02; MF-04 must not create `Vaccine`, `VaccineType`, `VaccineRepository` or another master lifecycle.
-6. MF-05 backend code uses `administration/`; do not create a competing `vaccination/` backend package.
+6. MF-05 backend code belongs in its designated domain package; do not duplicate parallel packages across `vaccination/` and `administration/`.
 7. MF-03 uses `CheckInEvent` / `CheckInEventType`, not an alternative `CheckInRecord` model.
 8. MF-05 uses `CertificateIssue`, `CertificateVerificationLog` and `ApiIdempotencyRecord`; do not replace them with simplified `DigitalCertificate` or generic `IdempotencyRecord` models.
 9. Shared account/access, security, audit, notifications and transactional-outbox infrastructure belong under shared/supporting code, not inside one MF.
 10. Use DTOs for public API input/output; do not expose JPA entities directly.
 11. Keep controllers thin; business rules belong in services/domain validation and critical constraints also require database enforcement.
-12. Flyway migration versions are **global**. The example `V001`-`V006` sequence is only the initial baseline; every future migration must use the next globally coordinated version. Do not create independent per-branch version sequences.
-13. Do not use Hibernate `create`, `create-drop` or `update` as the committed production/demo schema-management strategy.
+12. Flyway migration versions are **global**. The active sequence spans `V0` through `V11`; every future migration must use the next globally coordinated version. Do not create independent per-branch version sequences.
+13. Do not use Hibernate `create`, `create-drop` or `update` as the committed production/demo schema-management strategy; use `validate`.
 14. Use only synthetic/anonymized seed and test data. Never commit `.env`, secrets, real citizen data, real screening/medical data or production dumps.
 15. Tests should mirror the module they verify, and cross-module integration tests should live in shared/integration test locations rather than duplicating another module's business implementation.
 16. Exact final filenames may evolve as code is implemented. Canonical semantics and ownership are authoritative.
