@@ -13,6 +13,7 @@ import CampaignManagementPage from '../features/campaign-management/pages/Campai
 import CenterOperationsPage from '../features/center-operations/pages/CenterOperationsPage';
 import SessionsPage from '../features/session-management/pages/SessionsPage';
 import OperationalAnalyticsView from '../features/analytics/components/OperationalAnalyticsView';
+import ScreeningQuestionsPage from '../features/screening/pages/ScreeningQuestionsPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
 import OverviewPage from './pages/OverviewPage';
@@ -41,6 +42,8 @@ const ANALYTICS_VIEW_ROLES = [
   'ROLE_CAMPAIGN_OFFICER',
   'ROLE_CENTER_MANAGER',
 ];
+
+const SCREENING_ADMIN_ROLES = ['ROLE_ADMIN'];
 
 function InitializingPage() {
   return (
@@ -169,6 +172,10 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={ANALYTICS_VIEW_ROLES} />}>
             <Route path="analytics" element={<OperationalAnalyticsView />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={SCREENING_ADMIN_ROLES} />}>
+            <Route path="screening/questions" element={<ScreeningQuestionsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

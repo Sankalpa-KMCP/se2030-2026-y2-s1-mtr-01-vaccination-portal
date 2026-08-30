@@ -6,6 +6,7 @@ import {
   canViewCampaigns,
   canViewCenters,
   canViewSessions,
+  hasRole,
 } from '../../auth/utils/roleUtils';
 
 const ROLE_LABELS = {
@@ -37,6 +38,7 @@ export default function Header({ onLogout }) {
   const showCenters = canViewCenters(user);
   const showSessions = canViewSessions(user);
   const showAnalytics = canViewAnalytics(user);
+  const showScreeningQuestions = hasRole(user, 'ROLE_ADMIN');
 
   return (
     <header>
@@ -82,6 +84,14 @@ export default function Header({ onLogout }) {
                 <li className="nav-item">
                   <NavLink className={navigationClassName} to="/app/analytics">
                     Analytics
+                  </NavLink>
+                </li>
+              )}
+
+              {showScreeningQuestions && (
+                <li className="nav-item">
+                  <NavLink className={navigationClassName} to="/app/screening/questions">
+                    Screening Questions
                   </NavLink>
                 </li>
               )}
