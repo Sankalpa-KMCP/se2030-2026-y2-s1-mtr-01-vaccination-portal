@@ -21,6 +21,10 @@ vi.mock('../features/screening/pages/ScreeningQuestionsPage', () => ({
   default: () => 'Screening Questions Test Page',
 }));
 
+vi.mock('../features/screening/pages/ScreeningQuestionnairesPage', () => ({
+  default: () => 'Screening Questionnaires Test Page',
+}));
+
 import Header from '../components/common/Header';
 import ProtectedRoute from './ProtectedRoute';
 import PortalRoutes from './routes';
@@ -191,6 +195,30 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
   });
 
+  it('allows an ADMIN to open the screening questionnaires route', () => {
+    setAuth({ roles: ['ROLE_ADMIN'] });
+
+    render(
+      <MemoryRouter initialEntries={['/app/screening/questionnaires']}>
+        <PortalRoutes />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Screening Questionnaires Test Page')).toBeTruthy();
+  });
+
+  it('denies the screening questionnaires route to a non-ADMIN role', () => {
+    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
+
+    render(
+      <MemoryRouter initialEntries={['/app/screening/questionnaires']}>
+        <PortalRoutes />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+  });
+
   it('shows the screening navigation entry only to ADMIN users', () => {
     setAuth({ roles: ['ROLE_ADMIN'] });
     const view = render(
@@ -200,6 +228,7 @@ describe('shared routing and role guards', () => {
     );
 
     expect(screen.getByRole('link', { name: 'Screening Questions' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Questionnaires' })).toBeTruthy();
 
     setAuth({ roles: ['ROLE_CITIZEN'] });
     view.rerender(
@@ -209,5 +238,6 @@ describe('shared routing and role guards', () => {
     );
 
     expect(screen.queryByRole('link', { name: 'Screening Questions' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Questionnaires' })).toBeNull();
   });
 });

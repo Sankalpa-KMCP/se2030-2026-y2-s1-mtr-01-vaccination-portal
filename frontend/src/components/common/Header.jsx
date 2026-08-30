@@ -89,11 +89,18 @@ export default function Header({ onLogout }) {
               )}
 
               {showScreeningQuestions && (
-                <li className="nav-item">
-                  <NavLink className={navigationClassName} to="/app/screening/questions">
-                    Screening Questions
-                  </NavLink>
-                </li>
+                <>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/screening/questions">
+                      Screening Questions
+                    </NavLink>
+                  </li>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/screening/questionnaires">
+                      Questionnaires
+                    </NavLink>
+                  </li>
+                </>
               )}
             </ul>
 

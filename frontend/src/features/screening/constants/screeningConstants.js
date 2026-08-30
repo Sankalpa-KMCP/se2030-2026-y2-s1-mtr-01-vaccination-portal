@@ -26,3 +26,29 @@ const CHOICE_QUESTION_TYPES = Object.freeze([
 export function isChoiceQuestionType(questionType) {
   return CHOICE_QUESTION_TYPES.includes(questionType);
 }
+
+export const QUESTIONNAIRE_VERSION_STATUS = Object.freeze({
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  RETIRED: 'RETIRED',
+});
+
+export const QUESTIONNAIRE_VERSION_STATUS_LABELS = Object.freeze({
+  [QUESTIONNAIRE_VERSION_STATUS.DRAFT]: 'Draft',
+  [QUESTIONNAIRE_VERSION_STATUS.PUBLISHED]: 'Published',
+  [QUESTIONNAIRE_VERSION_STATUS.RETIRED]: 'Retired',
+});
+
+export const PRELIMINARY_SCREENING_RESULT = Object.freeze({
+  PASS: 'PRELIMINARY_PASS',
+  REVIEW_REQUIRED: 'PRELIMINARY_REVIEW_REQUIRED',
+});
+
+export const PRELIMINARY_SCREENING_RESULTS = Object.freeze(
+  Object.values(PRELIMINARY_SCREENING_RESULT),
+);
+
+export const PRELIMINARY_SCREENING_RESULT_LABELS = Object.freeze({
+  [PRELIMINARY_SCREENING_RESULT.PASS]: 'Preliminary Pass',
+  [PRELIMINARY_SCREENING_RESULT.REVIEW_REQUIRED]: 'Review Required',
+});

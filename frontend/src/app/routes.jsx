@@ -14,6 +14,7 @@ import CenterOperationsPage from '../features/center-operations/pages/CenterOper
 import SessionsPage from '../features/session-management/pages/SessionsPage';
 import OperationalAnalyticsView from '../features/analytics/components/OperationalAnalyticsView';
 import ScreeningQuestionsPage from '../features/screening/pages/ScreeningQuestionsPage';
+import ScreeningQuestionnairesPage from '../features/screening/pages/ScreeningQuestionnairesPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
 import OverviewPage from './pages/OverviewPage';
@@ -176,6 +177,7 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={SCREENING_ADMIN_ROLES} />}>
             <Route path="screening/questions" element={<ScreeningQuestionsPage />} />
+            <Route path="screening/questionnaires" element={<ScreeningQuestionnairesPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />
