@@ -692,8 +692,8 @@ Verified component sizes after PR #112:
 - `SessionCapacityCalculationService.java`: ~122 lines
 - `SessionCapacityPlan.java`: ~423 lines
 
-Current MF-02 production Java files under backend/src/main/java/com/se2030/vaccinationportal/campaign: 185.
-Current MF-02 test Java files under backend/src/test/java/com/se2030/vaccinationportal/campaign: 120.
+- **Historical PR #112 architecture snapshot:** 185 MF-02 production Java files, 120 MF-02 test Java files.
+- **Current post-closure repository state:** 208 MF-02 production Java files (213 total tracked backend campaign files including 5 `.gitkeep` directory placeholders), 136 MF-02 test Java files under `backend/src/test/java/com/se2030/vaccinationportal/campaign/`.
 
 Verified frontend component sizes after PR #145:
 - `SessionRecurrencePanel.jsx`: ~1,670 lines (MEDIUM complexity; recurrence management and series preview-confirm)
