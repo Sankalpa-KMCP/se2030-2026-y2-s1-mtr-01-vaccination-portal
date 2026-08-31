@@ -68,6 +68,9 @@ public class SecurityConfig {
                         // Protected Current User Profile Endpoint
                         .requestMatchers("/api/v1/auth/me").authenticated()
 
+                        // Administrator-only staff account review endpoints
+                        .requestMatchers("/api/v1/admin/staff-requests/**").hasRole("ADMIN")
+
                         // Protected Screening Endpoints (prevents unauthenticated header spoofing at HTTP boundary)
                         .requestMatchers("/api/v1/screening/**").authenticated()
 
