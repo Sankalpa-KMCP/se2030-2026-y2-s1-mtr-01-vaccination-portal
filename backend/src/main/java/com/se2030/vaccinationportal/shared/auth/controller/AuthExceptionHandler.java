@@ -4,7 +4,11 @@ import com.se2030.vaccinationportal.shared.auth.dto.AuthErrorResponse;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingApprovalException;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountRejectedException;
 import com.se2030.vaccinationportal.shared.auth.exception.DuplicateEmailException;
+import com.se2030.vaccinationportal.shared.auth.exception.InvalidApprovalRoleException;
+import com.se2030.vaccinationportal.shared.auth.exception.InvalidRejectionReasonException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidRequestedRoleException;
+import com.se2030.vaccinationportal.shared.auth.exception.StaffRequestNotFoundException;
+import com.se2030.vaccinationportal.shared.auth.exception.StaffRequestNotPendingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -64,6 +68,38 @@ public class AuthExceptionHandler {
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, "INVALID_REQUESTED_ROLE", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidApprovalRoleException.class)
+    public ResponseEntity<AuthErrorResponse> handleInvalidApprovalRole(
+            InvalidApprovalRoleException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_ROLE", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidRejectionReasonException.class)
+    public ResponseEntity<AuthErrorResponse> handleInvalidRejectionReason(
+            InvalidRejectionReasonException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "INVALID_REJECTION_REASON", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(StaffRequestNotFoundException.class)
+    public ResponseEntity<AuthErrorResponse> handleStaffRequestNotFound(
+            StaffRequestNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, "STAFF_REQUEST_NOT_FOUND", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(StaffRequestNotPendingException.class)
+    public ResponseEntity<AuthErrorResponse> handleStaffRequestNotPending(
+            StaffRequestNotPendingException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, "STAFF_REQUEST_NOT_PENDING", exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(AccountPendingApprovalException.class)
