@@ -19,8 +19,14 @@ public class UserAccount {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "full_name", length = 255)
+    private String fullName;
+
     @Column(name = "email", unique = true, nullable = false, length = 255)
     private String email;
+
+    @Column(name = "phone_number", length = 32)
+    private String phoneNumber;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
@@ -28,6 +34,20 @@ public class UserAccount {
     @Enumerated(EnumType.STRING)
     @Column(name = "account_status", nullable = false, length = 32)
     private AccountStatus accountStatus;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requested_role_id")
+    private Role requestedRole;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by_user_id")
+    private UserAccount reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
 
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
@@ -111,8 +131,24 @@ public class UserAccount {
         return id;
     }
 
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = normalizeNullable(fullName);
+    }
+
     public String getEmail() {
         return email;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = normalizeNullable(phoneNumber);
     }
 
     public String getPasswordHash() {
@@ -129,6 +165,38 @@ public class UserAccount {
 
     public void setAccountStatus(AccountStatus accountStatus) {
         this.accountStatus = Objects.requireNonNull(accountStatus, "Account status must not be null");
+    }
+
+    public Role getRequestedRole() {
+        return requestedRole;
+    }
+
+    public void setRequestedRole(Role requestedRole) {
+        this.requestedRole = requestedRole;
+    }
+
+    public UserAccount getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public void setReviewedBy(UserAccount reviewedBy) {
+        this.reviewedBy = reviewedBy;
+    }
+
+    public Instant getReviewedAt() {
+        return reviewedAt;
+    }
+
+    public void setReviewedAt(Instant reviewedAt) {
+        this.reviewedAt = reviewedAt;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = normalizeNullable(rejectionReason);
     }
 
     public Instant getEmailVerifiedAt() {
@@ -157,6 +225,14 @@ public class UserAccount {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    private static String normalizeNullable(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     @Override

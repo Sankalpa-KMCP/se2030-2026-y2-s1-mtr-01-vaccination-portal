@@ -10,6 +10,10 @@ import java.util.Optional;
 @Repository
 public interface UserAccountRepository extends JpaRepository<UserAccount, Long> {
 
+    @Override
+    @EntityGraph(attributePaths = "roles")
+    Optional<UserAccount> findById(Long id);
+
     @EntityGraph(attributePaths = "roles")
     Optional<UserAccount> findByEmailIgnoreCase(String email);
 

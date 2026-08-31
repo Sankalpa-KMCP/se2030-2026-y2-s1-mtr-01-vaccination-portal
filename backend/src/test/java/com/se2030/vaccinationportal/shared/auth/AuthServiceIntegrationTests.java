@@ -150,14 +150,20 @@ class AuthServiceIntegrationTests {
     }
 
     @Test
-    @DisplayName("getCurrentUserProfile maps principal correctly")
+    @DisplayName("getCurrentUserProfile loads the current account including nullable legacy profile fields")
     void getCurrentUserProfile_validPrincipal_returnsProfile() {
-        UserPrincipal principal = UserPrincipal.fromClaims(55L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+        UserAccount account = new UserAccount("admin@portal.gov", passwordEncoder.encode("Password123!"), AccountStatus.ACTIVE);
+        account.addRole(adminRole);
+        account = userAccountRepository.saveAndFlush(account);
+        UserPrincipal principal = UserPrincipal.fromClaims(account.getId(), account.getEmail(), List.of("ROLE_ADMIN"));
         UserProfileResponse profile = authService.getCurrentUserProfile(principal);
 
         assertNotNull(profile);
-        assertEquals(55L, profile.id());
+        assertEquals(account.getId(), profile.id());
+        assertNull(profile.fullName());
+        assertNull(profile.phoneNumber());
         assertEquals("admin@portal.gov", profile.email());
+        assertEquals(AccountStatus.ACTIVE, profile.accountStatus());
         assertEquals(List.of("ROLE_ADMIN"), profile.roles());
     }
 }
