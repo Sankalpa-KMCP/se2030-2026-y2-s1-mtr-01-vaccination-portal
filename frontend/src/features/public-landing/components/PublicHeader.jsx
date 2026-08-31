@@ -21,7 +21,7 @@ export default function PublicHeader({ onLoginClick }) {
             className="lp-btn lp-btn--header"
             onClick={onLoginClick}
           >
-            Sign in
+            Login
           </button>
         </nav>
       </div>

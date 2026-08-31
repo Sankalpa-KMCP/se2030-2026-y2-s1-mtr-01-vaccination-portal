@@ -16,7 +16,7 @@ export const NETWORK_ERROR_MESSAGE = 'Unable to reach the server. Please check y
 
 const DEFAULT_ERROR_MESSAGES = {
   400: 'The request could not be completed. Please check the submitted information.',
-  401: 'Your session has expired. Please sign in again.',
+  401: 'Your session has expired. Please log in again.',
   403: PERMISSION_DENIED_MESSAGE,
   404: 'The requested resource could not be found.',
   409: 'The request conflicts with the current state of the resource.',

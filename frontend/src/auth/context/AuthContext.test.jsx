@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -24,11 +25,13 @@ function response({ body = '', status = 200, statusText = 'OK' } = {}) {
 }
 
 function AuthStateProbe() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, login, user } = useAuth();
   return (
     <div>
       <span>{isAuthenticated ? 'authenticated' : 'signed-out'}</span>
       <span>{user?.email || 'no-user'}</span>
+      <span>{user?.fullName || 'no-name'}</span>
+      <button type="button" onClick={() => login('citizen@example.com', 'Secret123!')}>Test Login</button>
     </div>
   );
 }
@@ -80,5 +83,29 @@ describe('AuthProvider unauthorized handling', () => {
       expect(screen.getByText('no-user')).toBeTruthy();
       expect(getToken()).toBeNull();
     });
+  });
+
+  it('stores the richer login profile and returns it to callers', async () => {
+    fetch.mockResolvedValueOnce(response({
+      body: JSON.stringify({
+        token: 'citizen-token',
+        user: {
+          id: 9,
+          fullName: 'Citizen User',
+          email: 'citizen@example.com',
+          phoneNumber: '+94 77 123 4567',
+          accountStatus: 'ACTIVE',
+          roles: ['ROLE_CITIZEN'],
+        },
+      }),
+    }));
+
+    render(<AuthProvider><AuthStateProbe /></AuthProvider>);
+    await screen.findByText('signed-out');
+    fireEvent.click(screen.getByRole('button', { name: 'Test Login' }));
+
+    await screen.findByText('authenticated');
+    expect(screen.getByText('Citizen User')).toBeTruthy();
+    expect(getToken()).toBe('citizen-token');
   });
 });

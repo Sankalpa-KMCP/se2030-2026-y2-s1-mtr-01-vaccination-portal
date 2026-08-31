@@ -8,6 +8,18 @@ import {
 } from 'react-router-dom';
 import { useAuth } from '../auth/context/AuthContext';
 import LoginPage from '../auth/pages/LoginPage';
+import CitizenRegistrationPage from '../auth/pages/CitizenRegistrationPage';
+import StaffRegistrationRequestPage from '../auth/pages/StaffRegistrationRequestPage';
+import CitizenDashboardPage from '../auth/pages/CitizenDashboardPage';
+import StaffDashboardPage from '../auth/pages/StaffDashboardPage';
+import AdminDashboardPage from '../auth/pages/AdminDashboardPage';
+import PendingStaffRequestsPage from '../auth/pages/PendingStaffRequestsPage';
+import {
+  ADMIN_ROLE,
+  CITIZEN_ROLE,
+  STAFF_DASHBOARD_ROLES,
+} from '../auth/constants/authRoles';
+import { getRoleHomePath } from '../auth/utils/roleRedirect';
 import LandingPage from '../features/public-landing/pages/LandingPage';
 import CampaignManagementPage from '../features/campaign-management/pages/CampaignManagementPage';
 import CenterOperationsPage from '../features/center-operations/pages/CenterOperationsPage';
@@ -17,7 +29,6 @@ import ScreeningQuestionsPage from '../features/screening/pages/ScreeningQuestio
 import ScreeningQuestionnairesPage from '../features/screening/pages/ScreeningQuestionnairesPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
-import OverviewPage from './pages/OverviewPage';
 import NotAuthorizedPage from './pages/NotAuthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -45,6 +56,10 @@ const ANALYTICS_VIEW_ROLES = [
 ];
 
 const SCREENING_ADMIN_ROLES = ['ROLE_ADMIN'];
+
+function RoleHomeRedirect({ user }) {
+  return <Navigate to={getRoleHomePath(user)} replace />;
+}
 
 function InitializingPage() {
   return (
@@ -94,6 +109,7 @@ export default function PortalRoutes() {
     initializationError,
     retryBootstrap,
     logout,
+    user,
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -140,7 +156,7 @@ export default function PortalRoutes() {
         path="/"
         element={
           isAuthenticated
-            ? <Navigate to="/app/overview" replace />
+            ? <RoleHomeRedirect user={user} />
             : <LandingPage onLoginClick={() => navigate('/login')} />
         }
       />
@@ -148,16 +164,45 @@ export default function PortalRoutes() {
         path="/login"
         element={
           isAuthenticated
-            ? <Navigate to="/app/overview" replace />
-            : <LoginPage onBackToLanding={() => navigate('/')} />
+            ? <RoleHomeRedirect user={user} />
+            : <LoginPage audience="generic" onBackToLanding={() => navigate('/')} />
         }
+      />
+      <Route
+        path="/login/citizen"
+        element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <LoginPage audience="citizen" onBackToLanding={() => navigate('/')} />}
+      />
+      <Route
+        path="/login/staff"
+        element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <LoginPage audience="staff" onBackToLanding={() => navigate('/')} />}
+      />
+      <Route
+        path="/register/citizen"
+        element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <CitizenRegistrationPage />}
+      />
+      <Route
+        path="/register/staff"
+        element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <StaffRegistrationRequestPage />}
       />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/app" element={<AuthenticatedLayout onLogout={handleVoluntaryLogout} />}>
-          <Route index element={<Navigate to="overview" replace />} />
-          <Route path="overview" element={<OverviewPage />} />
+          <Route index element={<RoleHomeRedirect user={user} />} />
+          <Route path="overview" element={<RoleHomeRedirect user={user} />} />
           <Route path="not-authorized" element={<NotAuthorizedPage />} />
+
+          <Route element={<ProtectedRoute allowedRoles={[CITIZEN_ROLE]} />}>
+            <Route path="citizen" element={<CitizenDashboardPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={STAFF_DASHBOARD_ROLES} />}>
+            <Route path="staff" element={<StaffDashboardPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={[ADMIN_ROLE]} />}>
+            <Route path="admin" element={<AdminDashboardPage />} />
+            <Route path="admin/staff-requests" element={<PendingStaffRequestsPage />} />
+          </Route>
 
           <Route element={<ProtectedRoute allowedRoles={CAMPAIGN_VIEW_ROLES} />}>
             <Route path="campaigns" element={<CampaignManagementPage />} />

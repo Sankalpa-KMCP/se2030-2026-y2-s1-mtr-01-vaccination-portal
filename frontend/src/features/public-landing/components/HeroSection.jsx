@@ -25,7 +25,7 @@ export default function HeroSection({ onLoginClick }) {
               className="lp-btn lp-btn--primary"
               onClick={onLoginClick}
             >
-              Sign in
+              Login
             </button>
             <a className="lp-btn lp-btn--secondary" href="#capabilities">
               Explore capabilities

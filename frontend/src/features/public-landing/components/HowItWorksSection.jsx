@@ -4,7 +4,7 @@ const STAGES = [
   {
     stageNum: 'STAGE 01',
     phase: 'Identity & Access',
-    title: 'Sign in securely',
+    title: 'Log in securely',
     desc: 'Each team member signs in through an authenticated account associated with their assigned operational role.',
     points: ['Role-scoped permissions', 'Authenticated session access'],
   },

@@ -26,7 +26,7 @@ export default function PublicFooter({ onLoginClick }) {
               className="lp-footer__btn"
               onClick={onLoginClick}
             >
-              Sign in
+              Login
             </button>
           </nav>
         </div>

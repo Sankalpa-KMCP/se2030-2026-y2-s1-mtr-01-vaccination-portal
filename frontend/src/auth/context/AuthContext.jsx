@@ -100,7 +100,7 @@ export function AuthProvider({ children }) {
         setUser(data.user);
         setIsAuthenticated(true);
         setInitializationError(null);
-        return { success: true };
+        return { success: true, user: data.user };
       } else {
         throw new Error('Authentication response was incomplete');
       }

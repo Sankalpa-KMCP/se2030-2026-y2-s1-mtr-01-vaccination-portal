@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/context/AuthContext';
+import { ADMIN_ROLE, getRoleLabel } from '../../auth/constants/authRoles';
 import {
   canViewAnalytics,
   canViewCampaigns,
@@ -8,20 +9,7 @@ import {
   canViewSessions,
   hasRole,
 } from '../../auth/utils/roleUtils';
-
-const ROLE_LABELS = {
-  ROLE_ADMIN: 'Administrator',
-  ROLE_CENTER_MANAGER: 'Center Manager',
-  ROLE_HEALTHCARE_OFFICER: 'Healthcare Officer',
-  ROLE_CAMPAIGN_OFFICER: 'Campaign Officer',
-  ROLE_INVENTORY_OFFICER: 'Inventory Officer',
-  ROLE_CITIZEN: 'Citizen',
-  ROLE_MANAGEMENT_USER: 'Management User',
-};
-
-function formatRole(roleCode) {
-  return ROLE_LABELS[roleCode] || roleCode.replace(/^ROLE_/, '').replace(/_/g, ' ');
-}
+import { getRoleHomePath } from '../../auth/utils/roleRedirect';
 
 function navigationClassName({ isActive }) {
   return `btn btn-sm ${isActive ? 'btn-light text-primary fw-bold' : 'btn-outline-light border-0'}`;
@@ -38,7 +26,8 @@ export default function Header({ onLogout }) {
   const showCenters = canViewCenters(user);
   const showSessions = canViewSessions(user);
   const showAnalytics = canViewAnalytics(user);
-  const showScreeningQuestions = hasRole(user, 'ROLE_ADMIN');
+  const showAdminNavigation = hasRole(user, ADMIN_ROLE);
+  const dashboardPath = getRoleHomePath(user);
 
   return (
     <header>
@@ -51,8 +40,8 @@ export default function Header({ onLogout }) {
           <div className="d-flex align-items-center flex-grow-1">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0 flex-row gap-2">
               <li className="nav-item">
-                <NavLink className={navigationClassName} to="/app/overview">
-                  Overview
+                <NavLink className={navigationClassName} to={dashboardPath}>
+                  Dashboard
                 </NavLink>
               </li>
 
@@ -88,8 +77,13 @@ export default function Header({ onLogout }) {
                 </li>
               )}
 
-              {showScreeningQuestions && (
+              {showAdminNavigation && (
                 <>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/admin/staff-requests">
+                      Staff Requests
+                    </NavLink>
+                  </li>
                   <li className="nav-item">
                     <NavLink className={navigationClassName} to="/app/screening/questions">
                       Screening Questions
@@ -107,12 +101,12 @@ export default function Header({ onLogout }) {
             {user && (
               <div className="d-flex align-items-center gap-2 ms-auto">
                 <div className="text-end d-none d-sm-block text-white me-2">
-                  <div className="small fw-semibold">{user.email}</div>
+                  <div className="small fw-semibold">{user.fullName || user.email}</div>
                   {user.roles && user.roles.length > 0 && (
                     <div className="d-flex gap-1 justify-content-end">
                       {user.roles.map((role) => (
                         <span key={role} className="badge bg-light text-primary py-0 px-1" style={{ fontSize: '0.7rem' }}>
-                          {formatRole(role)}
+                          {getRoleLabel(role)}
                         </span>
                       ))}
                     </div>
