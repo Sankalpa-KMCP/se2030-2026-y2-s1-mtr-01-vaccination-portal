@@ -1,9 +1,12 @@
 package com.se2030.vaccinationportal.vaccination.controller;
 
 import com.se2030.vaccinationportal.vaccination.dto.VaccinationApiErrorResponse;
+import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
@@ -64,9 +67,33 @@ public class VaccinationExceptionHandler {
         return response(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
     }
 
+    @ExceptionHandler(VaccinationAppointmentNotFoundException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleAppointmentNotFound(
+            VaccinationAppointmentNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
     @ExceptionHandler(DuplicateVaccinationDraftException.class)
     public ResponseEntity<VaccinationApiErrorResponse> handleDuplicate(
             DuplicateVaccinationDraftException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(AppointmentNotCheckedInException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleAppointmentNotCheckedIn(
+            AppointmentNotCheckedInException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(VaccinationRecordAlreadyExistsException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleRecordAlreadyExists(
+            VaccinationRecordAlreadyExistsException ex,
             HttpServletRequest request
     ) {
         return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);

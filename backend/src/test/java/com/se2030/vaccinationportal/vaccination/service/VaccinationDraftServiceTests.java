@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,9 +14,11 @@ import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationDraftReques
 import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationDraftRepository;
+import com.se2030.vaccinationportal.vaccination.validation.VaccinationDraftIntegrationValidator;
 import com.se2030.vaccinationportal.vaccination.validation.VaccinationDraftValidator;
 import java.time.Clock;
 import java.time.Instant;
@@ -37,6 +40,9 @@ class VaccinationDraftServiceTests {
     @Mock
     private VaccinationDraftRepository draftRepository;
 
+    @Mock
+    private VaccinationDraftIntegrationValidator integrationValidator;
+
     private VaccinationDraftService service;
 
     @BeforeEach
@@ -44,7 +50,7 @@ class VaccinationDraftServiceTests {
         VaccinationDraftValidator validator = new VaccinationDraftValidator(
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
-        service = new VaccinationDraftService(draftRepository, validator);
+        service = new VaccinationDraftService(draftRepository, validator, integrationValidator);
     }
 
     @Test
@@ -59,6 +65,7 @@ class VaccinationDraftServiceTests {
         assertEquals(101L, created.getAppointmentId());
         assertEquals(2, created.getDoseNumber());
         assertFalse(created.isPhysicalAdministrationConfirmed());
+        verify(integrationValidator).validateAppointment(101L);
         verify(draftRepository).saveAndFlush(created);
     }
 
@@ -130,6 +137,21 @@ class VaccinationDraftServiceTests {
         assertEquals(3, updated.getDoseNumber());
         assertEquals("Updated notes", updated.getAuthorizedNotes());
         assertEquals(true, updated.isPhysicalAdministrationConfirmed());
+        verify(integrationValidator).validateAppointment(101L);
+    }
+
+    @Test
+    void createDraft_failedIntegrationValidationDoesNotPersist() {
+        when(draftRepository.existsByAppointmentId(101L)).thenReturn(false);
+        doThrow(new AppointmentNotCheckedInException("Appointment is not checked in"))
+                .when(integrationValidator).validateAppointment(101L);
+
+        assertThrows(
+                AppointmentNotCheckedInException.class,
+                () -> service.createDraft(createRequest(101L))
+        );
+
+        verify(draftRepository, never()).saveAndFlush(any());
     }
 
     @Test

@@ -17,8 +17,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
 import com.se2030.vaccinationportal.vaccination.service.VaccinationDraftService;
 import java.time.Instant;
@@ -107,6 +110,47 @@ class VaccinationDraftControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"appointmentId\":101}"))
                 .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("already exists")));
+    }
+
+    @Test
+    void createDraft_unknownAppointment_returns404() throws Exception {
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class)))
+                .thenThrow(new VaccinationAppointmentNotFoundException("Appointment not found: 101"));
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"appointmentId\":101}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.message", containsString("not found")));
+    }
+
+    @Test
+    void createDraft_appointmentNotCheckedIn_returns409() throws Exception {
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class)))
+                .thenThrow(new AppointmentNotCheckedInException("Appointment is not checked in: 101"));
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"appointmentId\":101}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.message", containsString("not checked in")));
+    }
+
+    @Test
+    void createDraft_existingVaccinationRecord_returns409() throws Exception {
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class)))
+                .thenThrow(new VaccinationRecordAlreadyExistsException(
+                        "A finalized vaccination record already exists for appointment: 101"
+                ));
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"appointmentId\":101}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
                 .andExpect(jsonPath("$.message", containsString("already exists")));
     }
 
