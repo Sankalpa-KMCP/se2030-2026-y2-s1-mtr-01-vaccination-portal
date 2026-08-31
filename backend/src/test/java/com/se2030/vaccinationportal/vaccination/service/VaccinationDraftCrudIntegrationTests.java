@@ -3,7 +3,10 @@ package com.se2030.vaccinationportal.vaccination.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
+import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationPort;
+import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationSnapshot;
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
@@ -11,10 +14,12 @@ import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRep
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationDraftRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -34,8 +39,13 @@ class VaccinationDraftCrudIntegrationTests {
     @Autowired
     private DigitalCertificateRepository certificateRepository;
 
+    @MockitoBean
+    private AppointmentValidationPort appointmentValidationPort;
+
     @Test
     void draftCrudDoesNotCreatePermanentRecordsOrCertificates() {
+        when(appointmentValidationPort.findByAppointmentId(99001L))
+                .thenReturn(Optional.of(new AppointmentValidationSnapshot(99001L, true)));
         long recordCountBefore = recordRepository.count();
         long certificateCountBefore = certificateRepository.count();
 

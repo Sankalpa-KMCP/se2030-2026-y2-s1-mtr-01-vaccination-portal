@@ -8,6 +8,7 @@ import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFou
 import com.se2030.vaccinationportal.vaccination.mapper.VaccinationDraftMapper;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationDraftRepository;
+import com.se2030.vaccinationportal.vaccination.validation.VaccinationDraftIntegrationValidator;
 import com.se2030.vaccinationportal.vaccination.validation.VaccinationDraftValidator;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,13 +25,16 @@ public class VaccinationDraftService {
 
     private final VaccinationDraftRepository draftRepository;
     private final VaccinationDraftValidator validator;
+    private final VaccinationDraftIntegrationValidator integrationValidator;
 
     public VaccinationDraftService(
             VaccinationDraftRepository draftRepository,
-            VaccinationDraftValidator validator
+            VaccinationDraftValidator validator,
+            VaccinationDraftIntegrationValidator integrationValidator
     ) {
         this.draftRepository = draftRepository;
         this.validator = validator;
+        this.integrationValidator = integrationValidator;
     }
 
     public VaccinationDraft createDraft(CreateVaccinationDraftRequest request) {
@@ -43,6 +47,7 @@ public class VaccinationDraftService {
 
         VaccinationDraft draft = VaccinationDraftMapper.fromCreateRequest(request);
         validator.validateDraft(draft);
+        integrationValidator.validateAppointment(draft.getAppointmentId());
 
         try {
             return draftRepository.saveAndFlush(draft);
@@ -72,6 +77,7 @@ public class VaccinationDraftService {
 
         VaccinationDraftMapper.applyUpdate(request, draft);
         validator.validateDraft(draft);
+        integrationValidator.validateAppointment(draft.getAppointmentId());
         return draftRepository.save(draft);
     }
 
