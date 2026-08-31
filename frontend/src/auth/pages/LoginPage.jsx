@@ -1,8 +1,33 @@
 import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getRoleHomePath } from '../utils/roleRedirect';
 
-export default function LoginPage({ onBackToLanding }) {
+const LOGIN_CONTENT = {
+  citizen: {
+    heading: 'Citizen Login',
+    description: 'Log in with your citizen account.',
+  },
+  staff: {
+    heading: 'Staff Login',
+    description: 'Log in with your approved staff or administrator account.',
+  },
+  generic: {
+    heading: 'Login to Vaccination Portal',
+    description: 'Use your citizen or authorized staff account.',
+  },
+};
+
+export default function LoginPage({ audience = 'generic', onBackToLanding }) {
   const { login, loginError, clearLoginError } = useAuth();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const routeAudience = pathname === '/login/citizen'
+    ? 'citizen'
+    : pathname === '/login/staff'
+      ? 'staff'
+      : audience;
+  const content = LOGIN_CONTENT[routeAudience] || LOGIN_CONTENT.generic;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +70,7 @@ export default function LoginPage({ onBackToLanding }) {
       const result = await login(trimmedEmail, password);
       if (result.success) {
         setPassword('');
+        navigate(getRoleHomePath(result.user), { replace: true });
       }
     } finally {
       setIsSubmitting(false);
@@ -71,8 +97,8 @@ export default function LoginPage({ onBackToLanding }) {
           <div className="card shadow-sm border-0">
             <div className="card-body p-4 p-md-5">
               <div className="text-center mb-4">
-                <h1 className="h3 text-primary fw-bold mb-2">Vaccination Portal</h1>
-                <p className="text-muted small">Sign in to access your operational account</p>
+                <h1 className="h3 text-primary fw-bold mb-2">{content.heading}</h1>
+                <p className="text-muted small">{content.description}</p>
               </div>
 
               {activeError && (
@@ -137,19 +163,25 @@ export default function LoginPage({ onBackToLanding }) {
                     {isSubmitting ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
-                        Signing in...
+                        Logging in...
                       </>
                     ) : (
-                      'Sign In'
+                      'Login'
                     )}
                   </button>
                 </div>
               </form>
 
               <div className="text-center mt-3">
-                <small className="text-muted">
-                  Authorized healthcare & operations personnel only.
-                </small>
+                {routeAudience === 'citizen' && (
+                  <small className="text-muted">Need a citizen account? <Link to="/register/citizen">Create Citizen Account</Link></small>
+                )}
+                {routeAudience === 'staff' && (
+                  <small className="text-muted">Need staff access? <Link to="/register/staff">Request a Staff Account</Link></small>
+                )}
+                {routeAudience === 'generic' && (
+                  <small className="text-muted">Choose citizen or staff access from the portal home page.</small>
+                )}
               </div>
             </div>
           </div>

@@ -14,7 +14,7 @@ export default function FinalCtaSection({ onLoginClick }) {
               Access the portal
             </h2>
             <p className="lp-cta-panel__text">
-              Sign in with your authorized account to manage campaigns, centers, and vaccination sessions.
+              Log in with your authorized account to manage campaigns, centers, and vaccination sessions.
             </p>
             <span className="lp-cta-panel__note">
               Access is based on your assigned portal role.
@@ -27,7 +27,7 @@ export default function FinalCtaSection({ onLoginClick }) {
               className="lp-btn lp-btn--primary lp-cta-panel__btn"
               onClick={onLoginClick}
             >
-              Sign in to portal
+              Login to portal
             </button>
             <a className="lp-cta-panel__link" href="#capabilities">
               Review capabilities
