@@ -1,8 +1,12 @@
 package com.se2030.vaccinationportal.vaccination.service;
 
+import com.se2030.vaccinationportal.vaccination.dto.CertificateVerificationResponse;
+import com.se2030.vaccinationportal.vaccination.exception.CertificateVerificationNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.DigitalCertificateNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateDigitalCertificateException;
+import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateVerificationTokenException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
+import com.se2030.vaccinationportal.vaccination.mapper.DigitalCertificateMapper;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
@@ -75,6 +79,20 @@ public class DigitalCertificateService {
                 .orElseThrow(() -> new DigitalCertificateNotFoundException(
                         "Digital certificate not found with reference: " + certificateReference
                 ));
+    }
+
+    @Transactional(readOnly = true)
+    public CertificateVerificationResponse verifyCertificate(String verificationToken) {
+        if (verificationToken == null || verificationToken.isBlank()) {
+            throw new InvalidCertificateVerificationTokenException("Certificate verification token is required");
+        }
+
+        String normalizedToken = verificationToken.trim();
+        DigitalCertificate certificate = certificateRepository.findByVerificationToken(normalizedToken)
+                .orElseThrow(() -> new CertificateVerificationNotFoundException(
+                        "No digital certificate was found for the supplied verification token"
+                ));
+        return DigitalCertificateMapper.toVerificationResponse(certificate);
     }
 
     private String generateUniqueCertificateReference() {

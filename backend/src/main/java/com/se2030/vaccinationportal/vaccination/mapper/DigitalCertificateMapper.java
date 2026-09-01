@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.vaccination.mapper;
 
+import com.se2030.vaccinationportal.vaccination.dto.CertificateVerificationResponse;
 import com.se2030.vaccinationportal.vaccination.dto.DigitalCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 
 /**
@@ -21,6 +23,19 @@ public final class DigitalCertificateMapper {
                 certificate.getCertificateReference(),
                 certificate.getIssuedAt(),
                 certificate.getStatus()
+        );
+    }
+
+    public static CertificateVerificationResponse toVerificationResponse(DigitalCertificate certificate) {
+        if (certificate == null) {
+            return null;
+        }
+        return new CertificateVerificationResponse(
+                certificate.getCertificateReference(),
+                certificate.getVaccinationRecordId(),
+                certificate.getIssuedAt(),
+                certificate.getStatus(),
+                certificate.getStatus() == CertificateStatus.VALID
         );
     }
 }

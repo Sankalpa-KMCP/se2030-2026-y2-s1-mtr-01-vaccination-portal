@@ -4,14 +4,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.se2030.vaccinationportal.vaccination.dto.CertificateVerificationResponse;
+import com.se2030.vaccinationportal.vaccination.exception.CertificateVerificationNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.DigitalCertificateNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateDigitalCertificateException;
+import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateVerificationTokenException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
@@ -28,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class DigitalCertificateServiceTests {
@@ -137,6 +142,65 @@ class DigitalCertificateServiceTests {
                 DigitalCertificateNotFoundException.class,
                 () -> service.getCertificateByReference("CERT-UNKNOWN")
         );
+    }
+
+    @Test
+    void validVerificationTokenReturnsValidResponseWithoutMutation() {
+        DigitalCertificate certificate = certificate();
+        when(certificateRepository.findByVerificationToken("secure-token"))
+                .thenReturn(Optional.of(certificate));
+
+        CertificateVerificationResponse response = service.verifyCertificate(" secure-token ");
+
+        assertEquals("CERT-EXISTING", response.certificateReference());
+        assertEquals(RECORD_ID, response.vaccinationRecordId());
+        assertEquals(NOW, response.issuedAt());
+        assertEquals(CertificateStatus.VALID, response.status());
+        assertTrue(response.valid());
+        assertEquals(CertificateStatus.VALID, certificate.getStatus());
+        verify(certificateRepository, never()).save(any(DigitalCertificate.class));
+        verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
+    }
+
+    @Test
+    void revokedCertificateReturnsInvalidResponseWithoutChangingStatus() {
+        DigitalCertificate certificate = certificate();
+        ReflectionTestUtils.setField(certificate, "status", CertificateStatus.REVOKED);
+        when(certificateRepository.findByVerificationToken("revoked-token"))
+                .thenReturn(Optional.of(certificate));
+
+        CertificateVerificationResponse response = service.verifyCertificate("revoked-token");
+
+        assertFalse(response.valid());
+        assertEquals(CertificateStatus.REVOKED, response.status());
+        assertEquals(CertificateStatus.REVOKED, certificate.getStatus());
+        verify(certificateRepository, never()).save(any(DigitalCertificate.class));
+        verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
+    }
+
+    @Test
+    void unknownVerificationTokenIsRejected() {
+        when(certificateRepository.findByVerificationToken("unknown-token"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                CertificateVerificationNotFoundException.class,
+                () -> service.verifyCertificate("unknown-token")
+        );
+    }
+
+    @Test
+    void blankOrMissingVerificationTokenIsRejectedBeforeRepositoryAccess() {
+        assertThrows(
+                InvalidCertificateVerificationTokenException.class,
+                () -> service.verifyCertificate("   ")
+        );
+        assertThrows(
+                InvalidCertificateVerificationTokenException.class,
+                () -> service.verifyCertificate(null)
+        );
+
+        verifyNoInteractions(certificateRepository);
     }
 
     private DigitalCertificate certificate() {
