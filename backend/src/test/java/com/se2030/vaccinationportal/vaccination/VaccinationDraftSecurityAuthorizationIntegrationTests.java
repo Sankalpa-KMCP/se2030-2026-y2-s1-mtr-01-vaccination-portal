@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.se2030.vaccinationportal.VaccinationPortalApplication;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Spring Security integration tests for {@code /api/v1/vaccination/drafts} endpoints (MF-05).
  * Tests method security and HTTP boundary enforcement for allowed and denied roles.
  */
-@SpringBootTest
+@SpringBootTest(classes = VaccinationPortalApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
