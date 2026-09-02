@@ -317,4 +317,25 @@ describe('shared routing and role guards', () => {
     view.rerender(<MemoryRouter key="requests-denied" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
   });
+
+  it('keeps all three public pages accessible without authentication', () => {
+    setAuth({ isAuthenticated: false });
+
+    render(<MemoryRouter key="home" initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /vaccination care, coordinated for your community/i })).toBeTruthy();
+    cleanup();
+
+    render(<MemoryRouter key="how" initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /one system, two journeys/i })).toBeTruthy();
+    cleanup();
+
+    render(<MemoryRouter key="about" initialEntries={['/about']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /a system built on responsibility/i })).toBeTruthy();
+  });
+
+  it('redirects authenticated users away from public pages to their role home', () => {
+    setAuth({ roles: ['ROLE_CITIZEN'] });
+    render(<MemoryRouter initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByText('Citizen Dashboard')).toBeTruthy();
+  });
 });

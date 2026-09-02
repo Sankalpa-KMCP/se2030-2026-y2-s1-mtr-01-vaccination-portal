@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import HeroArtwork from './HeroArtwork';
 
 const HERO_ASSURANCES = [
@@ -63,9 +64,9 @@ export default function HeroSection({ onLoginClick }) {
                 Sign in
                 <span className="lp-btn__arrow" aria-hidden="true">&rarr;</span>
               </button>
-              <a className="lp-btn lp-btn--secondary" href="#how-it-works">
+              <Link to="/how-it-works" className="lp-btn lp-btn--secondary">
                 How it works
-              </a>
+              </Link>
             </div>
 
             <div className="lp-hero__meta">

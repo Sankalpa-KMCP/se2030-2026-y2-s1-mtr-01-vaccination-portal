@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link, NavLink } from 'react-router-dom';
 
 function BrandGlyph() {
   return (
@@ -36,6 +37,12 @@ function BannerEmblem() {
   );
 }
 
+const NAV_ITEMS = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/how-it-works', label: 'How it works', end: false },
+  { to: '/about', label: 'About', end: false },
+];
+
 export default function PublicHeader({ onLoginClick }) {
   return (
     <>
@@ -44,19 +51,25 @@ export default function PublicHeader({ onLoginClick }) {
       </div>
       <header className="lp-header">
         <div className="lp-container lp-header__inner">
-          <div className="lp-header__brand-group">
+          <Link to="/" className="lp-header__brand-group" aria-label="Vaccination Portal — home">
             <BrandGlyph />
             <span className="lp-header__brand">Vaccination Portal</span>
             <span className="lp-header__badge">Public Health Service</span>
-          </div>
+          </Link>
 
           <nav className="lp-header__nav" aria-label="Main navigation">
-            <a className="lp-header__link" href="#capabilities">
-              What we do
-            </a>
-            <a className="lp-header__link" href="#how-it-works">
-              How it works
-            </a>
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `lp-header__link${isActive ? ' lp-is-active' : ''}`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
             <button
               type="button"
               className="lp-btn lp-btn--header"
