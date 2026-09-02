@@ -257,10 +257,10 @@ describe('shared routing and role guards', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Create Citizen Account' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Citizen Login' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Request Staff Account' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Staff Login' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /create citizen account/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /citizen login/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /request staff account/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /staff login/i })).toBeTruthy();
   });
 
   it('keeps the generic, citizen, and staff login routes registered', () => {
