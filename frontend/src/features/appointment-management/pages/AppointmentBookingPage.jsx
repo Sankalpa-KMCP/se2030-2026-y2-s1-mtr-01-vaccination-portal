@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import AvailabilitySearch from '../components/AvailabilitySearch';
 import { bookAppointment } from '../api/appointmentApi';
-import { useAuth } from '../../../../auth/context/AuthContext';
+import { useAuth } from '../../../auth/context/AuthContext';
 
 /**
  * Appointment Booking Page (US-03).

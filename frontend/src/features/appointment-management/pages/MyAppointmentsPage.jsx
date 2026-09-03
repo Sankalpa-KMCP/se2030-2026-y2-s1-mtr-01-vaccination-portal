@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AppointmentCard from '../components/AppointmentCard';
 import RescheduleDialog from '../components/RescheduleDialog';
 import { getMyAppointments, cancelAppointment } from '../api/appointmentApi';
-import { useAuth } from '../../../../auth/context/AuthContext';
+import { useAuth } from '../../../auth/context/AuthContext';
 
 /**
  * Citizen My Appointments Page (US-03).

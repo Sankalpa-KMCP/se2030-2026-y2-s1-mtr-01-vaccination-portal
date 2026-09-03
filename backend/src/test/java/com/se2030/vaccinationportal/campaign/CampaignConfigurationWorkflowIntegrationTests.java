@@ -120,10 +120,10 @@ class CampaignConfigurationWorkflowIntegrationTests {
                 "National rollout for adult population",
                 vaccineType.getId(),
                 targetGroup.getId(),
-                LocalDate.of(2026, 9, 1),
-                LocalDate.of(2026, 12, 31),
-                Instant.parse("2026-08-15T00:00:00Z"),
-                Instant.parse("2026-12-30T23:59:59Z")
+                LocalDate.of(2026, 12, 1),
+                LocalDate.of(2027, 3, 31),
+                Instant.parse("2026-11-15T00:00:00Z"),
+                Instant.parse("2027-03-30T23:59:59Z")
         );
         Long campaignId = campaign.getId();
         assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.DRAFT);
@@ -141,7 +141,7 @@ class CampaignConfigurationWorkflowIntegrationTests {
                 28,
                 false,
                 15,
-                LocalDate.of(2026, 9, 1)
+                LocalDate.of(2026, 12, 1)
         );
         assertThat(doseProg.getVersionNumber()).isEqualTo(1);
 
@@ -149,7 +149,7 @@ class CampaignConfigurationWorkflowIntegrationTests {
         CampaignQuestionnaireAssignment questAssign = questionnaireAssignmentService.assignQuestionnaireVersion(
                 campaignId,
                 501L,
-                LocalDate.of(2026, 9, 1)
+                LocalDate.of(2026, 12, 1)
         );
         assertThat(questAssign.getQuestionnaireVersionId()).isEqualTo(501L);
 
@@ -157,8 +157,8 @@ class CampaignConfigurationWorkflowIntegrationTests {
         CampaignCenterAssignment centerAssign = centerAssignmentService.createAssignment(
                 campaignId,
                 center.getId(),
-                LocalDate.of(2026, 9, 1),
-                LocalDate.of(2026, 12, 31)
+                LocalDate.of(2026, 12, 1),
+                LocalDate.of(2027, 3, 31)
         );
         assertThat(centerAssign.getCenter().getId()).isEqualTo(center.getId());
 
