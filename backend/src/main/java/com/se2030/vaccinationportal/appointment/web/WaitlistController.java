@@ -6,12 +6,14 @@ import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.appointment.service.WaitlistJoinService;
+import com.se2030.vaccinationportal.appointment.service.WaitlistLeaveService;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,18 +21,28 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST Controller exposing waitlist join and citizen waitlist status inspection endpoints.
+ * REST Controller exposing waitlist join, leave, and citizen waitlist status inspection endpoints (US-05).
  */
 @RestController
 @RequestMapping("/api/v1/waitlist")
 public class WaitlistController {
 
     private final WaitlistJoinService joinService;
+    private final WaitlistLeaveService leaveService;
     private final WaitlistRepository waitlistRepository;
 
-    @Autowired
     public WaitlistController(WaitlistJoinService joinService, WaitlistRepository waitlistRepository) {
+        this(joinService, null, waitlistRepository);
+    }
+
+    @Autowired
+    public WaitlistController(
+            WaitlistJoinService joinService,
+            @Autowired(required = false) WaitlistLeaveService leaveService,
+            WaitlistRepository waitlistRepository
+    ) {
         this.joinService = joinService;
+        this.leaveService = leaveService;
         this.waitlistRepository = waitlistRepository;
     }
 
@@ -45,11 +57,31 @@ public class WaitlistController {
         return ResponseEntity.status(HttpStatus.CREATED).body(WaitlistEntryResponse.fromEntity(entry));
     }
 
+    @PostMapping("/{id}/leave")
+    public ResponseEntity<WaitlistEntryResponse> leaveWaitlist(
+            @PathVariable("id") Long id,
+            @RequestParam("citizenId") Long citizenId
+    ) {
+        if (leaveService == null) {
+            throw new IllegalStateException("WaitlistLeaveService is not available");
+        }
+        WaitlistEntry entry = leaveService.leaveWaitlist(id, citizenId);
+        return ResponseEntity.ok(WaitlistEntryResponse.fromEntity(entry));
+    }
+
     @GetMapping("/status")
     public ResponseEntity<WaitlistEntryResponse> getWaitlistStatus(
             @RequestParam("citizenId") Long citizenId,
             @RequestParam("campaignId") Long campaignId
     ) {
+        if (leaveService != null) {
+            return leaveService.getWaitlistStatus(citizenId, campaignId)
+                    .map(entry -> {
+                        Integer position = leaveService.getQueuePosition(entry);
+                        return ResponseEntity.ok(WaitlistEntryResponse.fromEntity(entry, position));
+                    })
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        }
         return waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(citizenId, campaignId, WaitlistStatus.WAITING)
                 .map(entry -> ResponseEntity.ok(WaitlistEntryResponse.fromEntity(entry)))
                 .orElseGet(() -> ResponseEntity.notFound().build());

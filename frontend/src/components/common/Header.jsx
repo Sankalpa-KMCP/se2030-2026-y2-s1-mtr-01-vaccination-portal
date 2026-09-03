@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../auth/context/AuthContext';
-import { ADMIN_ROLE, getRoleLabel } from '../../auth/constants/authRoles';
+import { ADMIN_ROLE, CITIZEN_ROLE, getRoleLabel } from '../../auth/constants/authRoles';
 import {
   canViewAnalytics,
   canViewCampaigns,
@@ -27,6 +27,7 @@ export default function Header({ onLogout }) {
   const showSessions = canViewSessions(user);
   const showAnalytics = canViewAnalytics(user);
   const showAdminNavigation = hasRole(user, ADMIN_ROLE);
+  const showCitizenNavigation = hasRole(user, CITIZEN_ROLE);
   const dashboardPath = getRoleHomePath(user);
 
   return (
@@ -44,6 +45,21 @@ export default function Header({ onLogout }) {
                   Dashboard
                 </NavLink>
               </li>
+
+              {showCitizenNavigation && (
+                <>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/appointments/book">
+                      Book Appointment
+                    </NavLink>
+                  </li>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/appointments/mine">
+                      My Appointments
+                    </NavLink>
+                  </li>
+                </>
+              )}
 
               {showCampaigns && (
                 <li className="nav-item">
