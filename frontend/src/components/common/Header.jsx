@@ -58,6 +58,11 @@ export default function Header({ onLogout }) {
                       My Appointments
                     </NavLink>
                   </li>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/appointments/waitlist">
+                      Waitlist
+                    </NavLink>
+                  </li>
                 </>
               )}
 

@@ -31,6 +31,7 @@ import ScreeningQuestionsPage from '../features/screening/pages/ScreeningQuestio
 import ScreeningQuestionnairesPage from '../features/screening/pages/ScreeningQuestionnairesPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
+import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
 import NotAuthorizedPage from './pages/NotAuthorizedPage';
@@ -215,6 +216,7 @@ export default function PortalRoutes() {
             <Route path="citizen" element={<CitizenDashboardPage />} />
             <Route path="appointments/book" element={<AppointmentBookingPage />} />
             <Route path="appointments/mine" element={<MyAppointmentsPage />} />
+            <Route path="appointments/waitlist" element={<WaitlistPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={STAFF_DASHBOARD_ROLES} />}>
