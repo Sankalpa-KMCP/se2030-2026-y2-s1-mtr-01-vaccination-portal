@@ -29,6 +29,8 @@ import SessionsPage from '../features/session-management/pages/SessionsPage';
 import OperationalAnalyticsView from '../features/analytics/components/OperationalAnalyticsView';
 import ScreeningQuestionsPage from '../features/screening/pages/ScreeningQuestionsPage';
 import ScreeningQuestionnairesPage from '../features/screening/pages/ScreeningQuestionnairesPage';
+import CitizenScreeningCampaignsPage from '../features/screening/pages/CitizenScreeningCampaignsPage';
+import CitizenScreeningPage from '../features/screening/pages/CitizenScreeningPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
@@ -221,6 +223,8 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={[CITIZEN_ROLE]} />}>
             <Route path="citizen" element={<CitizenDashboardPage />} />
+            <Route path="screening" element={<CitizenScreeningCampaignsPage />} />
+            <Route path="screening/campaigns/:campaignId" element={<CitizenScreeningPage />} />
             <Route path="appointments/book" element={<AppointmentBookingPage />} />
             <Route path="appointments/mine" element={<MyAppointmentsPage />} />
             <Route path="appointments/waitlist" element={<WaitlistPage />} />

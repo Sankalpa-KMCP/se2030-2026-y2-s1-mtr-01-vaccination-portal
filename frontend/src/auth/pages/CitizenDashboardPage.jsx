@@ -4,7 +4,7 @@ import DashboardProfileCard from '../components/DashboardProfileCard';
 import DashboardServiceCard from '../components/DashboardServiceCard';
 
 const CITIZEN_SERVICES = [
-  ['Pre-Vaccination Screening', 'Complete screening before eligible appointments become available.'],
+  ['Pre-Vaccination Screening', 'Complete screening before eligible appointments become available.', '/app/screening'],
   ['My Eligibility', 'Review your vaccination eligibility status.'],
   ['My Appointments', 'View and manage your vaccination appointments.'],
   ['Screening History', 'Review previously submitted screening information.'],
@@ -38,8 +38,8 @@ export default function CitizenDashboardPage() {
 
       <h2 className="h3 mb-3">Citizen Services</h2>
       <div className="row g-4">
-        {CITIZEN_SERVICES.map(([title, description]) => (
-          <DashboardServiceCard key={title} title={title} description={description} />
+        {CITIZEN_SERVICES.map(([title, description, to]) => (
+          <DashboardServiceCard key={title} title={title} description={description} to={to} />
         ))}
       </div>
     </section>

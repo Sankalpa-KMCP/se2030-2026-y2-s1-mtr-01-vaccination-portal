@@ -25,6 +25,14 @@ vi.mock('../features/screening/pages/ScreeningQuestionnairesPage', () => ({
   default: () => 'Screening Questionnaires Test Page',
 }));
 
+vi.mock('../features/screening/pages/CitizenScreeningCampaignsPage', () => ({
+  default: () => 'Citizen Screening Campaigns Test Page',
+}));
+
+vi.mock('../features/screening/pages/CitizenScreeningPage', () => ({
+  default: () => 'Citizen Screening Form Test Page',
+}));
+
 vi.mock('../auth/pages/PendingStaffRequestsPage', () => ({
   default: () => 'Pending Staff Requests Test Page',
 }));
@@ -223,6 +231,33 @@ describe('shared routing and role guards', () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+  });
+
+  it('allows citizens to open both citizen screening routes', () => {
+    setAuth({ roles: ['ROLE_CITIZEN'] });
+    const view = render(
+      <MemoryRouter key="campaigns" initialEntries={['/app/screening']}>
+        <PortalRoutes />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Citizen Screening Campaigns Test Page')).toBeTruthy();
+
+    view.rerender(
+      <MemoryRouter key="form" initialEntries={['/app/screening/campaigns/22']}>
+        <PortalRoutes />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Citizen Screening Form Test Page')).toBeTruthy();
+  });
+
+  it('denies citizen screening routes to the wrong role', () => {
+    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
+    render(
+      <MemoryRouter initialEntries={['/app/screening']}>
+        <PortalRoutes />
+      </MemoryRouter>,
+    );
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
   });
 
