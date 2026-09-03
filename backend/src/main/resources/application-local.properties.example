@@ -1,0 +1,38 @@
+# ============================================================
+# Local Development Configuration Template
+# ============================================================
+#
+# Copy this file to:
+#
+# application-local.properties
+#
+# The copied file is intentionally ignored by Git.
+# Never commit real local credentials.
+#
+# LOCAL DEVELOPMENT ONLY.
+#
+# Usage:
+# Run backend with the local profile:
+#   PowerShell: .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+#   Bash:       ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+#
+# The First Administrator Bootstrap automatically creates an initial
+# local administrator account upon startup if no administrator exists yet.
+# Note: It does not reset passwords for existing accounts.
+# Change these values in your private application-local.properties if desired.
+# ============================================================
+
+# ------------------------------------------------------------
+# Database
+# ------------------------------------------------------------
+spring.datasource.url=jdbc:mysql://localhost:3307/vaccination_portal
+spring.datasource.username=root
+spring.datasource.password=YOUR_LOCAL_MYSQL_PASSWORD
+
+# ------------------------------------------------------------
+# First Administrator Bootstrap (Local Development Only)
+# ------------------------------------------------------------
+app.bootstrap.admin.email=admin@local.test
+app.bootstrap.admin.password=Admin123!
+app.bootstrap.admin.full-name=Local Administrator
+app.bootstrap.admin.phone=0771234567

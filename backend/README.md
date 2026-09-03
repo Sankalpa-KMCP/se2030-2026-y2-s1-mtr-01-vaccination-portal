@@ -98,6 +98,14 @@ export JWT_SECRET=your_secure_random_jwt_secret_key
 
 Execute commands from the `backend/` directory using the embedded Maven Wrapper:
 
+#### Local Development Configuration
+
+1. Copy the configuration template:
+   - PowerShell: `Copy-Item src/main/resources/application-local.properties.example src/main/resources/application-local.properties`
+   - Unix/macOS: `cp src/main/resources/application-local.properties.example src/main/resources/application-local.properties`
+2. Update your local database password in `src/main/resources/application-local.properties` if needed.
+3. Starting with the `local` profile automatically loads local properties and bootstraps the default local administrator (`admin@local.test` / `Admin123!`).
+
 ### Windows (PowerShell)
 
 ```powershell
@@ -110,8 +118,8 @@ Execute commands from the `backend/` directory using the embedded Maven Wrapper:
 # Run full verification with real MySQL Testcontainers concurrency assurance
 .\mvnw.cmd verify -Pmysql-concurrency
 
-# Run Spring Boot application locally (requires running MySQL database)
-.\mvnw.cmd spring-boot:run
+# Run Spring Boot application locally with local profile
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
 ### Unix-like Systems (macOS / Linux)
@@ -126,8 +134,8 @@ Execute commands from the `backend/` directory using the embedded Maven Wrapper:
 # Run full verification with real MySQL Testcontainers concurrency assurance
 ./mvnw verify -Pmysql-concurrency
 
-# Run Spring Boot application locally
-./mvnw spring-boot:run
+# Run Spring Boot application locally with local profile
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 ## Digital Certificate API
