@@ -1,0 +1,74 @@
+import React from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import PublicHeader from '../components/PublicHeader';
+import PublicFooter from '../components/PublicFooter';
+
+function renderHeader(onLoginClick = vi.fn()) {
+  return render(
+    <MemoryRouter>
+      <PublicHeader onLoginClick={onLoginClick} />
+    </MemoryRouter>,
+  );
+}
+
+function renderFooter(onLoginClick = vi.fn()) {
+  return render(
+    <MemoryRouter>
+      <PublicFooter onLoginClick={onLoginClick} />
+    </MemoryRouter>,
+  );
+}
+
+describe('Public site navigation', () => {
+  afterEach(cleanup);
+
+  it('renders all three page links plus login in the header', () => {
+    renderHeader();
+
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
+    expect(screen.getByRole('link', { name: 'How it works' }).getAttribute('href')).toBe('/how-it-works');
+    expect(screen.getByRole('link', { name: 'About' }).getAttribute('href')).toBe('/about');
+    expect(screen.getByRole('button', { name: 'Login' })).toBeTruthy();
+  });
+
+  it('marks the current page in the header nav', () => {
+    render(
+      <MemoryRouter initialEntries={['/how-it-works']}>
+        <PublicHeader onLoginClick={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    const activeLink = screen.getByRole('link', { name: 'How it works' });
+    expect(activeLink.className).toMatch(/lp-is-active/);
+
+    const homeLink = screen.getByRole('link', { name: 'Home' });
+    expect(homeLink.className).not.toMatch(/lp-is-active/);
+  });
+
+  it('renders footer navigation as router links', () => {
+    renderFooter();
+
+    expect(screen.getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
+    expect(screen.getByRole('link', { name: 'How it works' }).getAttribute('href')).toBe('/how-it-works');
+    expect(screen.getByRole('link', { name: 'About' }).getAttribute('href')).toBe('/about');
+  });
+
+  it('fires onLoginClick from header and footer buttons', () => {
+    const onLoginClick = vi.fn();
+    renderHeader(onLoginClick);
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+    expect(onLoginClick).toHaveBeenCalledTimes(1);
+
+    cleanup();
+    renderFooter(onLoginClick);
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+    expect(onLoginClick).toHaveBeenCalledTimes(2);
+  });
+
+  it('exposes the service banner', () => {
+    renderHeader();
+    expect(screen.getByText(/an official public health service/i)).toBeTruthy();
+  });
+});

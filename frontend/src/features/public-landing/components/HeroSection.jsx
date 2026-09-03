@@ -1,90 +1,98 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import HeroArtwork from './HeroArtwork';
+
+const HERO_ASSURANCES = [
+  { label: 'Official service', icon: 'shield' },
+  { label: 'Secure and private', icon: 'lock' },
+  { label: 'Free to use', icon: 'check' },
+];
+
+const HERO_STEPS = [
+  { num: '01', label: 'Create your account' },
+  { num: '02', label: 'Book a session near you' },
+  { num: '03', label: 'Attend and get your record' },
+];
+
+function AssuricIcon({ name }) {
+  if (name === 'shield') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 3 5.5 5.5v4.8c0 4.2 2.7 8 6.5 9.2 3.8-1.2 6.5-5 6.5-9.2V5.5L12 3Z" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'lock') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="5.5" y="10.5" width="13" height="9.5" rx="2" stroke="currentColor" strokeWidth="1.9" />
+        <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12.5l4.2 4.2L19 7.2" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export default function HeroSection({ onLoginClick }) {
   return (
     <section className="lp-hero" aria-labelledby="lp-hero-title">
-      <div className="lp-container lp-hero__grid">
-        <div className="lp-hero__content">
-          <div className="lp-hero__eyebrow-row">
-            <span className="lp-hero__eyebrow">Vaccination Program Portal</span>
-            <span className="lp-hero__eyebrow-line" aria-hidden="true" />
+      <div className="lp-container">
+        <div className="lp-hero__grid">
+          <div className="lp-hero__content">
+            <div className="lp-hero__eyebrow-row">
+              <span className="lp-hero__eyebrow">
+                Public Health Service
+              </span>
+            </div>
+
+            <h1 className="lp-hero__title" id="lp-hero-title">
+              Vaccination care, <span className="lp-hero__accent">coordinated</span>{' '}
+              for your community.
+            </h1>
+
+            <p className="lp-hero__lead">
+              Citizens, clinics, and health teams in one secure place &mdash;
+              book sessions, run campaigns, and keep immunisation records.
+            </p>
+
+            <div className="lp-hero__actions">
+              <button type="button" className="lp-btn lp-btn--primary" onClick={onLoginClick}>
+                Sign in
+                <span className="lp-btn__arrow" aria-hidden="true">&rarr;</span>
+              </button>
+              <Link to="/how-it-works" className="lp-btn lp-btn--secondary">
+                How it works
+              </Link>
+            </div>
+
+            <div className="lp-hero__meta">
+              {HERO_ASSURANCES.map((item) => (
+                <span key={item.label} className="lp-hero__meta-item">
+                  <AssuricIcon name={item.icon} />
+                  {item.label}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <h1 className="lp-hero__title" id="lp-hero-title">
-            Coordinated vaccination operations, in one secure portal.
-          </h1>
-
-          <p className="lp-hero__lead">
-            Programme teams can manage campaigns, centers, and vaccination sessions
-            — with capacity planning and readiness built into operations.
-          </p>
-
-          <div className="lp-hero__actions">
-            <button
-              type="button"
-              className="lp-btn lp-btn--primary"
-              onClick={onLoginClick}
-            >
-              Login
-            </button>
-            <a className="lp-btn lp-btn--secondary" href="#capabilities">
-              Explore capabilities
-            </a>
-          </div>
-
-          <div className="lp-hero__meta">
-            <span className="lp-hero__meta-item">Role-based access control</span>
-            <span className="lp-hero__meta-dot" aria-hidden="true">·</span>
-            <span className="lp-hero__meta-item">Pre-session readiness diagnostics</span>
-            <span className="lp-hero__meta-dot" aria-hidden="true">·</span>
-            <span className="lp-hero__meta-item">Change control logging</span>
+          <div className="lp-hero__art" aria-hidden="true">
+            <HeroArtwork />
           </div>
         </div>
 
-        <aside className="lp-hero__sidebar" aria-label="System operational scope">
-          <div className="lp-hero__sidebar-header">
-            <span className="lp-hero__sidebar-tag">SYSTEM SCOPE</span>
-            <span className="lp-hero__sidebar-badge">MF-02 Core</span>
-          </div>
-
-          <div className="lp-hero__sidebar-list">
-            <div className="lp-hero__sidebar-row">
-              <span className="lp-hero__sidebar-num">01</span>
-              <div className="lp-hero__sidebar-body">
-                <span className="lp-hero__sidebar-title">Campaign Policy</span>
-                <span className="lp-hero__sidebar-desc">Dose schedules, target locations &amp; lifecycle</span>
-              </div>
+        {/* Numbered micro-steps strip — replaces the old steps card. */}
+        <div className="lp-hero__strip">
+          {HERO_STEPS.map((step) => (
+            <div key={step.num} className="lp-hero__strip-item">
+              <span className="lp-hero__strip-num">{step.num}</span>
+              <span className="lp-hero__strip-label">{step.label}</span>
             </div>
-
-            <div className="lp-hero__sidebar-row">
-              <span className="lp-hero__sidebar-num">02</span>
-              <div className="lp-hero__sidebar-body">
-                <span className="lp-hero__sidebar-title">Center Facilities</span>
-                <span className="lp-hero__sidebar-desc">Stations, equipment &amp; staff rosters</span>
-              </div>
-            </div>
-
-            <div className="lp-hero__sidebar-row">
-              <span className="lp-hero__sidebar-num">03</span>
-              <div className="lp-hero__sidebar-body">
-                <span className="lp-hero__sidebar-title">Session Operations</span>
-                <span className="lp-hero__sidebar-desc">Single/recurring series &amp; change records</span>
-              </div>
-            </div>
-
-            <div className="lp-hero__sidebar-row">
-              <span className="lp-hero__sidebar-num">04</span>
-              <div className="lp-hero__sidebar-body">
-                <span className="lp-hero__sidebar-title">Readiness Gate</span>
-                <span className="lp-hero__sidebar-desc">Pre-opening operational readiness checks</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="lp-hero__sidebar-footer">
-            <span>Authorized operational portal accounts only</span>
-          </div>
-        </aside>
+          ))}
+        </div>
       </div>
     </section>
   );

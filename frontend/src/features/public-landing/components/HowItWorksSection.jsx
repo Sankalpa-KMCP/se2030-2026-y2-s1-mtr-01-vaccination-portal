@@ -2,65 +2,85 @@ import React from 'react';
 
 const STAGES = [
   {
-    stageNum: 'STAGE 01',
-    phase: 'Identity & Access',
-    title: 'Log in securely',
-    desc: 'Each team member signs in through an authenticated account associated with their assigned operational role.',
-    points: ['Role-scoped permissions', 'Authenticated session access'],
+    node: '1',
+    phase: 'For citizens',
+    title: 'Create your account',
+    desc: 'Register with your details once — your account is ready immediately.',
+    points: ['Register in minutes', 'Secure and private'],
   },
   {
-    stageNum: 'STAGE 02',
-    phase: 'Programme & Facility Setup',
-    title: 'Configure campaigns and centers',
-    desc: 'Define campaign parameters, target locations, and dose programmes, alongside center staffing rosters, operating hours, and physical stations.',
-    points: ['Dose schedules & target areas', 'Staffing rosters & station allocation'],
+    node: '2',
+    phase: 'For everyone',
+    title: 'Book or schedule',
+    desc: 'Citizens book a session at a nearby clinic. Staff plan one-off or repeating clinic schedules.',
+    points: ['Choose clinic & time', 'Repeating schedules'],
   },
   {
-    stageNum: 'STAGE 03',
-    phase: 'Planning & Execution',
-    title: 'Plan and operate vaccination sessions',
-    desc: 'Schedule single or recurring sessions, plan throughput capacity, execute pre-session readiness checks, and manage recorded schedule revisions.',
-    points: ['Throughput & recurrence rules', 'Operational readiness checks'],
+    node: '3',
+    phase: 'For everyone',
+    title: 'Attend and get your record',
+    desc: 'Visit the clinic for your vaccination — records update automatically for citizens and campaigns alike.',
+    points: ['Automatic records', 'Campaign progress'],
   },
 ];
 
+function PointIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12.5l4.2 4.2L19 7.2" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function HowItWorksSection() {
   return (
-    <section className="lp-section lp-section--subtle lp-workflow" id="how-it-works" aria-labelledby="lp-workflow-title">
+    <section
+      className="lp-section lp-section--subtle lp-workflow"
+      id="how-it-works"
+      aria-labelledby="lp-workflow-title"
+    >
       <div className="lp-container">
-        <div className="lp-section__header">
-          <div className="lp-section__eyebrow-row">
-            <span className="lp-section__eyebrow">Workflow</span>
-            <span className="lp-section__eyebrow-line" aria-hidden="true" />
-          </div>
-          <h2 className="lp-section__title" id="lp-workflow-title">
-            How programme operations work
-          </h2>
-          <p className="lp-section__lead">
-            A structured operational sequence from user authentication to operational session readiness.
-          </p>
-        </div>
-
-        <ol className="lp-workflow-grid">
-          {STAGES.map((stage) => (
-            <li key={stage.stageNum} className="lp-workflow-col">
-              <div className="lp-workflow-col__top">
-                <span className="lp-workflow-col__stage">{stage.stageNum}</span>
-                <span className="lp-workflow-col__phase">{stage.phase}</span>
+        <div className="lp-workflow-layout">
+          {/* Sticky aside */}
+          <aside className="lp-workflow-aside">
+            <div data-reveal>
+              <div className="lp-kicker">
+                <span className="lp-kicker__index">03</span>
+                <span className="lp-kicker__label">How it works</span>
+                <span className="lp-kicker__rule" aria-hidden="true" />
               </div>
-              <h3 className="lp-workflow-col__title">{stage.title}</h3>
-              <p className="lp-workflow-col__desc">{stage.desc}</p>
-              <ul className="lp-workflow-col__points" aria-label={`Deliverables for ${stage.title}`}>
-                {stage.points.map((pt) => (
-                  <li key={pt} className="lp-workflow-col__point">
-                    <span className="lp-workflow-col__bullet" aria-hidden="true" />
-                    <span>{pt}</span>
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ol>
+              <h2 className="lp-section__title" id="lp-workflow-title">
+                How programme operations work
+              </h2>
+              <p className="lp-section__lead">
+                Getting vaccinated &mdash; or running a programme &mdash; takes
+                three simple steps.
+              </p>
+            </div>
+          </aside>
+
+          {/* Steps with drawing spine */}
+          <ol className="lp-workflow__steps" data-reveal>
+            {STAGES.map((stage) => (
+              <li key={stage.node} className="lp-workflow-col">
+                <span className="lp-workflow-col__node" aria-hidden="true">{stage.node}</span>
+                <div className="lp-workflow-col__body">
+                  <span className="lp-workflow-col__phase">{stage.phase}</span>
+                  <h3 className="lp-workflow-col__title">{stage.title}</h3>
+                  <p className="lp-workflow-col__desc">{stage.desc}</p>
+                  <ul className="lp-workflow-col__points" aria-label={`Points for ${stage.title}`}>
+                    {stage.points.map((pt) => (
+                      <li key={pt} className="lp-workflow-col__point">
+                        <PointIcon />
+                        <span>{pt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
     </section>
   );
