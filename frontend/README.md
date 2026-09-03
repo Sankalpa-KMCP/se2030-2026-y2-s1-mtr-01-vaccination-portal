@@ -75,27 +75,27 @@ Serves the compiled production bundle locally for pre-deployment inspection.
 The frontend uses React Router DOM with a centralized route tree defined in `src/app/routes.jsx`:
 
 ### Public Routes
-- `/` â€” Public home landing page with portal overview, hero artwork, readiness indicators, and trust metrics
-- `/how-it-works` â€” Citizen and provider workflow guide
-- `/about` â€” Public portal mission, architecture, and healthcare governance overview
-- `/login` â€” Generic authentication entry point
-- `/login/citizen` â€” Dedicated citizen authentication
-- `/login/staff` â€” Operational and healthcare staff authentication
-- `/register/citizen` â€” Citizen self-registration
-- `/register/staff` â€” Operational and medical staff account registration request
+- `/` - Public home landing page with portal overview, hero artwork, readiness indicators, and trust metrics
+- `/how-it-works` - Citizen and provider workflow guide
+- `/about` - Public portal mission, architecture, and healthcare governance overview
+- `/login` - Generic authentication entry point
+- `/login/citizen` - Dedicated citizen authentication
+- `/login/staff` - Operational and healthcare staff authentication
+- `/register/citizen` - Citizen self-registration
+- `/register/staff` - Operational and medical staff account registration request
 
 ### Protected Routes (`/app/*`)
 Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticated session. Users are automatically directed to their role-specific view:
-- `/app/citizen` â€” Citizen Dashboard (accessible to `ROLE_CITIZEN`)
-- `/app/staff` â€” Staff Operations Dashboard (accessible to healthcare, campaign, and center staff)
-- `/app/admin` â€” System Administration Dashboard (`ROLE_ADMIN`)
-- `/app/admin/staff-requests` â€” Pending staff registration request management (`ROLE_ADMIN`)
-- `/app/campaigns` â€” Vaccination campaign management and dose programme configuration
-- `/app/center-operations` â€” Center master data, operating hours, and closures
-- `/app/sessions` â€” Vaccination session planning, recurrence series, and staff rostering
-- `/app/analytics` â€” Operational analytics and program metrics visualization
-- `/app/screening/questions` â€” Screening question configuration (`ROLE_ADMIN`)
-- `/app/screening/questionnaires` â€” Screening questionnaire versioning (`ROLE_ADMIN`)
+- `/app/citizen` - Citizen Dashboard (accessible to `ROLE_CITIZEN`)
+- `/app/staff` - Staff Operations Dashboard (accessible to healthcare, campaign, and center staff)
+- `/app/admin` - System Administration Dashboard (`ROLE_ADMIN`)
+- `/app/admin/staff-requests` - Pending staff registration request management (`ROLE_ADMIN`)
+- `/app/campaigns` - Vaccination campaign management and dose programme configuration
+- `/app/center-operations` - Center master data, operating hours, and closures
+- `/app/sessions` - Vaccination session planning, recurrence series, and staff rostering
+- `/app/analytics` - Operational analytics and program metrics visualization
+- `/app/screening/questions` - Screening question configuration (`ROLE_ADMIN`)
+- `/app/screening/questionnaires` - Screening questionnaire versioning (`ROLE_ADMIN`)
 
 ## Implemented Feature Areas & Status
 
@@ -116,40 +116,40 @@ Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticat
 
 ```text
 frontend/
-â”œâ”€â”€ README.md
-â”œâ”€â”€ package.json
-â”œâ”€â”€ package-lock.json
-â”œâ”€â”€ vite.config.js
-â”œâ”€â”€ eslint.config.js
-â”œâ”€â”€ index.html
-â”œâ”€â”€ .env.example
-â”œâ”€â”€ public/
-â””â”€â”€ src/
-    â”œâ”€â”€ app/
-    â”‚   â”œâ”€â”€ App.jsx
-    â”‚   â”œâ”€â”€ AuthenticatedLayout.jsx
-    â”‚   â”œâ”€â”€ ProtectedRoute.jsx
-    â”‚   â”œâ”€â”€ routes.jsx
-    â”‚   â””â”€â”€ pages/
-    â”œâ”€â”€ auth/
-    â”‚   â”œâ”€â”€ api/
-    â”‚   â”œâ”€â”€ constants/
-    â”‚   â”œâ”€â”€ context/
-    â”‚   â”œâ”€â”€ pages/
-    â”‚   â””â”€â”€ utils/
-    â”œâ”€â”€ components/
-    â”‚   â””â”€â”€ common/
-    â”œâ”€â”€ features/
-    â”‚   â”œâ”€â”€ analytics/
-    â”‚   â”œâ”€â”€ appointment-management/
-    â”‚   â”œâ”€â”€ campaign-management/
-    â”‚   â”œâ”€â”€ center-operations/
-    â”‚   â”œâ”€â”€ public-landing/
-    â”‚   â”œâ”€â”€ screening/
-    â”‚   â”œâ”€â”€ session-management/
-    â”‚   â””â”€â”€ vaccination-administration/
-    â”œâ”€â”€ services/
-    â”‚   â””â”€â”€ apiClient.js
-    â””â”€â”€ styles/
-        â””â”€â”€ global.css
+|-- README.md
+|-- package.json
+|-- package-lock.json
+|-- vite.config.js
+|-- eslint.config.js
+|-- index.html
+|-- .env.example
+|-- public/
+\-- src/
+    |-- app/
+    |   |-- App.jsx
+    |   |-- AuthenticatedLayout.jsx
+    |   |-- ProtectedRoute.jsx
+    |   |-- routes.jsx
+    |   \-- pages/
+    |-- auth/
+    |   |-- api/
+    |   |-- constants/
+    |   |-- context/
+    |   |-- pages/
+    |   \-- utils/
+    |-- components/
+    |   \-- common/
+    |-- features/
+    |   |-- analytics/
+    |   |-- appointment-management/
+    |   |-- campaign-management/
+    |   |-- center-operations/
+    |   |-- public-landing/
+    |   |-- screening/
+    |   |-- session-management/
+    |   \-- vaccination-administration/
+    |-- services/
+    |   \-- apiClient.js
+    \-- styles/
+        \-- global.css
 ```

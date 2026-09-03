@@ -34,9 +34,9 @@ Database schema versioning is managed via Flyway migrations located in [`../back
 
 ## Directory Structure
 
-- `migrations/` â€” Reference DDL exports and supplemental database scripts
-- `seeds/` â€” Synthetic development, testing, and benchmark seed data
-- `diagrams/` â€” Entity-Relationship (ER) diagrams and database design materials
+- `migrations/` - Reference DDL exports and supplemental database scripts
+- `seeds/` - Synthetic development, testing, and benchmark seed data
+- `diagrams/` - Entity-Relationship (ER) diagrams and database design materials
 
 ## Local Database Setup
 

@@ -65,12 +65,12 @@ The portal provides verifiable digital vaccination certificates with privacy-pre
 
 ## Repository Structure
 
-- `docs/` â€” Canonical project documentation (specifications, module handoffs, sprint evidence)
-- `frontend/` â€” Frontend React 19 application (Vite, React Router DOM, Bootstrap 5, modular feature structure)
-- `backend/` â€” Backend Spring Boot application (Java 21, Spring Data JPA, Flyway, MySQL 8.4)
-- `database/` â€” Local Docker Compose environment, seed guidelines, and ER diagrams
-- `tests/` â€” Cross-module, integration, system, end-to-end, and acceptance test resources
-- `.github/` â€” GitHub Actions CI/CD workflows and PR templates
+- `docs/` - Canonical project documentation (specifications, module handoffs, sprint evidence)
+- `frontend/` - Frontend React 19 application (Vite, React Router DOM, Bootstrap 5, modular feature structure)
+- `backend/` - Backend Spring Boot application (Java 21, Spring Data JPA, Flyway, MySQL 8.4)
+- `database/` - Local Docker Compose environment, seed guidelines, and ER diagrams
+- `tests/` - Cross-module, integration, system, end-to-end, and acceptance test resources
+- `.github/` - GitHub Actions CI/CD workflows and PR templates
 
 ## Application Setup & Local Development
 
@@ -149,9 +149,9 @@ npm run build
 ## Configuration & Local Safety
 
 Configuration templates are provided across modules:
-- `backend/.env.example` â€” Server port, database connection, JPA DDL validation, and JWT secret settings
-- `frontend/.env.example` â€” API base URL override
-- `database/.env.example` â€” MySQL container credentials
+- `backend/.env.example` - Server port, database connection, JPA DDL validation, and JWT secret settings
+- `frontend/.env.example` - API base URL override
+- `database/.env.example` - MySQL container credentials
 
 ### Local Developer Configuration Policy
 - Use environment variables or local developer configuration profiles to supply local credentials.
@@ -170,7 +170,7 @@ GitHub Actions workflows validate pull requests and merged commits targeting `de
 
 ## Canonical Documentation
 
-- [AI Canonical Project Specification](docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md) â€” Authoritative normative source of truth (version 3.3-AI, revision 2026-08-14-R9)
+- [AI Canonical Project Specification](docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md) - Authoritative normative source of truth (version 3.3-AI, revision 2026-08-14-R9)
 - [MF-02 Module Handoff Specification](docs/MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff.md)
 - [Database Configuration Guide](database/README.md)
 - [Contribution Guidelines](CONTRIBUTING.md)

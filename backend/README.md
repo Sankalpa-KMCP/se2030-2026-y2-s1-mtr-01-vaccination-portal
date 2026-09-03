@@ -161,39 +161,39 @@ Expected response:
 
 ```text
 backend/
-â”œâ”€â”€ README.md
-â”œâ”€â”€ pom.xml
-â”œâ”€â”€ mvnw
-â”œâ”€â”€ mvnw.cmd
-â”œâ”€â”€ .env.example
-â”œâ”€â”€ .mvn/
-â”‚   â””â”€â”€ wrapper/
-â”‚       â””â”€â”€ maven-wrapper.properties
-â””â”€â”€ src/
-    â”œâ”€â”€ main/
-    â”‚   â”œâ”€â”€ java/
-    â”‚   â”‚   â””â”€â”€ com/
-    â”‚   â”‚       â””â”€â”€ se2030/
-    â”‚   â”‚           â””â”€â”€ vaccinationportal/
-    â”‚   â”‚               â”œâ”€â”€ VaccinationPortalApplication.java
-    â”‚   â”‚               â”œâ”€â”€ appointment/
-    â”‚   â”‚               â”œâ”€â”€ campaign/
-    â”‚   â”‚               â”œâ”€â”€ inventory/
-    â”‚   â”‚               â”œâ”€â”€ screening/
-    â”‚   â”‚               â”œâ”€â”€ shared/
-    â”‚   â”‚               â”‚   â””â”€â”€ auth/
-    â”‚   â”‚               â””â”€â”€ vaccination/
-    â”‚   â””â”€â”€ resources/
-    â”‚       â”œâ”€â”€ application.properties
-    â”‚       â””â”€â”€ db/
-    â”‚           â””â”€â”€ migration/
-    â”‚               â”œâ”€â”€ V0__core_campaign_center_session_foundation.sql
-    â”‚               â””â”€â”€ ... (V1 through V12)
-    â””â”€â”€ test/
-        â”œâ”€â”€ java/
-        â”‚   â””â”€â”€ com/
-        â”‚       â””â”€â”€ se2030/
-        â”‚           â””â”€â”€ vaccinationportal/
-        â””â”€â”€ resources/
-            â””â”€â”€ application-test.properties
+|-- README.md
+|-- pom.xml
+|-- mvnw
+|-- mvnw.cmd
+|-- .env.example
+|-- .mvn/
+|   \-- wrapper/
+|       \-- maven-wrapper.properties
+\-- src/
+    |-- main/
+    |   |-- java/
+    |   |   \-- com/
+    |   |       \-- se2030/
+    |   |           \-- vaccinationportal/
+    |   |               |-- VaccinationPortalApplication.java
+    |   |               |-- appointment/
+    |   |               |-- campaign/
+    |   |               |-- inventory/
+    |   |               |-- screening/
+    |   |               |-- shared/
+    |   |               |   \-- auth/
+    |   |               \-- vaccination/
+    |   \-- resources/
+    |       |-- application.properties
+    |       \-- db/
+    |           \-- migration/
+    |               |-- V0__core_campaign_center_session_foundation.sql
+    |               \-- ... (V1 through V12)
+    \-- test/
+        |-- java/
+        |   \-- com/
+        |       \-- se2030/
+        |           \-- vaccinationportal/
+        \-- resources/
+            \-- application-test.properties
 ```
