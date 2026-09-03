@@ -105,3 +105,10 @@ export async function rescheduleAppointment(appointmentId, { requestingCitizenId
 
   return data;
 }
+
+export {
+  getVaccinatorQueue,
+  checkIn,
+  reverseCheckIn,
+  markNoShow,
+} from './checkInApi';
