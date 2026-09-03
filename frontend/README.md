@@ -87,6 +87,8 @@ The frontend uses React Router DOM with a centralized route tree defined in `src
 ### Protected Routes (`/app/*`)
 Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticated session. Users are automatically directed to their role-specific view:
 - `/app/citizen` - Citizen Dashboard (accessible to `ROLE_CITIZEN`)
+- `/app/appointments/book` - Vaccination session availability search and appointment booking (`ROLE_CITIZEN`)
+- `/app/appointments/mine` - Personal appointment listing, rescheduling, and cancellation management (`ROLE_CITIZEN`)
 - `/app/staff` - Staff Operations Dashboard (accessible to healthcare, campaign, and center staff)
 - `/app/admin` - System Administration Dashboard (`ROLE_ADMIN`)
 - `/app/admin/staff-requests` - Pending staff registration request management (`ROLE_ADMIN`)
@@ -109,7 +111,7 @@ Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticat
 | **Operational Analytics** | `src/features/analytics/` | **Implemented**: Interactive operations analytics view with filterable program metrics. |
 | **Screening & Eligibility** | `src/features/screening/` | **Implemented**: Screening question definition, answer options, and questionnaire version administration. |
 | **Vaccination Administration** | `src/features/vaccination-administration/` | **Partial**: Certificate verification form component implemented; complete clinical administration workflow UI is pending. |
-| **Appointment Management** | `src/features/appointment-management/` | **Pending**: Booking guard, slot selection, and queue management UI are pending integration (stub directories only). |
+| **Appointment Management** | `src/features/appointment-management/` | **Partial**: Availability search, appointment booking (`/app/appointments/book`), appointment listing, rescheduling, and cancellation UI (`/app/appointments/mine`) implemented for citizens; waitlist join/management and staff check-in queue UI remain pending. |
 | **Vaccine Inventory** | `src/features/inventory-management/` | **Planned**: Not implemented in current frontend release. |
 
 ## Directory Structure

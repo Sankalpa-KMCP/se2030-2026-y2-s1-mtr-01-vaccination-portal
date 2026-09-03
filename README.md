@@ -28,7 +28,7 @@ The backend follows an explicit hexagonal architecture (ports and adapters) unde
 | **Shared Authentication & Access Control** | `shared/auth` | `src/auth/` | **Implemented** | Stateless JWT authentication, citizen self-registration, staff registration requests, admin review, and role-based route protection. |
 | **MF-01: Pre-Vaccination Screening & Eligibility** | `screening` | `src/features/screening/` | **Implemented** | Screening question definitions, questionnaire versioning, dynamic rule evaluation, submission processing, and clinical eligibility reviews. |
 | **MF-02: Campaign, Center & Session Management** | `campaign` | `campaign-management`, `session-management`, `center-operations` | **Implemented** | Campaigns, target groups, dose programmes, geographic target allocations, vaccination centers, operating hours, closures, recurrence rule series generation, time slot capacity, and staff rostering. |
-| **MF-03: Appointment, Waitlist & Check-In** | `appointment` | `src/features/appointment-management/` | **Partial** | **Backend Implemented**: Citizen booking guard, concurrency-safe slot reservations, rescheduling, cancellations, check-in, check-in reversal, and waitlist queue management. Frontend UI is pending integration. |
+| **MF-03: Appointment, Waitlist & Check-In** | `appointment` | `src/features/appointment-management/` | **Partial** | **Backend Implemented**: Citizen booking guard, concurrency-safe slot reservations, rescheduling, cancellations, check-in, check-in reversal, and waitlist queue management. **Frontend Partial**: Availability search, appointment booking (`/app/appointments/book`), appointment listing, rescheduling, and cancellation UI (`/app/appointments/mine`) implemented for citizens; waitlist join/management and staff check-in queue UI remain pending. |
 | **MF-04: Vaccine Inventory & Batch Management** | `inventory` | `src/features/inventory-management/` | **Planned** | Module boundaries and package structure prepared; stock, cold-chain, and batch allocation slices are planned in upcoming milestones. |
 | **MF-05: Vaccination Administration & Records** | `vaccination` | `src/features/vaccination-administration/` | **Partial** | **Backend Implemented**: Vaccination draft CRUD, finalization integration, and digital certificate issuance/verification. **Frontend Partial**: Digital certificate verification component is available; full clinical administration workflow UI is pending. |
 | **Operational Analytics** | `campaign` | `src/features/analytics/` | **Implemented** | Interactive operational analytics view with filterable vaccination program metrics. |
@@ -49,7 +49,7 @@ The frontend application provides public navigation and dedicated access flows:
 | `/register/citizen` | `CitizenRegistrationPage` | Citizen self-registration for vaccination access. |
 | `/register/staff` | `StaffRegistrationRequestPage` | Operational/medical staff registration request submission. |
 
-Authenticated users accessing `/app` are routed automatically to their role-specific dashboards (`/app/citizen`, `/app/staff`, `/app/admin`) or authorized management interfaces.
+Authenticated users accessing `/app` are routed automatically to their role-specific dashboards (`/app/citizen`, `/app/staff`, `/app/admin`) or authorized management interfaces. Citizen users can access session availability search and appointment booking at `/app/appointments/book`, and personal appointment history, rescheduling, and cancellation management at `/app/appointments/mine`.
 
 ## Digital Certificate Management & Verification API
 
