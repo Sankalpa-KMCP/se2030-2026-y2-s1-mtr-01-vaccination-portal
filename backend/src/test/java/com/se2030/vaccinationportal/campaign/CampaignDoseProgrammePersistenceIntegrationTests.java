@@ -79,7 +79,7 @@ class CampaignDoseProgrammePersistenceIntegrationTests {
                 new TargetGroup("TG-ADULT-PROG", "Adults 18-64 Programme", true)
         );
 
-        VaccinationCampaign campaign = new VaccinationCampaign(
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
                 "CMP-PROG-2026",
                 "National Autumn Dose Programme Campaign",
                 "Dose programme testing campaign",

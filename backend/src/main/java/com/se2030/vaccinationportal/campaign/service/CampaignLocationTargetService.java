@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignLocationTarget;
 import com.se2030.vaccinationportal.campaign.model.LocationTargetType;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
@@ -57,7 +58,7 @@ public class CampaignLocationTargetService {
         }
 
         VaccinationCampaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
         Set<String> existingKeys = new HashSet<>();
         for (CampaignLocationTarget existing : locationTargetRepository.findByCampaignId(campaignId)) {
@@ -82,11 +83,11 @@ public class CampaignLocationTargetService {
      * List all administrative location targets for a campaign.
      *
      * @param campaignId VaccinationCampaign entity ID
-     * @return List of CampaignLocationTarget entities
+     * @return List of CampaignLocationTarget entities ordered deterministically
      */
     @Transactional(readOnly = true)
     public List<CampaignLocationTarget> getTargetsForCampaign(Long campaignId) {
-        return locationTargetRepository.findByCampaignId(campaignId);
+        return locationTargetRepository.findByCampaignIdOrderByTargetTypeAscTargetCodeAscIdAsc(campaignId);
     }
 
     /**
@@ -94,14 +95,14 @@ public class CampaignLocationTargetService {
      *
      * @param campaignId VaccinationCampaign entity ID
      * @param targetType LocationTargetType enum
-     * @return List of matching CampaignLocationTarget entities
+     * @return List of matching CampaignLocationTarget entities ordered deterministically
      */
     @Transactional(readOnly = true)
     public List<CampaignLocationTarget> getTargetsForCampaignAndType(Long campaignId, LocationTargetType targetType) {
         if (targetType == null) {
             throw new IllegalArgumentException("Target type is required");
         }
-        return locationTargetRepository.findByCampaignIdAndTargetType(campaignId, targetType);
+        return locationTargetRepository.findByCampaignIdAndTargetTypeOrderByTargetCodeAscIdAsc(campaignId, targetType);
     }
 
     /**

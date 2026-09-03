@@ -1,5 +1,7 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
+import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRuleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
@@ -62,11 +64,23 @@ public class SessionRecurrenceRuleService {
         SessionRecurrenceRule.validateDefinition(
                 weekdays, startDate, endDate, startTime, endTime, timezone);
 
-        VaccinationCampaign campaign = campaignRepository.findById(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException(
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot create session recurrence rule for suspended campaign with ID: " + campaignId);
+        }
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalArgumentException(
+                    "Cannot create session recurrence rule for operationally closed campaign with ID: " + campaignId);
+        }
+
         VaccinationCenter center = centerRepository.findById(centerId)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Vaccination center not found with ID: " + centerId));
 
         return ruleRepository.save(new SessionRecurrenceRule(
@@ -80,11 +94,23 @@ public class SessionRecurrenceRuleService {
     }
 
     @Transactional(readOnly = true)
+    public SessionRecurrenceRule getRequiredRuleById(Long id) {
+        requireId(id, "Session recurrence rule ID is required");
+        return ruleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
     public Optional<SessionRecurrenceRule> getRuleByGenerationKey(String generationKey) {
         if (generationKey == null || generationKey.isBlank()) {
             throw new IllegalArgumentException("Session recurrence generation key is required");
         }
         return ruleRepository.findByGenerationKey(generationKey.trim());
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionRecurrenceRule> getRules(Long campaignId, Long centerId, SessionRecurrenceRuleStatus status) {
+        return ruleRepository.findWithFilters(campaignId, centerId, status);
     }
 
     @Transactional(readOnly = true)
@@ -126,6 +152,24 @@ public class SessionRecurrenceRuleService {
         requireId(id, "Session recurrence rule ID is required");
         SessionRecurrenceRule.validateDefinition(
                 weekdays, startDate, endDate, startTime, endTime, timezone);
+
+        SessionRecurrenceRule unlockedTarget = ruleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Session recurrence rule not found with ID: " + id));
+        Long campaignId = unlockedTarget.getCampaign().getId();
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot update future session recurrence rule for suspended campaign with ID: " + campaignId);
+        }
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalArgumentException(
+                    "Cannot update future session recurrence rule for operationally closed campaign with ID: " + campaignId);
+        }
 
         SessionRecurrenceRule target = findAuthoritativeRule(id);
         requireActive(target);
@@ -187,7 +231,7 @@ public class SessionRecurrenceRuleService {
 
     private SessionRecurrenceRule findAuthoritativeRule(Long id) {
         SessionRecurrenceRule rule = ruleRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Session recurrence rule not found with ID: " + id));
         entityManager.refresh(rule);
         return rule;

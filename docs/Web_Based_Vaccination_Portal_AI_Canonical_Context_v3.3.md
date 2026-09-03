@@ -6,7 +6,7 @@ This file is the canonical, self-contained context package for the Web-Based Vac
 
 AI Consumption Contract
 
-Treat this document as the project source of truth for revision 2026-08-08-R8.
+Treat this document as the project source of truth for revision 2026-08-14-R9.
 
 Use exactly five major functions unless the user explicitly changes the scope.
 
@@ -46,19 +46,21 @@ Any generated code must use database constraints and service-level validation fo
 
 When asked about an external fact that is marked USER_DATA_REQUIRED, state that the fact was not provided instead of guessing.
 
-When canonical files conflict, the Markdown source controls; treat DOCX diagrams and pagination as presentation only.
+The canonical Markdown file is the sole normative semantic source. If any summary, generated derivative, diagram pack, or implementation note conflicts with it, the Markdown source controls.
 
 Source Authority and Synchronization
 
+**Revision R9 governance change (2026-08-14):** the project now uses Markdown-only canonical authority. This change retires the requirement for a synchronized binary canonical derivative. No MF business rule, ownership boundary, status model, or technical baseline is changed from R8 by this governance update.
+
 Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md is the normative semantic source for this release.
 
-Web_Based_Vaccination_Portal_AI_Canonical_Master_v3.3.docx is the synchronized human-readable derivative. Its diagrams, pagination and visual layout are presentational; they do not override the Markdown semantics.
+This release uses a Markdown-only canonical model. Human-readable derivatives may be generated for convenience, but they are optional, non-authoritative, and are not required release artifacts.
 
-Both files must carry document version 3.3-AI and content revision 2026-08-08-R8. A release with mismatched values is invalid.
+The canonical Markdown file must carry document version 3.3-AI and content revision 2026-08-14-R9. Maintained handoffs, evidence records, plans, and context summaries must identify the canonical revision they use.
 
 Generated code, schemas, OpenAPI contracts, test plans and summaries must identify canonical project WBVP-SE2030 and the revision used.
 
-If the two files ever conflict, use the Markdown file and regenerate the DOCX before implementation continues.
+If any derivative or summary conflicts with the canonical Markdown, use the Markdown source and regenerate, correct, or discard the derivative before implementation continues.
 
 Canonical Snapshot
 
@@ -128,7 +130,7 @@ Valid/Revoked/Invalid result plus minimum identity and vaccination proof fields
 
 Source authority
 
-Markdown is normative; DOCX is a synchronized human-readable derivative
+Markdown is the sole normative semantic source
 
 Conditional uniqueness
 
@@ -4462,8 +4464,8 @@ repository-root/
 │       ├── inventory/        MF-04
 │       └── administration/   MF-05
 ├── database/                 Flyway migrations, controlled seed data and database evidence
-├── docs/                     canonical files, handoffs, architecture, assessment and evidence
-├── docker-compose.yml
+├── docs/                     canonical Markdown, handoffs, architecture, assessment and evidence
+├── compose.yaml
 ├── README.md
 └── .github/                  issue and pull-request templates
 
@@ -5035,9 +5037,9 @@ Prevents AI systems from inventing legal or institutional retention periods
 
 DEC-036
 
-Markdown is the normative semantic source and DOCX is its synchronized human-readable derivative
+Markdown is the sole normative semantic source; generated derivatives are optional and non-authoritative
 
-Eliminates dual-source ambiguity while retaining a polished document
+Eliminates dual-source ambiguity and removes release dependence on synchronized binary derivatives
 
 DEC-037
 
@@ -6249,11 +6251,11 @@ Required result
 
 Version synchronization
 
-Markdown metadata, AI contract, DOCX visible footer and DOCX custom properties all use 3.3-AI / 2026-08-08-R8
+Canonical Markdown metadata and the AI contract use 3.3-AI / 2026-08-14-R9
 
 Canonical authority
 
-Markdown is marked normative and DOCX is marked as its synchronized derivative
+Canonical Markdown is marked as the sole normative semantic source
 
 Identifier integrity
 
@@ -6281,8 +6283,8 @@ State change and outbox insertion are atomic; consumers and notification writes 
 
 Documentation parity
 
-Material rules added to one canonical file are present in the other; diagram differences are presentational only
+All material canonical rules are present in the Markdown source; maintained summaries and generated derivatives are checked against it
 
 Delivery QA
 
-DOCX renders without clipping/overlap, tables remain readable, metadata is current, accessibility audit has no unresolved high-severity defect, and the final ZIP opens successfully
+Markdown files are readable, metadata is current, accessibility-relevant text structure has no unresolved high-severity defect, checksums validate, and the final release archive opens successfully

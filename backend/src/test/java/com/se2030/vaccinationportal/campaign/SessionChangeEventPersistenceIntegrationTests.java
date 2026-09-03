@@ -70,7 +70,7 @@ class SessionChangeEventPersistenceIntegrationTests {
                 new VaccineType("VAX-AUDIT-P", "Session Audit Persistence Vaccine"));
         TargetGroup group = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-AUDIT-P", "Session Audit Persistence Group"));
-        VaccinationCampaign campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-AUDIT-P", "Session Audit Persistence Campaign", null,
                 vaccine, group,
                 LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31),

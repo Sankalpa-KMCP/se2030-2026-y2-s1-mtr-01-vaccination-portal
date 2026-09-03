@@ -117,7 +117,7 @@ class AssignmentReverseImpactIntegrationTests {
 
     private VaccinationCampaign createCampaign(String code, LocalDate start, LocalDate end) {
         return campaignRepository.saveAndFlush(
-                new VaccinationCampaign(
+                CampaignTestFixtures.campaign(
                         code,
                         "Campaign " + code,
                         "Desc",

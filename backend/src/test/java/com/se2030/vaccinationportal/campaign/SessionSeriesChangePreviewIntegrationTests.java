@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterClosure;
@@ -109,7 +110,7 @@ class SessionSeriesChangePreviewIntegrationTests {
         TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-SERIES-TEST", "Series Test Target Group"));
 
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-SERIES-TEST", "Series Campaign", "Testing series change workflows",
                 vaccineType, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,
@@ -750,6 +751,16 @@ class SessionSeriesChangePreviewIntegrationTests {
         Map<LocalDate, SeriesOccurrencePreviewItem> map = toDateMap(preview.occurrenceEntries());
         assertThat(map.get(LocalDate.of(2026, 10, 5)).category()).isEqualTo(SeriesOccurrenceCategory.INELIGIBLE);
         assertThat(map.get(LocalDate.of(2026, 10, 7)).category()).isEqualTo(SeriesOccurrenceCategory.RETAINED);
+    }
+
+    @Test
+    @DisplayName("previewSeriesChange with non-existent ruleId throws ResourceNotFoundException")
+    void previewSeriesChange_missingRuleId_throwsResourceNotFoundException() {
+        Set<DayOfWeek> weekdays = EnumSet.of(DayOfWeek.MONDAY);
+        assertThatThrownBy(() -> seriesChangeService.previewSeriesChange(
+                999999L, weekdays, CAMPAIGN_START, CAMPAIGN_END, LocalTime.of(9, 0), LocalTime.of(12, 0), "UTC"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Session recurrence rule not found with ID: 999999");
     }
 
     private static Map<LocalDate, SeriesOccurrencePreviewItem> toDateMap(List<SeriesOccurrencePreviewItem> items) {

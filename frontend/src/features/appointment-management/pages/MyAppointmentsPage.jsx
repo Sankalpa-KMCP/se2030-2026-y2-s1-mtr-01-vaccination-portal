@@ -2,13 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AppointmentCard from '../components/AppointmentCard';
 import RescheduleDialog from '../components/RescheduleDialog';
 import { getMyAppointments, cancelAppointment } from '../api/appointmentApi';
+import { useAuth } from '../../../../auth/context/AuthContext';
 
 /**
  * Citizen My Appointments Page (US-03).
- * Fetches and displays a citizen's appointments across all statuses, enabling cancellation and rescheduling.
+ * Fetches and displays the authenticated citizen's appointments across all statuses,
+ * enabling cancellation and rescheduling. Uses the authenticated user ID from AuthContext.
  */
 export default function MyAppointmentsPage() {
-  const [citizenId, setCitizenId] = useState('7001');
+  const { user } = useAuth();
+  const citizenId = user?.id;
+
   const [appointments, setAppointments] = useState(null);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -37,11 +41,6 @@ export default function MyAppointmentsPage() {
   useEffect(() => {
     fetchAppointments(citizenId);
   }, [citizenId, fetchAppointments]);
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    fetchAppointments(citizenId);
-  };
 
   const handleCancelAppointment = async (appointmentId, { isStaffOverride, staffReason }) => {
     setFeedback(null);
@@ -83,40 +82,21 @@ export default function MyAppointmentsPage() {
     fetchAppointments(citizenId);
   };
 
+  if (!citizenId) {
+    return (
+      <div className="alert alert-warning border-0 shadow-sm" role="alert">
+        <h4 className="h6 alert-heading fw-bold mb-1">Authentication Required</h4>
+        <p className="mb-0">Unable to load appointments. Please sign in again.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="my-appointments-page">
       <div className="d-flex align-items-center justify-content-between mb-4">
         <div>
           <h1 className="h3 fw-bold text-primary mb-1">My Appointments</h1>
           <p className="text-muted mb-0">View, track, reschedule, or cancel your vaccination appointments.</p>
-        </div>
-      </div>
-
-      <div className="card shadow-sm border-0 mb-4">
-        <div className="card-body p-3">
-          <form onSubmit={handleSearchSubmit} className="row g-2 align-items-center">
-            <div className="col-auto">
-              <label htmlFor="citizenIdFilter" className="col-form-label fw-semibold">
-                Citizen ID:
-              </label>
-            </div>
-            <div className="col-auto">
-              <input
-                type="number"
-                id="citizenIdFilter"
-                className="form-control"
-                value={citizenId}
-                onChange={(e) => setCitizenId(e.target.value)}
-                placeholder="Enter Citizen ID"
-                required
-              />
-            </div>
-            <div className="col-auto">
-              <button type="submit" className="btn btn-primary fw-semibold" disabled={loading}>
-                {loading ? 'Loading...' : 'Fetch Appointments'}
-              </button>
-            </div>
-          </form>
         </div>
       </div>
 
@@ -156,7 +136,7 @@ export default function MyAppointmentsPage() {
             <div className="alert alert-info border-0 shadow-sm p-4 text-center">
               <h4 className="h6 alert-heading fw-bold mb-1">No Appointments Found</h4>
               <p className="mb-0 text-muted small">
-                You do not have any recorded vaccination appointments for Citizen ID #{citizenId}.
+                You do not have any recorded vaccination appointments.
               </p>
             </div>
           ) : (

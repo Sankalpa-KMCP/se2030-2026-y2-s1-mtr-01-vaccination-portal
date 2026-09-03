@@ -35,6 +35,10 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
-      - name: Verify backend application
+      - name: Verify backend application (H2 test suite)
         working-directory: backend
         run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Verify backend MySQL concurrency assurance (Testcontainers)
+        working-directory: backend
+        run: ./mvnw --batch-mode --no-transfer-progress verify -Pmysql-concurrency

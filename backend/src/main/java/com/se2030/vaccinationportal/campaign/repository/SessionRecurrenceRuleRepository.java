@@ -41,4 +41,15 @@ public interface SessionRecurrenceRuleRepository extends JpaRepository<SessionRe
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM SessionRecurrenceRule r WHERE r.id = :id")
     Optional<SessionRecurrenceRule> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("SELECT r FROM SessionRecurrenceRule r " +
+            "WHERE (:campaignId IS NULL OR r.campaign.id = :campaignId) " +
+            "AND (:centerId IS NULL OR r.center.id = :centerId) " +
+            "AND (:status IS NULL OR r.status = :status) " +
+            "ORDER BY r.startDate ASC, r.startTime ASC, r.id ASC")
+    List<SessionRecurrenceRule> findWithFilters(
+            @Param("campaignId") Long campaignId,
+            @Param("centerId") Long centerId,
+            @Param("status") SessionRecurrenceRuleStatus status
+    );
 }

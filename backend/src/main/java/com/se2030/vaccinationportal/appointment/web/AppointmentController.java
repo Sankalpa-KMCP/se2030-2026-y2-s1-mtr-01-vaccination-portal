@@ -22,6 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -123,6 +127,10 @@ public class AppointmentController {
         boolean isStaffOverride = (request != null && Boolean.TRUE.equals(request.isStaffOverride()));
         String staffReason = (request != null) ? request.staffReason() : null;
 
+        if (isStaffOverride) {
+            validateStaffOverrideAuthority();
+        }
+
         Appointment cancelled = cancellationService.cancelAppointment(
                 id,
                 requestingCitizenId,
@@ -140,6 +148,10 @@ public class AppointmentController {
     ) {
         boolean isStaffOverride = Boolean.TRUE.equals(request.isStaffOverride());
 
+        if (isStaffOverride) {
+            validateStaffOverrideAuthority();
+        }
+
         Appointment rescheduled = rescheduleService.rescheduleAppointment(
                 id,
                 request.requestingCitizenId(),
@@ -152,6 +164,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/check-in")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> checkIn(
             @PathVariable("id") Long id,
             @RequestBody(required = false) CheckInRequest request
@@ -164,23 +177,44 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/reverse-check-in")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> reverseCheckIn(@PathVariable("id") Long id) {
         Appointment reversed = checkInService.reverseCheckIn(id);
         return ResponseEntity.ok(AppointmentResponse.fromEntity(reversed));
     }
 
     @PostMapping("/{id}/no-show")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> markNoShow(@PathVariable("id") Long id) {
         Appointment noShow = checkInService.markNoShow(id, Instant.now());
         return ResponseEntity.ok(AppointmentResponse.fromEntity(noShow));
     }
 
     @GetMapping("/queue")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
     public ResponseEntity<List<AppointmentResponse>> getVaccinatorQueue(@RequestParam("slotId") Long slotId) {
         List<Appointment> queue = checkInService.getVaccinatorQueueForSlot(slotId);
         List<AppointmentResponse> responseList = queue.stream()
                 .map(AppointmentResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(responseList);
+    }
+
+    private void validateStaffOverrideAuthority() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Staff override requires an authenticated staff role");
+        }
+        boolean hasStaffRole = auth.getAuthorities().stream().anyMatch(a ->
+                "ROLE_ADMIN".equals(a.getAuthority()) ||
+                "ROLE_HEALTHCARE_OFFICER".equals(a.getAuthority()) ||
+                "ROLE_CENTER_MANAGER".equals(a.getAuthority()) ||
+                "ADMIN".equals(a.getAuthority()) ||
+                "HEALTHCARE_OFFICER".equals(a.getAuthority()) ||
+                "CENTER_MANAGER".equals(a.getAuthority())
+        );
+        if (!hasStaffRole) {
+            throw new AccessDeniedException("Staff override requires an authorized staff role (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER)");
+        }
     }
 }

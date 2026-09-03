@@ -1,2512 +1,1032 @@
-
-MF02_Sprint1_Evidence.md
-File
-You are continuing my existing WEB_01 — Web-Based Vaccination Portal (WBVP-SE2030) project as my Codex-first AI Coding Project Controller.
-
-I have uploaded the current authoritative project/controller files.
-
-Read them carefully before deciding the next coding-agent task.
-
-Coding-agent workflow
-Use the uploaded:
-
-AI_Coding_Prompt_Orchestrator_v6.1_Concise_Numbered_SDLC.md
-
-as the authoritative coding-agent workflow.
-
-Follow it whenever generic ChatGPT behavior conflicts with it.
-
-I use Codex as the coding agent.
-
-Do not connect to GitHub or modify the repository yourself.
-
-You communicate with Codex by preparing prompts for me to copy into Codex. I will return Codex Agent Reports to you.
-
-Use larger coherent Codex tasks where safe rather than unnecessarily splitting work into many tiny prompts.
-
-Before every Codex prompt, tell me the recommended:
-
-model;
-reasoning level;
-speed.
-All Codex prompts must be provided in editable writing-block format, not Markdown fenced code blocks.
-
-Private prompt-number controller state
-Prompt numbering is private ChatGPT controller state only.
-
-Do NOT ask Codex to store prompt numbers anywhere in:
-
-repository files;
-documentation;
-commits;
-branches;
-PRs;
-issues;
-evidence;
-project metadata.
-The latest Codex prompt already executed was:
-
-Prompt 52
-
-Therefore the next Codex prompt must be:
-
-Prompt 53
-
-Never reuse or reset the sequence while continuing this project.
-
-Current repository milestone
-We have just completed the following milestone:
-
-MILESTONE COMPLETE — MF-02 SUPPORTING BACKEND FOUNDATIONS INTEGRATED AND DOCUMENTED
-
-Final current:
-
-origin/develop = 7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf
-
-Current backend baseline:
-
-272 backend tests
-0 failures
-0 errors
-0 skipped
-Maven test SUCCESS
-Maven verify SUCCESS
-executable JAR packaged
-Backend CI SUCCESS
-Frontend CI SUCCESS
-Canonical authority remains:
-
-3.3-AI / 2026-08-08-R8
-
-Sprint:
-
-Sprint 1 — IN PROGRESS
-
-MF-02 and US-13 are NOT complete.
-
-Supporting backend foundations already complete
-The following MF-02 backend foundations are already implemented, reviewed, tested, CI-verified, merged, and documented:
-
-VaccinationCampaign / campaign lifecycle
-VaccineType
-TargetGroup
-CampaignDoseProgramme
-CampaignLocationTarget
-CampaignQuestionnaireAssignment
-VaccinationCenter
-OperatingHours
-CenterClosure
-CampaignCenterAssignment
-SessionRecurrenceRule
-MF-02 temporal/concurrency hardening
-Do NOT rediscover, redesign, or rebuild these unless live evidence demonstrates a concrete integration defect.
-
-Important completed contracts
-OperatingHours
-Normal recurring center operating calendar.
-
-Separate from temporary closures and concrete sessions.
-
-CenterClosure
-Temporary center-unavailability interval.
-
-Uses:
-
-Instant
-
-with half-open:
-
-[startAt, endAt)
-
-ACTIVE/CANCELLED lifecycle.
-
-Center-row serialization protects overlapping closure writes.
-
-CampaignCenterAssignment
-Operational authorization of a center for a campaign.
-
-Separate from CampaignLocationTarget.
-
-Uses:
-
-LocalDate
-
-half-open effective periods:
-
-[activeFrom, activeTo)
-
-with nullable open end.
-
-ACTIVE/CANCELLED lifecycle.
-
-Campaign-row locking protects same campaign-center assignment history.
-
-Existing-child mutation uses authoritative post-lock refresh.
-
-SessionRecurrenceRule
-Recurring-session definition only.
-
-It does NOT create concrete sessions yet.
-
-Uses:
-
-campaign
-center
-Set<DayOfWeek>
-inclusive bounded [startDate, endDate]
-same-day half-open [startTime, endTime)
-normalized ZoneId timezone
-ACTIVE/CANCELLED
-immutable backend-generated UUID generation key
-Identical/overlapping recurrence definitions are intentionally permitted.
-
-Existing-rule mutations use rule-row pessimistic locking followed by authoritative EntityManager.refresh().
-
-Concrete occurrence generation remains deferred.
-
-Current next major phase
-The next major phase is:
-
-VaccinationSession architecture and MF-02 cross-component integration planning
-
-VaccinationSession has NOT been implemented.
-
-Occurrence generation has NOT been implemented.
-
-Do not jump directly into coding it without the appropriate discovery/architecture gate.
-
-Key integration responsibilities for VaccinationSession
-The next design phase needs to determine how a concrete VaccinationSession interacts with the completed foundations.
-
-At minimum the architecture must account for canonical session rules involving:
-
-campaign service dates;
-CampaignCenterAssignment;
-VaccinationCenter lifecycle;
-OperatingHours;
-CenterClosure;
-SessionRecurrenceRule;
-one-off versus recurrence-generated sessions;
-recurrence generation/idempotency;
-session timestamps/timezone conversion;
-overlapping sessions where canonically relevant;
-capacity/resource concerns without prematurely absorbing later responsibilities;
-session lifecycle;
-one-occurrence edits;
-series-wide changes;
-history retention;
-MF02-BR-05;
-MF02-BR-06;
-MF02-BR-07;
-MF02-BR-08;
-MF02-BR-15 where applicable.
-Preserve clear module boundaries.
-
-Do not mix in appointments, waitlists, inventory, eligibility, or unrelated major functions.
-
-Known repository conventions
-Use the current repository rather than inventing new architectural patterns.
-
-Important conventions now include:
-
-JPA entities under campaign.model
-repositories under campaign.repository
-services under campaign.service
-generated Long IDs
-mandatory lazy parent relationships
-no unsafe remove cascades for operational history
-Instant for absolute timeline timestamps
-LocalDate for calendar-effective periods
-LocalTime for wall-clock recurrence/calendar values
-UTC application Clock
-narrow cohesive entity mutation APIs
-no broad public setter surfaces
-no custom entity equality/hash
-candidate validation before mutation
-IllegalArgumentException current domain/service style
-transactional services
-read-only transactions where appropriate
-parent-row pessimistic locks where cross-row invariants require them
-direct row locks where sibling serialization is unnecessary
-authoritative post-lock EntityManager.refresh() where stale first-level-cache state is a risk
-H2 in MySQL mode for current integration tests
-genuine separate-transaction concurrency regression tests where there is a real concurrency invariant
-production target MySQL
-Flyway business migrations still pending
-Do not introduce generic frameworks solely because VaccinationSession integrates multiple temporal components.
-
-Current documentation state
-The repository documentation is synchronized through:
-
-PR #28
-feat(mf02): add session recurrence rule backend foundation
-
-Recurrence merge:
-
-0dd05a5dce856bbaff6924c54fcf3c395920b076
-
-PR #29
-docs(mf02): sync evidence after session recurrence rule
-
-Documentation merge:
-
-7b7896b0f714742aa6dc8b47bdc2fe2d1c2c2ebf
-
-That documentation merge is the current overall repository checkpoint.
-
-Do not confuse documentation merge checkpoints with implementation commits.
-
-Current milestone meaning
-The following statement is now accurate:
-
-MF-02 SUPPORTING BACKEND FOUNDATIONS COMPLETE FOR THE CURRENT PRE-VACCINATIONSESSION PHASE
-
-This does NOT mean:
-
-MF-02 complete;
-US-13 complete;
-Sprint 1 complete.
-Remaining work still includes major items such as:
-
-VaccinationSession foundation;
-recurrence occurrence generation;
-cross-component session validation;
-MF02-BR-05 enforcement;
-MF02-BR-06 enforcement;
-one-occurrence/series change behavior;
-campaign publication prerequisite/transition integration;
-final MF-01 questionnaire adapter/FK;
-Flyway business migrations;
-REST/API/DTO/mapper work;
-Spring Security/RBAC;
-OpenAPI;
-frontend;
-final integration/Definition-of-Done evidence.
-What I want from you first
-Review the uploaded:
-
-orchestrator;
-canonical context;
-current MF-02 AI handoff;
-current Sprint 1 evidence;
-and the state above.
-
-Do NOT issue an implementation prompt immediately.
-
-First decide the correct next controlled objective for the VaccinationSession phase.
-
-I expect the next task to be a substantial discovery + architecture gate, potentially combining repository discovery and architecture planning in one Codex task if that is safe.
-
-The next Codex prompt must be:
-
-Prompt 53
-
-Before giving Prompt 53:
-
-tell me whether the supplied project state is internally consistent;
-identify exactly what milestone we have reached;
-state the proposed next SDLC objective;
-tell me the recommended Codex model/reasoning/speed.
-Then provide Prompt 53 in editable writing-block format.
-
-Do not ask me questions that can be resolved safely from the uploaded canonical documentation, current handoff/evidence, live repository, or established project decisions.
-
-If a genuine product decision cannot safely be inferred, stop and tell me exactly what decision needs me.
-
-
-
-Pasted markdown.md
-File
-
-
-Pasted markdown.md
-File
-usage ran out, i have antigravity though 
-
-
-Pasted text.txt
-Document
-
-
-Pasted text.txt
-Document
-
-
-Pasted markdown.md
-File
-
-
-Pasted markdown.md
-File
-
-
-Pasted markdown.md
-File
-
-
-Pasted markdown.md
-File
-
-
-Pasted markdown.md
-File
-
-
-Pasted text.txt
-Document
-
-
-Pasted text.txt
-Document
-how much of my part is done? 
-
-
-Pasted markdown.md
-File
-can i create a new antigravity session?
-
-
-WBVP_MF02_Sprint1_Review_2026-08-12.zip
-Zip Archive
-here. check thoroughly.  whether anything wrong or if there is a way to short codes and check if there is a way to make my part look more organized cause too much files in some folder
-
-Stopped thinking
-
-
-Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md
-File
-
-MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff.md
-File
-
-MF02_Sprint1_Evidence.md
-File
-first i want to give me the md file content updated. either give me the md to download or easy to copy. antigravity suck at documentation. 
-
-I updated both Markdown controller files directly. The original handoff had a real contradiction: the opening still said PR #42 / 422 tests / atomic confirmation pending, while later sections already recorded PR #44 / 434 tests / confirmation complete. 
-
- The evidence file also had older PR #40 / 405-test current-state sections mixed with newer PR #44 information. 
-
- I kept the canonical R8 requirements unchanged. 
-
-
-Updated files
-Download updated MF-02 AI Engineering Handoff
-
-Download updated MF-02 Sprint 1 Evidence
-
-I corrected them to the current state:
-
-Implementation checkpoint: PR #44 — 255754dedcd4cfff5744bce69db72d09061ff560
-
-Latest overall/docs checkpoint: PR #45 — 10614b5f32eaf54d00133a94aadc8a695280417a
-
-Backend baseline: 434 tests
-
-series preview and confirmation marked complete
-
-old “series changes not started” / PR #40 current-state text corrected
-
-external ZIP review added
-
-the 3 review defects are explicitly marked PENDING FIX, not implemented
-
-immediate next phase changed to regression hardening
-
-after that: full-series cancellation → reverse-impact protection → publication/lifecycle integration → final MF-01 adapter/FK
-
-production package verdict remains KEEP CURRENT STRUCTURE
-
-test organization/service splitting recorded as later maintainability work, so an AI does not randomly reorganize your project now
-
-For future AI/Codex/Antigravity handoffs, use the updated handoff file as the main controller document. The evidence file is the supporting history. 
-
-
-MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff_UPDATED_2026-08-12.md
-Document
-
-
-MF02_Sprint1_Evidence_UPDATED_2026-08-12.md
-Document
-
-
-check those again whether they are correct. twice
-
-Checked both files twice.
-
-The second audit did find a few documentation defects, so I corrected them before giving them back. The canonical R8 file itself was not changed. 
-
-
-What I corrected
-Fixed a malformed sentence in the handoff where two bullets had accidentally merged together.
-
-The handoff integration-history table stopped at PR #42 even though PR #44 and #45 were already completed. It now includes:
-
-PR #43 — docs after series preview
-
-PR #44 — atomic series-change confirmation
-
-PR #45 — docs after series confirmation
-
-Clearly separated:
-
-latest implementation checkpoint: PR #44 / 255754dedcd4cfff5744bce69db72d09061ff560
-
-latest overall/docs checkpoint: PR #45 / 10614b5f32eaf54d00133a94aadc8a695280417a
-
-Confirmed the current backend baseline is 434 tests, not 405 or 422.
-
-Kept 379 / 405 / 422 test counts only where they describe historical checkpoints.
-
-Relabeled an ambiguous 379-test section as explicitly historical.
-
-Corrected the PR #40 section so its old statement that series work was pending is clearly described as the state at PR #40, not the current state.
-
-Added series-preview + atomic-confirmation work to the Sprint Review completed evidence.
-
-Confirmed Sprint 1 and US-13 remain IN PROGRESS, consistent with the canonical/project state. 
-
-
-Confirmed the three ZIP-review issues are labelled PENDING FIX and are not falsely described as implemented.
-
-Confirmed the next task is regression hardening first, before full-series cancellation or other new functionality.
-
-Confirmed broad Java package restructuring is not recommended during this bug-fix step.
-
-Second-pass structural validation
-Both files now pass my consistency checks:
-
-current SHAs agree between both documents;
-
-current test baseline agrees;
-
-current/pending scope agrees;
-
-PR #44 versus PR #45 distinction is consistent;
-
-no remaining "series changes NOT STARTED" current-state claim;
-
-no malformed merged bullets;
-
-Markdown code fences are balanced;
-
-no duplicate section headings;
-
-no broken formatting/trailing garbage;
-
-historical test counts are not being presented as the current baseline.
-
-The evidence record originally contained several older checkpoint sections mixed with current material, which is why this second check was useful. 
-
-
-Final checked versions
-Download MF-02 AI Handoff — checked twice
-
-Download MF-02 Sprint 1 Evidence — checked twice
-
-These are the versions I recommend using. Use the Handoff as the main file you give Antigravity/another AI, and the Evidence file as the supporting engineering history.
-
-
-MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff_UPDATED_2026-08-12.md
-Document
-
-
-MF02_Sprint1_Evidence_UPDATED_2026-08-12.md
-Document
-
-
-MF-02 — Vaccination Campaign, Center and Session Management
-AI Engineering Handoff
-Project: Web-Based Vaccination Portal (WBVP-SE2030)
-
-Function: MF-02 — Vaccination Campaign, Center and Session Management
-
-Canonical authority: 3.3-AI / 2026-08-08-R8
-
-Sprint: Sprint 1 — IN PROGRESS
-
-Current implementation checkpoint: 1582c4cfa6596d1cc2dac9b977774fd8e010bc77 (PR #52 merge)
-
-Latest overall repository/documentation checkpoint: 1582c4cfa6596d1cc2dac9b977774fd8e010bc77 (PR #52 merge)
-
-Latest completed backend foundation: VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection (deactivateCenter pessimistic lock, OperatingHours range intersection, CenterClosure half-open [startAt,endAt) intersection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, 19 net-new tests, 495 total backend tests)
-
-Current backend baseline: 495 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #52.
-
-Next controlled implementation phase: campaign publication prerequisites/transition and required session lifecycle publishing
-
-
-This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
-
-The latest MF-02 implementation integration checkpoint is PR #48 merge 14e4976844870904b889fcd4970cc6d07439e168, with reviewed feature source 668ec98f31ea39904e7992a5f1a986e74ae8f8ab and base b12fe280b706c9ce58e3ac8b886a58c60c14f7fb. Documentation merge checkpoints do not replace or rename implementation checkpoints.
-
-1. Executive Snapshot
-The following MF-02 backend foundations are already implemented and integrated:
-
-campaign lifecycle, VaccineType, and TargetGroup;
-
-CampaignDoseProgramme;
-
-CampaignLocationTarget;
-
-CampaignQuestionnaireAssignment;
-
-VaccinationCenter;
-
-OperatingHours;
-
-CenterClosure;
-
-CampaignCenterAssignment;
-
-SessionRecurrenceRule;
-
-VaccinationCenter scheduling timezone and authoritative mutation locking prerequisite;
-
-VaccinationSession domain and repository foundation;
-
-VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation;
-
-SessionRecurrenceRule occurrence generation and idempotent VaccinationSession materialization;
-
-SessionChangeEvent append-only audit model, SessionScheduleSnapshot, SessionChangeType, SessionChangeEventRepository, SessionImpactReader integration port, SessionImpactSummary, and VaccinationSession pessimistic row lock;
-
-Individual VaccinationSession change workflows: read-only impact preview operations, cryptographic SHA-256 stale-preview protection, reschedule and center transfer confirmation, session cancellation, deterministic hierarchical locking (campaign → center(s) → session), occurrence provenance preservation, generator retry compatibility for individual overrides, exact no-op change rejection, and atomic append-only SessionChangeEvent creation;
-
-Series-wide VaccinationSession change preview foundation: read-only recurrence diff calculation, occurrence classification into RETAINED, REMOVED, NEW, PRESERVED_EXCEPTION, and INELIGIBLE, durable individual override detection via SessionChangeEvent audit history (RESCHEDULED, CENTER_TRANSFERRED, CANCELLED), real SessionImpactReader integration for SCHEDULED sessions when schedule actually changes (with 0 impact for unchanged retained sessions and DRAFT), candidate schedule validation using VaccinationSessionValidator, past candidate date rejection preventing latent elapsed occurrence creation, bookingCloseAt = proposedStartAt preview policy, and deterministic SHA-256 preview fingerprint token generation.
-
-CenterClosure remains IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED.
-
-CampaignCenterAssignment remains IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED at backend-foundation scope through PR #26.
-
-SessionRecurrenceRule is IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED at backend-foundation scope through PR #28.
-
-The VaccinationCenter scheduling-timezone and mutation-locking prerequisite is IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED through PR #30.
-
-The VaccinationSession domain and persistence foundation is IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED through PR #32.
-
-The VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation is IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED through PR #34.
-
-The SessionRecurrenceRule occurrence generation and idempotent VaccinationSession materialization is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #36.
-
-The SessionChangeEvent audit model, SessionImpactReader integration port, and VaccinationSession pessimistic row locking foundation is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #38.
-
-The individual VaccinationSession material change workflows are IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #40.
-
-The series-wide VaccinationSession change preview foundation is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #42.
-
-The atomic series-wide VaccinationSession change confirmation workflow is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #44.
-
-The session change regression hardening fixes (unchanged retained SCHEDULED zero-impact evaluation, latent past occurrence prevention, and exact no-op change rejection) are IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #46.
-
-The full-series cancellation workflow (previewSeriesCancellation, confirmSeriesCancellation, ACTIVE/non-expired rule validation, DRAFT/SCHEDULED future occurrence cancellation, real SCHEDULED impact counts, preserved individual exceptions, cryptographic SHA-256 stale-preview token, campaign -> center -> rule -> sessions ID ASC locking, append-only SERIES_CANCELLED audit events, atomic rollback, and recurrence-generator compatibility) is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #48.
-
-The campaign and assignment reverse-impact protection (VaccinationCampaignService.updateServiceDates campaign date shortening protection, CampaignCenterAssignmentService reverse protection for updateFutureAssignment, endAssignment, and cancelFutureAssignment, session scheduling timezone projection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, campaign-row locking & concurrency protection, 17 net-new tests, 476 total backend tests) is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #50.
-
-The VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection (deactivateCenter pessimistic center lock and authoritative refresh, OperatingHours range intersection against session scheduling timezone, CenterClosure half-open [startAt,endAt) interval intersection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, 19 net-new tests, 495 total backend tests) is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #52.
-
-The current backend baseline is 495 tests, with zero failures, errors, or skips. Maven test and verify succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #52 merge.
-
-MF-02 CENTER AVAILABILITY REVERSE-IMPACT PROTECTION INTEGRATED. This milestone covers Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, authoritative write-time validation, recurrence generation, session change audit, individual session changes, series-wide preview, atomic series-wide confirmation, session-change regression hardening, full-series cancellation, campaign/assignment reverse protection, and center/hours/closure reverse protection. It does not mean MF-02, US-13, or Sprint 1 is complete.
-
-Sprint 1 remains in progress. Center availability reverse-impact protection is COMPLETE in PR #52. The immediate next controlled phase is campaign publication prerequisites/transition, followed by required session lifecycle completion/hardening, final MF-01 questionnaire adapter/FK, and remaining Definition-of-Done layers.
-
-
-2. Authority and Startup Procedure
-Use this source order:
-
-docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md for semantic requirements;
-
-live origin/develop, merged PRs, code, and tests for implementation truth;
-
-docs/evidence/sprint-1/MF02_Sprint1_Evidence.md for accumulated engineering evidence;
-
-this handoff for current context and safe next steps.
-
-At the start of the next session:
-
-fetch origin and verify origin/develop;
-
-verify the latest overall checkpoint and implementation ancestry through PR #48 (14e4976844870904b889fcd4970cc6d07439e168);
-
-confirm Sprint 1 and US-13 remain in progress;
-
-reuse all completed session generation, individual-change, series-preview, series-confirmation, regression-hardened, and full-series cancellation foundations;
-
-proceed with reverse configuration-impact protection architecture/readiness gate;
-
-keep large package moves/service splits separate from functional work unless a concrete defect requires them.
-
-The immediate next phase is reverse configuration-impact protection architecture/readiness gate, followed by the remaining Sprint 1 backend gaps.
-
-3. Repository and Integration History
-Checkpoint	Integrated scope
-PR #12 eb4a4d9	Campaign, dose-programme, targeting, and questionnaire-assignment foundation
-PR #16 201768e	Vaccination-center foundation and initial hardening
-PR #17 bd22cb9	Canonical R8 DOCX synchronization
-PR #18 c120ee8	Sprint evidence checkpoint
-PR #19 8cdb112	Sprint evidence checkpoint
-PR #20 1cad899	OperatingHours backend foundation
-PR #21 433dbe1	OperatingHours evidence checkpoint
-PR #22 fe101bb	Evidence metadata stability checkpoint
-PR #23 5a5b3e7	Pre-CenterClosure backend hardening
-PR #24 e70940b	CenterClosure backend foundation
-PR #25 7b9398b	Evidence/handoff synchronization after CenterClosure
-PR #26 f9c2bba	CampaignCenterAssignment backend foundation
-PR #27 04b53da	Evidence/handoff synchronization after CampaignCenterAssignment
-PR #28 0dd05a5	SessionRecurrenceRule backend foundation
-PR #29 7b7896b	Evidence/handoff synchronization after SessionRecurrenceRule; metadata checkpoint only
-PR #30 bab77b7	VaccinationCenter scheduling-timezone and mutation-locking prerequisite
-PR #31 b5b674f	Evidence/handoff synchronization after center scheduling timezone; metadata checkpoint only
-PR #32 b175e8e	VaccinationSession domain and persistence foundation
-PR #33 f7360fb	Evidence/handoff synchronization after VaccinationSession domain foundation; metadata checkpoint only
-PR #34 f0a8880	VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation
-PR #35 f0dcff3	Evidence/handoff synchronization after validated one-off session; metadata checkpoint only
-PR #36 c54f590	SessionRecurrenceRule occurrence generation and idempotent VaccinationSession materialization
-PR #37 ce54040	Evidence/handoff synchronization after recurrence generation; metadata checkpoint only
-PR #38 b407679	SessionChangeEvent audit foundation, SessionImpactReader port, and VaccinationSession row locking
-PR #39 f6d8c18	Evidence/handoff synchronization after session change audit foundation; metadata checkpoint only
-PR #40 b72fc6b	Individual VaccinationSession change workflows (preview, stale token, reschedule, transfer, cancel, locking, and audit)
-PR #41 473f115	Evidence/handoff synchronization after individual session changes; metadata checkpoint only
-PR #42 68f6bcf	Series-wide VaccinationSession change preview foundation (diff calculation, occurrence classification, override preservation, impact aggregation, and SHA-256 stale token)
-PR #43 8177c7f	Evidence/handoff synchronization after series change preview; metadata checkpoint only
-PR #44 255754d	Atomic series-wide VaccinationSession change confirmation (locked stale-token revalidation, rule/session mutation, series audit events, and rollback semantics)
-PR #45 10614b5	Evidence/handoff synchronization after series change confirmation; metadata checkpoint only
-PR #46 5ebcaad	Session-change regression hardening (unchanged retained SCHEDULED series zero impact, latent past occurrence prevention, and exact no-op change rejection)
-PR #47 5ebcaad	Evidence/handoff synchronization after session-change regression hardening; metadata checkpoint only
-PR #48 14e4976	Full-series cancellation workflow (previewSeriesCancellation, confirmSeriesCancellation, ACTIVE/non-expired rule check, REMOVED/PRESERVED_EXCEPTION/INELIGIBLE categorization, real SCHEDULED impact counts, SHA-256 preview token, campaign->center->rule->sessions ASC locking, rule cancellation, session cancellation, SERIES_CANCELLED audit events, generator compatibility, 12 net-new tests, 459 total tests)
-PR #49 634e3dc	Evidence/handoff synchronization after series cancellation; metadata checkpoint only
-PR #50 8ff9936	Campaign and assignment reverse-impact protection (VaccinationCampaignService.updateServiceDates, CampaignCenterAssignmentService reverse protection for updateFutureAssignment, endAssignment, cancelFutureAssignment, session scheduling timezone projection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, campaign-row locking, 17 net-new tests, 476 total tests)
-PR #51 c9993ec	Evidence/handoff synchronization after campaign and assignment reverse-impact protection; metadata checkpoint only
-PR #52 1582c4c	VaccinationCenter deactivation, OperatingHours update/end-date, and CenterClosure create/update reverse-impact protection (deactivateCenter pessimistic lock, OperatingHours range intersection, CenterClosure half-open [startAt,endAt) intersection, DRAFT/SCHEDULED/IN_PROGRESS blocking semantics, 19 net-new tests, 495 total tests)
-The current checkpoint classification is:
-
-latest MF-02 implementation integration checkpoint = 1582c4cfa6596d1cc2dac9b977774fd8e010bc77
-certified PR #52 feature source = 17b45c6981a410e57daeef5eb64ba26693d1f22e
-actual PR #52 base = c9993ec01d56717291f154c6fa961051db021da1
-latest overall repository/documentation checkpoint = 1582c4cfa6596d1cc2dac9b977774fd8e010bc77
-Older SHAs and test counts in the evidence chronology are historical milestones, not the current repository state.
-
-
-
-
-4. Architecture and Ownership Boundaries
-The backend uses Spring Boot, Spring Data JPA, field-access entities, Maven, MySQL as the production target, and H2 in MySQL compatibility mode for current integration tests.
-
-Important ownership distinctions:
-
-CampaignLocationTarget is administrative/service-area targeting.
-
-CampaignCenterAssignment is operational authorization for a center to serve a campaign.
-
-OperatingHours defines normal recurring weekly center availability.
-
-CenterClosure records temporary exception intervals without rewriting OperatingHours.
-
-CenterStatus is long-term facility lifecycle state, not temporary unavailability.
-
-SessionRecurrenceRule describes bounded weekly recurrence definitions; it is not OperatingHours or a concrete VaccinationSession.
-
-VaccinationCenter.timezone is the approved implementation-level authority for one-off local scheduling.
-
-VaccinationSession is a concrete operational appointment session interval hosted at a center for a campaign.
-
-SessionBookingStatus is a derived/read-model projection concept, not an independently mutable state.
-
-SessionChangeEvent is an append-only audit record capturing material schedule/center changes and cancellations.
-
-SessionImpactReader defines the cross-module integration port to MF-03 for appointment/waitlist impact counts.
-
-MF-01 owns questionnaire version publication; MF-02 owns campaign linkage and still requires the final adapter/FK integration.
-
-Do not conflate administrative targeting, operational authorization, normal hours, closures, recurrence, actual session validity, or cross-module booking impacts.
-
-5. Shared Temporal and Locking Conventions
-Completed effective-history domains generally retain history and avoid normal hard-delete workflows.
-
-Temporal conventions must remain explicit:
-
-CampaignCenterAssignment uses half-open calendar periods [activeFrom, activeTo).
-
-CenterClosure uses half-open absolute intervals [startAt, endAt).
-
-OperatingHours retains its implemented inclusive effective calendar-date convention.
-
-VaccinationSession uses half-open absolute UTC intervals [startAt, endAt) with bookingCloseAt <= startAt.
-
-SessionChangeEvent captures snapshots of [startAt, endAt) and bookingCloseAt alongside centerId, scheduleTimezone, and lifecycleStatus.
-
-Campaign service dates and assignment dates are independent configuration boundaries at foundation level; session validation combines them.
-
-Locking conventions:
-
-campaign-owned cross-row configuration decisions serialize on the campaign row;
-
-center-owned cross-row scheduling decisions serialize on the center row;
-
-scalar parent-ID lookup may route an existing-child mutation before the parent lock;
-
-authoritative child state and business checks must be obtained only after the appropriate parent lock when stale first-level-cache state is possible;
-
-atomic session creation must use deterministic parent lock ordering (campaign → center) to prevent deadlocks between competing concurrent writes;
-
-recurrence-rule sibling creation is intentionally unconstrained; existing-rule mutation locks and refreshes that rule row directly;
-
-session modifications use pessimistic row locking via VaccinationSessionRepository.findByIdForUpdate(sessionId).
-
-5.1 VaccinationCenter scheduling-timezone and mutation prerequisite
-PR #30 added the approved implementation architecture needed before concrete sessions:
-
-every center requires an explicitly supplied scheduling timezone;
-
-the timezone is persisted as ZoneId.of(trimmedInput).getId() in a non-null String column;
-
-no JVM, operating-system, database, browser, user-profile, country, or hard-coded regional default is consulted;
-
-general center detail updates cannot change the timezone, and there is no public generic setter or timezone-change service operation;
-
-one-off sessions snapshot the center timezone into VaccinationSession.scheduleTimezone, while recurrence-generated sessions inherit the rule's stored timezone.
-
-Integration facts:
-
-PR #30 — feat(mf02): add center scheduling timezone;
-
-reviewed feature commit: d70c67b2ac48fe01f8d5f58491995bd19aa4b833;
-
-merge commit: bab77b7a6dc421d622153d422a7d589d3057ae7a.
-
-6. OperatingHours — Completed Contract
-OperatingHours was merged through PR #20 at 1cad899971c8b18804af31bfb079a24285f7d16d.
-
-The completed foundation includes:
-
-recurring weekday opening/closing shifts;
-
-inclusive effective calendar-date boundaries;
-
-multi-shift support with overlap prevention;
-
-candidate pre-validation and exception-safe mutation;
-
-future/current/historical configuration behavior;
-
-shortening-only deactivation/end workflow;
-
-center-row serialization for conflicting writes.
-
-Historical validation at that checkpoint was 55 OperatingHours-specific tests and 152 total backend tests.
-
-7. CenterClosure — Completed Contract
-CenterClosure was merged through PR #24 at e70940b7021778ae35dd2976ac5df6b649a28584.
-
-Completed behavior:
-
-mandatory VaccinationCenter ownership;
-
-UTC-safe Instant startAt / endAt with half-open [startAt, endAt) semantics;
-
-partial-day, overnight, multi-day, ongoing, historical, and future intervals;
-
-status exactly ACTIVE / CANCELLED;
-
-same-center ACTIVE overlap prevention with adjacency allowed;
-
-future-only normal update/cancellation, terminal cancellation, and retained history;
-
-independence from CenterStatus and OperatingHours configuration;
-
-center-row pessimistic serialization;
-
-read-side overlap helper for atomic VaccinationSession integration.
-
-Historical validation at that checkpoint was 45 CenterClosure-specific tests and 194 total backend tests.
-
-8. CampaignCenterAssignment — Completed Contract
-8.1 Purpose and model
-CampaignCenterAssignment records operational authorization for one center to serve one campaign during an effective calendar period. It is distinct from CampaignLocationTarget.
-
-Implemented types and fields:
-
-CampaignCenterAssignment;
-
-CampaignCenterAssignmentStatus with exactly ACTIVE and CANCELLED;
-
-mandatory lazy campaign relationship;
-
-mandatory lazy center relationship;
-
-LocalDate activeFrom;
-
-nullable exclusive LocalDate activeTo;
-
-Instant createdAt and Instant updatedAt;
-
-immutable ownership and retained history.
-
-8.2 Effective periods and lifecycle
-The effective period is half-open [activeFrom, activeTo):
-
-start is inclusive;
-
-end is exclusive;
-
-null end is open-ended;
-
-exact adjacency is allowed;
-
-zero-length and reversed finite periods are rejected;
-
-same campaign-center ACTIVE periods cannot overlap;
-
-CANCELLED rows are neither effective nor overlap blockers.
-
-8.3 Persistence, locking, and authoritative reload
-The campaign row is the write-serialization guard. Existing-child mutation ordering uses scalar campaign ID lookup, pessimistic campaign lock, authoritative assignment refresh via EntityManager.refresh(), lifecycle/period checks, and mutation.
-
-Integration facts:
-
-PR #26 — feat(mf02): add campaign center assignment backend foundation;
-
-merge commit: f9c2bbaa8f9f0c13a338ea910961820b34e88d9e;
-
-48 component tests; 242 total backend tests at that historical checkpoint.
-
-9. SessionRecurrenceRule — Completed Contract
-9.1 Purpose and model
-SessionRecurrenceRule is a bounded weekly definition from which individually stored VaccinationSession occurrences may later be generated.
-
-Implemented types and state:
-
-SessionRecurrenceRule;
-
-SessionRecurrenceRuleStatus with exactly ACTIVE and CANCELLED;
-
-mandatory immutable lazy campaign and center relationships;
-
-mutation-safe Set<DayOfWeek> persisted through an EAGER seven-value @ElementCollection;
-
-mandatory inclusive LocalDate startDate / endDate;
-
-same-local-day half-open LocalTime interval [startTime, endTime);
-
-normalized Java ZoneId string;
-
-immutable backend-generated UUID generationKey;
-
-Instant createdAt and updatedAt audit fields.
-
-9.2 Lifecycle and authoritative mutation
-New rules are ACTIVE. Full definition update is permitted only before the rule starts; prospective end-date shortening and terminal cancellation are supported. Existing-rule writes lock and refresh the rule row directly.
-
-Integration facts:
-
-PR #28 — feat(mf02): add session recurrence rule backend foundation;
-
-merge commit: 0dd05a5dce856bbaff6924c54fcf3c395920b076;
-
-30 component tests; 272 total backend tests at that historical checkpoint.
-
-10. VaccinationSession — Completed Domain, Validation & One-Off Creation
-10.1 Purpose and model
-VaccinationSession represents a concrete scheduled operational interval during which vaccination appointments may be conducted at a hosting center for an authorized campaign.
-
-Implemented types and state (PR #32 & PR #34):
-
-VaccinationSession JPA entity;
-
-SessionLifecycleStatus enum: DRAFT, SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED;
-
-SessionBookingStatus enum: NOT_OPEN, OPEN, FULL, CLOSED, SUSPENDED (reserved for upcoming read-model projection; not an independently mutable persisted state);
-
-generated Long id identity;
-
-mandatory immutable lazy VaccinationCampaign ownership (updatable = false);
-
-mandatory lazy VaccinationCenter hosting relationship;
-
-optional immutable lazy SessionRecurrenceRule provenance (updatable = false);
-
-nullable immutable String occurrenceKey (length 64) with database unique constraint uk_session_occurrence_key;
-
-nullable immutable LocalDate originOccurrenceDate;
-
-mandatory normalized ZoneId scheduleTimezone snapshot (e.g. ZoneId.of(trimmed).getId());
-
-mandatory absolute schedule Instant startAt and endAt with half-open [startAt, endAt) semantics (startAt < endAt);
-
-mandatory Instant bookingCloseAt with bookingCloseAt <= startAt;
-
-initial lifecycle status strictly initialized to SessionLifecycleStatus.DRAFT;
-
-audit fields Instant createdAt and updatedAt managed via standard @PrePersist and @PreUpdate;
-
-zero broad public setter surface;
-
-no unsafe remove cascade or orphan removal.
-
-10.2 Provenance invariant
-The entity strictly enforces all-or-none recurrence provenance:
-
-One-off session: recurrenceRule == null && occurrenceKey == null && originOccurrenceDate == null (isGenerated() == false); multiple one-off sessions with null occurrence keys are persistence-valid.
-
-Generated occurrence: recurrenceRule != null && occurrenceKey != null && originOccurrenceDate != null (isGenerated() == true); occurrence key is trimmed and validated (non-blank, length <= 64), and uniqueness is enforced at database level.
-
-Mixed partial provenance combinations are rejected with IllegalArgumentException.
-
-10.3 Persistence & repository
-VaccinationSessionRepository extends JpaRepository<VaccinationSession, Long> and provides:
-
-Optional<VaccinationSession> findByOccurrenceKey(String occurrenceKey);
-
-List<VaccinationSession> findByCampaignId(Long campaignId);
-
-List<VaccinationSession> findByCenterId(Long centerId);
-
-List<VaccinationSession> findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(Long recurrenceRuleId);
-
-boolean existsByRecurrenceRuleId(Long recurrenceRuleId);
-
-boolean existsByRecurrenceRuleIdAndOriginOccurrenceDateAfter(Long recurrenceRuleId, LocalDate date);
-
-@Lock(LockModeType.PESSIMISTIC_WRITE) Optional<VaccinationSession> findByIdForUpdate(Long id).
-
-Table vaccination_sessions defines composite indexes for campaign schedule, center schedule, and recurrence origin, along with the unique occurrence key constraint.
-
-10.4 VaccinationSessionValidator contract
-The shared VaccinationSessionValidator performs authoritative concrete-session schedule validation against already locked and refreshed parent entities:
-
-Candidate Invariants: Rejects null timestamps, startAt >= endAt, and bookingCloseAt > startAt.
-
-Center State: Requires center status == CenterStatus.ACTIVE.
-
-Scheduling Timezone Projection: Resolves the center's ZoneId to project startAt and endAt into local calendar dates (firstTouchedDate at startAt, lastTouchedDate at endAt.minusNanos(1)).
-
-Campaign Containment: Ensures all touched calendar dates fall within [campaign.startDate, campaign.endDate].
-
-CampaignCenterAssignment Coverage: Requires an active assignment covering the full span [firstTouchedDate, lastTouchedDate + 1).
-
-OperatingHours Contiguous Coverage: For each touched date, validates that the session interval is fully covered by contiguous active OperatingHours shifts on that day of week, active for that date. OperatingHours entities are explicitly refreshed prior to evaluation to guard against stale first-level cache state.
-
-CenterClosure Overlap Exclusion: Ensures the session interval [startAt, endAt) does not overlap any active CenterClosure on [closure.startAt, closure.endAt). Exact boundary adjacencies (closure.endAt <= session.startAt or session.endAt <= closure.startAt) are permitted.
-
-No Generic Same-Center Overlap Prohibition: Multiple concurrent or overlapping sessions may exist at the same center (AC-9, no generic same-center overlap restriction).
-
-Boundary: The validator is a pure validation component: it does not acquire locks, does not persist entities, does not generate occurrences, and does not perform capacity or staffing checks.
-
-10.5 VaccinationSessionService and One-Off DRAFT Creation
-VaccinationSessionService.createOneOffDraftSession(...) implements atomic one-off session creation:
-
-Deterministic Locking: Acquires pessimistic write locks in strict order: campaignRepository.findByIdForUpdate(campaignId) followed by centerRepository.findByIdForUpdate(centerId).
-
-Authoritative Reload: Refreshes both campaign and center via EntityManager.refresh() to ensure authoritative state.
-
-Write-Time Validation: Invokes VaccinationSessionValidator.validateSessionSchedule(...), which explicitly refreshes effective OperatingHours instances.
-
-Draft Construction & Persistence: Constructs a one-off VaccinationSession in DRAFT status with scheduleTimezone = center.getTimezone(), null recurrence provenance (recurrenceRule = null, occurrenceKey = null, originOccurrenceDate = null), and saves it via VaccinationSessionRepository.
-
-10.6 Write-Time Validity vs. Deferred Reverse-Impact Boundary
-The system guarantees that a session cannot be created or materialized when the authoritative serialized configuration state at write time violates session rules (authoritative write-time validation).
-
-This milestone does NOT implement reverse-impact workflows. The following reverse configuration-impact behaviors remain explicitly deferred:
-
-Campaign date modifications affecting existing sessions;
-
-Center deactivation affecting existing sessions;
-
-Assignment shortening or cancellation affecting existing sessions;
-
-OperatingHours modifications affecting existing sessions;
-
-CenterClosure creation or updates affecting existing sessions.
-
-10.7 One-Off Concurrency and Integration Evidence
-Three separate-transaction concurrency integration tests verify the runtime locking and refresh contracts:
-
-creationRejectsWhenCenterConcurrentlyDeactivated: Creation attempt serialized after center deactivation observes INACTIVE state and is rejected with IllegalArgumentException.
-
-concurrentSessionCreationsForSameCenterSucceedWithoutDeadlock: Concurrent creations for the same center succeed without deadlocks and both sessions are committed.
-
-creationRacingWithOverlappingClosureRejectsWhenClosureCommitsFirst: Session creation serialized after an overlapping closure commits is rejected. (This verifies serialized write-time validation; it does not prove closures created later automatically cancel existing sessions).
-
-Integration facts:
-
-PR #34 — feat(mf02): add validated one-off session creation;
-
-reviewed feature commit: 59da64445ba98482237dba01d8e2436de12678b6;
-
-merge commit: f0a8880831d27387b16f548a86e849ee2892b599;
-
-merge parents: f7360fb8d195c192a0396ca75e86f9825f9f4986 and 59da64445ba98482237dba01d8e2436de12678b6;
-
-35 new integration tests; full backend total was 329 tests at that historical checkpoint.
-
-10.8 SessionRecurrenceRule Occurrence Generation and Idempotent Materialization
-SessionOccurrenceGenerationService implements controlled transactional materialization of concrete DRAFT VaccinationSession occurrences from an ACTIVE SessionRecurrenceRule (PR #36):
-
-Routing Discovery & Pessimistic Locking: Discovers parent IDs via a non-locking pre-read of immutable @JoinColumn(updatable = false) IDs, then acquires pessimistic write locks in strict order: campaign → center → rule, followed by post-lock EntityManager.refresh on all three entities. An audit of all repository locking confirmed zero cross-workflow lock inversion.
-
-Rule Eligibility & Timezone Validation: Requires rule.getStatus() == SessionRecurrenceRuleStatus.ACTIVE. Enforces strict normalized rule/center timezone equality (rule.getTimezone().equals(center.getTimezone())); mismatches reject immediately with IllegalArgumentException.
-
-Effective Range & Date Enumeration: Computes the effective generation window intersection ([effectiveStart, effectiveEnd] between rule bounds and requested range). If disjoint, returns an empty result RecurrenceGenerationResult(0, 0, List.of()). Iterates ascending LocalDate values matching rule.getWeekdays(), producing exactly one candidate per matching date.
-
-DST-Safe Local Time Conversion: Converts configured local [startTime, endTime) to UTC Instant using ZoneRules.getValidOffsets(LocalDateTime):
-
-0 valid offsets (gap): rejects candidate and transaction with IllegalArgumentException (no silent forward shifting);
-
-1 valid offset: used directly;
-
-2 valid offsets (overlap): deterministically selects validOffsets.get(0) (earlier offset).
-
-Asserts absolute startAt.isBefore(endAt).
-
-Controller Booking-Close Decision: For every generated occurrence, bookingCloseAt = startAt exactly. (This is a controller implementation decision filling an unspecified generation detail; it is not derived from VaccinationCampaign.bookingCloseAt, not capped, no lead-time offset is applied, and no recurrence rule schema field is added).
-
-Deterministic Occurrence Identity: occurrenceKey = <rule.generationKey>:<originOccurrenceDate> (e.g. 47 characters for UUID + ISO date, well within the 64-character column limit). Independent of mutable start/end timestamps or center names.
-
-Validator Reuse: Directly invokes VaccinationSessionValidator.validateSessionSchedule(campaign, center, startAt, endAt, bookingCloseAt) for every missing candidate occurrence.
-
-Idempotency & Atomic Batch Persistence: Pre-existing occurrences for the rule are detected via findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc and retained untouched with historical provenance verified. All missing candidates are validated in memory before sessionRepository.saveAll() and flush(). Any validation failure throws before persistence, rolling back all newly generated occurrences in that invocation while preserving pre-existing sessions.
-
-Same-Rule Concurrency: Serialized on the recurrence rule row write lock backed by the database uk_session_occurrence_key constraint.
-
-Interim Rule Mutation Protection:
-
-SessionRecurrenceRuleService.updateFutureRule: rejects definition updates with IllegalArgumentException if any generated session exists for the rule (existsByRecurrenceRuleId(ruleId)).
-
-SessionRecurrenceRuleService.shortenRuleEnd: rejects shortening if any generated occurrence exists after the new end date (existsByRecurrenceRuleIdAndOriginOccurrenceDateAfter(ruleId, newEndDate)). An occurrence ON the new inclusive end date remains valid.
-
-SessionRecurrenceRuleService.cancelRule: remains permitted with generated occurrences, marking the rule CANCELLED, blocking future generation, and leaving existing generated sessions untouched.
-
-Integration facts:
-
-PR #36 — feat(mf02): add recurrence occurrence generation;
-
-certified feature source: 96450eb715e3dbc48547fe1235faa74598b6d009;
-
-merge commit: c54f59011543cda49a234710a857cdfe48d4b459;
-
-merge parents: f0dcff3c6109b55ae1777937988d63389532e5e8 and 96450eb715e3dbc48547fe1235faa74598b6d009;
-
-25 net-new integration tests (19 generation integration, 2 concurrency, 4 recurrence mutation protection); full backend total was 354 tests at that historical checkpoint.
-
-11. SessionChangeEvent and Impact Audit Foundation (PR #38)
-11.1 Purpose and Model
-SessionChangeEvent provides an append-only audit trail capturing material operational changes to vaccination sessions (reschedule, center transfer, cancellation, series-wide reschedule, series-wide cancellation).
-
-Implemented types and state:
-
-SessionChangeType enum: RESCHEDULED, CENTER_TRANSFERRED, CANCELLED, SERIES_RESCHEDULED, SERIES_CANCELLED.
-
-SessionScheduleSnapshot immutable @Embeddable value object capturing:
-
-Instant startAt
-
-Instant endAt
-
-Instant bookingCloseAt
-
-Long centerId
-
-String scheduleTimezone
-
-SessionLifecycleStatus lifecycleStatus
-
-SessionChangeEvent JPA entity (@Entity, @Table(name = "session_change_events")):
-
-generated Long id identity;
-
-mandatory immutable lazy VaccinationSession session reference (updatable = false);
-
-mandatory immutable SessionChangeType changeType (updatable = false);
-
-mandatory immutable SessionScheduleSnapshot oldSnapshot (@Embedded, @AttributeOverrides with old_ column prefix, updatable = false);
-
-mandatory immutable SessionScheduleSnapshot newSnapshot (@Embedded, @AttributeOverrides with new_ column prefix, updatable = false);
-
-mandatory non-blank trimmed String reason (max 500 characters, updatable = false);
-
-mandatory non-negative int affectedAppointmentsCount (>= 0, updatable = false);
-
-mandatory non-negative int affectedWaitlistCount (>= 0, updatable = false);
-
-mandatory non-blank trimmed String actorId (max 64 characters, updatable = false);
-
-managed audit timestamp Instant createdAt (@PrePersist, updatable = false);
-
-zero broad setter surface, ensuring append-only immutability.
-
-11.2 Integration Port Boundary (MF-02 -> MF-03)
-SessionImpactReader: Cross-module integration interface contract declaring SessionImpactSummary assessSessionImpact(Long sessionId).
-
-SessionImpactSummary: Value record encapsulating int affectedAppointmentsCount and int affectedWaitlistCount, strictly enforcing non-negative invariants (>= 0).
-
-Boundary rule: SCHEDULED session changes must read real MF-03 appointment and waitlist counts; no fake zero-count production adapter is allowed.
-
-11.3 Session Row Locking
-VaccinationSessionRepository.findByIdForUpdate(Long id): Dedicated repository query annotated with @Lock(LockModeType.PESSIMISTIC_WRITE) providing serialized concurrency control for session modifications.
-
-11.4 Repository and Indexing
-SessionChangeEventRepository extends JpaRepository<SessionChangeEvent, Long>:
-
-List<SessionChangeEvent> findBySessionIdOrderByCreatedAtAscIdAsc(Long sessionId).
-
-Table session_change_events defines index idx_sce_session_created on (session_id, created_at) and check constraints on reason/actor lengths and non-negative counts.
-
-11.5 Controller Decisions Recorded
-Individually edited recurrence occurrences are preserved during later series changes;
-
-Series preview will show individually edited occurrences as exceptions;
-
-Later series changes must not silently overwrite individually edited occurrences;
-
-SCHEDULED session changes must use real MF-03 appointment/waitlist counts;
-
-No fake zero-count MF-03 production adapter is allowed.
-
-Integration facts:
-
-PR #38 — feat(mf02): add session change audit foundation;
-
-reviewed feature commit: aa5b99320a609f412d832e40b9644e95addee039;
-
-merge commit: b407679f95b6ec791d23bff070f2756dbbaa06b2;
-
-merge parents: ce540402fd845458fcbaba35b850e5cf74f6131c and aa5b99320a609f412d832e40b9644e95addee039;
-
-10 changed files (7 production, 3 test; 1103 additions, 0 deletions);
-
-25 net-new tests (13 model, 9 persistence integration, 3 impact summary); full backend total was 379 tests, zero failures, zero errors, zero skipped;
-
-Maven test and verify succeeded and executable JAR packaged;
-
-Backend CI and Frontend CI succeeded before and after merge.
-
-12. Individual VaccinationSession Changes — Completed Contract
-PR #40 implemented individual VaccinationSession material-change workflows:
-
-12.1 Purpose and Model
-SessionChangePreview: Immutable record encapsulating Long sessionId, SessionChangeType changeType, SessionScheduleSnapshot oldSnapshot, SessionScheduleSnapshot newSnapshot, int affectedAppointmentCount, int affectedWaitlistCount, and String previewToken. Strictly validates non-null snapshots/type and non-negative counts.
-
-Read-only preview operations (previewReschedule, previewCenterTransfer, previewRescheduleOrTransfer, previewCancellation) annotated with @Transactional(readOnly = true) perform candidate validation and compute cross-module impact counts and preview tokens without mutating state.
-
-12.2 Reschedule and Center Transfer
-confirmReschedule, confirmCenterTransfer, confirmRescheduleOrTransfer on VaccinationSessionService:
-
-Validates session lifecycle status: DRAFT and SCHEDULED (with real impact counts) allowed; IN_PROGRESS, COMPLETED, and CANCELLED strictly rejected.
-
-Reuses VaccinationSessionValidator to revalidate candidate schedule bounds, active hosting center status, campaign service boundaries, operational assignment coverage, operating hours contiguous coverage, and closure exclusions.
-
-On center transfer, updates session center and changes scheduleTimezone to the target center's timezone.
-
-Booking close policy: preserves existing bookingCloseAt if <= newStartAt; otherwise resets bookingCloseAt to newStartAt (or validates explicit new timestamp).
-
-Mutates session via session.reschedule(newCenter, newStartAt, newEndAt, effectiveBookingCloseAt).
-
-12.3 Cancellation Workflow
-confirmCancellation on VaccinationSessionService and session.cancel():
-
-Validates session lifecycle status: DRAFT and SCHEDULED (with real impact counts) allowed; IN_PROGRESS, COMPLETED, and already CANCELLED sessions strictly rejected.
-
-Transitions lifecycleStatus to CANCELLED, retains session row, preserves recurrence provenance, and validates non-blank reason (max 500 chars) and actorId (max 64 chars).
-
-Creates append-only SessionChangeEvent with CANCELLED change type.
-
-Does not modify MF-03 appointment/waitlist records.
-
-12.4 Cryptographic Stale-Preview Protection
-generatePreviewToken: Computes deterministic SHA-256 fingerprint from sessionId|oldCenterId|oldTz|oldStart|oldEnd|oldClose|oldStatus|newCenterId|newTz|newStart|newEnd|newClose|newStatus|changeType|apptCount|waitlistCount.
-
-At confirmation: write locks are acquired, entities refreshed, schedule revalidated, and token recomputed; any drift in session schedule, center, lifecycle status, or impact counts rejects with IllegalStateException prior to session mutation.
-
-12.5 Hierarchical Parent Locking
-Deterministic write lock hierarchy prevents deadlocks and eliminates lock inversion:
-
-Same-center change: campaign → center → session
-
-Center transfer: campaign → center(min(oldId, newId)) → center(max(oldId, newId)) → session
-
-Compatible with existing campaign → center → rule recurrence generation locking.
-
-Post-lock entityManager.refresh() ensures all entity evaluations use authoritative database state.
-
-12.6 Cross-Module Impact Policy
-DRAFT sessions evaluate impact counts as known zero.
-
-SCHEDULED sessions strictly require real SessionImpactReader counts and reject with IllegalStateException if the reader is unavailable or returns null.
-
-No fake zero-count production adapter exists.
-
-12.7 Occurrence Isolation & Generator Compatibility
-Individual overrides on generated occurrences preserve recurrenceRule, occurrenceKey, and originOccurrenceDate. Sibling occurrences under the same rule remain untouched.
-
-SessionOccurrenceGenerationService recognizes individually modified/transferred/cancelled occurrences by occurrenceKey as already materialized, preserving them without reset or duplicate generation.
-
-True provenance corruption (for example mismatched recurrence rule, origin occurrence date, campaign, or missing center provenance) remains rejected.
-
-Controller decision recorded: Individually edited occurrences must be preserved during later series changes and shown as exceptions.
-
-Integration facts:
-
-PR #40 — feat(mf02): add individual session change workflows;
-
-reviewed feature commit: 2fa748903a3d630d84fbbf527e3bf73ddb8ffc3e;
-
-merge commit: b72fc6bdcff8b8e6d1817cfa35271edca90bb118;
-
-merge parents: f6d8c180b8bdf06886ad2647e5469c210ab5d971 and 2fa748903a3d630d84fbbf527e3bf73ddb8ffc3e;
-
-10 changed files (+1725 additions, -10 deletions);
-
-26 net-new tests (5 model unit, 3 preview record, 3 token hashing, 13 workflow integration, 2 concurrency); full backend total was 405 tests, zero failures, zero errors, zero skipped;
-
-Maven test and verify succeeded and executable JAR packaged;
-
-Backend CI and Frontend CI succeeded before and after merge.
-
-12.8 Series-Wide VaccinationSession Change Workflows (Preview and Confirmation)
-PR #42 (Preview engine) and PR #44 (Confirmation execution) implemented series-wide schedule change workflows:
-
-Series-Wide Preview Engine (PR #42)
-SessionSeriesChangeService.previewSeriesChange: Read-only operation annotated with @Transactional(readOnly = true) previewing proposed changes to weekdays, startDate, endDate, startTime, endTime, and timezone.
-
-Diff Classification Engine: Classifies occurrences into:
-
-RETAINED: Existing eligible sessions whose date matches the proposed schedule.
-
-REMOVED: Existing eligible sessions whose date is no longer present in the proposed schedule.
-
-NEW: Dates in the proposed schedule where no session currently exists.
-
-PRESERVED_EXCEPTION: Sessions with prior individual SessionChangeEvent records (rescheduled, center-transferred, or cancelled) that are preserved untouched.
-
-INELIGIBLE: Past/elapsed sessions or terminal states (IN_PROGRESS, COMPLETED, CANCELLED).
-
-Booking Close & Validator Policy: Candidate occurrences revalidate schedule bounds via VaccinationSessionValidator. Proposed schedule shifts set bookingCloseAt = newStartAt.
-
-Cryptographic Token: Computes SHA-256 fingerprint token across rule definition and all classified occurrence preview items.
-
-Integration facts: PR #42, reviewed source 9896ae462f880142f69963f4c9b983cf8cfe388d, merge commit 68f6bcf7381e5b0875ac64805cdd140f0db8b208, base 473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d, 17 net-new tests, backend baseline 422 tests.
-
-Atomic Series-Wide Confirmation (PR #44)
-SessionSeriesChangeService.confirmSeriesChange: Single @Transactional method executing series definition updates and session mutations atomically.
-
-Write-Lock Order: Acquires pessimistic write locks in strict lock hierarchy order: campaign → center → rule → affected sessions (by ID ASC). Performs explicit entityManager.refresh(...) under locks.
-
-Stale Preview Revalidation: Re-evaluates preview diff and SHA-256 token under write locks. If token mismatches, throws IllegalStateException prior to entity mutation.
-
-Mutation Execution:
-
-RETAINED: Updates startAt/endAt, sets bookingCloseAt = newStartAt, retains lifecycle status, preserves occurrenceKey/originOccurrenceDate, and emits SERIES_RESCHEDULED SessionChangeEvent (only if schedule shifted).
-
-REMOVED: Retains row in DB, sets lifecycleStatus = CANCELLED, and emits SERIES_CANCELLED SessionChangeEvent. Hard delete is never performed.
-
-NEW: Instantiates new DRAFT VaccinationSession with deterministic occurrenceKey, center timezone, and bookingCloseAt = startAt.
-
-PRESERVED_EXCEPTION & INELIGIBLE: Retained completely untouched with original schedule and center.
-
-SessionRecurrenceRule: Definition parameters updated via rule.updateDefinition(...).
-
-Generator Compatibility: Occurrences after confirmation remain recorded in DB, ensuring SessionOccurrenceGenerationService retries create zero duplicate sessions.
-
-Series center transfer remains unsupported.
-
-Integration facts:
-
-PR #44 — feat(mf02): add series change confirmation;
-
-reviewed feature commit: 640d4044c6b5753f4e6e0f1ca73a68e5898209ed;
-
-merge commit: 255754dedcd4cfff5744bce69db72d09061ff560;
-
-merge parents: 8177c7f3b4623164c8a9a093763febc941f1532b and 640d4044c6b5753f4e6e0f1ca73a68e5898209ed;
-
-4 changed files (+836 insertions, -10 deletions);
-
-12 net-new tests (10 integration tests in SessionSeriesChangeConfirmationIntegrationTests, 2 concurrency tests in Mf02ConcurrencyIntegrationTests); full backend total is 434 tests, zero failures, zero errors, zero skipped;
-
-Maven test and verify succeeded and executable JAR packaged;
-
-Backend CI and Frontend CI succeeded before and after merge.
-
-12.9 External ZIP Review — Regression Hardening Findings
-A full repository ZIP review was performed against the clean develop checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a, whose latest MF-02 implementation ancestor is PR #44 merge 255754dedcd4cfff5744bce69db72d09061ff560.
-
-The review did not identify a need for a broad MF-02 redesign. Production package layering remains acceptable. It identified three concrete behavioral hardening items that were subsequently fixed and verified in PR #46:
-
-Series impact over-count for unchanged retained SCHEDULED occurrences — FIXED / VERIFIED (PR #46)
-
-SessionSeriesChangeService now evaluates material schedule equality before querying SessionImpactReader for retained SCHEDULED occurrences. Unchanged retained occurrences contribute 0 appointments and 0 waitlist entries to series-change impact totals, allow missing impact reader when retained sessions are unchanged, and do not make the stale token depend on unrelated booking-count drift.
-
-Latent elapsed occurrence introduction through series definition change — FIXED / VERIFIED (PR #46)
-
-Series change proposals introducing missing candidate occurrences with proposedStartAt <= now(clock) are rejected with IllegalArgumentException before recurrence-rule mutation, preventing latent past recurrence creation while preserving existing historical occurrences.
-
-Exact no-op individual change creates false durable override — FIXED / VERIFIED (PR #46)
-
-Individual reschedule/transfer proposals that leave center, schedule, timezone, and booking close materially unchanged are rejected with IllegalArgumentException during preview and under authoritative locks during confirmation, persisting no SessionChangeEvent and preventing false PRESERVED_EXCEPTION classification.
-
-Additional hardening/design notes:
-
-VaccinationSession.transitionLifecycleStatus(...) is currently too permissive for the final lifecycle state machine. Production code should move toward explicit legal transition operations as lifecycle work is completed.
-
-Production package structure should remain stable for now. Do not perform a broad feature-package migration during active Sprint work.
-
-The test package is the main organization problem: MF-02 tests are flat and numerous. After functional hardening, group tests into campaign/center/session-oriented test subpackages and introduce small domain-specific fixture helpers where they reduce repeated setup.
-
-VaccinationSessionService and SessionSeriesChangeService have grown large. Consider later extraction of cohesive change/planning responsibilities, but do not combine this structural refactor with the regression-fix slice.
-
-External review verdict: FIXED AND VERIFIED IN PR #46.
-
-12.10 Session-Change Regression Hardening Integration (PR #46)
-The three external-review regression defects were resolved, tested, independently reviewed, CI-verified, and merged through PR #46:
-
-PR #46 — fix(mf02): harden session change regressions;
-
-reviewed feature commit: a84d9e13dab956581b0d549f355998691a807ffc;
-
-merge commit: 5ebcaadc44227d016956982a4ebf32e35c731491;
-
-merge parents: 397b17c4c5de68b463e3f2ab5fa06ec9ef2a6385 and a84d9e13dab956581b0d549f355998691a807ffc;
-
-5 changed files (+439 insertions, -45 deletions);
-
-13 net-new tests (6 in SessionSeriesChangePreviewIntegrationTests, 2 in SessionSeriesChangeConfirmationIntegrationTests, 5 in VaccinationSessionChangeIntegrationTests); full backend total is 447 tests, zero failures, zero errors, zero skipped;
-
-Maven test and verify succeeded and executable JAR packaged;
-
-Backend CI and Frontend CI succeeded before and after merge.
-
-13. Story and Sprint Status
-Sprint 1 remains IN PROGRESS.
-
-Story	Current status
-US-09	In progress at full-story scope: backend foundation implemented; publication transition/API/UI/DoD work remains
-US-10	In progress: MF-02 foundation hardened; final MF-01 QuestionnaireVersion adapter/FK remains
-US-11	Backend foundation complete; later API/UI/integration layers remain
-US-12	Backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, VaccinationSession integration, and final DoD evidence remain
-US-13	IN PROGRESS: VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence foundations, authoritative write-time validation / atomic one-off DRAFT creation, recurrence occurrence generation, session change audit / locking foundation, individual session change workflows (preview, stale token, reschedule, transfer, cancel, locking, and audit), series-wide change preview engine, atomic series change confirmation (confirmSeriesChange, SERIES_RESCHEDULED, SERIES_CANCELLED), and session change regression hardening complete; full-series cancellation command, recurrence-rule orchestration for materialized series, series exception handling, MF-03 adapter, lifecycle transition services beyond DRAFT, reverse configuration impact, API/UI/migration, and final DoD work remain
-US-27	Backend foundation implemented; later API/UI integration remains
-Do not mark Sprint 1, US-12, or US-13 fully Definition-of-Done complete solely from these backend foundations.
-
-14. SessionRecurrenceRule Boundary
-SessionRecurrenceRule is complete at its current backend-foundation scope, occurrence generation is operational through SessionOccurrenceGenerationService, and individually edited occurrences are safely recognized by the generator as already materialized without reset.
-
-Preserved boundary:
-
-it belongs to US-13;
-
-it describes recurrence of proposed sessions rather than normal center availability;
-
-it must not duplicate OperatingHours or CenterClosure;
-
-it exposes stable definition and generation-identity data for VaccinationSession generation;
-
-plain definition updates on rules with materialized sessions are guarded; series-wide future-session editing and exception handling build on the session change audit, individual change, series change confirmation, and regression-hardened foundations.
-
-15. VaccinationSession Operational Boundary & Remaining Work
-The domain foundation, shared validator, one-off creation service, recurrence occurrence generation, session change audit / locking foundation, individual session change workflows, series preview, atomic series change confirmation (confirmSeriesChange), and regression hardening are complete.
-
-Immediate next controlled phase
-full-series cancellation workflow (previewSeriesCancellation / confirmSeriesCancellation);
-
-Remaining Sprint 1 backend gaps
-reverse configuration-impact protection for campaign dates/status, center deactivation, CampaignCenterAssignment changes, OperatingHours changes, and CenterClosure changes where existing sessions would be invalidated;
-
-campaign publication prerequisite/transition integration and required session lifecycle publishing;
-
-final MF-01 QuestionnaireVersion adapter/FK integration;
-
-final Sprint integration and Definition-of-Done evidence.
-
-Separate later / broader layers
-MF-03 production impact reader adapter and downstream appointment mutation;
-
-transactional outbox/event delivery;
-
-TimeSlot, staffing/resources, calculated capacity and utilization where scheduled for later Lab sprints;
-
-Flyway business migrations;
-
-REST/API/DTO/mapper, security/RBAC, OpenAPI and frontend;
-
-production MySQL concurrency assurance.
-
-Do not overstate MF02-BR-15 as complete: individual material changes, atomic series schedule changes, and regression hardening are implemented, while full-series cancellation and reverse configuration protections remain pending.
-
-16. Anti-Regression Guardrails
-Do not:
-
-rebuild or materially redesign completed OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, VaccinationSession, SessionChangeEvent, individual session change, series change confirmation, or regression-hardened domain foundations without a new scoped review;
-
-remove CampaignCenterAssignment, VaccinationSession, SessionOccurrenceGeneration, or VaccinationSessionService post-lock authoritative refresh;
-
-conflate CampaignLocationTarget with CampaignCenterAssignment;
-
-treat ACTIVE status alone as effectiveness outside the applicable period;
-
-change half-open assignment, closure, or session schedule semantics;
-
-make assignment configuration depend on campaign status, center status, or campaign service-date containment;
-
-represent H2 concurrency tests as proof of production MySQL behavior;
-
-claim hosted approval evidence that GitHub does not contain;
-
-rebuild or broaden the completed SessionRecurrenceRule foundation without a new scoped review;
-
-bypass deterministic parent locking (campaign → center(s) → session/rule) when writing, modifying, or generating sessions;
-
-bypass pessimistic row locking (VaccinationSessionRepository.findByIdForUpdate) when modifying existing sessions;
-
-introduce a fake zero-count MF-03 production adapter;
-
-introduce a generic same-center session overlap prohibition;
-
-claim reverse configuration-impact protections or full-series cancellation commands are implemented;
-
-count unchanged retained SCHEDULED occurrences as affected by a series change;
-
-allow a series definition change to create a missing elapsed occurrence that can later be materialized by normal generation;
-
-create an individual change event for an exact no-op and thereby turn the occurrence into a false PRESERVED_EXCEPTION;
-
-perform broad package moves or large service refactors in the same commit as behavioral feature work;
-
-mark Sprint 1 complete prematurely.
-
-17. Final Handoff State
-Canonical: 3.3-AI / 2026-08-08-R8
-Sprint: Sprint 1 — IN PROGRESS
-Latest MF-02 implementation merge: PR #48 / 14e4976844870904b889fcd4970cc6d07439e168
-PR #48 certified source: 668ec98f31ea39904e7992a5f1a986e74ae8f8ab
-PR #48 actual base: b12fe280b706c9ce58e3ac8b886a58c60c14f7fb
-Latest overall repository/documentation checkpoint: 14e4976844870904b889fcd4970cc6d07439e168
-Backend baseline: 459 tests; Maven test/verify SUCCESS; executable JAR packaged
-CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Center scheduling-timezone prerequisite: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-VaccinationSession domain & persistence foundation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-VaccinationSession write-time validation & one-off creation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-VaccinationSession recurrence occurrence generation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Session change audit foundation & row locking: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Individual VaccinationSession change workflows: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Series-wide VaccinationSession change preview & confirmation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Session change regression hardening: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #46)
-Full-series cancellation workflow: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #48)
-External ZIP review: COMPLETE — 3 behavioral hardening items FIXED AND VERIFIED
-Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
-Immediate next phase: reverse configuration-impact protection architecture/readiness gate
-After reverse impact protection: campaign publication prerequisites/transition + remaining MF-02 Sprint 1 backend gaps
-The next AI should refresh live repository state and perform the reverse configuration-impact protection architecture/readiness gate. Keep the implementation behavior-focused and regression-tested. Do not combine it with broad package moves or large service decomposition. After reverse configuration-impact protection is independently reviewed and integrated, continue with campaign publication prerequisites/transition and the remaining Sprint 1 backend-gap sequence.
-
-MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff_UPDATED_2026-08-12.md
-
-
-MF-02 — Vaccination Campaign, Center and Session Management
-AI Engineering Handoff
-Project: Web-Based Vaccination Portal (WBVP-SE2030)
-
-Function: MF-02 — Vaccination Campaign, Center and Session Management
-
-Canonical authority: 3.3-AI / 2026-08-08-R8
-
-Sprint: Sprint 1 — IN PROGRESS
-
-Current implementation checkpoint: 255754dedcd4cfff5744bce69db72d09061ff560 (PR #44 merge)
-
-Latest overall repository/documentation checkpoint: 10614b5f32eaf54d00133a94aadc8a695280417a (PR #45 documentation merge)
-
-Latest completed backend foundation: Atomic series-wide VaccinationSession change confirmation (locked stale-preview revalidation, recurrence-rule update, retained occurrence reschedule, removed occurrence cancellation, new DRAFT materialization, exception preservation, and append-only SERIES_RESCHEDULED/SERIES_CANCELLED audit emission)
-
-Current backend baseline: 434 tests — 0 failures, 0 errors, 0 skipped; Maven test/verify SUCCESS; executable JAR packaged; Backend and Frontend CI SUCCESS around PR #44 and documentation synchronization.
-
-Next controlled implementation phase: External-review regression hardening before remaining Sprint 1 backend gaps — READY TO START
-
-This handoff is optimized for the next AI session. The canonical Markdown is the semantic requirements source of truth; live Git history and tests are the implementation source of truth. Do not rebuild completed foundations or treat this handoff as authority to change canonical rules.
-
-The latest MF-02 implementation integration checkpoint is PR #44 merge 255754dedcd4cfff5744bce69db72d09061ff560, with reviewed feature source 640d4044c6b5753f4e6e0f1ca73a68e5898209ed and base 8177c7f3b4623164c8a9a093763febc941f1532b. The latest overall documentation/repository checkpoint is PR #45 merge 10614b5f32eaf54d00133a94aadc8a695280417a. Documentation merge checkpoints do not replace or rename implementation checkpoints.
-
-1. Executive Snapshot
-The following MF-02 backend foundations are already implemented and integrated:
-
-campaign lifecycle, VaccineType, and TargetGroup;
-
-CampaignDoseProgramme;
-
-CampaignLocationTarget;
-
-CampaignQuestionnaireAssignment;
-
-VaccinationCenter;
-
-OperatingHours;
-
-CenterClosure;
-
-CampaignCenterAssignment;
-
-SessionRecurrenceRule;
-
-VaccinationCenter scheduling timezone and authoritative mutation locking prerequisite;
-
-VaccinationSession domain and repository foundation;
-
-VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation;
-
-SessionRecurrenceRule occurrence generation and idempotent VaccinationSession materialization;
-
-SessionChangeEvent append-only audit model, SessionScheduleSnapshot, SessionChangeType, SessionChangeEventRepository, SessionImpactReader integration port, SessionImpactSummary, and VaccinationSession pessimistic row lock;
-
-Individual VaccinationSession change workflows: read-only impact preview operations, cryptographic SHA-256 stale-preview protection, reschedule and center transfer confirmation, session cancellation, deterministic hierarchical locking (campaign → center(s) → session), occurrence provenance preservation, generator retry compatibility for individual overrides, and atomic append-only SessionChangeEvent creation;
-
-Series-wide VaccinationSession change preview foundation: read-only recurrence diff calculation, occurrence classification into RETAINED, REMOVED, NEW, PRESERVED_EXCEPTION, and INELIGIBLE, durable individual override detection via SessionChangeEvent audit history (RESCHEDULED, CENTER_TRANSFERRED, CANCELLED), real SessionImpactReader integration for SCHEDULED sessions (with 0 impact for DRAFT), candidate schedule validation using VaccinationSessionValidator, bookingCloseAt = proposedStartAt preview policy, and deterministic SHA-256 preview fingerprint token generation.
-
-CenterClosure remains IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED.
-
-CampaignCenterAssignment remains IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED at backend-foundation scope through PR #26.
-
-SessionRecurrenceRule is IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED at backend-foundation scope through PR #28.
-
-The VaccinationCenter scheduling-timezone and mutation-locking prerequisite is IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED through PR #30.
-
-The VaccinationSession domain and persistence foundation is IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED through PR #32.
-
-The VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation is IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED through PR #34.
-
-The SessionRecurrenceRule occurrence generation and idempotent VaccinationSession materialization is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #36.
-
-The SessionChangeEvent audit model, SessionImpactReader integration port, and VaccinationSession pessimistic row locking foundation is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #38.
-
-The individual VaccinationSession material change workflows are IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #40.
-
-The series-wide VaccinationSession change preview foundation is IMPLEMENTED, INDEPENDENTLY REVIEWED, CERTIFIED, TESTED, CI-VERIFIED, AND MERGED through PR #42:
-
-RecurrenceRuleDefinitionSnapshot immutable value object encapsulates validated rule definition parameters (weekdays, startDate, endDate, startTime, endTime, timezone) and evaluates calendar date occurrences.
-
-SeriesOccurrenceCategory enum defines discrete occurrence classifications: RETAINED, REMOVED, NEW, PRESERVED_EXCEPTION, and INELIGIBLE.
-
-SeriesOccurrencePreviewItem immutable record captures per-occurrence identity (<generationKey>:<originOccurrenceDate>), origin date, category, session ID (if existing), current snapshot, proposed snapshot, and cross-module impact counts.
-
-SeriesChangePreview immutable aggregate record contains rule ID, current definition snapshot, proposed definition snapshot, list of categorized occurrence entries, aggregate affected appointment count, aggregate affected waitlist count, and cryptographic SHA-256 preview token.
-
-Read-only preview operation SessionSeriesChangeService.previewSeriesChange performs zero entity mutation, no repository saves, no SessionChangeEvent creation, and persists no NEW occurrences under @Transactional(readOnly = true).
-
-Durable individual override preservation: queries SessionChangeEvent history via findBySessionIdIn; occurrences with RESCHEDULED, CENTER_TRANSFERRED, or CANCELLED events are classified as PRESERVED_EXCEPTION, preserved untouched with original schedule/center, and excluded from series impact totals.
-
-Ineligible occurrence handling: past/elapsed occurrences (startAt <= now(clock)), occurrences in IN_PROGRESS or COMPLETED status, and past candidate dates are classified as INELIGIBLE with 0 series impact.
-
-Impact count policy: DRAFT sessions evaluate impact as known zero; SCHEDULED sessions strictly require real SessionImpactReader counts and reject if unavailable with IllegalStateException.
-
-Candidate schedule validation: RETAINED and NEW proposed schedules reuse VaccinationSessionValidator to enforce campaign bounds, operational center assignment coverage, operating hours contiguous coverage, and closure exclusions.
-
-Timezone policy: proposed timezone must match the hosting center timezone; timezone changes are rejected. DST resolution selects first valid offset on overlap and rejects transition gaps.
-
-Booking close policy: proposed bookingCloseAt is set to proposedStartAt for rescheduled RETAINED and NEW occurrences, while PRESERVED_EXCEPTION sessions retain their existing bookingCloseAt.
-
-Stale preview protection: SHA-256 fingerprint token computed deterministically from rule ID, sorted current/proposed definitions, ordered occurrence keys, category classifications, schedule snapshots, per-occurrence impact counts, and aggregate impact totals.
-
-Controller decision enforced: Individually edited occurrences are preserved as exceptions during series changes.
-
-The series-wide preview foundation was integrated through PR #42 and the atomic confirmation workflow was subsequently integrated through PR #44. The current backend baseline is 434 tests, with zero failures, errors, or skips. Maven test and verify succeeded, the executable JAR packaged successfully, and Backend CI and Frontend CI succeeded before and after the PR #44 merge.
-
-MF-02 ATOMIC SERIES-CHANGE CONFIRMATION INTEGRATED. This milestone covers Campaign, Center, Assignment, RecurrenceRule, Session domain/persistence, authoritative write-time validation, recurrence generation, session change audit, individual session changes, series-wide preview, and atomic series-wide confirmation. It does not mean MF-02, US-13, or Sprint 1 is complete.
-
-Sprint 1 remains in progress. Before adding the remaining Sprint 1 gaps, an independent ZIP-based review identified three regression-hardening items that should be corrected first: unchanged SCHEDULED retained occurrences are currently counted as affected during series preview; a series change can introduce an unmaterialized elapsed date that a later ordinary generator call may materialize; and an exact no-op individual reschedule/transfer can still create an audit event and therefore incorrectly become a durable PRESERVED_EXCEPTION. These are review findings only and are NOT IMPLEMENTED YET. Full-series cancellation, reverse configuration-impact protection, campaign publication/lifecycle completion, final MF-01 questionnaire adapter/FK, and remaining Definition-of-Done layers also remain pending.
-
-2. Authority and Startup Procedure
-Use this source order:
-
-docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md for semantic requirements;
-
-live origin/develop, merged PRs, code, and tests for implementation truth;
-
-docs/evidence/sprint-1/MF02_Sprint1_Evidence.md for accumulated engineering evidence;
-
-this handoff for current context and safe next steps.
-
-At the start of the next session:
-
-fetch origin and verify origin/develop;
-
-verify the latest overall checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a and implementation ancestry through PR #44;
-
-confirm Sprint 1 and US-13 remain in progress;
-
-reuse all completed session generation, individual-change, series-preview, and series-confirmation foundations;
-
-fix the three externally reviewed regression items before implementing more Sprint 1 behavior;
-
-keep large package moves/service splits separate from functional fixes unless a concrete defect requires them.
-
-The immediate next phase is regression hardening of already integrated session-change behavior, followed by the remaining Sprint 1 backend gaps.
-
-3. Repository and Integration History
-Checkpoint	Integrated scope
-PR #12 eb4a4d9	Campaign, dose-programme, targeting, and questionnaire-assignment foundation
-PR #16 201768e	Vaccination-center foundation and initial hardening
-PR #17 bd22cb9	Canonical R8 DOCX synchronization
-PR #18 c120ee8	Sprint evidence checkpoint
-PR #19 8cdb112	Sprint evidence checkpoint
-PR #20 1cad899	OperatingHours backend foundation
-PR #21 433dbe1	OperatingHours evidence checkpoint
-PR #22 fe101bb	Evidence metadata stability checkpoint
-PR #23 5a5b3e7	Pre-CenterClosure backend hardening
-PR #24 e70940b	CenterClosure backend foundation
-PR #25 7b9398b	Evidence/handoff synchronization after CenterClosure
-PR #26 f9c2bba	CampaignCenterAssignment backend foundation
-PR #27 04b53da	Evidence/handoff synchronization after CampaignCenterAssignment
-PR #28 0dd05a5	SessionRecurrenceRule backend foundation
-PR #29 7b7896b	Evidence/handoff synchronization after SessionRecurrenceRule; metadata checkpoint only
-PR #30 bab77b7	VaccinationCenter scheduling-timezone and mutation-locking prerequisite
-PR #31 b5b674f	Evidence/handoff synchronization after center scheduling timezone; metadata checkpoint only
-PR #32 b175e8e	VaccinationSession domain and persistence foundation
-PR #33 f7360fb	Evidence/handoff synchronization after VaccinationSession domain foundation; metadata checkpoint only
-PR #34 f0a8880	VaccinationSession authoritative write-time validation and atomic one-off DRAFT creation
-PR #35 f0dcff3	Evidence/handoff synchronization after validated one-off session; metadata checkpoint only
-PR #36 c54f590	SessionRecurrenceRule occurrence generation and idempotent VaccinationSession materialization
-PR #37 ce54040	Evidence/handoff synchronization after recurrence generation; metadata checkpoint only
-PR #38 b407679	SessionChangeEvent audit foundation, SessionImpactReader port, and VaccinationSession row locking
-PR #39 f6d8c18	Evidence/handoff synchronization after session change audit foundation; metadata checkpoint only
-PR #40 b72fc6b	Individual VaccinationSession change workflows (preview, stale token, reschedule, transfer, cancel, locking, and audit)
-PR #41 473f115	Evidence/handoff synchronization after individual session changes; metadata checkpoint only
-PR #42 68f6bcf	Series-wide VaccinationSession change preview foundation (diff calculation, occurrence classification, override preservation, impact aggregation, and SHA-256 stale token)
-PR #43 8177c7f	Evidence/handoff synchronization after series change preview; metadata checkpoint only
-PR #44 255754d	Atomic series-wide VaccinationSession change confirmation (locked stale-token revalidation, rule/session mutation, series audit events, and rollback semantics)
-PR #45 10614b5	Evidence/handoff synchronization after series change confirmation; metadata checkpoint only
-The current checkpoint classification is:
-
-latest MF-02 implementation integration checkpoint = 255754dedcd4cfff5744bce69db72d09061ff560
-certified PR #44 feature source = 640d4044c6b5753f4e6e0f1ca73a68e5898209ed
-actual PR #44 base = 8177c7f3b4623164c8a9a093763febc941f1532b
-latest overall repository/documentation checkpoint = 10614b5f32eaf54d00133a94aadc8a695280417a
-Older SHAs and test counts in the evidence chronology are historical milestones, not the current repository state.
-
-
-
-4. Architecture and Ownership Boundaries
-The backend uses Spring Boot, Spring Data JPA, field-access entities, Maven, MySQL as the production target, and H2 in MySQL compatibility mode for current integration tests.
-
-Important ownership distinctions:
-
-CampaignLocationTarget is administrative/service-area targeting.
-
-CampaignCenterAssignment is operational authorization for a center to serve a campaign.
-
-OperatingHours defines normal recurring weekly center availability.
-
-CenterClosure records temporary exception intervals without rewriting OperatingHours.
-
-CenterStatus is long-term facility lifecycle state, not temporary unavailability.
-
-SessionRecurrenceRule describes bounded weekly recurrence definitions; it is not OperatingHours or a concrete VaccinationSession.
-
-VaccinationCenter.timezone is the approved implementation-level authority for one-off local scheduling.
-
-VaccinationSession is a concrete operational appointment session interval hosted at a center for a campaign.
-
-SessionBookingStatus is a derived/read-model projection concept, not an independently mutable state.
-
-SessionChangeEvent is an append-only audit record capturing material schedule/center changes and cancellations.
-
-SessionImpactReader defines the cross-module integration port to MF-03 for appointment/waitlist impact counts.
-
-MF-01 owns questionnaire version publication; MF-02 owns campaign linkage and still requires the final adapter/FK integration.
-
-Do not conflate administrative targeting, operational authorization, normal hours, closures, recurrence, actual session validity, or cross-module booking impacts.
-
-5. Shared Temporal and Locking Conventions
-Completed effective-history domains generally retain history and avoid normal hard-delete workflows.
-
-Temporal conventions must remain explicit:
-
-CampaignCenterAssignment uses half-open calendar periods [activeFrom, activeTo).
-
-CenterClosure uses half-open absolute intervals [startAt, endAt).
-
-OperatingHours retains its implemented inclusive effective calendar-date convention.
-
-VaccinationSession uses half-open absolute UTC intervals [startAt, endAt) with bookingCloseAt <= startAt.
-
-SessionChangeEvent captures snapshots of [startAt, endAt) and bookingCloseAt alongside centerId, scheduleTimezone, and lifecycleStatus.
-
-Campaign service dates and assignment dates are independent configuration boundaries at foundation level; session validation combines them.
-
-Locking conventions:
-
-campaign-owned cross-row configuration decisions serialize on the campaign row;
-
-center-owned cross-row scheduling decisions serialize on the center row;
-
-scalar parent-ID lookup may route an existing-child mutation before the parent lock;
-
-authoritative child state and business checks must be obtained only after the appropriate parent lock when stale first-level-cache state is possible;
-
-atomic session creation must use deterministic parent lock ordering (campaign → center) to prevent deadlocks between competing concurrent writes;
-
-recurrence-rule sibling creation is intentionally unconstrained; existing-rule mutation locks and refreshes that rule row directly;
-
-session modifications use pessimistic row locking via VaccinationSessionRepository.findByIdForUpdate(sessionId).
-
-5.1 VaccinationCenter scheduling-timezone and mutation prerequisite
-PR #30 added the approved implementation architecture needed before concrete sessions:
-
-every center requires an explicitly supplied scheduling timezone;
-
-the timezone is persisted as ZoneId.of(trimmedInput).getId() in a non-null String column;
-
-no JVM, operating-system, database, browser, user-profile, country, or hard-coded regional default is consulted;
-
-general center detail updates cannot change the timezone, and there is no public generic setter or timezone-change service operation;
-
-one-off sessions snapshot the center timezone into VaccinationSession.scheduleTimezone, while recurrence-generated sessions inherit the rule's stored timezone.
-
-Integration facts:
-
-PR #30 — feat(mf02): add center scheduling timezone;
-
-reviewed feature commit: d70c67b2ac48fe01f8d5f58491995bd19aa4b833;
-
-merge commit: bab77b7a6dc421d622153d422a7d589d3057ae7a.
-
-6. OperatingHours — Completed Contract
-OperatingHours was merged through PR #20 at 1cad899971c8b18804af31bfb079a24285f7d16d.
-
-The completed foundation includes:
-
-recurring weekday opening/closing shifts;
-
-inclusive effective calendar-date boundaries;
-
-multi-shift support with overlap prevention;
-
-candidate pre-validation and exception-safe mutation;
-
-future/current/historical configuration behavior;
-
-shortening-only deactivation/end workflow;
-
-center-row serialization for conflicting writes.
-
-Historical validation at that checkpoint was 55 OperatingHours-specific tests and 152 total backend tests.
-
-7. CenterClosure — Completed Contract
-CenterClosure was merged through PR #24 at e70940b7021778ae35dd2976ac5df6b649a28584.
-
-Completed behavior:
-
-mandatory VaccinationCenter ownership;
-
-UTC-safe Instant startAt / endAt with half-open [startAt, endAt) semantics;
-
-partial-day, overnight, multi-day, ongoing, historical, and future intervals;
-
-status exactly ACTIVE / CANCELLED;
-
-same-center ACTIVE overlap prevention with adjacency allowed;
-
-future-only normal update/cancellation, terminal cancellation, and retained history;
-
-independence from CenterStatus and OperatingHours configuration;
-
-center-row pessimistic serialization;
-
-read-side overlap helper for atomic VaccinationSession integration.
-
-Historical validation at that checkpoint was 45 CenterClosure-specific tests and 194 total backend tests.
-
-8. CampaignCenterAssignment — Completed Contract
-8.1 Purpose and model
-CampaignCenterAssignment records operational authorization for one center to serve one campaign during an effective calendar period. It is distinct from CampaignLocationTarget.
-
-Implemented types and fields:
-
-CampaignCenterAssignment;
-
-CampaignCenterAssignmentStatus with exactly ACTIVE and CANCELLED;
-
-mandatory lazy campaign relationship;
-
-mandatory lazy center relationship;
-
-LocalDate activeFrom;
-
-nullable exclusive LocalDate activeTo;
-
-Instant createdAt and Instant updatedAt;
-
-immutable ownership and retained history.
-
-8.2 Effective periods and lifecycle
-The effective period is half-open [activeFrom, activeTo):
-
-start is inclusive;
-
-end is exclusive;
-
-null end is open-ended;
-
-exact adjacency is allowed;
-
-zero-length and reversed finite periods are rejected;
-
-same campaign-center ACTIVE periods cannot overlap;
-
-CANCELLED rows are neither effective nor overlap blockers.
-
-8.3 Persistence, locking, and authoritative reload
-The campaign row is the write-serialization guard. Existing-child mutation ordering uses scalar campaign ID lookup, pessimistic campaign lock, authoritative assignment refresh via EntityManager.refresh(), lifecycle/period checks, and mutation.
-
-Integration facts:
-
-PR #26 — feat(mf02): add campaign center assignment backend foundation;
-
-merge commit: f9c2bbaa8f9f0c13a338ea910961820b34e88d9e;
-
-48 component tests; 242 total backend tests at that historical checkpoint.
-
-9. SessionRecurrenceRule — Completed Contract
-9.1 Purpose and model
-SessionRecurrenceRule is a bounded weekly definition from which individually stored VaccinationSession occurrences may later be generated.
-
-Implemented types and state:
-
-SessionRecurrenceRule;
-
-SessionRecurrenceRuleStatus with exactly ACTIVE and CANCELLED;
-
-mandatory immutable lazy campaign and center relationships;
-
-mutation-safe Set<DayOfWeek> persisted through an EAGER seven-value @ElementCollection;
-
-mandatory inclusive LocalDate startDate / endDate;
-
-same-local-day half-open LocalTime interval [startTime, endTime);
-
-normalized Java ZoneId string;
-
-immutable backend-generated UUID generationKey;
-
-Instant createdAt and updatedAt audit fields.
-
-9.2 Lifecycle and authoritative mutation
-New rules are ACTIVE. Full definition update is permitted only before the rule starts; prospective end-date shortening and terminal cancellation are supported. Existing-rule writes lock and refresh the rule row directly.
-
-Integration facts:
-
-PR #28 — feat(mf02): add session recurrence rule backend foundation;
-
-merge commit: 0dd05a5dce856bbaff6924c54fcf3c395920b076;
-
-30 component tests; 272 total backend tests at that historical checkpoint.
-
-10. VaccinationSession — Completed Domain, Validation & One-Off Creation
-10.1 Purpose and model
-VaccinationSession represents a concrete scheduled operational interval during which vaccination appointments may be conducted at a hosting center for an authorized campaign.
-
-Implemented types and state (PR #32 & PR #34):
-
-VaccinationSession JPA entity;
-
-SessionLifecycleStatus enum: DRAFT, SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED;
-
-SessionBookingStatus enum: NOT_OPEN, OPEN, FULL, CLOSED, SUSPENDED (reserved for upcoming read-model projection; not an independently mutable persisted state);
-
-generated Long id identity;
-
-mandatory immutable lazy VaccinationCampaign ownership (updatable = false);
-
-mandatory lazy VaccinationCenter hosting relationship;
-
-optional immutable lazy SessionRecurrenceRule provenance (updatable = false);
-
-nullable immutable String occurrenceKey (length 64) with database unique constraint uk_session_occurrence_key;
-
-nullable immutable LocalDate originOccurrenceDate;
-
-mandatory normalized ZoneId scheduleTimezone snapshot (e.g. ZoneId.of(trimmed).getId());
-
-mandatory absolute schedule Instant startAt and endAt with half-open [startAt, endAt) semantics (startAt < endAt);
-
-mandatory Instant bookingCloseAt with bookingCloseAt <= startAt;
-
-initial lifecycle status strictly initialized to SessionLifecycleStatus.DRAFT;
-
-audit fields Instant createdAt and updatedAt managed via standard @PrePersist and @PreUpdate;
-
-zero broad public setter surface;
-
-no unsafe remove cascade or orphan removal.
-
-10.2 Provenance invariant
-The entity strictly enforces all-or-none recurrence provenance:
-
-One-off session: recurrenceRule == null && occurrenceKey == null && originOccurrenceDate == null (isGenerated() == false); multiple one-off sessions with null occurrence keys are persistence-valid.
-
-Generated occurrence: recurrenceRule != null && occurrenceKey != null && originOccurrenceDate != null (isGenerated() == true); occurrence key is trimmed and validated (non-blank, length <= 64), and uniqueness is enforced at database level.
-
-Mixed partial provenance combinations are rejected with IllegalArgumentException.
-
-10.3 Persistence & repository
-VaccinationSessionRepository extends JpaRepository<VaccinationSession, Long> and provides:
-
-Optional<VaccinationSession> findByOccurrenceKey(String occurrenceKey);
-
-List<VaccinationSession> findByCampaignId(Long campaignId);
-
-List<VaccinationSession> findByCenterId(Long centerId);
-
-List<VaccinationSession> findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc(Long recurrenceRuleId);
-
-boolean existsByRecurrenceRuleId(Long recurrenceRuleId);
-
-boolean existsByRecurrenceRuleIdAndOriginOccurrenceDateAfter(Long recurrenceRuleId, LocalDate date);
-
-@Lock(LockModeType.PESSIMISTIC_WRITE) Optional<VaccinationSession> findByIdForUpdate(Long id).
-
-Table vaccination_sessions defines composite indexes for campaign schedule, center schedule, and recurrence origin, along with the unique occurrence key constraint.
-
-10.4 VaccinationSessionValidator contract
-The shared VaccinationSessionValidator performs authoritative concrete-session schedule validation against already locked and refreshed parent entities:
-
-Candidate Invariants: Rejects null timestamps, startAt >= endAt, and bookingCloseAt > startAt.
-
-Center State: Requires center status == CenterStatus.ACTIVE.
-
-Scheduling Timezone Projection: Resolves the center's ZoneId to project startAt and endAt into local calendar dates (firstTouchedDate at startAt, lastTouchedDate at endAt.minusNanos(1)).
-
-Campaign Containment: Ensures all touched calendar dates fall within [campaign.startDate, campaign.endDate].
-
-CampaignCenterAssignment Coverage: Requires an active assignment covering the full span [firstTouchedDate, lastTouchedDate + 1).
-
-OperatingHours Contiguous Coverage: For each touched date, validates that the session interval is fully covered by contiguous active OperatingHours shifts on that day of week, active for that date. OperatingHours entities are explicitly refreshed prior to evaluation to guard against stale first-level cache state.
-
-CenterClosure Overlap Exclusion: Ensures the session interval [startAt, endAt) does not overlap any active CenterClosure on [closure.startAt, closure.endAt). Exact boundary adjacencies (closure.endAt <= session.startAt or session.endAt <= closure.startAt) are permitted.
-
-No Generic Same-Center Overlap Prohibition: Multiple concurrent or overlapping sessions may exist at the same center (AC-9, no generic same-center overlap restriction).
-
-Boundary: The validator is a pure validation component: it does not acquire locks, does not persist entities, does not generate occurrences, and does not perform capacity or staffing checks.
-
-10.5 VaccinationSessionService and One-Off DRAFT Creation
-VaccinationSessionService.createOneOffDraftSession(...) implements atomic one-off session creation:
-
-Deterministic Locking: Acquires pessimistic write locks in strict order: campaignRepository.findByIdForUpdate(campaignId) followed by centerRepository.findByIdForUpdate(centerId).
-
-Authoritative Reload: Refreshes both campaign and center via EntityManager.refresh() to ensure authoritative state.
-
-Write-Time Validation: Invokes VaccinationSessionValidator.validateSessionSchedule(...), which explicitly refreshes effective OperatingHours instances.
-
-Draft Construction & Persistence: Constructs a one-off VaccinationSession in DRAFT status with scheduleTimezone = center.getTimezone(), null recurrence provenance (recurrenceRule = null, occurrenceKey = null, originOccurrenceDate = null), and saves it via VaccinationSessionRepository.
-
-10.6 Write-Time Validity vs. Deferred Reverse-Impact Boundary
-The system guarantees that a session cannot be created or materialized when the authoritative serialized configuration state at write time violates session rules (authoritative write-time validation).
-
-This milestone does NOT implement reverse-impact workflows. The following reverse configuration-impact behaviors remain explicitly deferred:
-
-Campaign date modifications affecting existing sessions;
-
-Center deactivation affecting existing sessions;
-
-Assignment shortening or cancellation affecting existing sessions;
-
-OperatingHours modifications affecting existing sessions;
-
-CenterClosure creation or updates affecting existing sessions.
-
-10.7 One-Off Concurrency and Integration Evidence
-Three separate-transaction concurrency integration tests verify the runtime locking and refresh contracts:
-
-creationRejectsWhenCenterConcurrentlyDeactivated: Creation attempt serialized after center deactivation observes INACTIVE state and is rejected with IllegalArgumentException.
-
-concurrentSessionCreationsForSameCenterSucceedWithoutDeadlock: Concurrent creations for the same center succeed without deadlocks and both sessions are committed.
-
-creationRacingWithOverlappingClosureRejectsWhenClosureCommitsFirst: Session creation serialized after an overlapping closure commits is rejected. (This verifies serialized write-time validation; it does not prove closures created later automatically cancel existing sessions).
-
-Integration facts:
-
-PR #34 — feat(mf02): add validated one-off session creation;
-
-reviewed feature commit: 59da64445ba98482237dba01d8e2436de12678b6;
-
-merge commit: f0a8880831d27387b16f548a86e849ee2892b599;
-
-merge parents: f7360fb8d195c192a0396ca75e86f9825f9f4986 and 59da64445ba98482237dba01d8e2436de12678b6;
-
-35 new integration tests; full backend total was 329 tests at that historical checkpoint.
-
-10.8 SessionRecurrenceRule Occurrence Generation and Idempotent Materialization
-SessionOccurrenceGenerationService implements controlled transactional materialization of concrete DRAFT VaccinationSession occurrences from an ACTIVE SessionRecurrenceRule (PR #36):
-
-Routing Discovery & Pessimistic Locking: Discovers parent IDs via a non-locking pre-read of immutable @JoinColumn(updatable = false) IDs, then acquires pessimistic write locks in strict order: campaign → center → rule, followed by post-lock EntityManager.refresh on all three entities. An audit of all repository locking confirmed zero cross-workflow lock inversion.
-
-Rule Eligibility & Timezone Validation: Requires rule.getStatus() == SessionRecurrenceRuleStatus.ACTIVE. Enforces strict normalized rule/center timezone equality (rule.getTimezone().equals(center.getTimezone())); mismatches reject immediately with IllegalArgumentException.
-
-Effective Range & Date Enumeration: Computes the effective generation window intersection ([effectiveStart, effectiveEnd] between rule bounds and requested range). If disjoint, returns an empty result RecurrenceGenerationResult(0, 0, List.of()). Iterates ascending LocalDate values matching rule.getWeekdays(), producing exactly one candidate per matching date.
-
-DST-Safe Local Time Conversion: Converts configured local [startTime, endTime) to UTC Instant using ZoneRules.getValidOffsets(LocalDateTime):
-
-0 valid offsets (gap): rejects candidate and transaction with IllegalArgumentException (no silent forward shifting);
-
-1 valid offset: used directly;
-
-2 valid offsets (overlap): deterministically selects validOffsets.get(0) (earlier offset).
-
-Asserts absolute startAt.isBefore(endAt).
-
-Controller Booking-Close Decision: For every generated occurrence, bookingCloseAt = startAt exactly. (This is a controller implementation decision filling an unspecified generation detail; it is not derived from VaccinationCampaign.bookingCloseAt, not capped, no lead-time offset is applied, and no recurrence rule schema field is added).
-
-Deterministic Occurrence Identity: occurrenceKey = <rule.generationKey>:<originOccurrenceDate> (e.g. 47 characters for UUID + ISO date, well within the 64-character column limit). Independent of mutable start/end timestamps or center names.
-
-Validator Reuse: Directly invokes VaccinationSessionValidator.validateSessionSchedule(campaign, center, startAt, endAt, bookingCloseAt) for every missing candidate occurrence.
-
-Idempotency & Atomic Batch Persistence: Pre-existing occurrences for the rule are detected via findByRecurrenceRuleIdOrderByOriginOccurrenceDateAsc and retained untouched with historical provenance verified. All missing candidates are validated in memory before sessionRepository.saveAll() and flush(). Any validation failure throws before persistence, rolling back all newly generated occurrences in that invocation while preserving pre-existing sessions.
-
-Same-Rule Concurrency: Serialized on the recurrence rule row write lock backed by the database uk_session_occurrence_key constraint.
-
-Interim Rule Mutation Protection:
-
-SessionRecurrenceRuleService.updateFutureRule: rejects definition updates with IllegalArgumentException if any generated session exists for the rule (existsByRecurrenceRuleId(ruleId)).
-
-SessionRecurrenceRuleService.shortenRuleEnd: rejects shortening if any generated occurrence exists after the new end date (existsByRecurrenceRuleIdAndOriginOccurrenceDateAfter(ruleId, newEndDate)). An occurrence ON the new inclusive end date remains valid.
-
-SessionRecurrenceRuleService.cancelRule: remains permitted with generated occurrences, marking the rule CANCELLED, blocking future generation, and leaving existing generated sessions untouched.
-
-Integration facts:
-
-PR #36 — feat(mf02): add recurrence occurrence generation;
-
-certified feature source: 96450eb715e3dbc48547fe1235faa74598b6d009;
-
-merge commit: c54f59011543cda49a234710a857cdfe48d4b459;
-
-merge parents: f0dcff3c6109b55ae1777937988d63389532e5e8 and 96450eb715e3dbc48547fe1235faa74598b6d009;
-
-25 net-new integration tests (19 generation integration, 2 concurrency, 4 recurrence mutation protection); full backend total was 354 tests at that historical checkpoint.
-
-11. SessionChangeEvent and Impact Audit Foundation (PR #38)
-11.1 Purpose and Model
-SessionChangeEvent provides an append-only audit trail capturing material operational changes to vaccination sessions (reschedule, center transfer, cancellation, series-wide reschedule, series-wide cancellation).
-
-Implemented types and state:
-
-SessionChangeType enum: RESCHEDULED, CENTER_TRANSFERRED, CANCELLED, SERIES_RESCHEDULED, SERIES_CANCELLED.
-
-SessionScheduleSnapshot immutable @Embeddable value object capturing:
-
-Instant startAt
-
-Instant endAt
-
-Instant bookingCloseAt
-
-Long centerId
-
-String scheduleTimezone
-
-SessionLifecycleStatus lifecycleStatus
-
-SessionChangeEvent JPA entity (@Entity, @Table(name = "session_change_events")):
-
-generated Long id identity;
-
-mandatory immutable lazy VaccinationSession session reference (updatable = false);
-
-mandatory immutable SessionChangeType changeType (updatable = false);
-
-mandatory immutable SessionScheduleSnapshot oldSnapshot (@Embedded, @AttributeOverrides with old_ column prefix, updatable = false);
-
-mandatory immutable SessionScheduleSnapshot newSnapshot (@Embedded, @AttributeOverrides with new_ column prefix, updatable = false);
-
-mandatory non-blank trimmed String reason (max 500 characters, updatable = false);
-
-mandatory non-negative int affectedAppointmentsCount (>= 0, updatable = false);
-
-mandatory non-negative int affectedWaitlistCount (>= 0, updatable = false);
-
-mandatory non-blank trimmed String actorId (max 64 characters, updatable = false);
-
-managed audit timestamp Instant createdAt (@PrePersist, updatable = false);
-
-zero broad setter surface, ensuring append-only immutability.
-
-11.2 Integration Port Boundary (MF-02 -> MF-03)
-SessionImpactReader: Cross-module integration interface contract declaring SessionImpactSummary assessSessionImpact(Long sessionId).
-
-SessionImpactSummary: Value record encapsulating int affectedAppointmentsCount and int affectedWaitlistCount, strictly enforcing non-negative invariants (>= 0).
-
-Boundary rule: SCHEDULED session changes must read real MF-03 appointment and waitlist counts; no fake zero-count production adapter is allowed.
-
-11.3 Session Row Locking
-VaccinationSessionRepository.findByIdForUpdate(Long id): Dedicated repository query annotated with @Lock(LockModeType.PESSIMISTIC_WRITE) providing serialized concurrency control for session modifications.
-
-11.4 Repository and Indexing
-SessionChangeEventRepository extends JpaRepository<SessionChangeEvent, Long>:
-
-List<SessionChangeEvent> findBySessionIdOrderByCreatedAtAscIdAsc(Long sessionId).
-
-Table session_change_events defines index idx_sce_session_created on (session_id, created_at) and check constraints on reason/actor lengths and non-negative counts.
-
-11.5 Controller Decisions Recorded
-Individually edited recurrence occurrences are preserved during later series changes;
-
-Series preview will show individually edited occurrences as exceptions;
-
-Later series changes must not silently overwrite individually edited occurrences;
-
-SCHEDULED session changes must use real MF-03 appointment/waitlist counts;
-
-No fake zero-count MF-03 production adapter is allowed.
-
-Integration facts:
-
-PR #38 — feat(mf02): add session change audit foundation;
-
-reviewed feature commit: aa5b99320a609f412d832e40b9644e95addee039;
-
-merge commit: b407679f95b6ec791d23bff070f2756dbbaa06b2;
-
-merge parents: ce540402fd845458fcbaba35b850e5cf74f6131c and aa5b99320a609f412d832e40b9644e95addee039;
-
-10 changed files (7 production, 3 test; 1103 additions, 0 deletions);
-
-25 net-new tests (13 model, 9 persistence integration, 3 impact summary); full backend total was 379 tests, zero failures, zero errors, zero skipped;
-
-Maven test and verify succeeded and executable JAR packaged;
-
-Backend CI and Frontend CI succeeded before and after merge.
-
-12. Individual VaccinationSession Changes — Completed Contract
-PR #40 implemented individual VaccinationSession material-change workflows:
-
-12.1 Purpose and Model
-SessionChangePreview: Immutable record encapsulating Long sessionId, SessionChangeType changeType, SessionScheduleSnapshot oldSnapshot, SessionScheduleSnapshot newSnapshot, int affectedAppointmentCount, int affectedWaitlistCount, and String previewToken. Strictly validates non-null snapshots/type and non-negative counts.
-
-Read-only preview operations (previewReschedule, previewCenterTransfer, previewRescheduleOrTransfer, previewCancellation) annotated with @Transactional(readOnly = true) perform candidate validation and compute cross-module impact counts and preview tokens without mutating state.
-
-12.2 Reschedule and Center Transfer
-confirmReschedule, confirmCenterTransfer, confirmRescheduleOrTransfer on VaccinationSessionService:
-
-Validates session lifecycle status: DRAFT and SCHEDULED (with real impact counts) allowed; IN_PROGRESS, COMPLETED, and CANCELLED strictly rejected.
-
-Reuses VaccinationSessionValidator to revalidate candidate schedule bounds, active hosting center status, campaign service boundaries, operational assignment coverage, operating hours contiguous coverage, and closure exclusions.
-
-On center transfer, updates session center and changes scheduleTimezone to the target center's timezone.
-
-Booking close policy: preserves existing bookingCloseAt if <= newStartAt; otherwise resets bookingCloseAt to newStartAt (or validates explicit new timestamp).
-
-Mutates session via session.reschedule(newCenter, newStartAt, newEndAt, effectiveBookingCloseAt).
-
-12.3 Cancellation Workflow
-confirmCancellation on VaccinationSessionService and session.cancel():
-
-Validates session lifecycle status: DRAFT and SCHEDULED (with real impact counts) allowed; IN_PROGRESS, COMPLETED, and already CANCELLED sessions strictly rejected.
-
-Transitions lifecycleStatus to CANCELLED, retains session row, preserves recurrence provenance, and validates non-blank reason (max 500 chars) and actorId (max 64 chars).
-
-Creates append-only SessionChangeEvent with CANCELLED change type.
-
-Does not modify MF-03 appointment/waitlist records.
-
-12.4 Cryptographic Stale-Preview Protection
-generatePreviewToken: Computes deterministic SHA-256 fingerprint from sessionId|oldCenterId|oldTz|oldStart|oldEnd|oldClose|oldStatus|newCenterId|newTz|newStart|newEnd|newClose|newStatus|changeType|apptCount|waitlistCount.
-
-At confirmation: write locks are acquired, entities refreshed, schedule revalidated, and token recomputed; any drift in session schedule, center, lifecycle status, or impact counts rejects with IllegalStateException prior to session mutation.
-
-12.5 Hierarchical Parent Locking
-Deterministic write lock hierarchy prevents deadlocks and eliminates lock inversion:
-
-Same-center change: campaign → center → session
-
-Center transfer: campaign → center(min(oldId, newId)) → center(max(oldId, newId)) → session
-
-Compatible with existing campaign → center → rule recurrence generation locking.
-
-Post-lock entityManager.refresh() ensures all entity evaluations use authoritative database state.
-
-12.6 Cross-Module Impact Policy
-DRAFT sessions evaluate impact counts as known zero.
-
-SCHEDULED sessions strictly require real SessionImpactReader counts and reject with IllegalStateException if the reader is unavailable or returns null.
-
-No fake zero-count production adapter exists.
-
-12.7 Occurrence Isolation & Generator Compatibility
-Individual overrides on generated occurrences preserve recurrenceRule, occurrenceKey, and originOccurrenceDate. Sibling occurrences under the same rule remain untouched.
-
-SessionOccurrenceGenerationService recognizes individually modified/transferred/cancelled occurrences by occurrenceKey as already materialized, preserving them without reset or duplicate generation.
-
-True provenance corruption (for example mismatched recurrence rule, origin occurrence date, campaign, or missing center provenance) remains rejected.
-
-Controller decision recorded: Individually edited occurrences must be preserved during later series changes and shown as exceptions.
-
-Integration facts:
-
-PR #40 — feat(mf02): add individual session change workflows;
-
-reviewed feature commit: 2fa748903a3d630d84fbbf527e3bf73ddb8ffc3e;
-
-merge commit: b72fc6bdcff8b8e6d1817cfa35271edca90bb118;
-
-merge parents: f6d8c180b8bdf06886ad2647e5469c210ab5d971 and 2fa748903a3d630d84fbbf527e3bf73ddb8ffc3e;
-
-10 changed files (+1725 additions, -10 deletions);
-
-26 net-new tests (5 model unit, 3 preview record, 3 token hashing, 13 workflow integration, 2 concurrency); full backend total was 405 tests, zero failures, zero errors, zero skipped;
-
-Maven test and verify succeeded and executable JAR packaged;
-
-Backend CI and Frontend CI succeeded before and after merge.
-
-12.8 Series-Wide VaccinationSession Change Workflows (Preview and Confirmation)
-PR #42 (Preview engine) and PR #44 (Confirmation execution) implemented series-wide schedule change workflows:
-
-Series-Wide Preview Engine (PR #42)
-SessionSeriesChangeService.previewSeriesChange: Read-only operation annotated with @Transactional(readOnly = true) previewing proposed changes to weekdays, startDate, endDate, startTime, endTime, and timezone.
-
-Diff Classification Engine: Classifies occurrences into:
-
-RETAINED: Existing eligible sessions whose date matches the proposed schedule.
-
-REMOVED: Existing eligible sessions whose date is no longer present in the proposed schedule.
-
-NEW: Dates in the proposed schedule where no session currently exists.
-
-PRESERVED_EXCEPTION: Sessions with prior individual SessionChangeEvent records (rescheduled, center-transferred, or cancelled) that are preserved untouched.
-
-INELIGIBLE: Past/elapsed sessions or terminal states (IN_PROGRESS, COMPLETED, CANCELLED).
-
-Booking Close & Validator Policy: Candidate occurrences revalidate schedule bounds via VaccinationSessionValidator. Proposed schedule shifts set bookingCloseAt = newStartAt.
-
-Cryptographic Token: Computes SHA-256 fingerprint token across rule definition and all classified occurrence preview items.
-
-Integration facts: PR #42, reviewed source 9896ae462f880142f69963f4c9b983cf8cfe388d, merge commit 68f6bcf7381e5b0875ac64805cdd140f0db8b208, base 473f1153cc9ed0c8946947f4c5ac9ad8a0a0527d, 17 net-new tests, backend baseline 422 tests.
-
-Atomic Series-Wide Confirmation (PR #44)
-SessionSeriesChangeService.confirmSeriesChange: Single @Transactional method executing series definition updates and session mutations atomically.
-
-Write-Lock Order: Acquires pessimistic write locks in strict lock hierarchy order: campaign → center → rule → affected sessions (by ID ASC). Performs explicit entityManager.refresh(...) under locks.
-
-Stale Preview Revalidation: Re-evaluates preview diff and SHA-256 token under write locks. If token mismatches, throws IllegalStateException prior to entity mutation.
-
-Mutation Execution:
-
-RETAINED: Updates startAt/endAt, sets bookingCloseAt = newStartAt, retains lifecycle status, preserves occurrenceKey/originOccurrenceDate, and emits SERIES_RESCHEDULED SessionChangeEvent (only if schedule shifted).
-
-REMOVED: Retains row in DB, sets lifecycleStatus = CANCELLED, and emits SERIES_CANCELLED SessionChangeEvent. Hard delete is never performed.
-
-NEW: Instantiates new DRAFT VaccinationSession with deterministic occurrenceKey, center timezone, and bookingCloseAt = startAt.
-
-PRESERVED_EXCEPTION & INELIGIBLE: Retained completely untouched with original schedule and center.
-
-SessionRecurrenceRule: Definition parameters updated via rule.updateDefinition(...).
-
-Generator Compatibility: Occurrences after confirmation remain recorded in DB, ensuring SessionOccurrenceGenerationService retries create zero duplicate sessions.
-
-Series center transfer remains unsupported.
-
-Integration facts:
-
-PR #44 — feat(mf02): add series change confirmation;
-
-reviewed feature commit: 640d4044c6b5753f4e6e0f1ca73a68e5898209ed;
-
-merge commit: 255754dedcd4cfff5744bce69db72d09061ff560;
-
-merge parents: 8177c7f3b4623164c8a9a093763febc941f1532b and 640d4044c6b5753f4e6e0f1ca73a68e5898209ed;
-
-4 changed files (+836 insertions, -10 deletions);
-
-12 net-new tests (10 integration tests in SessionSeriesChangeConfirmationIntegrationTests, 2 concurrency tests in Mf02ConcurrencyIntegrationTests); full backend total is 434 tests, zero failures, zero errors, zero skipped;
-
-Maven test and verify succeeded and executable JAR packaged;
-
-Backend CI and Frontend CI succeeded before and after merge.
-
-12.9 External ZIP Review — Regression Hardening Findings
-A full repository ZIP review was performed against the clean develop checkpoint 10614b5f32eaf54d00133a94aadc8a695280417a, whose latest MF-02 implementation ancestor is PR #44 merge 255754dedcd4cfff5744bce69db72d09061ff560.
-
-The review did not identify a need for a broad MF-02 redesign. Production package layering remains acceptable. It identified three concrete behavioral hardening items that should be fixed before the remaining Sprint 1 features:
-
-Series impact over-count for unchanged retained SCHEDULED occurrences — PENDING FIX
-
-SessionSeriesChangeService currently resolves and aggregates MF-03 impact for retained SCHEDULED occurrences even when the proposed schedule is identical to the current schedule.
-
-Unchanged retained occurrences should contribute 0 appointments and 0 waitlist entries to the series-change impact totals and should not make the stale token depend on unrelated booking-count drift.
-
-Add regression tests for range extension / weekday addition where existing retained sessions are unchanged.
-
-Latent elapsed occurrence introduction through series definition change — PENDING FIX
-
-Series preview can classify a missing elapsed proposed occurrence as INELIGIBLE, while confirmation still updates the recurrence definition to include that date.
-
-A later ordinary recurrence-generation call can then see the missing date and materialize a past occurrence.
-
-Series changes must not introduce new unmaterialized elapsed occurrences. Reject such a proposal (or otherwise enforce an equivalent invariant) and add a generator regression test.
-
-Exact no-op individual change creates false durable override — PENDING FIX
-
-An individual reschedule/transfer proposal that leaves center, schedule, timezone, booking close and lifecycle materially unchanged can still proceed to confirmation and create a RESCHEDULED/CENTER_TRANSFERRED audit event.
-
-Because series exception detection intentionally uses durable individual change history, this can incorrectly classify an unchanged occurrence as PRESERVED_EXCEPTION.
-
-Reject exact no-op material changes during preview and defensively at confirmation; verify no event is written and no preserved exception is created.
-
-Additional hardening/design notes:
-
-VaccinationSession.transitionLifecycleStatus(...) is currently too permissive for the final lifecycle state machine. Production code should move toward explicit legal transition operations as lifecycle work is completed.
-
-Production package structure should remain stable for now. Do not perform a broad feature-package migration during active Sprint work.
-
-The test package is the main organization problem: MF-02 tests are flat and numerous. After functional hardening, group tests into campaign/center/session-oriented test subpackages and introduce small domain-specific fixture helpers where they reduce repeated setup.
-
-VaccinationSessionService and SessionSeriesChangeService have grown large. Consider later extraction of cohesive change/planning responsibilities, but do not combine this structural refactor with the regression-fix slice.
-
-External review verdict: FIX A FEW ITEMS BEFORE CONTINUING FINAL SPRINT 1 GAPS.
-
-13. Story and Sprint Status
-Sprint 1 remains IN PROGRESS.
-
-Story	Current status
-US-09	In progress at full-story scope: backend foundation implemented; publication transition/API/UI/DoD work remains
-US-10	In progress: MF-02 foundation hardened; final MF-01 QuestionnaireVersion adapter/FK remains
-US-11	Backend foundation complete; later API/UI/integration layers remain
-US-12	Backend foundation implemented, reviewed, tested, CI-verified, and merged; Flyway, API/security/UI, VaccinationSession integration, and final DoD evidence remain
-US-13	IN PROGRESS: VaccinationCenter, OperatingHours, CenterClosure, SessionRecurrenceRule, VaccinationSession domain/persistence foundations, authoritative write-time validation / atomic one-off DRAFT creation, recurrence occurrence generation, session change audit / locking foundation, individual session change workflows (preview, stale token, reschedule, transfer, cancel, locking, and audit), series-wide change preview engine, and atomic series change confirmation (confirmSeriesChange, SERIES_RESCHEDULED, SERIES_CANCELLED) complete; full-series cancellation command, recurrence-rule orchestration for materialized series, series exception handling, MF-03 adapter, lifecycle transition services beyond DRAFT, reverse configuration impact, API/UI/migration, and final DoD work remain
-US-27	Backend foundation implemented; later API/UI integration remains
-Do not mark Sprint 1, US-12, or US-13 fully Definition-of-Done complete solely from these backend foundations.
-
-14. SessionRecurrenceRule Boundary
-SessionRecurrenceRule is complete at its current backend-foundation scope, occurrence generation is operational through SessionOccurrenceGenerationService, and individually edited occurrences are safely recognized by the generator as already materialized without reset.
-
-Preserved boundary:
-
-it belongs to US-13;
-
-it describes recurrence of proposed sessions rather than normal center availability;
-
-it must not duplicate OperatingHours or CenterClosure;
-
-it exposes stable definition and generation-identity data for VaccinationSession generation;
-
-plain definition updates on rules with materialized sessions are guarded; series-wide future-session editing and exception handling build on the session change audit, individual change, and series change confirmation foundations.
-
-15. VaccinationSession Operational Boundary & Remaining Work
-The domain foundation, shared validator, one-off creation service, recurrence occurrence generation, session change audit / locking foundation, individual session change workflows, series preview, and atomic series change confirmation (confirmSeriesChange) are complete.
-
-Immediate regression hardening — required before new feature work
-correct series impact totals so unchanged retained SCHEDULED occurrences are not counted as affected;
-
-prevent series changes from introducing unmaterialized elapsed occurrences that a later generator call could create;
-
-reject exact no-op individual changes so they do not create false durable override history;
-
-add focused regression tests for each issue.
-
-Remaining Sprint 1 backend gaps after hardening
-full-series cancellation command (previewSeriesCancellation / confirmSeriesCancellation);
-
-reverse configuration-impact protection for campaign dates/status, center deactivation, CampaignCenterAssignment changes, OperatingHours changes, and CenterClosure changes where existing sessions would be invalidated;
-
-campaign publication prerequisite/transition integration and required session lifecycle publishing;
-
-final MF-01 QuestionnaireVersion adapter/FK integration;
-
-final Sprint integration and Definition-of-Done evidence.
-
-Separate later / broader layers
-MF-03 production impact reader adapter and downstream appointment mutation;
-
-transactional outbox/event delivery;
-
-TimeSlot, staffing/resources, calculated capacity and utilization where scheduled for later Lab sprints;
-
-Flyway business migrations;
-
-REST/API/DTO/mapper, security/RBAC, OpenAPI and frontend;
-
-production MySQL concurrency assurance.
-
-Do not overstate MF02-BR-15 as complete: individual material changes and atomic series schedule changes are implemented, while full-series cancellation and the reviewed hardening corrections remain pending.
-
-16. Anti-Regression Guardrails
-Do not:
-
-rebuild or materially redesign completed OperatingHours, CenterClosure, CampaignCenterAssignment, SessionRecurrenceRule, VaccinationSession, SessionChangeEvent, individual session change, or series change confirmation domain foundations without a new scoped review;
-
-remove CampaignCenterAssignment, VaccinationSession, SessionOccurrenceGeneration, or VaccinationSessionService post-lock authoritative refresh;
-
-conflate CampaignLocationTarget with CampaignCenterAssignment;
-
-treat ACTIVE status alone as effectiveness outside the applicable period;
-
-change half-open assignment, closure, or session schedule semantics;
-
-make assignment configuration depend on campaign status, center status, or campaign service-date containment;
-
-represent H2 concurrency tests as proof of production MySQL behavior;
-
-claim hosted approval evidence that GitHub does not contain;
-
-rebuild or broaden the completed SessionRecurrenceRule foundation without a new scoped review;
-
-bypass deterministic parent locking (campaign → center(s) → session/rule) when writing, modifying, or generating sessions;
-
-bypass pessimistic row locking (VaccinationSessionRepository.findByIdForUpdate) when modifying existing sessions;
-
-introduce a fake zero-count MF-03 production adapter;
-
-introduce a generic same-center session overlap prohibition;
-
-claim center, OperatingHours, or CenterClosure reverse configuration-impact protections are NOT implemented (they ARE implemented through PR #52);
-
-count unchanged retained SCHEDULED occurrences as affected by a series change;
-
-allow a series definition change to create a missing elapsed occurrence that can later be materialized by normal generation;
-
-create an individual change event for an exact no-op and thereby turn the occurrence into a false PRESERVED_EXCEPTION;
-
-perform broad package moves or large service refactors in the same commit as behavioral regression fixes;
-
-mark Sprint 1 complete prematurely.
-
-17. Final Handoff State
-Canonical: 3.3-AI / 2026-08-08-R8
-Sprint: Sprint 1 — IN PROGRESS
-Latest MF-02 implementation merge: PR #55 / 9a470da982f1510213163b3b909a02bd0f85973b
-PR #55 certified source: d1d9e63a5398687e78734f835357fb9c6ded34d8
-PR #55 actual base: 62f9743a7caa50fb1f26551edb611ee4edbbcccf
-PR #55 merge parents: 62f9743a7caa50fb1f26551edb611ee4edbbcccf and d1d9e63a5398687e78734f835357fb9c6ded34d8
-Latest overall repository/documentation checkpoint: PR #55 / 9a470da982f1510213163b3b909a02bd0f85973b
-Backend baseline: 521 tests; Maven test/verify SUCCESS; executable JAR packaged
-CenterClosure: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-CampaignCenterAssignment: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-SessionRecurrenceRule: IMPLEMENTED, REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Center scheduling-timezone prerequisite: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-VaccinationSession domain & persistence foundation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-VaccinationSession write-time validation & one-off creation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-VaccinationSession recurrence occurrence generation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Session change audit foundation & row locking: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Individual VaccinationSession change workflows: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Series-wide VaccinationSession change preview & confirmation: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED
-Regression hardening (3 external-review fixes): IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #46)
-Full-series cancellation command: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #48)
-Campaign and assignment reverse-impact protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #50)
-VaccinationCenter deactivation reverse protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #52)
-OperatingHours update/end-date reverse protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #52)
-CenterClosure create/update reverse protection: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #52)
-VaccinationSession lifecycle state machine hardening: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #53)
-VaccinationCampaign publication prerequisites and transition: IMPLEMENTED, INDEPENDENTLY REVIEWED, TESTED, CI-VERIFIED, AND MERGED (PR #55)
-- Controlled transition: DRAFT/SCHEDULED -> PUBLISHED (rejects all other source statuses)
-- Mandatory publication prerequisites (enforced under campaign pessimistic write lock findByIdForUpdate and post-lock entity refresh):
-  * Valid campaign service dates & booking window (validateDateConsistency)
-  * Active VaccineType requirement
-  * Active TargetGroup with non-blank description requirement
-  * Exactly one effective CampaignDoseProgramme requirement
-  * Exactly one effective CampaignQuestionnaireAssignment requirement
-  * Referenced QuestionnaireVersion is PUBLISHED via QuestionnaireVersionPublicationPort
-- Non-prerequisites: CampaignLocationTarget, CampaignCenterAssignment, SessionRecurrenceRule, and VaccinationSession remain optional and do not block publication
-- 14 net-new tests added in CampaignPublicationIntegrationTests (521 total backend tests passing)
-Package structure verdict: KEEP CURRENT PRODUCTION STRUCTURE; ORGANIZE TESTS LATER
-Immediate next phase: remaining campaign lifecycle transitions readiness gate
-Pending Sprint 1 gaps: remaining campaign lifecycle transitions, MF-01 QuestionnaireVersion production adapter/FK integration, final Sprint DoD evidence
-The next AI should start a fresh chat/session, refresh live repository state, and proceed with the remaining campaign lifecycle transitions readiness gate. Campaign publication, session lifecycle hardening, and all reverse configuration-impact protections are complete. Keep implementation behavior-focused and regression-tested. Do not mark Sprint 1 complete prematurely.
+# MF-02 — Vaccination Campaign, Center and Session Management
+## AI Engineering Handoff
+
+**Project:** Web-Based Vaccination Portal (`WBVP-SE2030`)
+**Function:** MF-02 — Vaccination Campaign, Center and Session Management
+**Canonical authority:** `3.3-AI / 2026-08-14-R9`
+**Canonical source model:** Markdown-only; the canonical Markdown file is the sole normative semantic source.
+**Sprint:** Sprint 1 — **IN PROGRESS**
+**MF-02 Planned Implementation:** **COMPLETE**
+**MF-02 Implementation Milestones:** **COMPLETE / MERGED / FROZEN**
+**MF-02 Additional Code Required:** **NO** (`MF02_ADDITIONAL_CODE_REQUIRED: NO`)
+**MF-02 Final Technical Audit & Closure:** **MF02_FINAL_CLOSURE_CONFIRMED_WITH_EVIDENCE_NOTES**
+**Documentation Candidate Review:** **IN PROGRESS — final publication review pending**
+**US-13:** **IN PROGRESS**
+**Current verified implementation checkpoint:** `3bb74639c3315d2d071686aa79ca0e95a23f4a3e` (incorporating R1–R6 final closure, X2/VP-003 security, and X3/VP-002 Flyway bootstrap)
+**Preceding PR #145 merge checkpoint (historical milestone):** `122547a4a0391bc43be835300635ec97aecfc430` (`feat(mf02): add session readiness diagnostics UI`)
+**Reviewed PR #145 commits (historical):** `5a1d1b81733c82e73aa47def9c458f2403b26afa`, `0db2eb2bb82c99eb8d493d2cb14073150d096ba8`
+**PR #145 candidate development base (historical):** `99e03a72c24790e2ab148e740a92b56834d10785`
+**Preceding F6 readiness query prerequisite:** PR #144 (`7eab0d290c5cd0c6fdbfa32dd9bb342f4af7b756` / merge `99e03a72c24790e2ab148e740a92b56834d10785`)
+**Preceding F4D session recurrence management UI:** PR #141 (`c2b5147`, `f85ef46` / merge `d9e923f`)
+**Preceding F4D trusted actor fix:** PR #140 (`69466a1` / merge `fdd6699`)
+**Preceding F4C session change control UI:** PR #139 (`8b43a7e`, `43305bb` / merge `165a553`)
+**Preceding F4C trusted actor fix:** PR #138 (`49c7eee` / merge `a1c385a`)
+**Preceding F4B simple session lifecycle UI:** PR #137 (`97fc3d2`)
+**Preceding slot capacity integration milestone:** PR #117 (`b248541bd5efeedbfbb6a3708a4b4ef60b509156` / merge `c89cdcb610fd4690ee98e11f13955c8b9ef68966`)
+**Preceding documentation synchronization milestone:** PR #116 (`9525a0cae67578960a7f238365a40c6056d93d84`)
+**Preceding operational readiness milestone:** PR #114 (`eeeed097d5430bc63e12ff699282b6cd617ca93c` / merge `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`)
+**Preceding documentation synchronization milestone:** PR #113 (`2a64c8e7f3dde7281e2fb38a0f5d2425caf944a9` / merge `b30d9dd02698684dd2337b259c4c95b87daced48`)
+**Preceding session capacity plan milestone:** PR #112 (`0525aea5f016023187e03f75c51a189182f58130` / merge `56860a20bf87a08bc755d92c9e9fe4032b6bf0c7`)
+**Preceding documentation synchronization milestone:** PR #111 (`2b39987ef1c0800b73c2420185934eb99fbfd0f3` / merge `fd79ca6b301039216886c2d20404edf14ac91b1b`)
+**Preceding session operational assignments milestone:** PR #110 (`d3a1d787cd0b5b8f29a62709d4fd26e853ba4fbd` / merge `1c7a09c772018eaf56481aa77ff38688587879fc`)
+**Preceding documentation synchronization milestone:** PR #109 (`a4a289af163628e36fa78831e5f8fdf4e45cf5dc` / merge `94af45a27636deb4e057c94846086da018da8d9e`)
+**Preceding center operational resource and staff roster milestone:** PR #108 (`5dc5e2be5f30d211bf075afd9323141822c63290` / merge `6edcaca67af0dca9d4e0a76bd69b8f180b6e7b85`)
+**Preceding documentation synchronization milestone:** PR #107 (`02257217fb8bcab4810f6cb3883a9ceb00244729` / merge `e63bb76ac3dbb08b5009976233bf4255a059a712`)
+**Preceding session operational core milestone:** PR #106 (`46de335ec2654c89417366d65ca439c3ff1c5501` / merge `888f9d4b53d5206ff9fdfaadcedaf86092ab62f1`)
+**Preceding documentation synchronization milestone:** PR #105 (`03c6511fa9d1b017b2b6aa6b1397b9195977926c` / merge `c8d5b452ee88ec97988874e211ffb26ea321b3e1`)
+**Preceding campaign configuration REST milestone:** PR #104 (`eb41c2210fa8fdce80a8524746386b9c341ff2ec` / merge `6454a8faf2fe7a511f324deb5227c34d6197d81c`)
+**Preceding documentation synchronization milestone:** PR #103 (`220553c7d171946be68113d8a2b22c4d5f694a9e` / merge `d8d7c3afcea889e9e65b6c188afbc23ef7bde548`)
+**Preceding session operational prerequisite guard milestone:** PR #102 (`d7663abeb39dd76861e817cbf750b9de7d5d70d5` / merge `616636762687e5c2497db8e0227ee8692311703c`)
+**Preceding documentation synchronization milestone:** PR #101 (`1c73a21cb5a07374b3303666ff7cb1ca01a2eb31` / merge `046f475f13bb1e7c734492ae58f3e3bb3eb7f9ff`)
+**Preceding recurrence/series REST milestone:** PR #100 (`f5c385ae7d43a17e60a2ee7647fe96f7cfa0446c` / merge `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`)
+**Preceding documentation synchronization milestone:** PR #98 (`09da5f9d9ac512210be9d7086f0f96ced2e3cb02` / merge `6be1c7f78328c58c02b274db774936d951ef9fc0`)
+**Preceding pre-recurrence remediation milestone:** PR #97 (`ff60fb065bba498a8da05f41c1d3e1e56791c3c6` / merge `e83e54bff1f2c682fbdb6d760856bde993faf162`)
+**Preceding documentation synchronization milestone:** PR #93 (`71de894870f7dbbfa34a4cb69fb04a11f26a117b` / merge `1b90e2ee4567502a5d90d72af28eda4998f554b7`)
+**Preceding session change REST milestone:** PR #92 (`ccf5c3d58035d35e56d316207848d58388446547` / merge `6ff63bdd04f34d3bd334d011fdf55dee8010a140`)
+**Preceding documentation synchronization milestone:** PR #91 (`debc5666f2284991507df089ea49d0dd1310114a` / merge `1531ad9f89e3dc75b174cc3deb3a2204e2712a52`)
+**Preceding session core REST milestone:** PR #90 (`3324ab4b2a84960dea946c531115b5aee829ad61` / merge `9cc7a606260e24e243090f70f5e957b0544bfa3b`)
+**Preceding documentation synchronization milestone:** PR #89 (`77c9fbeb75e268cadf519fcb1fa297822712f7bb` / merge `4eaa8cd31c04aedf23f3887f25de27ec924165b8`)
+**Preceding center REST milestone:** PR #88 (`263c26bc9d9a7b51bd81e28d326a90b004c548f0` / merge `faf455ff6f07d096258e7cd977765e6e9e25b10f`)
+**Preceding documentation synchronization milestone:** PR #87 (`9371e0e14f07670175674b79ec98978096136158` / merge `37574bb02e157971c3ca2250d4953834cfe6d132`)
+**Preceding campaign REST milestone:** PR #86 (`0fab4afa983252e927dda01278193a584ad9a0d8` / merge `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`)
+**Preceding documentation synchronization milestone:** PR #85 (`ac860a9d271daa2ecf4211571e44a93a2f2622f4` / merge `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`)
+**Preceding MySQL assurance milestone:** PR #84 (`ded72c17d8bb4aaf222d6e2a96b44fa93208e880` / merge `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`)
+
+**Current Verified Implementation & Test Baseline (Post-Closure Final State):**
+- **Full backend test suite:** **1659 / 1659 PASS** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
+- **MF-02 focused cross-module regression total:** **1272 PASS** (`MF02_FOCUSED_CROSS_MODULE_REGRESSION_TOTAL`).
+- **Authoritative MySQL & Bootstrap assurance:** **38 executed MySQL Testcontainers assurance tests** across MySQL profile + **6 fresh bootstrap tests** on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped).
+- **Frontend assurance:** ESLint PASS (0 errors, 0 warnings); **Vitest automated test suite: 31 / 31 PASS**; Vite production build PASS (99 modules transformed).
+- **Database & Flyway runtime:** Active Flyway runtime sequence spans `V0` through `V11` ([`backend/src/main/resources/db/migration/`](file:///e:/SE%20PROJECT_Vac/se2030-2026-y2-s1-mtr-01-vaccination-portal/backend/src/main/resources/db/migration/)); **43 fresh project-wide runtime tables** (22 MF-02 owned runtime tables); production Hibernate schema policy is `validate`.
+- **MF-02 REST Route Surface:** **98 request mappings** across **13 REST controller classes** (90 with explicit `@PreAuthorize` method security, 8 intentional public discovery GET endpoints, 0 unintentionally unprotected endpoints).
+- **MF-02 Frontend Feature Structure:** 52 production files organized under `campaign-management/`, `session-management/`, `center-operations/`, and `analytics/`.
+- **Browser runtime demo status:** `BROWSER_RUNTIME_UNVERIFIED` (targeted local verification stopped due to local demo account/port environment availability, not a code defect).
+- **Thread.sleep in tests:** 0 occurrences across `backend/src/test`.
+- **Historical PR #145 milestone evidence:** 1280 backend tests, 24 MySQL assurance tests across 10 classes, 79 routes.
+
+> This file is a maintained engineering snapshot. Canonical Markdown controls semantics; live Git/code/tests control implementation truth. This handoff must not be used to override canonical rules.
+
+## 1. Authority Order
+
+Use this order when facts conflict:
+
+1. `docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md` — semantic/business source of truth.
+2. Live `origin/develop`, merged PRs, production code, tests, and CI — implementation truth.
+3. `docs/MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff.md` — current MF-02 engineering state.
+4. `docs/evidence/sprint-1/MF02_Sprint1_Evidence.md` — implementation/verification chronology.
+5. `ai/PROJECT_CONTEXT.md` — orientation summary only (do not edit).
+
+Future agents must fetch live `origin/develop` before treating `122547a4a0391bc43be835300635ec97aecfc430` as the repository tip.
+
+## 2. Current Milestone
+
+### Milestone reached
+
+**MF-02 PLANNED IMPLEMENTATION (F4A, F4B, F4C, F4D, F5A, F5B, F6 READINESS QUERY, F6 FRONTEND) IS COMPLETE, MERGED, AND FROZEN. FINAL INDEPENDENT AUDIT VERDICT: MF02_FINAL_AUDIT_PASS_SUBMISSION_READY.**
+
+All planned implementation milestones for MF-02 are integrated and frozen:
+1. **F4A — Campaign and Center Configuration UI / Core REST:** COMPLETE / MERGED / FROZEN
+2. **F4B — Session Core and Lifecycle UI (PR #137):** COMPLETE / MERGED / FROZEN
+3. **F4C — Session Change Control UI (PR #139, PR #138):** COMPLETE / MERGED / FROZEN
+4. **F4D — Session Recurrence and Series Management UI (PR #141, PR #140):** COMPLETE / MERGED / FROZEN
+5. **F5A — Session Operational Assignments UI / REST:** COMPLETE / MERGED / FROZEN
+6. **F5B — Session Capacity Planning UI / REST:** COMPLETE / MERGED / FROZEN
+7. **F6 Readiness Query Prerequisite (PR #144):** COMPLETE / MERGED / FROZEN
+8. **F6 Session Readiness and Diagnostics Frontend (PR #145):** COMPLETE / MERGED / FROZEN
+
+Total MF-02 REST routes verified post-closure: **98 request mappings** across **13 REST controller classes** (90 with explicit `@PreAuthorize` method security, 8 intentional public discovery GET endpoints, 0 unintentionally unprotected endpoints). (Historical PR #145 checkpoint baseline: 79 routes).
+
+### Current verified integrations
+
+1. **PR #145 — `feat(mf02): add session readiness diagnostics UI` (F6 Frontend Final Milestone)**
+   - reviewed candidate commits:
+     - initial candidate: `5a1d1b81733c82e73aa47def9c458f2403b26afa` (`feat(mf02): add session readiness diagnostics UI`)
+     - remediation commit: `0db2eb2bb82c99eb8d493d2cb14073150d096ba8` (`fix(mf02): invalidate stale readiness after failed refresh`)
+   - candidate development base: `99e03a72c24790e2ab148e740a92b56834d10785`
+   - merge: `122547a4a0391bc43be835300635ec97aecfc430`
+   - merged at: `2026-08-26T04:17:57Z`
+   - merge method: normal merge commit
+   - Backend CI: PASS (1280 backend tests + 24 Testcontainers MySQL tests on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 3m04s; Run 32929442329)
+   - Frontend CI: PASS (11s; Run 32929442459)
+   - scope: 3 files (`sessionApi.js`, `SessionDetailsModal.jsx`, `SessionReadinessTab.jsx`)
+   - behavior: Implements the final F6 session readiness and diagnostics tab in `SessionDetailsModal.jsx`. Consumes `GET /api/v1/sessions/{id}/readiness` via centralized `getSessionReadiness(sessionId)`. Displays point-in-time readiness status banner (READY / NOT READY), blocking violations list in backend order, 6-cell operational metrics grid, and generic corrective navigation. Enforces synchronous request mutex (`activeRequestRef`) and monotonic token sequencing (`requestSeqRef`) to prevent duplicate dispatches and race conditions. Invalidates prior snapshot state upon failed refresh to ensure error alerts and stale snapshots are strictly mutually exclusive.
+
+2. **PR #144 — `feat(mf02): expose session readiness query` (F6 Prerequisite)**
+   - reviewed source: `7eab0d290c5cd0c6fdbfa32dd9bb342f4af7b756`
+   - candidate development base: `328670bdd9b9112b1133eb09a74d0af42aef5e1b`
+   - merge: `99e03a72c24790e2ab148e740a92b56834d10785`
+   - behavior: Exposes existing side-effect-free evaluator `SessionOperationalReadinessService.evaluateReadiness(Long sessionId)` as `GET /api/v1/sessions/{id}/readiness`. Returns structured `SessionReadinessResponse` with `ready`, `violations`, `assignedVaccinatorCount`, `availableStationCount`, `approvedCapacity`, `durationMinutes`, `expectedServiceMinutes`, `revision`, and `evaluatedAt`. Preserves `POST /api/v1/sessions/{id}/schedule` as the sole transactional, locking-aware state transition.
+
+3. **PR #141 — `feat(mf02): add session recurrence management UI (F4D)`**
+   - reviewed commits: `c2b5147` (`feat(mf02): add session recurrence management UI`), `f85ef46` (`fix(mf02): harden recurrence management state handling`)
+   - merge: `d9e923f`
+   - behavior: Implements `SessionRecurrencePanel.jsx` supporting rule creation, 366-day bounded occurrence generation, series schedule preview/confirm, series cancellation preview/confirm, and occurrence drill-down.
+
+4. **PR #140 — `fix(mf02): derive series change actor from authentication`**
+   - reviewed source: `69466a1`
+   - merge: `fdd6699`
+   - behavior: Enforces server-side derivation of `actorId` from authenticated `UserPrincipal.getUserId()` for `POST /api/v1/recurrence-rules/{id}/change` and `POST /api/v1/recurrence-rules/{id}/cancel`, ignoring any client-provided actor identity.
+
+5. **PR #139 — `feat(mf02): add session change control UI (F4C)`**
+   - reviewed commits: `8b43a7e` (`feat(mf02): add session change control UI`), `43305bb` (`fix(mf02): harden session transfer metadata handling`)
+   - merge: `165a553`
+   - behavior: Implements `SessionChangeControlTab.jsx` with tabbed preview-confirm workflows for reschedule, center transfer, cancellation, and historical change event audit inspection.
+
+6. **PR #138 — `fix(mf02): derive session change actor from authentication`**
+   - reviewed source: `49c7eee`
+   - merge: `a1c385a`
+   - behavior: Enforces server-side derivation of `actorId` from authenticated `UserPrincipal.getUserId()` for `POST /api/v1/sessions/{id}/reschedule`, `transfer`, and `cancel`, ignoring any client-provided actor identity.
+
+7. **PR #137 — `feat(mf02): add simple session lifecycle UI (F4B)`**
+   - merge: `97fc3d2`
+   - behavior: Implements `SessionLifecycleActionCard` in `SessionDetailsModal.jsx` supporting lifecycle actions (schedule, start, complete).
+
+8. **PR #117 — `feat(mf02): integrate slot capacity with booking port`**
+   - reviewed commits:
+     - production: `b248541bd5efeedbfbb6a3708a4b4ef60b509156` (`feat(mf02): integrate slot capacity with booking port`), `396a1787a2a2267a9bbc5a3e8b9fd779b4b30147` (`fix(mf02): serialize session slot capacity configuration`), `a180f76d434ac2645e8f621527e6a61695896416` (`fix(mf02): use current reads for slot capacity aggregates`)
+     - test recovery: `265a3d2bae5dd9c2a87a6c2cd188a89b96168b14` (`test(mf02): repair m4 mysql fixtures`), `9399acc8c1297ed525882a74b6a79186fe1f5f19` (`test(mf02): ensure clean table before v3 migration sql execution`)
+   - candidate development base: `9525a0cae67578960a7f238365a40c6056d93d84`
+   - merge: `c89cdcb610fd4690ee98e11f13955c8b9ef68966`
+   - merged at: `2026-08-22T03:39:08Z`
+   - merge method: normal merge commit (two parents: `9525a0cae67578960a7f238365a40c6056d93d84` and `9399acc8c1297ed525882a74b6a79186fe1f5f19`)
+   - integration drift: 0
+   - Backend CI: PASS (1160 H2 verify in combined merge context + 23 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m32s; Run 32549398387, Job 96973523785)
+   - Frontend CI: PASS (14s; Run 32549398452, Job 96973524017)
+   - authoritative backend baseline: **1160 functional H2 tests** (0 failures, 0 errors, 0 skipped; +22 over immediate parent baseline 1138) + **23 MySQL assurance tests** across 9 classes
+   - net-new executions: **+22 H2 tests** across 2 test files (+19 `TimeSlotCapacityServiceIntegrationTests`, +3 `SlotCapacityPortCrossModuleIntegrationTests`) + **8 MySQL assurance tests** (7 `SlotCapacityMySqlConcurrencyIntegrationTests` + 1 `TimeSlotMigrationMySqlIntegrationTests`)
+   - scope: 10 files (5 production, 1 migration SQL `V3__mf02_time_slot.sql`, 4 test files; +1768 / -1 lines)
+   - integrated domain components & services:
+     - `TimeSlot` entity (`session_id`, `start_time`, `end_time`, `capacity`, `reserved_count`, `lock_version`, timestamps)
+     - `TimeSlotRepository` (`findBySessionId`, `findBySessionIdForUpdateOrderByIdAsc`, `sumCapacityBySessionId`, `findByIdForUpdate`)
+     - `TimeSlotService` (`createSlot`, `updateSlotCapacity`, `deleteSlot`, `getSlotsForSession`)
+     - `TimeSlotCapacityService` implementing `SlotCapacityPort` for cross-MF booking integration (`hasAvailableCapacity`, `reserveCapacity`, `releaseCapacity`, `getSlotStartTime`)
+     - `V3__mf02_time_slot.sql` migration script (Flyway runtime is not currently configured; verified via direct SQL execution against MySQL 8.4.3)
+   - Slot Capacity Semantics:
+     - Hard session approved capacity ceiling: Total configured time slot capacity across all slots for a session must not exceed `approvedCapacity` of the latest approved `SessionCapacityPlan`.
+     - Non-negative capacity floor: Slot capacity cannot be reduced below current `reservedCount` (`capacity >= reservedCount`).
+     - Session operating window containment: Slot intervals `[startTime, endTime)` must fall strictly within the session operating window `[session.startAt, session.endAt]`.
+     - Overbooking prevention: `reserveCapacity(slotId)` atomicity via pessimistic locking (`findByIdForUpdate`), preventing overbooking under concurrent reservation races.
+     - Release floor: `releaseCapacity(slotId)` safely releases booked capacity and cannot reduce `reservedCount` below 0.
+     - Parent session lock serialization: `TimeSlotService.createSlot` and `updateSlotCapacity` lock parent `VaccinationSession` (`findByIdForUpdate`) and evaluate aggregate slot capacity via current read `findBySessionIdForUpdateOrderByIdAsc`, eliminating snapshot-isolation anomalies under MySQL `REPEATABLE_READ`.
+   - Milestone 4 Conclusion: Completes Milestone 4 (Slot Capacity Integration). All four operational-model milestones M1–M4 are complete; M2 comprised M2A/M2B/M2C.
+
+9. **PR #114 — `feat(mf02): enforce operational readiness for session scheduling`**
+   - reviewed source: `eeeed097d5430bc63e12ff699282b6cd617ca93c`, `59359fe9fa9fd67ca9f403d111f2e2689b784888`, and `f4bc3319db6e3a22cea925154e48d6d00dd58a6d`
+   - candidate development base: `b30d9dd02698684dd2337b259c4c95b87daced48`
+   - merge: `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`
+   - merged at: `2026-08-21T18:36:26Z`
+   - merge method: normal merge commit
+   - Backend CI: PASS (1123 H2 verify in candidate context / 1138 combined develop + 15 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 3m29s; Run 32513794982, Job 96870725052)
+   - Frontend CI: PASS (14s; Run 32513794969, Job 96870724758)
+   - authoritative backend baseline: **1123 functional H2 tests** (0 failures, 0 errors, 0 skipped; +18 over pre-M3 base 1105) + **15 MySQL assurance tests** across 7 classes
+   - net-new executions: **+18 H2 tests** (+20 over isolated M2C candidate) + **8 MySQL assurance tests** (7 `SessionOperationalReadinessMySqlConcurrencyIntegrationTests` + 1 `OperationalStaffIdentityMigrationMySqlIntegrationTests`)
+   - scope: 10 files (4 new production, 2 modified production, 1 migration SQL `V2__mf02_operational_staff_identity.sql`, 3 new test files; +1213 / -17 lines)
+   - behavior: Replaces synthetic session scheduling guard with authoritative operational readiness verification. Enforces center operational resources, staffing qualification and supervisor rules, capacity plan snapshot validity, and deterministic ascending `userId` locking via `OperationalStaffIdentity` with native upsert bootstrap. Verified V2 migration SQL execution and backfill against real MySQL/InnoDB.
+   - Milestone 3 Conclusion: Completes Milestone 3 (Session Operational Readiness & Guard Replacement).
+
+10. **PR #112 — `feat(mf02): expose session capacity plan rest api`**
+   - reviewed source: `0525aea5f016023187e03f75c51a189182f58130`
+   - candidate development base: `fd79ca6b301039216886c2d20404edf14ac91b1b`
+   - MySQL test fixture repair commit: `9659f0f6ebd515fcf690dfe40bf8a7ded54ba461`
+   - pre-merge develop baseline: `b74238db44557e6de15349159f994123e4b7caa3` (non-material MF-01 screening merge PR #113)
+   - actual merge Parent 1: `b74238db44557e6de15349159f994123e4b7caa3`
+   - actual merge Parent 2: `9659f0f6ebd515fcf690dfe40bf8a7ded54ba461`
+   - merge: `56860a20bf87a08bc755d92c9e9fe4032b6bf0c7`
+   - merged at: `2026-08-21T10:49:08Z`
+   - merge method: normal merge commit (two parents: `b74238db44557e6de15349159f994123e4b7caa3` and `9659f0f6ebd515fcf690dfe40bf8a7ded54ba461`)
+   - integration drift: 0 (develop movement was unrelated MF-01 screening merge)
+   - Backend CI: PASS (1105 H2 verify in combined merge context + 7 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m45s; Run 32474023752, Job 96746548406)
+   - Frontend CI: PASS (23s; Run 32474023738, Job 96746548469)
+   - authoritative backend baseline: **1103 functional H2 tests** (0 failures, 0 errors, 0 skipped; +23 over immediate parent baseline 1080) and **1105 combined merge-context H2 tests** in CI + **7 MySQL assurance tests** across 5 classes
+   - net-new executions: **+23 H2 tests** across 3 test files (+23 `SessionCapacityPlanControllerTests`, `SessionCapacityPlanServiceIntegrationTests`, `SessionCapacityPlanPersistenceIntegrationTests`) + **1 MySQL concurrency assurance test** (`SessionCapacityPlanMySqlConcurrencyIntegrationTests`)
+   - scope: 12 files (7 new production, 3 new test, 2 modified test files; +1554 / -4 lines)
+   - integrated endpoints under `/api/v1/sessions/{sessionId}/capacity-plans` (5):
+     1. `POST /api/v1/sessions/{sessionId}/capacity-plans/preview` (Preview capacity plan calculation for session; 200 OK)
+     2. `POST /api/v1/sessions/{sessionId}/capacity-plans` (Create new immutable capacity plan revision for DRAFT session; 201 Created + Location header `/api/v1/sessions/{sessionId}/capacity-plans/{revision}`)
+     3. `GET /api/v1/sessions/{sessionId}/capacity-plans` (List capacity plan revisions for session, ordered by `revisionNumber` DESC; 200 OK)
+     4. `GET /api/v1/sessions/{sessionId}/capacity-plans/latest` (Get latest capacity plan revision for session; 200 OK)
+     5. `GET /api/v1/sessions/{sessionId}/capacity-plans/{revision}` (Get specific capacity plan revision for session; 200 OK)
+   - Capacity Plan Semantics:
+     - Immutable revisions: Persisted revisions are append-only with monotonically increasing `revisionNumber` starting at 1. No PUT, PATCH, or DELETE endpoints exist for capacity plans.
+     - Non-persistent preview: `POST .../preview` executes purely in memory without creating database rows or mutating session state. Preview is lifecycle-independent and available across all session states.
+     - DRAFT-only revision creation: Persisting a new revision via `POST .../capacity-plans` requires session lifecycle status `DRAFT`. Non-DRAFT create attempts reject with `IllegalStateException` (HTTP 409 Conflict).
+     - Lifecycle-independent revision reads: History and latest revision retrieval operate across all session lifecycle states.
+     - Server-derived calculations: Session duration is derived from session operating window (`Duration.between(startAt, endAt)`). Expected service minutes are derived from active `CampaignDoseProgramme` on session `startAt` (with authorized default of 10 minutes when unconfigured). Active qualifying vaccinators (roster status `ACTIVE`, role `VACCINATOR`) and active qualifying vaccination stations (resource status `ACTIVE`, type `VACCINATION_STATION`) are counted server-side from session assignments.
+     - Effective stations & throughput: `effectiveStationCount = min(assignedVaccinatorCount, availableStationCount, fullyEquippedStationCount)` where `fullyEquippedStationCount` is an explicit non-negative scalar input. `recommendedThroughput = effectiveStationCount * floor(durationMinutes / expectedServiceMinutes)`.
+     - Hard ceiling & override rules: If center `sessionServiceCeiling != null`, `approvedCapacity <= sessionServiceCeiling` is strictly enforced as an un-overrideable hard cap. If `approvedCapacity > recommendedThroughput`, a non-blank `overrideReason` is mandatory.
+     - Caller cannot supply derived values: Duration, service minutes, vaccinator count, station count, effective stations, and recommended throughput cannot be forged or overridden by callers; all are server-evaluated.
+   - Concurrency & Lock Sequencing:
+     - Capacity plan creation locks the parent `VaccinationSession` row (`findByIdForUpdate`), preventing concurrent revision creation on the same session from racing on revision numbers or calculation snapshots.
+     - Concurrency proof: Real MySQL 8.4.3 Testcontainers concurrency test `SessionCapacityPlanMySqlConcurrencyIntegrationTests` verifies that concurrent attempts to create revisions on the same session serialize deterministically into distinct revisions (e.g. revisions 1 and 2) without duplicate key errors or lost updates. Safe claim: "Per-session capacity-plan revision creation is serialized against real MySQL/InnoDB; exact JDBC blocking timing is not instrumented."
+   - Fixture Cleanup Alignment:
+     - Multi-test execution on shared Testcontainers database revealed a fixture cleanup-order gap where newly persisted `campaign_dose_programmes` and `session_capacity_plans` remained when subsequent MySQL test classes attempted to delete parent campaigns/sessions.
+     - Resolved strictly in test fixture infrastructure (`CampaignReverseImpactMySqlConcurrencyIntegrationTests.java` and `SessionOperationalAssignmentMySqlConcurrencyIntegrationTests.java`) by injecting missing repositories and ensuring leaf-to-parent deletion order. 0 production changes.
+   - Scheduling state & exclusions:
+     - PR #102 temporary fail-closed scheduling guard remains `COMPLETE`.
+     - `DRAFT -> SCHEDULED` is still fail-closed with HTTP 409 Conflict.
+     - Excludes M3 operational readiness evaluation engine and M4 slot capacity integration.
+   - REST routes added: 5 (total MF-02 routes: 73 -> 78).
+
+11. **PR #110 — `feat(mf02): expose session operational assignment rest api`**
+   - reviewed source: `d3a1d787cd0b5b8f29a62709d4fd26e853ba4fbd`
+   - candidate development base: `94af45a27636deb4e057c94846086da018da8d9e`
+   - MySQL fixture repair commit: `228dde476b5b86354bdb07f7887c99e76f035348`
+   - production concurrency correction commit: `26db0433045478876c3ea1c4cbc1ba1708aad16c`
+   - actual merge Parent 1: `94af45a27636deb4e057c94846086da018da8d9e`
+   - actual merge Parent 2: `26db0433045478876c3ea1c4cbc1ba1708aad16c`
+   - merge: `1c7a09c772018eaf56481aa77ff38688587879fc`
+   - merged at: `2026-08-21T08:22:21Z`
+   - merge method: normal merge commit (two parents: `94af45a27636deb4e057c94846086da018da8d9e` and `26db0433045478876c3ea1c4cbc1ba1708aad16c`)
+   - integration drift: 0
+   - Backend CI: PASS (1080 H2 verify in combined merge context + 6 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m16s; Run 32462530177, Job 96712222310)
+   - Frontend CI: PASS (15s; Run 32462530139, Job 96712222180)
+   - authoritative backend baseline: **1080 functional H2 tests** (0 failures, 0 errors, 0 skipped; +39 over immediate parent baseline 1041) and **1080 combined merge-context H2 tests** in CI + **6 MySQL assurance tests** across 4 classes
+   - net-new executions: **+39 H2 tests** across 3 test files (+20 `SessionOperationalAssignmentControllerTests`, +9 `SessionResourceAssignmentServiceIntegrationTests`, +10 `StaffAssignmentServiceIntegrationTests`) + **2 MySQL concurrency assurance tests** (`SessionOperationalAssignmentMySqlConcurrencyIntegrationTests`)
+   - scope: 14 files (9 new production, 2 modified production, 3 new test files; +1995 / -1 lines)
+   - integrated endpoints under `/api/v1/sessions/{sessionId}` (8):
+     1. `POST /api/v1/sessions/{sessionId}/resource-assignments` (Assign center resource to DRAFT session; 201 Created + Location header `/api/v1/sessions/{sessionId}/resource-assignments/{id}`)
+     2. `GET /api/v1/sessions/{sessionId}/resource-assignments` (List session resource assignments, ordered by `startAt` ASC, `id` ASC; 200 OK)
+     3. `GET /api/v1/sessions/{sessionId}/resource-assignments/{assignmentId}` (Get single resource assignment; 200 OK)
+     4. `DELETE /api/v1/sessions/{sessionId}/resource-assignments/{assignmentId}` (Delete resource assignment from DRAFT session; 204 No Content)
+     5. `POST /api/v1/sessions/{sessionId}/staff-assignments` (Assign staff member to DRAFT session; 201 Created + Location header `/api/v1/sessions/{sessionId}/staff-assignments/{id}`)
+     6. `GET /api/v1/sessions/{sessionId}/staff-assignments` (List session staff assignments, ordered by `startAt` ASC, `id` ASC; 200 OK)
+     7. `GET /api/v1/sessions/{sessionId}/staff-assignments/{assignmentId}` (Get single staff assignment; 200 OK)
+     8. `DELETE /api/v1/sessions/{sessionId}/staff-assignments/{assignmentId}` (Delete staff assignment from DRAFT session; 204 No Content)
+   - Operational Assignment Semantics:
+     - DRAFT-only mutation: Assignments can only be created or deleted when session lifecycle status is `DRAFT`. Attempting to mutate assignments for non-DRAFT sessions throws `IllegalStateException` (HTTP 409 Conflict).
+     - Lifecycle-independent reads: GET endpoints operate across all session lifecycle states.
+     - Operating window containment: Assignment intervals `[startAt, endAt)` must fall strictly within the session operating window `[session.startAt, session.endAt]`.
+     - Half-open interval overlap checks: `existing.startAt < requested.endAt AND requested.startAt < existing.endAt`.
+     - Active entity checks: Resources and staff roster entries must have status `ACTIVE` at the time of assignment.
+     - Same-center qualification: The assigned resource or staff roster entry must belong to the same vaccination center as the session.
+     - Role qualification: The requested assignment role (`StaffRole`) must match the staff member's qualified roster role.
+     - Historical preservation: CANCELLED sessions are excluded from temporal overlap collision detection.
+     - Nested ownership & 404 normalization: Missing parent sessions or cross-session assignment ID mismatches normalize to HTTP 404 Not Found.
+   - Concurrency & Lock Sequencing:
+     - Resource assignment lock sequence: `VaccinationSession` lock -> `OperationalResource` row lock (`findByIdForUpdate`) -> Overlap check (`existsOverlappingAssignment`) -> Save.
+     - Staff assignment lock sequence: `VaccinationSession` lock -> Non-locking target user resolution (`findById`) -> Global user roster lock set (`findByUserIdForUpdateOrderByIdAsc`) in deterministic `id ASC` order -> Locked roster qualification -> Pessimistic write current-read overlap query (`findOverlappingAssignmentsForUpdate`) -> Save.
+     - Concurrency finding & fix: Real MySQL/InnoDB Testcontainers execution revealed that under REPEATABLE READ, non-locking overlap queries read from MVCC snapshots established before lock acquisition. Upgrading the post-lock overlap check to a locking current read query (`findOverlappingAssignmentsForUpdate` with `@Lock(LockModeType.PESSIMISTIC_WRITE)`) guarantees that serialized transactions observe committed overlapping assignments immediately upon acquiring global user roster locks, preserving deterministic global lock order without deadlock inversion risk.
+   - Scheduling state & exclusions:
+     - PR #102 temporary fail-closed scheduling guard remains `COMPLETE`.
+     - `DRAFT -> SCHEDULED` is still fail-closed with HTTP 409 Conflict.
+     - Excludes M2C capacity plans, M3 readiness evaluation, and M4 slot capacity integration.
+   - REST routes added: 8 (total MF-02 routes: 65 -> 73).
+
+12. **PR #108 — `feat(mf02): expose center operational resources and staff roster rest api`**
+   - reviewed source: `5dc5e2be5f30d211bf075afd9323141822c63290`
+   - candidate development base: `e63bb76ac3dbb08b5009976233bf4255a059a712`
+   - actual merge Parent 1: `e63bb76ac3dbb08b5009976233bf4255a059a712`
+   - actual merge Parent 2: `5dc5e2be5f30d211bf075afd9323141822c63290`
+   - merge: `6edcaca67af0dca9d4e0a76bd69b8f180b6e7b85`
+   - merged at: `2026-08-21T04:21:37Z`
+   - merge method: normal merge commit (two parents: `e63bb76ac3dbb08b5009976233bf4255a059a712` and `5dc5e2be5f30d211bf075afd9323141822c63290`)
+   - integration drift: 0
+   - Backend CI: PASS (1041 H2 verify in combined merge context + 4 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m37s; Run 32446414058, Job 96666733750)
+   - Frontend CI: PASS (14s; Run 32446414084, Job 96666733813)
+   - authoritative backend baseline: **1041 functional H2 tests** (0 failures, 0 errors, 0 skipped; +43 over immediate parent baseline 998) and **1041 combined merge-context H2 tests** in CI + **4 MySQL assurance tests** across 3 classes
+   - net-new executions: **+43 H2 tests** across 6 test files (+14 `CenterOperationalResourceControllerTests`, +19 `CenterStaffRosterControllerTests`, +3 `OperationalConcurrencyTranslationUnitTests`, +2 `OperationalResourcePersistenceIntegrationTests`, -2 net / +23 additional assertion paths `OperationalResourceServiceIntegrationTests`, +7 `OperationalStaffRosterServiceIntegrationTests`)
+   - scope: 21 files (10 new production, 5 modified production, 4 new test, 2 modified test; +1783 / -59 lines)
+   - integrated endpoints under `/api/v1/centers/{centerId}` (8):
+     1. `POST /api/v1/centers/{centerId}/resources` (Create center operational resource; 201 Created + Location header `/api/v1/centers/{centerId}/resources/{id}`)
+     2. `GET /api/v1/centers/{centerId}/resources` (List center operational resources with optional `?resourceType=` filter; returns all statuses `ACTIVE`, `MAINTENANCE`, `INACTIVE` by default; 200 OK)
+     3. `GET /api/v1/centers/{centerId}/resources/{resourceId}` (Get center operational resource by ID; 200 OK)
+     4. `PUT /api/v1/centers/{centerId}/resources/{resourceId}` (Update operational resource name/status with pessimistic locking; 200 OK)
+     5. `POST /api/v1/centers/{centerId}/staff-roster` (Register staff member to center roster; 201 Created + Location header `/api/v1/centers/{centerId}/staff-roster/{id}`)
+     6. `GET /api/v1/centers/{centerId}/staff-roster` (List center staff roster with optional `?role=` and `?status=` filters; returns all roles and statuses by default; 200 OK)
+     7. `GET /api/v1/centers/{centerId}/staff-roster/{rosterId}` (Get center staff roster entry by ID; 200 OK)
+     8. `PUT /api/v1/centers/{centerId}/staff-roster/{rosterId}` (Update staff roster role/status with pessimistic locking; 200 OK)
+   - OperationalResourceStatus Canonical Correction:
+     - Canonical enum contains: `ACTIVE`, `MAINTENANCE`, `INACTIVE`.
+     - `MAINTENANCE` was the canonical Section 6.6 value missing from the initial M1 implementation and was added in M2A.
+     - No database schema migration required because JPA persistence uses `EnumType.STRING` and the existing database column accommodates `MAINTENANCE`.
+    - StaffRole:
+      - `StaffRole` remains the live implementation-defined three-value set `VACCINATOR`, `CHECK_IN_STAFF`, and `SUPERVISOR`; canonical requires the operational vaccinator/check-in semantics but does not define a closed StaffRole enum.
+   - Resource and Roster Semantics & Concurrency:
+     - Resource create defaults status `ACTIVE`.
+     - Resource list returns all statuses (`ACTIVE`, `MAINTENANCE`, `INACTIVE`) by default; `resourceType` filter does not filter by status.
+     - Resource `code` and `resourceType` are immutable.
+     - Resource `name` and `status` are mutable.
+     - Resource updates use pessimistic locking on the resource row (`findByIdForUpdate`).
+     - Duplicate resource code for same center -> HTTP 409 Conflict.
+     - Nested center ownership mismatch -> HTTP 404 Not Found.
+     - Staff roster registration defaults status `ACTIVE`.
+     - Staff roster list returns all roles and statuses by default; optional `role` and `status` filters.
+     - Staff roster `userId` is immutable.
+     - Staff roster `staffRole` and `status` are mutable.
+     - Staff roster updates use pessimistic locking on the roster row (`findByIdForUpdate`).
+     - Duplicate roster user for same center -> HTTP 409 Conflict.
+     - Nested center ownership mismatch -> HTTP 404 Not Found.
+     - Database uniqueness constraint races on concurrent creates/registrations are narrowly caught and mapped to HTTP 409 Conflict. Unrelated data integrity violations are rethrown.
+     - Existing assignment history (`SessionResourceAssignment` rows, `StaffAssignment` snapshots) is preserved during status mutations.
+   - Scheduling state & exclusions:
+     - PR #102 temporary fail-closed scheduling guard remains `COMPLETE`.
+     - `DRAFT -> SCHEDULED` is still fail-closed with HTTP 409 Conflict.
+     - Excludes M2B session resource/staff assignments, M2C capacity plans, M3 readiness evaluation, and M4 slot capacity integration.
+   - REST routes added: 8 (total MF-02 routes: 57 -> 65).
+
+13. **PR #106 — `feat(mf02): implement session operational core model and calculation engine`**
+   - reviewed source: `46de335ec2654c89417366d65ca439c3ff1c5501` (original M1 commit `e91269927355e3adcaba11eec75e45728d1889d7`, cross-center staff-lock correction `46de335ec2654c89417366d65ca439c3ff1c5501`)
+   - candidate development base: `c8d5b452ee88ec97988874e211ffb26ea321b3e1`
+   - actual merge Parent 1: `c8d5b452ee88ec97988874e211ffb26ea321b3e1`
+   - actual merge Parent 2: `46de335ec2654c89417366d65ca439c3ff1c5501`
+   - merge: `888f9d4b53d5206ff9fdfaadcedaf86092ab62f1`
+   - merged at: `2026-08-20T09:58:52Z`
+   - merge method: normal merge commit (two parents: `c8d5b452ee88ec97988874e211ffb26ea321b3e1` and `46de335ec2654c89417366d65ca439c3ff1c5501`)
+   - integration drift: 0
+   - Backend CI: PASS (998 H2 verify in combined merge context + 4 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m28s / H2 suite 1m25s; Run 32356332347, Job 96386194220)
+   - Frontend CI: PASS (14s; Run 32356332549, Job 96386194726)
+   - authoritative backend baseline: **998 functional H2 tests** (0 failures, 0 errors, 0 skipped; +45 over immediate parent baseline 953) and **998 combined merge-context H2 tests** in CI + **4 MySQL assurance tests** across 3 classes
+   - net-new executions: **+45 H2 tests** across 8 test files
+   - scope: 27 files (19 new production Java files, 0 modified production files, 8 new test files; +3009 / -0 lines)
+   - integrated domain model & services:
+     - Enums: `ResourceType`, `OperationalResourceStatus`, `StaffRole`, `OperationalStaffStatus`
+     - Entities: `OperationalResource`, `SessionResourceAssignment`, `OperationalStaffRoster`, `StaffAssignment`, `SessionCapacityPlan`
+     - Value Objects: `OccupancyInterval`, `OccupancyEvaluationResult`
+     - Repositories: `OperationalResourceRepository`, `SessionResourceAssignmentRepository`, `OperationalStaffRosterRepository`, `StaffAssignmentRepository`, `SessionCapacityPlanRepository`
+     - Services: `OperationalResourceService`, `OperationalStaffRosterService`, `SessionCapacityCalculationService`
+   - Capacity & Throughput Semantics:
+     - `recommendedThroughput = effectiveStationCount * floor(durationMinutes / expectedServiceMinutes)`
+     - `effectiveStationCount = min(assignedVaccinatorCount, availableStationCount, fullyEquippedStationCount)` where `fullyEquippedStationCount` is an explicit scalar snapshot/input (not derived by counting generic EQUIPMENT resources).
+     - `approvedCapacity`: Operationally approved booking capacity. If `sessionServiceCeiling != null`, then `approvedCapacity <= sessionServiceCeiling`.
+     - `overrideReason`: Mandatory when `approvedCapacity > recommendedThroughput`. The hard `sessionServiceCeiling` cannot be overridden.
+     - `sessionServiceCeiling`: Configured on `VaccinationCenter`, nullable, snapshotted into `SessionCapacityPlan`; NOT calculated from throughput; NOT calculated from availableStationCount.
+     - `approvedBy`: String audit actor metadata (shared Bearer JWT authentication is active; method-level authorization is enforced for capacity overrides (ROLE_CENTER_MANAGER required, ROLE_ADMIN denied)).
+   - Staff Concurrency & Roster-Lock Foundation:
+     - `OperationalStaffRoster` is center-scoped: `unique(center_id, user_id)`
+     - `StaffAssignment` overlap detection is global by external `userId`
+     - Repository provides `findByUserIdForUpdateOrderByIdAsc(userId)` with `PESSIMISTIC_WRITE` covering all roster rows for the user in deterministic ID order
+     - Safe claim: MF-02 has a deterministic global pessimistic-lock repository foundation for cross-center staff scheduling. Live scheduling concurrency is `NOT_YET_PROVEN` as live scheduling does not use this contract yet.
+     - Future M3 obligation: Concurrent roster registration vs future staff scheduling must receive dedicated MySQL/Testcontainers concurrency proof in Milestone 3 before the PR #102 scheduling guard is replaced (`REQUIRED_IN_M3`).
+   - Scheduling state:
+     - PR #102 temporary fail-closed scheduling guard remains `COMPLETE`.
+     - `DRAFT -> SCHEDULED` is still fail-closed with HTTP 409 Conflict. These foundations are NOT wired into `DRAFT -> SCHEDULED` yet.
+   - REST routes added: 0 (total MF-02 routes remain 57).
+
+14. **PR #104 — `feat(mf02): expose campaign configuration rest api`**
+   - reviewed source: `eb41c2210fa8fdce80a8524746386b9c341ff2ec`
+   - candidate development base: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548`
+   - actual merge Parent 1: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548`
+   - actual merge Parent 2: `eb41c2210fa8fdce80a8524746386b9c341ff2ec`
+   - merge: `6454a8faf2fe7a511f324deb5227c34d6197d81c`
+   - merged at: `2026-08-20T06:45:46Z`
+   - merge method: normal merge commit (two parents: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548` and `eb41c2210fa8fdce80a8524746386b9c341ff2ec`)
+   - integration drift: 0
+   - Backend CI: PASS (953 H2 verify in combined merge context + 4 Testcontainers MySQL verify on `mysql:8.4.3`, 0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m39s)
+   - Frontend CI: PASS (13s)
+   - authoritative backend baseline at PR #104: **953 functional H2 tests** (101 locally verified Surefire XML reports; +25 over immediate parent baseline 928) and **953 combined merge-context H2 tests** in CI + **4 MySQL assurance tests** across 3 classes
+   - net-new executions: **+25 H2 tests** (+8 `CampaignConfigurationDtoMapperTests`, +16 `CampaignConfigurationControllerTests`, +1 `CampaignConfigurationWorkflowIntegrationTests`)
+   - scope: 21 files (13 new production, 5 modified production, 3 new test files; +1505 / -21 lines)
+   - integrated endpoints under `/api/v1/campaigns/{id}` (12):
+     1. `POST /api/v1/campaigns/{id}/dose-programmes` (Create initial dose programme; 201 Created + `Location: /api/v1/campaigns/{id}/dose-programmes`)
+     2. `POST /api/v1/campaigns/{id}/dose-programmes/versions` (Create new dose programme version; 201 Created + `Location: /api/v1/campaigns/{id}/dose-programmes`)
+     3. `GET /api/v1/campaigns/{id}/dose-programmes` (Get dose programme version history, ordered by `versionNumber` DESC; 200 OK)
+     4. `POST /api/v1/campaigns/{id}/questionnaire-assignments` (Assign published questionnaire version; 201 Created + `Location: /api/v1/campaigns/{id}/questionnaire-assignments`)
+     5. `GET /api/v1/campaigns/{id}/questionnaire-assignments` (Get questionnaire assignment history, ordered by `activeFrom` DESC, `id` DESC; 200 OK)
+     6. `POST /api/v1/campaigns/{id}/center-assignments` (Create campaign-center assignment; 201 Created + `Location: /api/v1/campaigns/{id}/center-assignments/{id}`)
+     7. `GET /api/v1/campaigns/{id}/center-assignments` (Get campaign-center assignments, ordered by `activeFrom` ASC, `id` ASC; 200 OK)
+     8. `PUT /api/v1/campaigns/{id}/center-assignments/{assignmentId}` (Update mutable future campaign-center assignment; 200 OK)
+     9. `POST /api/v1/campaigns/{id}/center-assignments/{assignmentId}/end-date` (End currently effective campaign-center assignment early; 200 OK)
+     10. `POST /api/v1/campaigns/{id}/center-assignments/{assignmentId}/cancel` (Cancel mutable future campaign-center assignment; 200 OK)
+     11. `POST /api/v1/campaigns/{id}/location-targets` (Add administrative location target; 201 Created + `Location: /api/v1/campaigns/{id}/location-targets`)
+     12. `GET /api/v1/campaigns/{id}/location-targets` (Get location targets with optional `?type=` filter, ordered by `targetType` ASC, `targetCode` ASC, `id` ASC; 200 OK)
+   - audit finding resolution: Resolves confirmed P1 audit finding MF02-003 (Campaign Configuration API Blocker). Exposes existing domain services `CampaignDoseProgrammeService`, `CampaignQuestionnaireAssignmentService`, `CampaignCenterAssignmentService`, and `CampaignLocationTargetService` through clean REST endpoints.
+   - master data boundary: `VaccineType` and `TargetGroup` remain seeded reference data without public administration REST routes (`PUBLIC_WORKFLOW_CLOSED_WITH_SEEDED_MASTER_DATA`).
+   - nested ownership & 404 normalization: `CampaignCenterAssignmentService` enforces nested campaign ownership on mutations (`PUT`, `end-date`, `cancel`), throwing `ResourceNotFoundException` (HTTP 404) on cross-campaign assignment mismatches. Genuine missing resources normalize to 404, while invalid business arguments remain 400 and lifecycle/overlap conflicts remain 409.
+   - deterministic ordering: Enforced at repository query level across all configuration history lists.
+   - cross-module boundary: MF-01 questionnaire publication lifecycle remains strictly behind `QuestionnaireVersionPublicationPort`; 0 direct MF-01 repository access. 0 MF-03 implementation added.
+
+15. **PR #102 — `fix(mf02): guard session scheduling until operational readiness`**
+   - reviewed source: `d7663abeb39dd76861e817cbf750b9de7d5d70d5`
+   - merge: `616636762687e5c2497db8e0227ee8692311703c`
+   - behavior: The public route `POST /api/v1/sessions/{id}/schedule` remains available. An otherwise-valid DRAFT session schedule attempt fails closed with `IllegalStateException` -> `HTTP 409 Conflict` and message `"Session scheduling is unavailable until operational resource and capacity readiness can be validated"`. The persisted session remains `DRAFT`.
+   - audit finding resolution: Addresses confirmed P1 audit finding MF02-001 (Scheduling). Scheduling is intentionally fail-closed rather than inventing unvalidated state transitions or production bypasses.
+
+16. **PR #100 — `feat(mf02): implement recurrence rule and series rest api`**
+   - reviewed source: `f5c385ae7d43a17e60a2ee7647fe96f7cfa0446c`
+   - merge: `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`
+   - integrated endpoints under `/api/v1/recurrence-rules` (9): `createRule`, `getRuleById`, `getRules`, `replaceRule`, `generateOccurrences`, `previewSeriesChange`, `confirmSeriesChange`, `previewSeriesCancellation`, `confirmSeriesCancellation`. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
+
+17. **PR #97 — `fix(mf02): harden pre-recurrence correctness and safety`**
+   - reviewed source: `ff60fb065bba498a8da05f41c1d3e1e56791c3c6`
+   - merge: `e83e54bff1f2c682fbdb6d760856bde993faf162`
+   - remediation contents: F-01 (Early session start prevention), F-02 (366-day recurrence safety horizon), F-03 (Campaign service-date consistency), F-04 (Recurrence/series missing-resource HTTP 404 normalization), MySQL series concurrency assurance (`SessionSeriesMySqlConcurrencyIntegrationTests`).
+
+18. **PR #92 — `feat(mf02): add session change control REST API`**
+   - reviewed source: `ccf5c3d58035d35e56d316207848d58388446547`
+   - merge: `6ff63bdd04f34d3bd334d011fdf55dee8010a140`
+   - integrated endpoints under `/api/v1/sessions` (7): `cancellation-preview`, `cancel`, `reschedule-preview`, `reschedule`, `transfer-preview`, `transfer`, `change-events`. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
+
+19. **PR #90 — `feat(mf02): implement vaccination session core and lifecycle rest api`**
+   - reviewed source: `3324ab4b2a84960dea946c531115b5aee829ad61`
+   - merge: `9cc7a606260e24e243090f70f5e957b0544bfa3b`
+   - integrated endpoints under `/api/v1/sessions` (6): `createSession`, `getSessionById`, `getSessions`, `scheduleSession`, `startSession`, `completeSession`. Qualified as `COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD via PR #102`.
+
+20. **PR #88 — `feat(mf02): add vaccination center management REST API`**
+    - merge: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
+    - integrated endpoints under `/api/v1/centers` (14): Center Master (6), Operating Hours (4), Center Closures (4).
+
+21. **PR #86 — `feat(mf02): add campaign management REST API`**
+    - merge: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
+    - integrated endpoints under `/api/v1/campaigns` (9): Campaign Master & Lifecycle transitions.
+
+
+## 3. Implemented MF-02 Backend Scope
+
+The repository contains substantial implemented MF-02 backend behavior:
+
+### Campaign configuration
+- `VaccineType` (seeded reference data)
+- `TargetGroup` (seeded reference data)
+- `VaccinationCampaign`
+- `CampaignDoseProgramme`
+- `CampaignLocationTarget`
+- `CampaignQuestionnaireAssignment`
+- effective-history validation and mutation protection
+- deterministic version and assignment history ordering
+- campaign publication prerequisites
+- campaign lifecycle state-integrity hardening
+- `DRAFT -> SCHEDULED`
+- `DRAFT/SCHEDULED -> PUBLISHED`
+- `PUBLISHED -> ACTIVE`
+- `PUBLISHED/ACTIVE -> SUSPENDED`
+- `SUSPENDED -> PUBLISHED`
+- `SUSPENDED -> ACTIVE`
+
+### Center planning
+- `VaccinationCenter`
+- explicit normalized scheduling timezone
+- `OperatingHours`
+- `CenterClosure`
+- `CampaignCenterAssignment` (with nested campaign ownership enforcement)
+- center/hours/closure reverse-impact protection
+- center and campaign pessimistic serialization where required
+
+### Center operational resources & staff roster (Milestone 2A — PR #108)
+- `CenterOperationalResourceController`, `CreateOperationalResourceRequest`, `UpdateOperationalResourceRequest`, `OperationalResourceResponse`, `OperationalResourceDtoMapper`
+- `CenterStaffRosterController`, `RegisterStaffRosterRequest`, `UpdateStaffRosterRequest`, `OperationalStaffRosterResponse`, `OperationalStaffRosterDtoMapper`
+- `OperationalResourceStatus` canonical correction (`ACTIVE`, `MAINTENANCE`, `INACTIVE`)
+- Pessimistic write locking on resource and roster row updates (`findByIdForUpdate`)
+- Narrow mapping of duplicate key database violations to HTTP 409 Conflict
+
+### Session operational assignments (Milestone 2B — PR #110)
+- `SessionOperationalAssignmentController`, `CreateSessionResourceAssignmentRequest`, `CreateStaffAssignmentRequest`, `SessionResourceAssignmentResponse`, `StaffAssignmentResponse`, `SessionResourceAssignmentDtoMapper`, `StaffAssignmentDtoMapper`
+- `SessionResourceAssignmentService`: DRAFT-only session resource assignment mutation (create/delete), lifecycle-independent reads, session window containment, active resource verification, same-center verification, temporal interval overlap detection, pessimistic write locking (`findByIdForUpdate`)
+- `StaffAssignmentService`: DRAFT-only session staff assignment mutation (create/delete), lifecycle-independent reads, session window containment, active roster verification, same-center verification, role qualification (`StaffRole` matches roster role), global user roster locking (`findByUserIdForUpdateOrderByIdAsc`), post-lock pessimistic current-read overlap query (`findOverlappingAssignmentsForUpdate`)
+- `StaffAssignmentRepository`: added `findOverlappingAssignmentsForUpdate` with `@Lock(LockModeType.PESSIMISTIC_WRITE)` ensuring current-read visibility under MySQL/InnoDB `REPEATABLE READ` without target-first lock inversion risk
+- `SessionOperationalAssignmentMySqlConcurrencyIntegrationTests`: real MySQL 8.4.3 Testcontainers concurrency assurance proving serialization of overlapping same-resource assignments and cross-center same-user staff assignments
+
+### Session capacity planning (Milestone 2C — PR #112)
+- `SessionCapacityPlanController`, `PreviewCapacityPlanRequest`, `CreateSessionCapacityPlanRequest`, `CapacityPlanPreviewResponse`, `SessionCapacityPlanResponse`, `SessionCapacityPlanDtoMapper`
+- `SessionCapacityPlanService`: non-persistent preview calculation across all session lifecycle states; DRAFT-only immutable revision creation; lifecycle-independent historical revision and latest plan retrieval
+- Server-evaluated capacity derivation: session duration from operating window, expected service minutes from active dose programme (with 10-minute default), active qualifying vaccinator counts and active qualifying station counts derived server-side from session assignments, effective station count evaluation `min(vaccinators, stations, fullyEquipped)`, recommended throughput calculation, safe occupancy interval evaluation, hard `sessionServiceCeiling` cap enforcement, and mandatory `overrideReason` when approved capacity exceeds throughput
+- `SessionCapacityPlanMySqlConcurrencyIntegrationTests`: real MySQL 8.4.3 Testcontainers concurrency assurance proving deterministic serialization of concurrent capacity plan revision creation under parent session pessimistic locking
+- Multi-test MySQL fixture cleanup alignment: FK-safe cleanup across all Testcontainers concurrency test classes
+
+### Recurrence and sessions
+- `SessionRecurrenceRule` (hardened in PR #97 with 366-day inclusive safety horizon `MAX_RECURRENCE_HORIZON_DAYS`)
+- `VaccinationSession` (hardened in PR #97 with Clock-based early-start rejection; scheduling fail-closed in PR #102)
+- authoritative session schedule validator
+- one-off DRAFT creation
+- recurrence occurrence generation (bounded by 366-day horizon)
+- deterministic occurrence identity
+- retry/idempotency behavior
+- DST-aware conversion
+- individual reschedule / center transfer / cancellation
+- series-wide preview / confirmation (with 366-day horizon and SHA-256 preview fingerprint)
+- full-series cancellation
+- append-only-style `SessionChangeEvent`
+- stale-preview SHA-256 fingerprints
+- terminal-state planning guard
+- SUSPENDED new-planning freeze
+
+### Session operational core model & calculation engine (Milestone 1 — PR #106)
+- `OperationalResource`, `OperationalResourceStatus`, `ResourceType`
+- `SessionResourceAssignment`
+- `OperationalStaffRoster`, `OperationalStaffStatus`, `StaffRole`
+- `StaffAssignment`
+- `SessionCapacityPlan`
+- `OccupancyInterval`, `OccupancyEvaluationResult`
+- `SessionCapacityCalculationService` (recommended throughput, effective station count, approved capacity, override rules, ceiling snapshot)
+- `OperationalResourceService`
+- `OperationalStaffRosterService`
+- Global staff roster locking query `findByUserIdForUpdateOrderByIdAsc(userId)` (PESSIMISTIC_WRITE)
+
+### Session lifecycle
+The current session lifecycle foundation includes controlled DRAFT/SCHEDULED/IN_PROGRESS/COMPLETED/CANCELLED behavior, prevents start attempts prior to `startAt`, and guards DRAFT -> SCHEDULED transitions with HTTP 409 Conflict until operational readiness can be evaluated in Milestone 3.
+
+### Session operational readiness & diagnostics (Milestone F6 — PR #144, PR #145)
+- `SessionReadinessResponse`, `SessionOperationalReadinessService.evaluateReadiness(sessionId)`
+- `GET /api/v1/sessions/{sessionId}/readiness` exposing pure side-effect-free diagnostic evaluation (does not mutate database rows or grant durable scheduling bypass)
+- Validation of active qualifying vaccinators, physical stations, fully equipped stations, and approved capacity plans
+- Returns structured diagnostic boolean `ready`, blocking violations array in deterministic backend order, and snapshot metrics
+- Frontend `SessionReadinessTab.jsx` embedded in `SessionDetailsModal.jsx` with point-in-time status badge, violations list, 6-cell metrics grid, and mutex-protected re-check refresh
+
+## 4. Campaign Lifecycle Contracts
+
+### 4.1 Campaign `DRAFT -> SCHEDULED` Contract — PR #71
+Internal campaign scheduling approval under `VaccinationCampaignService.scheduleCampaign(Long campaignId)`.
+
+### 4.2 Campaign `PUBLISHED -> ACTIVE` Activation Contract — PR #80
+Authoritative campaign activation according to Canonical R9 Appendix E.5 under `VaccinationCampaignService.activateCampaign(Long campaignId)`.
+
+### 4.3 Campaign `SUSPENDED -> PUBLISHED / ACTIVE` Resumption Contract — PR #82
+Authoritative campaign resumption according to Canonical R9 Appendix E.5 under `VaccinationCampaignService.resumeCampaign(Long campaignId, String reason, String actorId)`.
+
+## 5. Locking and Transaction Conventions
+
+Preserve established parent-first ordering and authoritative post-lock refresh.
+
+Common lock paths include:
+- campaign configuration writes: Campaign
+- center calendar/configuration writes: Center
+- recurrence generation: Campaign -> Center -> Rule
+- individual same-center session change: Campaign -> Center -> Session
+- individual center transfer: Campaign -> Center(min ID) -> Center(max ID) -> Session
+- series confirmation: Campaign -> Center -> Rule -> affected Sessions by ascending ID
+- campaign scheduling: Campaign
+- campaign activation: Campaign
+- campaign resumption: Campaign
+- session scheduling guard: Campaign -> Session
+- resource row update: `OperationalResource` via `findByIdForUpdate`
+- staff roster row update: `OperationalStaffRoster` via `findByIdForUpdate`
+- session resource assignment write: `VaccinationSession` -> `OperationalResource` via `findByIdForUpdate` -> overlap check -> save
+- session staff assignment write: `VaccinationSession` -> resolve target userId non-locking -> global user roster set via `findByUserIdForUpdateOrderByIdAsc(userId)` in deterministic ID order -> locked roster qualification -> current-read overlap check via `findOverlappingAssignmentsForUpdate` (PESSIMISTIC_WRITE) -> save
+- staff roster cross-center lock query: `findByUserIdForUpdateOrderByIdAsc(userId)` (PESSIMISTIC_WRITE across all roster rows for the user in ascending ID order)
+- session capacity plan revision creation: `VaccinationSession` via `findByIdForUpdate` -> server-evaluated calculations -> save
+
+Critical write services are transactional. Read-only preview operations use read-only transactions where appropriate.
+
+
+## 6. Current Test / Verification State
+
+### Current Verified Implementation & Test Baseline (Post-Closure Final State)
+- **Full Backend Test Suite:** **1659 / 1659 PASS** across all modules (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS`).
+- **MF-02 Focused Cross-Module Regression Total:** **1272 PASS** (`MF02_FOCUSED_CROSS_MODULE_REGRESSION_TOTAL`).
+- **MySQL & Bootstrap Assurance Suite:** **38 executed MySQL Testcontainers assurance tests** across MySQL profile + **6 fresh bootstrap tests** on `mysql:8.4.3` (0 failures, 0 errors, 0 skipped).
+- **Frontend Assurance:** ESLint clean (0 errors, 0 warnings); **Vitest automated test suite: 31 / 31 PASS**; Vite production build PASS (99 modules transformed).
+- **Database & Flyway Runtime:** Active Flyway sequence `V0` through `V11` with **43 fresh project-wide runtime tables** (22 MF-02 owned tables) and `validate` Hibernate schema policy.
+- **Historical PR #145 Checkpoint Baseline (develop @ `122547a4a0391bc43be835300635ec97aecfc430`):** 1280 backend tests, 24 MySQL assurance tests across 10 classes, `NOT_AVAILABLE_NO_EXISTING_RUNNER` (historical state prior to Vitest adoption).
+
+
+### Historical Verification Checkpoints (Prior Milestones)
+
+1. **Historical Checkpoints:**
+   - Pre-Remediation Checkpoint (Base `1b90e2ee...`): **790 functional H2 tests** across 81 XML reports + **3 MySQL assurance tests** (793 logical executions).
+   - PR #97 Remediation Candidate Checkpoint: **799 functional H2 tests** (81 local XML reports).
+   - PR #97 Combined Merge-Context Checkpoint: **835 functional H2 tests** executed in CI (incorporating 36 intervening MF-01 screening tests).
+   - Milestone 5 Immediate Parent Baseline (`8f58ae23...`): **882 functional H2 tests** (835 PR #97 base + 47 unrelated tests landed on develop: 5 MF-01 + 42 MF-03).
+   - Milestone 5 Verified Backend Baseline (PR #100 / Merge `684a4d6...`): **926 functional H2 tests** (+44 net-new tests over parent baseline 882) + **4 MySQL assurance tests**.
+   - Session Scheduling Guard Verified Backend Baseline (PR #102 / Merge `6166367...`): **928 functional H2 tests** (+2 net-new tests over parent baseline 926) + **4 MySQL assurance tests**.
+   - Campaign Configuration REST Verified Backend Baseline (PR #104 / Merge `6454a8f...`): **953 functional H2 tests** (+25 net-new tests over immediate parent baseline 928) + **4 MySQL assurance tests**.
+   - Session Operational Core Model and Calculation Engine Verified Backend Baseline (PR #106 / Merge `888f9d4...`): **998 functional H2 tests** (+45 net-new tests over immediate parent baseline 953) + **4 MySQL assurance tests**.
+   - Center Operational Resource and Staff Roster REST API Verified Backend Baseline (PR #108 / Merge `6edcaca...`): **1041 functional H2 tests** (+43 net-new tests over immediate parent baseline 998) + **4 MySQL assurance tests**.
+   - Session Operational Assignments REST API Verified Backend Baseline (PR #110 / Merge `1c7a09c...`): **1080 functional H2 tests** (+39 net-new tests over immediate parent baseline 1041) + **6 MySQL assurance tests**.
+
+2. **Session Capacity Plan REST API Verified Backend Baseline (PR #112 / Merge `56860a2...`):**
+   - **Candidate-local functional H2 baseline:** **1103 functional H2 tests** across locally verified Surefire XML reports (0 failures, 0 errors, 0 skipped; +23 net-new tests over immediate parent baseline 1080).
+   - **Fresh PR #112 merge-context Backend CI:** **1105 functional H2 tests** (1103 + 2 from develop merge PR #113; 0 failures, 0 errors, 0 skipped).
+   - **MySQL CI:** **7 / 7 PASS** across 5 classes on `mysql:8.4.3`.
+
+3. **Session Operational Readiness and Scheduling Enforcement Verified Backend Baseline (PR #114 / Merge `e82f733...`):**
+   - **Functional H2 baseline:** **1123 candidate / 1138 combined develop** (0 failures, 0 errors, 0 skipped; +18 net-new tests over pre-M3 base).
+   - **MySQL CI:** **15 / 15 PASS** across 7 classes on `mysql:8.4.3` (+8 MySQL tests: 7 operational readiness + 1 V2 migration SQL test).
+
+4. **Slot Capacity Integration Verified Backend Baseline (PR #117 / Merge `c89cdcb...`):**
+   - **Candidate-local functional H2 baseline:** **1160 functional H2 tests** across locally verified Surefire XML reports (0 failures, 0 errors, 0 skipped; +22 net-new tests over immediate parent baseline 1138).
+   - **Fresh PR #117 Backend CI:** **1160 functional H2 tests** (0 failures, 0 errors, 0 skipped, `BUILD SUCCESS` in 2m32s; Run 32549398387, Job 96973523785).
+   - **Net-new candidate executions (+22 H2 tests across 2 test files):**
+     - +19 `TimeSlotCapacityServiceIntegrationTests`, +3 `SlotCapacityPortCrossModuleIntegrationTests`
+   - **MySQL CI:** **23 / 23 PASS** across 9 classes on `mysql:8.4.3` (+8 net-new MySQL tests: 7 slot capacity concurrency + 1 V3 migration SQL test).
+   - **Frontend CI:** PASS (14s; Run 32549398452, Job 96973524017).
+
+### Authoritative MySQL Concurrency Assurance Checkpoint
+
+Fresh GitHub Actions CI executed **23 tests across 9 classes** under `-Pmysql-concurrency` on `mysql:8.4.3`:
+- `CampaignLifecycleMySqlConcurrencyIntegrationTests`: 2 tests (0 failures, 0 errors, 0 skipped)
+- `CampaignReverseImpactMySqlConcurrencyIntegrationTests`: 1 test (0 failures, 0 errors, 0 skipped)
+- `SessionSeriesMySqlConcurrencyIntegrationTests`: 1 test (0 failures, 0 errors, 0 skipped)
+- `SessionOperationalAssignmentMySqlConcurrencyIntegrationTests`: 2 tests (0 failures, 0 errors, 0 skipped)
+- `SessionCapacityPlanMySqlConcurrencyIntegrationTests`: 1 test (0 failures, 0 errors, 0 skipped)
+- `SessionOperationalReadinessMySqlConcurrencyIntegrationTests`: 7 tests (0 failures, 0 errors, 0 skipped)
+- `OperationalStaffIdentityMigrationMySqlIntegrationTests`: 1 test (0 failures, 0 errors, 0 skipped)
+- `SlotCapacityMySqlConcurrencyIntegrationTests`: 7 tests (0 failures, 0 errors, 0 skipped)
+- `TimeSlotMigrationMySqlIntegrationTests`: 1 test (0 failures, 0 errors, 0 skipped)
+- **Total:** **23 / 23 PASS** (0 failures, 0 errors, 0 skipped).
+- *Supported Claim:* Representative single-row lifecycle, parent/child reverse-impact, series generation, operational resource/staff assignment, session capacity plan revision creation, operational readiness evaluation, deterministic staff identity locking, time slot booking capacity reservation/release, and session slot aggregate serialization are validated against real MySQL/InnoDB in CI on `mysql:8.4.3`. Exact low-level JDBC blocking timing is not instrumented, and non-concurrency domain paths remain verified by the fast H2 suite.
+
+### Test Architecture
+- Fast in-memory H2 default suite in MySQL compatibility mode.
+- Dedicated production-equivalent MySQL 8.4.3 Testcontainers suite via `AbstractMySqlTestContainersIntegrationTest` under Maven profile `-Pmysql-concurrency`.
+- Separate validation paths: H2 functional tests and MySQL concurrency assurance tests are kept strictly distinct.
+
+### Baseline reconciliation history
+- PR #71: **591**
+- PR #75: **599** (+8 from `SessionSeriesPreviewCalculatorTests`)
+- PR #80: **616** (+17 net-new)
+- PR #82: **645** (+29 net-new)
+- PR #84: **645 functional H2 + 3 MySQL** (**648 logical executions**)
+- PR #86: **680 functional H2 + 3 MySQL** (**683 logical executions**; +35 H2)
+- PR #88: **724 functional H2 + 3 MySQL** (**727 logical executions**; +44 H2)
+- PR #90: **763 functional H2 + 3 MySQL** (**766 logical executions**; +39 H2)
+- PR #92: **790 functional H2 + 3 MySQL** (**793 logical executions**; +27 H2)
+- PR #97: **799 candidate functional H2 (835 combined merge-context H2) + 4 MySQL** (**803 logical candidate executions / 839 logical combined merge executions**)
+- PR #100: **926 functional H2 + 4 MySQL** (**930 logical executions**; 882 immediate parent baseline + 44 candidate net-new)
+- PR #102: **928 functional H2 + 4 MySQL** (**932 logical executions**; 926 immediate parent baseline + 2 candidate net-new)
+- PR #104: **953 functional H2 + 4 MySQL** (**957 logical executions**; 928 immediate parent baseline + 25 candidate net-new)
+- PR #106: **998 functional H2 + 4 MySQL** (**1002 logical executions**; 953 immediate parent baseline + 45 candidate net-new)
+- PR #108: **1041 functional H2 + 4 MySQL** (**1045 logical executions**; 998 immediate parent baseline + 43 candidate net-new)
+- PR #110: **1080 functional H2 + 6 MySQL** (**1086 logical executions**; 1041 immediate parent baseline + 39 candidate net-new H2 + 2 net-new MySQL)
+- PR #111: **1080 functional H2 + 6 MySQL** (**1086 logical executions**; documentation synchronization)
+- PR #112: **1103 functional H2 + 7 MySQL** (**1110 logical candidate executions**; 1080 immediate parent baseline + 23 candidate net-new H2 + 1 net-new MySQL)
+- PR #113: **1105 functional H2 + 7 MySQL** (**1112 logical executions**; merge-context develop baseline)
+- PR #114: **1123 functional H2 (1138 combined develop) + 15 MySQL** (**1138 / 1153 logical executions**; +18 net-new H2 + 8 net-new MySQL)
+- PR #116: **1138 functional H2 + 15 MySQL** (**1153 logical executions**; documentation synchronization)
+- PR #117: **1160 functional H2 + 23 MySQL** (**1183 logical executions**; 1138 immediate parent baseline + 22 candidate net-new H2 + 8 net-new MySQL)
+- PR #118: **1160 functional H2 + 23 MySQL** (documentation synchronization)
+- PR #137: **1170 backend tests** (F4B simple session lifecycle UI)
+- PR #138: **1170 backend tests** (F4C trusted actor derivation)
+- PR #139: **1170 backend tests** (F4C session change control UI)
+- PR #140: **1170 backend tests** (F4D series change trusted actor derivation)
+- PR #141: **1170 backend tests** (F4D session recurrence management UI)
+- PR #144: **1280 backend tests + 24 MySQL tests** (F6 session readiness query prerequisite)
+- PR #145: **1280 backend tests + 24 MySQL tests** (F6 session readiness diagnostics UI final milestone)
+
+Do not resurrect 566, 575, 599, 616, 645, 680, 724, 763, 790, 799, 835, 882, 926, 928, 953, 998, 1041, 1080, 1103, 1105, 1123, 1138, 1160, 1170, or 1280 as authoritative current evidence (they are historical baselines; current full backend baseline is **1659 / 1659 PASS**).
+
+
+## 7. Architecture / Maintainability Audit — Current Repository Snapshot
+
+The current repository maintains a **layered modular monolith**.
+
+Verified component sizes after PR #112:
+- `SessionCapacityPlanController.java`: ~82 lines
+- `SessionCapacityPlanService.java`: ~293 lines
+- `SessionCapacityPlanDtoMapper.java`: ~40 lines
+- `SessionOperationalAssignmentController.java`: ~136 lines
+- `SessionResourceAssignmentService.java`: ~164 lines
+- `StaffAssignmentService.java`: ~181 lines
+- `SessionResourceAssignmentDtoMapper.java`: ~31 lines
+- `StaffAssignmentDtoMapper.java`: ~30 lines
+- `CenterOperationalResourceController.java`: ~88 lines
+- `CenterStaffRosterController.java`: ~89 lines
+- `OperationalResourceDtoMapper.java`: ~30 lines
+- `OperationalStaffRosterDtoMapper.java`: ~29 lines
+- `OperationalResourceService.java`: ~217 lines
+- `OperationalStaffRosterService.java`: ~204 lines
+- `CampaignConfigurationController.java`: ~250 lines
+- `CampaignConfigurationDtoMapper.java`: ~85 lines
+- `RecurrenceRuleController.java`: ~174 lines
+- `RecurrenceRuleDtoMapper.java`: ~160 lines
+- `SessionSeriesChangeService.java`: ~694 lines
+- `SessionSeriesPreviewCalculator.java`: ~456 lines
+- `VaccinationSessionService.java`: ~869 lines
+- `VaccinationCampaignService.java`: ~428 lines
+- `CampaignCenterAssignmentService.java`: ~376 lines
+- `OperatingHoursService.java`: ~488 lines
+- `CenterClosureService.java`: ~424 lines
+- `VaccinationCenterService.java`: ~245 lines
+- `CenterController.java`: ~228 lines
+- `CampaignController.java`: ~184 lines
+- `SessionController.java`: ~188 lines
+- `SessionDtoMapper.java`: ~98 lines
+- `SessionCapacityCalculationService.java`: ~122 lines
+- `SessionCapacityPlan.java`: ~423 lines
+
+- **Historical PR #112 architecture snapshot:** 185 MF-02 production Java files, 120 MF-02 test Java files.
+- **Current post-closure repository state:** 208 MF-02 production Java files (213 total tracked backend campaign files including 5 `.gitkeep` directory placeholders), 136 MF-02 test Java files under `backend/src/test/java/com/se2030/vaccinationportal/campaign/`.
+
+Verified frontend component sizes after PR #145:
+- `SessionRecurrencePanel.jsx`: ~1,670 lines (MEDIUM complexity; recurrence management and series preview-confirm)
+- `SessionChangeControlTab.jsx`: ~1,458 lines (MEDIUM complexity; reschedule, transfer, cancel, change events)
+- `SessionCapacityPlanTab.jsx`: ~848 lines (LOW complexity; capacity preview, approval, revision history)
+- `SessionDetailsModal.jsx`: ~563 lines (LOW complexity; container modal, lifecycle action card, tab routing)
+- `SessionReadinessTab.jsx`: ~296 lines (LOW complexity; diagnostic status banner, metrics grid, violations list)
+- `SessionsPage.jsx`: ~289 lines (LOW complexity; list table, filters, pagination)
+
+
+Remaining bounded maintainability targets:
+1. Evaluation/focused decomposition of `VaccinationSessionService` (~869 lines) if future evidence justifies it (`DEFER`).
+2. Duplicated preview/impact/fingerprint/event-construction helpers across session services.
+
+
+## 8. Production-Layer Gaps
+
+The following summarizes the current production-layer status:
+
+- MF-02 Campaign REST API (9 endpoints) — **RESOLVED in PR #86**
+- MF-02 VaccinationCenter REST API (14 endpoints) — **RESOLVED in PR #88**
+- MF-02 VaccinationSession Core REST API (6 endpoints) — **RESOLVED in PR #90 (COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD via PR #102)**
+- MF-02 VaccinationSession Change Control REST API (7 endpoints) — **RESOLVED in PR #92 (COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT)**
+- Pre-Recurrence Correctness and Safety Remediation — **RESOLVED in PR #97**
+- MF-02 VaccinationSession Recurrence / Series REST API (9 endpoints) — **RESOLVED in PR #100 (COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT)**
+- Session Operational Prerequisite Guard — **RESOLVED in PR #102**
+- Campaign Configuration REST API (12 endpoints) — **RESOLVED in PR #104 (Master data management subsequently closed in R3)**
+- Session Operational Core Model and Calculation Engine (Milestone 1) — **RESOLVED in PR #106 (COMPLETE)**
+- Center Operational Resources & Staff Roster REST API (Milestone 2A; 8 endpoints) — **RESOLVED in PR #108 (COMPLETE)**
+- Session Resource & Staff Assignment REST API (Milestone 2B; 8 endpoints) — **RESOLVED in PR #110 (COMPLETE)**
+- Session Capacity Plan REST API (Milestone 2C; 5 endpoints) — **RESOLVED in PR #112 (COMPLETE)**
+- Session Operational Configuration REST API (Milestone 2 Overall; 21 endpoints) — **RESOLVED in PR #112 (COMPLETE)**
+- Session Operational Readiness & Guard Replacement (Milestone 3) — **RESOLVED in PR #114 (COMPLETE)**
+- MF02/MF03 Slot Capacity Integration (Milestone 4) — **RESOLVED in PR #117 (COMPLETE)**
+- Campaign terminal lifecycle transitions (`complete`, `cancel`, `archive`) — **RESOLVED in R1 (CLOSED with state guards and audit records)**
+- Production MF-03 impact adapter (owned by MF-03; `SessionImpactReader` dependency)
+- Spring Security/RBAC framework integration — **RESOLVED in X2 / VP-003 (CLOSED with method security and principal derivation)**
+- OpenAPI documentation (project-wide documentation follow-on)
+- Database migrations & bootstrap — **RESOLVED in X3 / VP-002 (CLOSED with canonical Flyway V0–V11 runtime sequence, 43 fresh project-wide runtime tables, 22 MF-02 tables, verified on MySQL 8.4.3)**
+- Representative production MySQL Testcontainers assurance (RESOLVED in PR #84, PR #97, PR #110, PR #112, PR #114, PR #117, and X3 bootstrap suite)
+- MF-02 frontend business screens (F4A, F4B, F4C, F4D, F5A, F5B, F6 UI) — **RESOLVED in PR #137, PR #139, PR #141, PR #145**
+- Frontend automated tests runner — **RESOLVED (Vitest configured in `frontend/package.json`; 31 / 31 PASS)**
+- Reliable transactional outbox delivery (project-wide infrastructure follow-on)
+
+
+## 9. Known Issues / Risks to Resolve Before More Lifecycle Growth
+
+### 9.1 Campaign questionnaire-version invariant — RESOLVED (PR #73)
+Defensively enforces `MF02-BR-02` revalidating `QuestionnaireVersionPublicationPort.isPublished(...)` under campaign lock.
+
+### 9.2 Oversized orchestration services — PARTIALLY RESOLVED (PR #75)
+`SessionSeriesChangeService` decomposed via `SessionSeriesPreviewCalculator`. `VaccinationSessionService` maintainability review remains `DEFER`.
+
+### 9.3 Optional critical integration ports
+Optional injection boundaries remain for `QuestionnaireVersionPublicationPort` (production bean provided by MF-01 `QuestionnaireVersionService`) and `SessionImpactReader` (MF-03 port; adapter missing).
+
+### 9.4 Timing-based concurrency test — RESOLVED (PR #78)
+Eliminated `Thread.sleep(300)` in `CampaignAssignmentReverseImpactConcurrencyIntegrationTests` with deterministic latches. 0 `Thread.sleep` calls remain under `backend/src/test`.
+
+### 9.5 Representative MySQL Testcontainers concurrency assurance — RESOLVED (PR #84, PR #97, PR #110, PR #112, PR #114, & PR #117)
+- Containerized MySQL 8.4.3 InnoDB integration tests via Testcontainers under profile `-Pmysql-concurrency`.
+- PR #84 validated single-row lifecycle duplicate-command race serialization and parent/child reverse-impact locking.
+- PR #97 added `SessionSeriesMySqlConcurrencyIntegrationTests` validating concurrent series confirmation versus occurrence generation.
+- PR #110 added `SessionOperationalAssignmentMySqlConcurrencyIntegrationTests` validating concurrent session resource assignment and cross-center staff assignment serialization.
+- PR #112 added `SessionCapacityPlanMySqlConcurrencyIntegrationTests` validating concurrent session capacity plan revision creation serialization under parent session pessimistic locking.
+- PR #114 added `SessionOperationalReadinessMySqlConcurrencyIntegrationTests` and `OperationalStaffIdentityMigrationMySqlIntegrationTests` validating operational readiness evaluation under concurrent roster/resource updates and V2 migration SQL execution on real MySQL 8.4.3.
+- PR #117 added `SlotCapacityMySqlConcurrencyIntegrationTests` and `TimeSlotMigrationMySqlIntegrationTests` validating concurrent booking capacity reservations, slot creation/update aggregate ceiling enforcement under current reads, and V3 migration SQL execution on real MySQL 8.4.3.
+- Total suite in CI: 23 tests across 9 classes on `mysql:8.4.3`.
+
+### 9.6 Append-only audit limitation
+Lifecycle/change repositories inherit normal repository delete operations. Domain/API convention rather than deletion-proof database enforcement.
+
+### 9.7 Pre-Recurrence Correctness and Safety Remediation — RESOLVED (PR #97)
+Prerequisite engineering review findings resolved: early session start rejection (F-01), 366-day recurrence safety horizon (F-02), campaign service date consistency (F-03), missing-resource HTTP 404 normalization (F-04), and MySQL series concurrency assurance.
+
+### 9.8 Recurrence and Series REST API Milestone 5 — RESOLVED (PR #100)
+Exposed 9 public REST routes under `/api/v1/recurrence-rules` matching Prompt 115 frozen design. Preserved `cancelRule()` as internal only, while exposing impact-aware preview/confirm series cancellation. Qualified as `COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT`.
+
+### 9.9 Session Operational Prerequisite Guard — RESOLVED (PR #102)
+Resolved confirmed P1 audit finding MF02-001 (Scheduling). `POST /api/v1/sessions/{id}/schedule` fails closed with HTTP 409 Conflict while physical resource, staff assignment, and capacity planning models are absent, preserving `DRAFT` persistence state.
+
+### 9.10 Campaign Configuration REST API — RESOLVED (PR #104)
+Resolved confirmed P1 audit finding MF02-003 (Campaign Configuration API Blocker). Exposed 12 public REST routes under `/api/v1/campaigns/{id}` covering dose programmes, questionnaire assignments, campaign-center assignments, and location targets with deterministic ordering and nested ownership checks. Qualified as `PUBLIC_WORKFLOW_CLOSED_WITH_SEEDED_MASTER_DATA`.
+
+### 9.11 Session Operational Core Model, Staff Concurrency Foundation, and Capacity Semantics — RESOLVED (PR #106)
+- **Operational Core Models:** Implemented entities, repositories, and domain services for center-owned physical resources (`OperationalResource`), center operational staff roster (`OperationalStaffRoster`), session resource assignments (`SessionResourceAssignment`), session staff assignments (`StaffAssignment`), and session capacity plans (`SessionCapacityPlan`).
+- **Calculation Engine:** Implemented pure calculations for recommended throughput (`recommendedThroughput = effectiveStationCount * floor(durationMinutes / expectedServiceMinutes)`), effective station count (`min(assignedVaccinatorCount, availableStationCount, fullyEquippedStationCount)` where `fullyEquippedStationCount` is an explicit scalar snapshot/input), approved capacity (`approvedCapacity <= sessionServiceCeiling` when ceiling configured; overrideReason required if exceeding recommended throughput), and interval occupancy evaluation (`OccupancyInterval`, `OccupancyEvaluationResult`).
+- **Global Staff Roster Locking Foundation:** `OperationalStaffRoster` is center-scoped (`unique(center_id, user_id)`), while `StaffAssignment` overlap detection is global by external `userId`. Repository provides `findByUserIdForUpdateOrderByIdAsc(userId)` with `PESSIMISTIC_WRITE` covering all roster rows for the user in deterministic ascending ID order. Safe claim: MF-02 has a deterministic global pessimistic-lock repository foundation for cross-center staff scheduling. Live scheduling concurrency is `NOT_YET_PROVEN` as live scheduling does not use this contract yet.
+- **Future M3 Concurrency Obligation:** Dedicated MySQL/Testcontainers concurrency proof for concurrent roster registration versus future staff scheduling is required in Milestone 3 before the PR #102 scheduling guard is replaced (`REQUIRED_IN_M3`).
+- **Scheduling Guard Preserved:** PR #102 fail-closed guard remains in effect; `DRAFT -> SCHEDULED` is still rejected with HTTP 409 Conflict until Milestone 3 readiness integration.
+
+### 9.12 Center Operational Resource & Staff Roster REST API — RESOLVED (PR #108)
+- **Exposed 8 REST routes under `/api/v1/centers/{centerId}`:** 4 operational resource endpoints and 4 operational staff roster endpoints.
+- **OperationalResourceStatus Canonical Correction:** Authoritative enum contains `ACTIVE`, `MAINTENANCE`, `INACTIVE`. `MAINTENANCE` was the canonical Section 6.6 value missing from M1 and was added in M2A.
+- **Pessimistic Update Locking:** Update paths for resources and roster entries execute under pessimistic row locks (`findByIdForUpdate`).
+- **Duplicate Protection:** Database uniqueness constraints `unique(center_id, code)` and `unique(center_id, user_id)` are enforced. Uniqueness race exceptions map narrowly to HTTP 409 Conflict.
+- **Preserved History:** Existing assignment rows (`SessionResourceAssignment`) and staff snapshot records (`StaffAssignment`) are preserved during registry updates.
+- **Nested Ownership:** Mismatches between path `centerId` and resource/roster parent center normalize to HTTP 404 Not Found.
+
+### 9.13 Session Operational Assignments REST API & MySQL Concurrency Assurance — RESOLVED (PR #110)
+- **Exposed 8 REST routes under `/api/v1/sessions/{sessionId}`:** 4 session resource assignment endpoints (`POST`, `GET` list, `GET` by ID, `DELETE`) and 4 session staff assignment endpoints (`POST`, `GET` list, `GET` by ID, `DELETE`).
+- **DRAFT-Only Mutation Invariant:** Assignment creation and deletion are strictly constrained to `DRAFT` sessions; non-DRAFT mutation attempts reject with `IllegalStateException` (HTTP 409 Conflict). Read operations remain lifecycle-independent.
+- **Interval and Qualification Bounds:** Assignment time intervals `[startAt, endAt)` are strictly bounded within session operating windows, validated with half-open collision checks, and require `ACTIVE` resources/staff roster entries belonging to the same center with matching `StaffRole` qualifications.
+- **MySQL REPEATABLE READ Snapshot Resolution:** Concurrency testing on real MySQL 8.4.3 exposed that initial non-locking entity reads establish MVCC consistent-read snapshots that prevent unblocked transactions from seeing newly committed overlapping assignments. Resolved by introducing `findOverlappingAssignmentsForUpdate` with `@Lock(LockModeType.PESSIMISTIC_WRITE)` in `StaffAssignmentRepository`, ensuring a current-read check occurs immediately after acquiring global user roster locks without introducing target-first deadlock risk.
+- **MySQL Assurance Suite Growth:** Added `SessionOperationalAssignmentMySqlConcurrencyIntegrationTests` with 2 tests verifying serialization of concurrent overlapping assignments on real MySQL 8.4.3 InnoDB (suite total: 6 / 6 PASS).
+
+### 9.14 Session Capacity Plan REST API & Concurrency Serialization — RESOLVED (PR #112)
+- **Exposed 5 REST routes under `/api/v1/sessions/{sessionId}/capacity-plans`:** preview (`POST .../preview`), create revision (`POST .../capacity-plans`), list revisions (`GET .../capacity-plans`), latest revision (`GET .../latest`), and specific revision (`GET .../{revision}`).
+- **Immutable Revision Progression:** Created capacity plans are strictly immutable revisions (`revisionNumber` 1, 2, 3...) persisted under parent session pessimistic locking (`findByIdForUpdate`).
+- **Calculation Integrity:** Session duration, expected service minutes, active qualifying vaccinators, and active qualifying vaccination stations are server-evaluated from session state and active configurations. Effective stations, recommended throughput, safe occupancy intervals, hard session service ceiling caps, and override rules are enforced strictly by the calculation service.
+- **MySQL Concurrency Serialization Proof:** Added `SessionCapacityPlanMySqlConcurrencyIntegrationTests` verifying that competing creation workers serialize deterministically on real MySQL 8.4.3 InnoDB into distinct incremental revisions without key collision or lost updates (suite total: 7 / 7 PASS).
+- **Milestone 2 Completion:** Closes Milestone 2 (Session Operational Configuration REST API; 21 total endpoints across M2A, M2B, and M2C).
+
+
+### 9.15 Simple Session Lifecycle UI (F4B) — RESOLVED (PR #137)
+Implemented `SessionLifecycleActionCard` within `SessionDetailsModal.jsx` enabling schedule, start, and complete operational lifecycle actions with optimistic UI feedback.
+
+### 9.16 Session Change Control UI & Trusted Actor Derivation (F4C) — RESOLVED (PR #138, PR #139)
+Implemented `SessionChangeControlTab.jsx` with tabbed preview-confirm workflows for reschedule, center transfer, cancellation, and append-only `SessionChangeEvent` inspection. Hardened backend controllers (`SessionController`) to derive `actorId` strictly from authenticated JWT principal (`UserPrincipal.getUserId()`), ignoring client-provided actor identity.
+
+### 9.17 Session Recurrence UI & Trusted Actor Derivation (F4D) — RESOLVED (PR #140, PR #141)
+Implemented `SessionRecurrencePanel.jsx` supporting rule creation, 366-day bounded occurrence generation, series schedule change preview/confirm, and series cancellation preview/confirm. Hardened backend controllers (`RecurrenceRuleController`) to derive `actorId` strictly from authenticated JWT principal (`UserPrincipal.getUserId()`).
+
+### 9.18 Session Readiness Diagnostics Query & UI (F6) — RESOLVED (PR #144, PR #145)
+Exposed side-effect-free diagnostic evaluation query `GET /api/v1/sessions/{id}/readiness` (PR #144) and implemented `SessionReadinessTab.jsx` (PR #145). Enforced synchronous request mutex (`activeRequestRef`), monotonic token sequencing (`requestSeqRef`), and stale snapshot invalidation on failed re-check to guarantee mutual exclusivity between error alerts and stale readiness metrics. Preserved `POST /api/v1/sessions/{id}/schedule` as the sole authoritative transactional scheduling operation.
+
+
+## 10. SUSPENDED Planning Policy
+
+Project policy S3 is implemented: **NEW PLANNING FROZEN, REMEDIATION ALLOWED**.
+
+## 11. Campaign Lifecycle Transitions & Final Closure
+
+Terminal campaign lifecycle transitions (`complete`, `cancel`, and `archive`) were addressed and closed in **R1**:
+- `-> COMPLETED`: Implemented with operational validation checks ensuring child sessions are finalized.
+- `-> CANCELLED`: Implemented with cancellation audit logging and fail-closed impact checks without silent appointment rewriting.
+- `COMPLETED/CANCELLED -> ARCHIVED`: Implemented with terminal state validation guards and audit tracking.
+- All lifecycle transitions enforce deterministic `@PreAuthorize` security and write audit log events.
+
+## 12. MF-02 Ownership Boundaries
+
+- MF-01 owns screening questions, questionnaire versions, eligibility rules, submissions, answers, and assessments.
+- MF-02 owns campaigns, center planning, operating calendars, recurrence, sessions, resources/capacity, schedule changes, and operational utilization.
+- MF-03 owns appointments, waitlists, rebooking, and check-in.
+- MF-04 owns batches, stock quantities, allocations, and stock movements.
+- MF-05 owns vaccination administration records and certificates.
+
+MF-02 may read aggregate impact/readiness information through ports. It must not silently mutate MF-03 appointment/waitlist history.
+
+## 13. Immediate Engineering Order
+
+Recommended next direction (classified as **RECOMMENDATION_ONLY**; planned MF-02 implementation is complete):
+1. Acknowledge completion of all planned MF-02 implementation milestones (F4A, F4B, F4C, F4D, F5A, F5B, F6 readiness query, F6 frontend);
+2. Acknowledge external MF-03 `SessionImpactReader` dependency (owned by MF-03; required for non-fail-closed scheduled session modifications);
+3. Complete independent Codex review for the final documentation/evidence package;
+4. Project-wide follow-ons outside MF-02 core scope: MF-03 appointment booking consumer, project-wide transactional outbox runner, Flyway runtime startup runner, OpenAPI documentation exposure.
+
+
+## 14. Historical Milestone Summary
+
+Selected MF-02 chronology spans early PR #12-era work through PR #118, with subsequent reviewed milestones through PR #145:
+
+| PR | Milestone |
+|---|---|
+| #12 | Campaign/dose/target/questionnaire foundations |
+| #16 | VaccinationCenter foundation |
+| #20 | OperatingHours |
+| #24 | CenterClosure |
+| #26 | CampaignCenterAssignment |
+| #28 | SessionRecurrenceRule |
+| #30 | Center scheduling timezone / mutation locking prerequisite |
+| #32 | VaccinationSession domain/persistence |
+| #34 | Validated one-off session creation |
+| #36 | Recurrence occurrence generation |
+| #38 | SessionChangeEvent / impact port / session row locking |
+| #40 | Individual session change workflows |
+| #42 | Series-wide preview |
+| #44 | Atomic series-wide confirmation |
+| #46 | Session-change regression hardening |
+| #48 | Full-series cancellation |
+| #50 | Campaign/assignment reverse-impact protection |
+| #52 | Center/hours/closure reverse-impact protection |
+| #53 | VaccinationSession lifecycle state-machine hardening |
+| #55 | Campaign publication |
+| #58 | Deterministic reverse-impact test hardening |
+| #61 | Campaign lifecycle state-integrity hardening |
+| #65 | Campaign suspension |
+| #67 | Terminal-state planning guard |
+| #69 | SUSPENDED planning freeze |
+| #70 | Documentation synchronization after PR #69 |
+| #71 | Campaign `DRAFT -> SCHEDULED` approval |
+| #72 | Markdown-only canonical authority synchronization |
+| #73 | Campaign questionnaire publication invariant hardening |
+| #74 | Evidence synchronization after PR #73 |
+| #75 | Series preview calculator decomposition refactor |
+| #77 | Evidence synchronization after PR #75 |
+| #78 | Deterministic reverse-impact concurrency test hardening |
+| #79 | Evidence synchronization after PR #78 |
+| #80 | Campaign `PUBLISHED -> ACTIVE` activation |
+| #81 | Evidence synchronization after PR #80 |
+| #82 | Campaign `SUSPENDED -> PUBLISHED / ACTIVE` resumption |
+| #83 | Evidence synchronization after PR #82 |
+| #84 | Representative MySQL/Testcontainers concurrency assurance |
+| #85 | Documentation synchronization after PR #84 |
+| #86 | Campaign Management REST API vertical slice (9 endpoints) |
+| #87 | Documentation synchronization after PR #86 |
+| #88 | Vaccination Center Management REST API vertical slice (14 endpoints) |
+| #89 | Documentation synchronization after PR #88 |
+| #90 | Vaccination Session Core REST API vertical slice (6 endpoints; COMPLETE_WITH_OPERATIONAL_SCHEDULING_GUARD) |
+| #91 | Documentation synchronization after PR #90 |
+| #92 | Vaccination Session Change Control REST API vertical slice (7 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) |
+| #93 | Documentation synchronization after PR #92 |
+| #97 | Pre-Recurrence Correctness and Safety Remediation (F-01, F-02, F-03, F-04, MySQL assurance) |
+| #98 | Documentation synchronization after PR #97 |
+| #100 | Vaccination Session Recurrence / Series REST API Milestone 5 (9 endpoints; COMPLETE_WITH_MF03_RUNTIME_CONSTRAINT) |
+| #101 | Documentation synchronization after PR #100 |
+| #102 | Vaccination Session Operational Prerequisite Guard (COMPLETE) |
+| #103 | Documentation synchronization after PR #102 |
+| #104 | Campaign Configuration REST API (12 endpoints; COMPLETE_WITH_SEEDED_MASTER_DATA) |
+| #105 | Documentation synchronization after PR #104 |
+| #106 | Session Operational Core Model and Calculation Engine (Milestone 1; COMPLETE) |
+| #107 | Documentation synchronization after PR #106 |
+| #108 | Center Operational Resource and Staff Roster REST API (Milestone 2A; 8 endpoints; COMPLETE) |
+| #109 | Documentation synchronization after PR #108 |
+| #110 | Session Operational Assignments REST API (Milestone 2B; 8 endpoints; COMPLETE) |
+| #111 | Documentation synchronization after PR #110 |
+| #112 | Session Capacity Plan REST API (Milestone 2C; 5 endpoints; COMPLETE) |
+| #114 | Session Operational Readiness & Scheduling Enforcement (Milestone 3; COMPLETE) |
+| #116 | Documentation synchronization after PR #114 (M3 sync) |
+| #117 | Slot Capacity Integration with Booking Port (Milestone 4; COMPLETE) |
+| #118 | Review and testing synchronization milestone |
+
+Key full merge checkpoints:
+- PR #55: `9a470da982f1510213163b3b909a02bd0f85973b`
+- PR #61: `d5dff09c6d0ed643cb4537abff64056b7d20656c`
+- PR #65: `228cdd6f0f6d72b8e776ab5ca1cf9af30819adc3`
+- PR #67: `296c763b48bac4ab837dafeb67cc9788b071912d`
+- PR #69: `545075aaedda338a2c16e7d97803704b55fef951`
+- PR #70: `c3bf7c2fb03513d8540a78dcc4ab5d93f322f468`
+- PR #71: `6d52449db4f29099f3a979e824a7efcae8f4ea54`
+- PR #72: `5fe33208d11a21ced5c6c1c520dfe01c13858bf0`
+- PR #73: `d3fbb3eb95333d1da0b3e5c33283a1bcf81635e9`
+- PR #74: `b8289635054a6f15d8c611e18e86a0e7a0a64687`
+- PR #75: `cc13082ad94701475b69bc53b699d897486ff7fc`
+- PR #77: `6b8bf9c765aaa577b6c29521539e42acb29f70f9`
+- PR #78: `20520c03bdd53329a7fe647a7355beed58ed552e`
+- PR #79: `3d21d38777eff40104b46a11773ceeded6d8dece`
+- PR #80: `852802ff0d533fdb013c64b4b10de395efd40557`
+- PR #81: `ff3d832745708e5d563c63059820e1e157767a60`
+- PR #82: `5dd7034df64951f061dc27c5596d17a3cb440061`
+- PR #83: `633e6a94585a9549718e16b038ae27e6646347f0`
+- PR #84: `34aa7666dc2d37b1b71faf25a7f51cfba10ee26a`
+- PR #85: `9d40ddbd55139a28707c3bdb68fb6a222b5b1c28`
+- PR #86: `a9a71114738ce8aed6c1f0cff8a8f42d955a033c`
+- PR #87: `37574bb02e157971c3ca2250d4953834cfe6d132`
+- PR #88: `faf455ff6f07d096258e7cd977765e6e9e25b10f`
+- PR #89: `4eaa8cd31c04aedf23f3887f25de27ec924165b8`
+- PR #90: `9cc7a606260e24e243090f70f5e957b0544bfa3b`
+- PR #91: `1531ad9f89e3dc75b174cc3deb3a2204e2712a52`
+- PR #92: `6ff63bdd04f34d3bd334d011fdf55dee8010a140`
+- PR #93: `1b90e2ee4567502a5d90d72af28eda4998f554b7`
+- PR #97: `e83e54bff1f2c682fbdb6d760856bde993faf162`
+- PR #98: `6be1c7f78328c58c02b274db774936d951ef9fc0`
+- PR #100: `684a4d6bffbe1d1b21f10ad9fa141b62fb23625a`
+- PR #101: `046f475f13bb1e7c734492ae58f3e3bb3eb7f9ff`
+- PR #102: `616636762687e5c2497db8e0227ee8692311703c`
+- PR #103: `d8d7c3afcea889e9e65b6c188afbc23ef7bde548`
+- PR #104: `6454a8faf2fe7a511f324deb5227c34d6197d81c`
+- PR #105: `c8d5b452ee88ec97988874e211ffb26ea321b3e1`
+- PR #106: `888f9d4b53d5206ff9fdfaadcedaf86092ab62f1`
+- PR #107: `e63bb76ac3dbb08b5009976233bf4255a059a712`
+- PR #108: `6edcaca67af0dca9d4e0a76bd69b8f180b6e7b85`
+- PR #109: `94af45a27636deb4e057c94846086da018da8d9e`
+- PR #110: `1c7a09c772018eaf56481aa77ff38688587879fc`
+- PR #111: `fd79ca6b301039216886c2d20404edf14ac91b1b`
+- PR #112: `56860a20bf87a08bc755d92c9e9fe4032b6bf0c7`
+- PR #113: `b30d9dd02698684dd2337b259c4c95b87daced48`
+- PR #114: `e82f7338ba2c83d2271d3c42fcb6d48162c1e51b`
+- PR #116: `9525a0cae67578960a7f238365a40c6056d93d84`
+- PR #117: `c89cdcb610fd4690ee98e11f13955c8b9ef68966`
+- PR #118: `21879c3b65998582f7804b2278f23fcd55f377a9`
+
+
+## 15. Status Discipline
+
+Never claim:
+- Whole project complete (MF-03, MF-04, MF-05, and project-wide transactional outbox remain);
+- Sprint 1 complete;
+- US-13 complete;
+- Centralized ELK/Loki logging or Prometheus monitoring complete when only basic Actuator health is present;
+- Universal server-derived actor provenance across 100% of endpoints (campaign lifecycle retains request-based actor provenance).
+
+Current status remains:
+- Sprint 1: **IN PROGRESS**
+- MF-02 Planned Implementation: **COMPLETE**
+- MF-02 Implementation Milestones: **COMPLETE / MERGED / FROZEN** (F4A, F4B, F4C, F4D, F5A, F5B, F6 readiness query, F6 frontend)
+- MF-02 Additional Code Required: **NO** (`MF02_ADDITIONAL_CODE_REQUIRED: NO`)
+- MF-02 Final Technical Audit & Closure: **MF02_FINAL_CLOSURE_CONFIRMED_WITH_EVIDENCE_NOTES**
+- US-13: **IN PROGRESS**
+- Campaign Management REST API: **COMPLETE**
+- Vaccination Center Management REST API: **COMPLETE**
+- Vaccination Session Core REST API: **COMPLETE**
+- Vaccination Session Change Control REST API: **COMPLETE**
+- Pre-Recurrence Correctness and Safety Remediation: **COMPLETE**
+- Vaccination Session Recurrence / Series REST API: **COMPLETE**
+- Campaign Configuration REST API: **COMPLETE**
+- Session Operational Core Model & Calculation Engine: **COMPLETE**
+- Center Operational Resources & Staff Roster REST API: **COMPLETE**
+- Session Resource & Staff Assignment REST API: **COMPLETE**
+- Session Capacity Plan REST API: **COMPLETE**
+- Session Operational Readiness & Scheduling Enforcement: **COMPLETE**
+- MF02/MF03 Slot Capacity Integration: **COMPLETE**
+- Session Readiness & Diagnostics Query (PR #144): **COMPLETE**
+- Session Readiness & Diagnostics UI (PR #145): **COMPLETE**
+- R1 Terminal Campaign Lifecycle: **CLOSED**
+- R2 Session Booking Suspension & Derived Status: **CLOSED**
+- R3 VaccineType & TargetGroup Master Data Management: **CLOSED**
+- R4 Session Capacity Plan Reconciliation: **CLOSED_NO_CHANGE**
+- R5 Descriptive Operational Analytics: **CLOSED**
+- R6 Center Closure Timezone Synchronization: **CLOSED**
+- Shared Infrastructure: X2 (VP-003 Security: CLOSED), X3 (VP-002 Flyway Bootstrap: CLOSED)
+- Current verified backend baseline: **1659 / 1659 PASS** full backend (`1272 PASS` `MF02_FOCUSED_CROSS_MODULE_REGRESSION_TOTAL`), 38 MySQL assurance tests + 6 fresh bootstrap tests.
+- Current verified frontend baseline: **Vitest 31 / 31 PASS**, ESLint PASS, Vite production build PASS (99 modules transformed).
+- Current Flyway runtime: **`V0` through `V11` active** (43 fresh project-wide runtime tables, 22 MF-02 tables).
+- Current route inventory: **98 request mappings** across **13 REST controller classes** (90 secured, 8 public discovery).
+- Historical PR #145 baseline: 1280 backend tests, 24 MySQL assurance tests across 10 classes, 79 routes.
+- MF02_DOCUMENTATION_CLOSURE_AUDIT: **IN PROGRESS — final publication review pending**
+
+## 16. Startup Procedure for the Next AI Session
+
+1. Read canonical Markdown `3.3-AI / 2026-08-14-R9`.
+2. Fetch live `origin/develop`.
+3. Verify whether `3bb74639c3315d2d071686aa79ca0e95a23f4a3e` remains an ancestor/current checkpoint.
+4. Run/inspect current backend tests before changing behavior.
+5. Read this handoff and Sprint evidence.
+6. Do not rebuild completed foundations.

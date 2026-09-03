@@ -90,7 +90,7 @@ class CampaignPublicationIntegrationTests {
 
     private VaccinationCampaign createBaseCampaign(CampaignStatus status) {
         LocalDate today = LocalDate.now();
-        VaccinationCampaign campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        VaccinationCampaign campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-PUB-" + System.nanoTime(), "Test Pub Campaign", "Desc",
                 activeVaccineType, validTargetGroup,
                 today, today.plusDays(30),
@@ -145,6 +145,8 @@ class CampaignPublicationIntegrationTests {
         addQuestionnaireAssignment(campaign, 103L);
 
         assertThrows(IllegalStateException.class, () -> campaignService.publishCampaign(campaign.getId()));
+        assertEquals(CampaignStatus.PUBLISHED,
+                campaignRepository.findById(campaign.getId()).orElseThrow().getStatus());
     }
 
     @Test
@@ -156,6 +158,7 @@ class CampaignPublicationIntegrationTests {
             addQuestionnaireAssignment(campaign, 104L);
 
             assertThrows(IllegalStateException.class, () -> campaignService.publishCampaign(campaign.getId()));
+            assertEquals(status, campaignRepository.findById(campaign.getId()).orElseThrow().getStatus());
         }
     }
 

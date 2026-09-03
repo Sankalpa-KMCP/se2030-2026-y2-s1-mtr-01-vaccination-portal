@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import AvailabilitySearch from '../components/AvailabilitySearch';
 import { bookAppointment } from '../api/appointmentApi';
+import { useAuth } from '../../../../auth/context/AuthContext';
 
 /**
  * Appointment Booking Page (US-03).
  * Composes AvailabilitySearch, handles booking execution, and maps backend error responses.
+ * Uses the authenticated user's ID from AuthContext — no manual citizen ID entry required.
  */
 export default function AppointmentBookingPage() {
-  const [citizenId, setCitizenId] = useState('7001');
+  const { user } = useAuth();
+  const citizenId = user?.id;
+
   const [bookingSessionId, setBookingSessionId] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
@@ -18,8 +22,8 @@ export default function AppointmentBookingPage() {
     if (!citizenId) {
       setFeedback({
         type: 'danger',
-        title: 'Validation Error',
-        message: 'Citizen ID is required before booking an appointment.',
+        title: 'Authentication Error',
+        message: 'Your session could not be verified. Please sign in again.',
       });
       return;
     }
@@ -37,7 +41,7 @@ export default function AppointmentBookingPage() {
       setFeedback({
         type: 'success',
         title: 'Booking Confirmed!',
-        message: `Appointment #${response.id} successfully booked for Citizen ${response.citizenId} at Center ${session.centerName || session.centerId}. Status: ${response.status}`,
+        message: `Appointment #${response.id} successfully booked at Center ${session.centerName || session.centerId}. Status: ${response.status}`,
       });
     } catch (err) {
       let userMessage = err.message || 'An unexpected error occurred during booking.';
@@ -64,6 +68,15 @@ export default function AppointmentBookingPage() {
       setBookingSessionId(null);
     }
   };
+
+  if (!citizenId) {
+    return (
+      <div className="alert alert-warning border-0 shadow-sm" role="alert">
+        <h4 className="h6 alert-heading fw-bold mb-1">Authentication Required</h4>
+        <p className="mb-0">Unable to load this page. Please sign in again.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="appointment-booking-page">
@@ -92,7 +105,6 @@ export default function AppointmentBookingPage() {
 
       <AvailabilitySearch
         citizenId={citizenId}
-        onCitizenIdChange={setCitizenId}
         onBookSession={handleBookSession}
         bookingSessionId={bookingSessionId}
       />

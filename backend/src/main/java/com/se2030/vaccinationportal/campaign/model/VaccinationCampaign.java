@@ -83,7 +83,7 @@ public class VaccinationCampaign {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public VaccinationCampaign() {
+    protected VaccinationCampaign() {
     }
 
     public VaccinationCampaign(String code,
@@ -94,8 +94,7 @@ public class VaccinationCampaign {
                                LocalDate serviceStartDate,
                                LocalDate serviceEndDate,
                                Instant bookingOpenAt,
-                               Instant bookingCloseAt,
-                               CampaignStatus status) {
+                               Instant bookingCloseAt) {
         this.code = code;
         this.name = name;
         this.description = description;
@@ -105,7 +104,7 @@ public class VaccinationCampaign {
         this.serviceEndDate = serviceEndDate;
         this.bookingOpenAt = bookingOpenAt;
         this.bookingCloseAt = bookingCloseAt;
-        this.status = status != null ? status : CampaignStatus.DRAFT;
+        this.status = CampaignStatus.DRAFT;
         validateDateConsistency();
     }
 
@@ -238,8 +237,17 @@ public class VaccinationCampaign {
         return status;
     }
 
-    public void setStatus(CampaignStatus status) {
-        this.status = status;
+    /**
+     * Transitions campaign status to SCHEDULED.
+     * Allowed only from DRAFT status.
+     */
+    public void schedule() {
+        if (this.status != CampaignStatus.DRAFT) {
+            throw new IllegalStateException(
+                    "Cannot schedule campaign in " + this.status + " status. Only DRAFT campaigns can be scheduled."
+            );
+        }
+        this.status = CampaignStatus.SCHEDULED;
     }
 
     /**
@@ -253,6 +261,99 @@ public class VaccinationCampaign {
             );
         }
         this.status = CampaignStatus.PUBLISHED;
+    }
+
+    /**
+     * Transitions campaign status to ACTIVE.
+     * Allowed only from PUBLISHED status.
+     */
+    public void activate() {
+        if (this.status != CampaignStatus.PUBLISHED) {
+            throw new IllegalStateException(
+                    "Cannot activate campaign in " + this.status + " status. Only PUBLISHED campaigns can be activated."
+            );
+        }
+        this.status = CampaignStatus.ACTIVE;
+    }
+
+    /**
+     * Transitions campaign status to SUSPENDED.
+     * Allowed only from PUBLISHED or ACTIVE status.
+     */
+    public void suspend() {
+        if (this.status != CampaignStatus.PUBLISHED && this.status != CampaignStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "Cannot suspend campaign in " + this.status + " status. Only PUBLISHED or ACTIVE campaigns can be suspended."
+            );
+        }
+        this.status = CampaignStatus.SUSPENDED;
+    }
+
+    /**
+     * Transitions campaign status to PUBLISHED upon resumption before service start.
+     * Allowed only from SUSPENDED status.
+     */
+    public void resumeToPublished() {
+        if (this.status != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot resume campaign in " + this.status + " status. Only SUSPENDED campaigns can be resumed."
+            );
+        }
+        this.status = CampaignStatus.PUBLISHED;
+    }
+
+    /**
+     * Transitions campaign status to ACTIVE upon resumption during service period.
+     * Allowed only from SUSPENDED status.
+     */
+    public void resumeToActive() {
+        if (this.status != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot resume campaign in " + this.status + " status. Only SUSPENDED campaigns can be resumed."
+            );
+        }
+        this.status = CampaignStatus.ACTIVE;
+    }
+
+    /**
+     * Transitions campaign status to COMPLETED upon conclusion of vaccination operations.
+     * Allowed only from ACTIVE, PUBLISHED, or SUSPENDED status.
+     */
+    public void complete() {
+        if (this.status != CampaignStatus.ACTIVE
+                && this.status != CampaignStatus.PUBLISHED
+                && this.status != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot complete campaign in " + this.status + " status. Only ACTIVE, PUBLISHED, or SUSPENDED campaigns can be completed."
+            );
+        }
+        this.status = CampaignStatus.COMPLETED;
+    }
+
+    /**
+     * Transitions campaign status to CANCELLED.
+     * Allowed only from non-terminal states (DRAFT, SCHEDULED, PUBLISHED, ACTIVE, SUSPENDED).
+     */
+    public void cancel() {
+        if (this.status.isOperationallyClosed()) {
+            throw new IllegalStateException(
+                    "Cannot cancel campaign in " + this.status + " status. Campaign is already operationally closed."
+            );
+        }
+        this.status = CampaignStatus.CANCELLED;
+    }
+
+    /**
+     * Transitions campaign status to ARCHIVED.
+     * Allowed only from COMPLETED or CANCELLED status.
+     */
+    public void archive() {
+        if (!this.status.isArchivable()) {
+            throw new IllegalStateException(
+                    "Cannot archive campaign in " + this.status + " status. Only COMPLETED or CANCELLED campaigns can be archived."
+            );
+        }
+        this.status = CampaignStatus.ARCHIVED;
     }
 
     public Instant getCreatedAt() {

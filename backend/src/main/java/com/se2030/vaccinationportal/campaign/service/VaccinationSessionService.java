@@ -1,5 +1,7 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
+import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeType;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -13,12 +15,15 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterReposit
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.validation.VaccinationSessionValidator;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,6 +45,8 @@ public class VaccinationSessionService {
     private final SessionChangeEventRepository sessionChangeEventRepository;
     private final VaccinationSessionValidator validator;
     private final SessionImpactReader sessionImpactReader;
+    private final SessionOperationalReadinessService operationalReadinessService;
+    private final Clock clock;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -50,7 +57,9 @@ public class VaccinationSessionService {
             VaccinationCenterRepository centerRepository,
             SessionChangeEventRepository sessionChangeEventRepository,
             VaccinationSessionValidator validator,
-            @Autowired(required = false) SessionImpactReader sessionImpactReader
+            @Autowired(required = false) SessionImpactReader sessionImpactReader,
+            SessionOperationalReadinessService operationalReadinessService,
+            Clock clock
     ) {
         this.sessionRepository = sessionRepository;
         this.campaignRepository = campaignRepository;
@@ -58,6 +67,31 @@ public class VaccinationSessionService {
         this.sessionChangeEventRepository = sessionChangeEventRepository;
         this.validator = validator;
         this.sessionImpactReader = sessionImpactReader;
+        this.operationalReadinessService = operationalReadinessService;
+        this.clock = clock != null ? clock : Clock.systemUTC();
+    }
+
+    public VaccinationSessionService(
+            VaccinationSessionRepository sessionRepository,
+            VaccinationCampaignRepository campaignRepository,
+            VaccinationCenterRepository centerRepository,
+            SessionChangeEventRepository sessionChangeEventRepository,
+            VaccinationSessionValidator validator,
+            SessionImpactReader sessionImpactReader,
+            Clock clock
+    ) {
+        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, sessionImpactReader, null, clock);
+    }
+
+    public VaccinationSessionService(
+            VaccinationSessionRepository sessionRepository,
+            VaccinationCampaignRepository campaignRepository,
+            VaccinationCenterRepository centerRepository,
+            SessionChangeEventRepository sessionChangeEventRepository,
+            VaccinationSessionValidator validator,
+            SessionImpactReader sessionImpactReader
+    ) {
+        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, sessionImpactReader, null, Clock.systemUTC());
     }
 
     public VaccinationSessionService(
@@ -67,7 +101,7 @@ public class VaccinationSessionService {
             SessionChangeEventRepository sessionChangeEventRepository,
             VaccinationSessionValidator validator
     ) {
-        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, null);
+        this(sessionRepository, campaignRepository, centerRepository, sessionChangeEventRepository, validator, null, null, Clock.systemUTC());
     }
 
     /**
@@ -93,13 +127,21 @@ public class VaccinationSessionService {
         requireId(centerId, "Center ID is required");
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
+        if (campaign.getStatus() == CampaignStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot create one-off session for suspended campaign with ID: " + campaignId);
+        }
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalArgumentException(
+                    "Cannot create one-off session for operationally closed campaign with ID: " + campaignId);
+        }
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
         if (entityManager != null) {
             entityManager.refresh(center);
         }
@@ -125,6 +167,20 @@ public class VaccinationSessionService {
     }
 
     @Transactional(readOnly = true)
+    public VaccinationSession getRequiredSessionById(Long id) {
+        if (id == null) {
+            throw new ResourceNotFoundException("Session ID is required");
+        }
+        return sessionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<VaccinationSession> getSessions(Long campaignId, Long centerId, SessionLifecycleStatus status) {
+        return sessionRepository.findWithFilters(campaignId, centerId, status);
+    }
+
+    @Transactional(readOnly = true)
     public List<VaccinationSession> getSessionsForCampaign(Long campaignId) {
         requireId(campaignId, "Campaign ID is required");
         return sessionRepository.findByCampaignId(campaignId);
@@ -136,22 +192,51 @@ public class VaccinationSessionService {
         return sessionRepository.findByCenterId(centerId);
     }
 
+    @Transactional(readOnly = true)
+    public List<SessionChangeEvent> getSessionChangeEvents(Long sessionId) {
+        if (sessionId == null) {
+            throw new IllegalArgumentException("Session ID is required");
+        }
+        if (!sessionRepository.existsById(sessionId)) {
+            throw new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId);
+        }
+        return sessionChangeEventRepository.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId);
+    }
+
     /**
-     * Schedules a DRAFT vaccination session (transitions to SCHEDULED).
+     * Evaluates authoritative operational resource, staff, and capacity readiness,
+     * and transitions a DRAFT session to SCHEDULED status.
      * Lifecycle-only transition: does NOT create a SessionChangeEvent.
      *
      * @param sessionId ID of the target VaccinationSession
-     * @return Saved VaccinationSession in SCHEDULED lifecycle status
+     * @return Saved VaccinationSession in SCHEDULED status
+     * @throws IllegalStateException    if operational readiness checks fail or lifecycle transition is invalid
+     * @throws IllegalArgumentException if campaign/session lifecycle precludes scheduling
      */
     public VaccinationSession scheduleSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
+        Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        Long centerId = sessionRepository.findCenterIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
-        if (entityManager != null) {
-            entityManager.refresh(session);
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+
+        if (!session.getCampaign().getId().equals(campaignId) || !session.getCenter().getId().equals(center.getId())) {
+            throw new IllegalStateException("Authoritative session parent relationship changed concurrently");
         }
+
+        operationalReadinessService.assertReadyForScheduling(campaign, session);
+
         session.schedule();
-        return sessionRepository.save(session);
+        return sessionRepository.saveAndFlush(session);
     }
 
     /**
@@ -164,9 +249,14 @@ public class VaccinationSessionService {
     public VaccinationSession startSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
+        }
+        Instant now = clock.instant();
+        if (now.isBefore(session.getStartAt())) {
+            throw new IllegalStateException(
+                    "Cannot start vaccination session before scheduled start time: " + session.getStartAt());
         }
         session.start();
         return sessionRepository.save(session);
@@ -182,12 +272,90 @@ public class VaccinationSessionService {
     public VaccinationSession completeSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
         session.complete();
         return sessionRepository.save(session);
+    }
+
+    /**
+     * Authoritatively suspends booking intake for a SCHEDULED vaccination session with pessimistic locking
+     * and append-only SessionChangeEvent audit logging.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @param reason    Non-blank reason for the suspension (max 500 characters)
+     * @param actorId   Authenticated principal actor ID
+     * @return Saved VaccinationSession in suspended booking state
+     */
+    public VaccinationSession suspendBooking(Long sessionId, String reason, String actorId) {
+        requireId(sessionId, "Session ID is required");
+        String validatedReason = SessionChangeEvent.validateReason(reason);
+        String validatedActorId = SessionChangeEvent.validateActorId(actorId);
+
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+
+        session.suspendBooking();
+        VaccinationSession saved = sessionRepository.save(session);
+
+        SessionScheduleSnapshot snapshot = SessionScheduleSnapshot.from(saved);
+        SessionChangeEvent event = new SessionChangeEvent(
+                saved,
+                SessionChangeType.BOOKING_SUSPENDED,
+                snapshot,
+                snapshot,
+                validatedReason,
+                0,
+                0,
+                validatedActorId
+        );
+        sessionChangeEventRepository.save(event);
+
+        return saved;
+    }
+
+    /**
+     * Authoritatively resumes booking intake for a previously suspended SCHEDULED vaccination session
+     * with pessimistic locking and append-only SessionChangeEvent audit logging.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @param reason    Non-blank reason for resuming booking (max 500 characters)
+     * @param actorId   Authenticated principal actor ID
+     * @return Saved VaccinationSession with booking resumed
+     */
+    public VaccinationSession resumeBooking(Long sessionId, String reason, String actorId) {
+        requireId(sessionId, "Session ID is required");
+        String validatedReason = SessionChangeEvent.validateReason(reason);
+        String validatedActorId = SessionChangeEvent.validateActorId(actorId);
+
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+
+        session.resumeBooking();
+        VaccinationSession saved = sessionRepository.save(session);
+
+        SessionScheduleSnapshot snapshot = SessionScheduleSnapshot.from(saved);
+        SessionChangeEvent event = new SessionChangeEvent(
+                saved,
+                SessionChangeType.BOOKING_RESUMED,
+                snapshot,
+                snapshot,
+                validatedReason,
+                0,
+                0,
+                validatedActorId
+        );
+        sessionChangeEventRepository.save(event);
+
+        return saved;
     }
 
     /**
@@ -261,7 +429,7 @@ public class VaccinationSessionService {
         }
 
         VaccinationSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
 
         if (session.getLifecycleStatus() == SessionLifecycleStatus.CANCELLED) {
             throw new IllegalArgumentException("Cannot reschedule cancelled session");
@@ -272,7 +440,7 @@ public class VaccinationSessionService {
 
         Long targetCenterId = (newCenterId != null) ? newCenterId : session.getCenter().getId();
         VaccinationCenter targetCenter = centerRepository.findById(targetCenterId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + targetCenterId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + targetCenterId));
 
         Instant effectiveBookingClose = (newBookingCloseAt != null)
                 ? newBookingCloseAt
@@ -403,7 +571,7 @@ public class VaccinationSessionService {
 
         // Step 1: Pre-read to discover routing IDs
         VaccinationSession preRead = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         Long campaignId = preRead.getCampaign().getId();
         Long currentCenterId = preRead.getCenter().getId();
         Long targetCenterId = (newCenterId != null) ? newCenterId : currentCenterId;
@@ -411,7 +579,7 @@ public class VaccinationSessionService {
         // Step 2: Acquire deterministic write locks
         // Lock campaign first
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
@@ -421,7 +589,7 @@ public class VaccinationSessionService {
         VaccinationCenter targetCenter;
         if (currentCenterId.equals(targetCenterId)) {
             currentCenter = centerRepository.findByIdForUpdate(currentCenterId)
-                    .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + currentCenterId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + currentCenterId));
             if (entityManager != null) {
                 entityManager.refresh(currentCenter);
             }
@@ -431,13 +599,13 @@ public class VaccinationSessionService {
             Long secondCenterId = Math.max(currentCenterId, targetCenterId);
 
             VaccinationCenter firstCenter = centerRepository.findByIdForUpdate(firstCenterId)
-                    .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + firstCenterId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + firstCenterId));
             if (entityManager != null) {
                 entityManager.refresh(firstCenter);
             }
 
             VaccinationCenter secondCenter = centerRepository.findByIdForUpdate(secondCenterId)
-                    .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + secondCenterId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + secondCenterId));
             if (entityManager != null) {
                 entityManager.refresh(secondCenter);
             }
@@ -448,7 +616,7 @@ public class VaccinationSessionService {
 
         // Lock session
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
@@ -557,7 +725,7 @@ public class VaccinationSessionService {
         requireId(sessionId, "Session ID is required");
 
         VaccinationSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
 
         if (session.getLifecycleStatus() == SessionLifecycleStatus.CANCELLED) {
             throw new IllegalArgumentException("Session is already cancelled");
@@ -631,25 +799,25 @@ public class VaccinationSessionService {
 
         // Step 1: Pre-read to discover routing IDs
         VaccinationSession preRead = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         Long campaignId = preRead.getCampaign().getId();
         Long centerId = preRead.getCenter().getId();
 
         // Step 2: Acquire deterministic write locks
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
-                .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
         if (entityManager != null) {
             entityManager.refresh(campaign);
         }
 
         VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination center not found with ID: " + centerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
         if (entityManager != null) {
             entityManager.refresh(center);
         }
 
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Vaccination session not found with ID: " + sessionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }

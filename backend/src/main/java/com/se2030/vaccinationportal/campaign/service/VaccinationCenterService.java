@@ -1,9 +1,14 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
+import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import jakarta.persistence.EntityManager;
@@ -38,14 +43,23 @@ public class VaccinationCenterService {
 
     private final VaccinationCenterRepository centerRepository;
     private final VaccinationSessionRepository sessionRepository;
+    private final TimeSlotRepository timeSlotRepository;
+    private final SessionCapacityPlanRepository capacityPlanRepository;
+    private final SessionCapacityCalculationService calculationService;
     private final Clock clock;
     @PersistenceContext private EntityManager entityManager;
 
     public VaccinationCenterService(VaccinationCenterRepository centerRepository,
                                     VaccinationSessionRepository sessionRepository,
+                                    TimeSlotRepository timeSlotRepository,
+                                    SessionCapacityPlanRepository capacityPlanRepository,
+                                    SessionCapacityCalculationService calculationService,
                                     Clock clock) {
         this.centerRepository = centerRepository;
         this.sessionRepository = sessionRepository;
+        this.timeSlotRepository = timeSlotRepository;
+        this.capacityPlanRepository = capacityPlanRepository;
+        this.calculationService = calculationService;
         this.clock = clock;
     }
 
@@ -109,6 +123,10 @@ public class VaccinationCenterService {
                                           Integer sessionServiceCeiling) {
         VaccinationCenter center = findAuthoritativeCenter(id);
 
+        if (safeConcurrentOccupancy < center.getSafeConcurrentOccupancy()) {
+            validateConfiguredOccupancyForLowerLimit(id, safeConcurrentOccupancy);
+        }
+
         center.updateDetails(name, address, contact, safeConcurrentOccupancy, sessionServiceCeiling);
 
         return centerRepository.save(center);
@@ -168,6 +186,22 @@ public class VaccinationCenterService {
     }
 
     /**
+     * Retrieves an authoritative vaccination center by ID or throws {@link ResourceNotFoundException}.
+     *
+     * @param id Center entity ID
+     * @return VaccinationCenter entity
+     * @throws ResourceNotFoundException if center is not found
+     */
+    @Transactional(readOnly = true)
+    public VaccinationCenter getRequiredCenterById(Long id) {
+        if (id == null) {
+            throw new ResourceNotFoundException("Vaccination center ID is required");
+        }
+        return centerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + id));
+    }
+
+    /**
      * Retrieves a vaccination center by its unique business code.
      *
      * @param code Center business code
@@ -201,11 +235,64 @@ public class VaccinationCenterService {
         return centerRepository.findByCenterStatus(CenterStatus.ACTIVE);
     }
 
+    /**
+     * Retrieves vaccination centers, optionally filtered by status, ordered deterministically by code ascending.
+     *
+     * @param status Optional CenterStatus filter
+     * @return List of matching vaccination centers
+     */
+    @Transactional(readOnly = true)
+    public List<VaccinationCenter> getCenters(CenterStatus status) {
+        if (status == null) {
+            return centerRepository.findAllByOrderByCodeAsc();
+        }
+        return centerRepository.findByCenterStatusOrderByCodeAsc(status);
+    }
+
     private VaccinationCenter findAuthoritativeCenter(Long id) {
+        if (id == null) {
+            throw new ResourceNotFoundException("Vaccination center ID is required");
+        }
         VaccinationCenter center = centerRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Vaccination center not found with ID: " + id));
-        entityManager.refresh(center);
+        if (entityManager != null) {
+            entityManager.refresh(center);
+        }
         return center;
+    }
+
+    private void validateConfiguredOccupancyForLowerLimit(Long centerId, int proposedLimit) {
+        List<VaccinationSession> sessions = sessionRepository.findOperationalSessionsForCenterForUpdate(
+                centerId,
+                BLOCKING_STATUSES
+        );
+
+        for (VaccinationSession session : sessions) {
+            List<TimeSlot> slots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(session.getId());
+            if (slots.isEmpty()) {
+                continue;
+            }
+
+            Optional<SessionCapacityPlan> plan = capacityPlanRepository
+                    .findTopBySessionIdOrderByRevisionDesc(session.getId());
+            int dwellMinutes = plan.map(SessionCapacityPlan::getExpectedDwellMinutes)
+                    .orElse(SessionCapacityPlan.DEFAULT_EXPECTED_DWELL_MINUTES);
+            double accompanyingRatio = plan.map(SessionCapacityPlan::getExpectedAccompanyingPersonsPerBooking)
+                    .orElse(SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO);
+
+            OccupancyEvaluationResult result = calculationService.evaluateConcurrentOccupancy(
+                    calculationService.mapSlotsToOccupancyIntervals(slots, dwellMinutes, accompanyingRatio),
+                    proposedLimit
+            );
+            if (!result.safe()) {
+                throw new IllegalArgumentException(String.format(
+                        "Center safe concurrent occupancy cannot be lowered to %d because session %d has configured peak occupancy %.1f",
+                        proposedLimit,
+                        session.getId(),
+                        result.peakOccupancyUnits()
+                ));
+            }
+        }
     }
 }

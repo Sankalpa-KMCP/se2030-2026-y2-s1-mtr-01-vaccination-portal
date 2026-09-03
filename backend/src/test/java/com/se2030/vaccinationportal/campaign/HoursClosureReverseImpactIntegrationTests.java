@@ -26,6 +26,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +39,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.temporal.TemporalAdjusters;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -47,7 +53,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Import(HoursClosureReverseImpactIntegrationTests.FixedClockConfig.class)
 class HoursClosureReverseImpactIntegrationTests {
+
+    @TestConfiguration
+    static class FixedClockConfig {
+        @Bean
+        @Primary
+        Clock fixedClock() {
+            return Clock.fixed(Instant.parse("2026-08-12T12:00:00Z"), ZoneOffset.UTC);
+        }
+    }
 
     @Autowired private OperatingHoursService hoursService;
     @Autowired private CenterClosureService closureService;
@@ -85,8 +101,8 @@ class HoursClosureReverseImpactIntegrationTests {
                 CenterStatus.ACTIVE, 100, 50, "Asia/Colombo"
         ));
 
-        LocalDate today = LocalDate.now(clock.getZone());
-        campaign = campaignRepository.saveAndFlush(new VaccinationCampaign(
+        LocalDate today = LocalDate.now(clock);
+        campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-HOURS-1", "Hours Closure Campaign", "Desc", vaccineType, targetGroup,
                 today.minusDays(10), today.plusDays(30),
                 Instant.now(clock).minusSeconds(3600), Instant.now(clock).plusSeconds(86400 * 180),
@@ -129,18 +145,14 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("updateOperatingHours rejects shift shortening that exposes a dependent session end")
     void updateOperatingHours_rejects_whenShiftShortenedAcrossSession() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         // Shift on MONDAY 08:00 - 17:00
         OperatingHours shift = hoursService.createOperatingHours(
                 center1.getId(), DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0),
                 today.minusDays(5), today.plusDays(30)
         );
 
-        // Find next Monday
-        LocalDate monday = today;
-        while (monday.getDayOfWeek() != DayOfWeek.MONDAY) {
-            monday = monday.plusDays(1);
-        }
+        LocalDate monday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
         Instant sessionStart = monday.atTime(9, 0).atZone(zoneId).toInstant();
         Instant sessionEnd = monday.atTime(16, 0).atZone(zoneId).toInstant();
@@ -161,7 +173,7 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("endDateOperatingHours rejects ending effective period before dependent session")
     void endDateOperatingHours_rejects_whenEndedBeforeSessionDate() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         OperatingHours shift = hoursService.createOperatingHours(
                 center1.getId(), DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0),
                 today.minusDays(5), today.plusDays(30)
@@ -189,16 +201,13 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("updateOperatingHours allows safe shift expansion")
     void updateOperatingHours_allows_safeExpansion() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         OperatingHours shift = hoursService.createOperatingHours(
                 center1.getId(), DayOfWeek.MONDAY, LocalTime.of(9, 0), LocalTime.of(16, 0),
                 today.minusDays(5), today.plusDays(30)
         );
 
-        LocalDate monday = today;
-        while (monday.getDayOfWeek() != DayOfWeek.MONDAY) {
-            monday = monday.plusDays(1);
-        }
+        LocalDate monday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
         Instant sessionStart = monday.atTime(9, 0).atZone(zoneId).toInstant();
         Instant sessionEnd = monday.atTime(16, 0).atZone(zoneId).toInstant();
@@ -215,7 +224,7 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("updateOperatingHours handles multi-shift contiguous coverage correctly")
     void updateOperatingHours_allows_multiShiftContiguousCoverage() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         // Shift 1: 08:00 - 12:00
         OperatingHours shift1 = hoursService.createOperatingHours(
                 center1.getId(), DayOfWeek.TUESDAY, LocalTime.of(8, 0), LocalTime.of(12, 0),
@@ -227,10 +236,7 @@ class HoursClosureReverseImpactIntegrationTests {
                 today.minusDays(5), today.plusDays(30)
         );
 
-        LocalDate tuesday = today;
-        while (tuesday.getDayOfWeek() != DayOfWeek.TUESDAY) {
-            tuesday = tuesday.plusDays(1);
-        }
+        LocalDate tuesday = today.with(TemporalAdjusters.next(DayOfWeek.TUESDAY));
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
         Instant sessionStart = tuesday.atTime(9, 0).atZone(zoneId).toInstant();
         Instant sessionEnd = tuesday.atTime(16, 0).atZone(zoneId).toInstant();
@@ -247,7 +253,7 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("updateOperatingHours rejects introducing a gap between shifts across session")
     void updateOperatingHours_rejects_gapIntroducedAcrossSession() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         OperatingHours shift1 = hoursService.createOperatingHours(
                 center1.getId(), DayOfWeek.WEDNESDAY, LocalTime.of(8, 0), LocalTime.of(12, 0),
                 today.minusDays(5), today.plusDays(30)
@@ -257,14 +263,12 @@ class HoursClosureReverseImpactIntegrationTests {
                 today.minusDays(5), today.plusDays(30)
         );
 
-        LocalDate wednesday = today;
-        while (wednesday.getDayOfWeek() != DayOfWeek.WEDNESDAY) {
-            wednesday = wednesday.plusDays(1);
-        }
+        LocalDate wednesday = today.with(TemporalAdjusters.next(DayOfWeek.WEDNESDAY));
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
         Instant sessionStart = wednesday.atTime(9, 0).atZone(zoneId).toInstant();
         Instant sessionEnd = wednesday.atTime(16, 0).atZone(zoneId).toInstant();
 
+        assertTrue(sessionStart.isAfter(clock.instant()), "Gap test requires a future session fixture");
         createSession(center1, sessionStart, sessionEnd, SessionLifecycleStatus.SCHEDULED);
 
         // Update shift 2 to start at 13:00 creating a 12:00 - 13:00 gap
@@ -281,16 +285,13 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("updateOperatingHours allows exact half-open boundary shift")
     void updateOperatingHours_allows_exactHalfOpenBoundaries() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         OperatingHours shift = hoursService.createOperatingHours(
                 center1.getId(), DayOfWeek.THURSDAY, LocalTime.of(8, 0), LocalTime.of(17, 0),
                 today.minusDays(5), today.plusDays(30)
         );
 
-        LocalDate thursday = today;
-        while (thursday.getDayOfWeek() != DayOfWeek.THURSDAY) {
-            thursday = thursday.plusDays(1);
-        }
+        LocalDate thursday = today.with(TemporalAdjusters.next(DayOfWeek.THURSDAY));
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
         Instant sessionStart = thursday.atTime(8, 0).atZone(zoneId).toInstant();
         Instant sessionEnd = thursday.atTime(17, 0).atZone(zoneId).toInstant();
@@ -307,7 +308,7 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("updateOperatingHours ignores unrelated weekdays and terminal sessions")
     void updateOperatingHours_ignores_unrelatedWeekdayAndTerminalSessions() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         OperatingHours fridayShift = hoursService.createOperatingHours(
                 center1.getId(), DayOfWeek.FRIDAY, LocalTime.of(8, 0), LocalTime.of(17, 0),
                 today.minusDays(5), today.plusDays(30)
@@ -318,10 +319,7 @@ class HoursClosureReverseImpactIntegrationTests {
                 today.minusDays(5), today.plusDays(30)
         );
 
-        LocalDate monday = today;
-        while (monday.getDayOfWeek() != DayOfWeek.MONDAY) {
-            monday = monday.plusDays(1);
-        }
+        LocalDate monday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
         Instant sessionStart = monday.atTime(9, 0).atZone(zoneId).toInstant();
         Instant sessionEnd = monday.atTime(16, 0).atZone(zoneId).toInstant();
@@ -330,10 +328,7 @@ class HoursClosureReverseImpactIntegrationTests {
         createSession(center1, sessionStart, sessionEnd, SessionLifecycleStatus.SCHEDULED);
 
         // Terminal/cancelled session on Friday
-        LocalDate friday = today;
-        while (friday.getDayOfWeek() != DayOfWeek.FRIDAY) {
-            friday = friday.plusDays(1);
-        }
+        LocalDate friday = today.with(TemporalAdjusters.next(DayOfWeek.FRIDAY));
         Instant friSessionStart = friday.atTime(9, 0).atZone(zoneId).toInstant();
         Instant friSessionEnd = friday.atTime(16, 0).atZone(zoneId).toInstant();
         createSession(center1, friSessionStart, friSessionEnd, SessionLifecycleStatus.CANCELLED);
@@ -351,7 +346,7 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("createClosure rejects when active closure overlaps future DRAFT or SCHEDULED session")
     void createClosure_rejects_whenOverlappingFutureSession() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         LocalDate futureDate = today.plusDays(5);
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
 
@@ -374,7 +369,7 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("updateFutureClosure rejects when update causes closure to overlap future session")
     void updateFutureClosure_rejects_whenUpdatedToOverlapSession() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         LocalDate futureDate = today.plusDays(5);
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
 
@@ -403,7 +398,7 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("createClosure allows exact boundary-touching closure")
     void createClosure_allows_exactBoundaryTouch() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         LocalDate futureDate = today.plusDays(5);
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
 
@@ -447,7 +442,7 @@ class HoursClosureReverseImpactIntegrationTests {
     @Test
     @DisplayName("createClosure ignores COMPLETED, CANCELLED, or unrelated center sessions")
     void createClosure_ignores_terminalAndUnrelatedCenterSessions() {
-        LocalDate today = LocalDate.now(clock.getZone());
+        LocalDate today = LocalDate.now(clock);
         LocalDate futureDate = today.plusDays(5);
         ZoneId zoneId = ZoneId.of(center1.getTimezone());
 

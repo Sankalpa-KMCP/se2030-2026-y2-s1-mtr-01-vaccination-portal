@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.OperatingHours;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
@@ -155,6 +156,37 @@ class VaccinationSessionConcurrencyIntegrationTests {
 
     @Test
     @Timeout(30)
+    void concurrentScheduleAttemptsFailClosedWithoutLifecycleOrEventMutation() throws Exception {
+        VaccinationCampaign campaign = createCampaign("CONC-SCHEDULE-GUARD");
+        VaccinationCenter center = createCenter("CONC-SCHEDULE-GUARD", CenterStatus.ACTIVE);
+        setupPrerequisites(campaign, center);
+
+        Instant startAt = Instant.parse("2026-10-14T09:00:00Z");
+        VaccinationSession draft = sessionService.createOneOffDraftSession(
+                campaign.getId(),
+                center.getId(),
+                startAt,
+                Instant.parse("2026-10-14T12:00:00Z"),
+                startAt.minusSeconds(3600)
+        );
+
+        List<Outcome> outcomes = runConcurrently(
+                () -> sessionService.scheduleSession(draft.getId()),
+                () -> sessionService.scheduleSession(draft.getId())
+        );
+
+        assertEquals(0, outcomes.stream().filter(Outcome::success).count(), outcomes.toString());
+        assertTrue(outcomes.stream().allMatch(outcome -> outcome.error() instanceof IllegalStateException));
+        assertTrue(outcomes.stream().allMatch(outcome -> outcome.error().getMessage().contains("vaccination station") || outcome.error().getMessage().contains("capacity plan")));
+        assertEquals(
+                SessionLifecycleStatus.DRAFT,
+                sessionRepository.findById(draft.getId()).orElseThrow().getLifecycleStatus()
+        );
+        assertTrue(sessionService.getSessionChangeEvents(draft.getId()).isEmpty());
+    }
+
+    @Test
+    @Timeout(30)
     void creationRacingWithOverlappingClosureRejectsWhenClosureCommitsFirst() throws Exception {
         VaccinationCampaign campaign = createCampaign("CONC-CLOSURE");
         VaccinationCenter center = createCenter("CONC-CLOSURE", CenterStatus.ACTIVE);
@@ -201,7 +233,7 @@ class VaccinationSessionConcurrencyIntegrationTests {
         TargetGroup targetGroup = targetGroupRepository.saveAndFlush(
                 new TargetGroup("TG-" + suffix, "Target Group " + suffix));
 
-        return campaignRepository.saveAndFlush(new VaccinationCampaign(
+        return campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-" + suffix, "Campaign " + suffix, "Desc",
                 vaccineType, targetGroup,
                 CAMPAIGN_START, CAMPAIGN_END,

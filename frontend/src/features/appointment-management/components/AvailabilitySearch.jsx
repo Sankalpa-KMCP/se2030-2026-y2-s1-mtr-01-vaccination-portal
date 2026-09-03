@@ -5,7 +5,7 @@ import { searchAvailableAppointments } from '../api/availabilityApi';
 /**
  * Availability search component containing filter form, API fetch, and result list (US-03).
  */
-export default function AvailabilitySearch({ onBookSession, bookingSessionId, citizenId, onCitizenIdChange }) {
+export default function AvailabilitySearch({ onBookSession, bookingSessionId, citizenId }) {
   const getTodayStr = () => new Date().toISOString().split('T')[0];
   const getNextWeekStr = () => {
     const d = new Date();
@@ -54,18 +54,10 @@ export default function AvailabilitySearch({ onBookSession, bookingSessionId, ci
           <form onSubmit={handleSearch}>
             <div className="row g-3">
               <div className="col-md-6 col-lg-3">
-                <label htmlFor="citizenIdInput" className="form-label fw-semibold">
-                  Citizen ID <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="citizenIdInput"
-                  className="form-control"
-                  value={citizenId}
-                  onChange={(e) => onCitizenIdChange(e.target.value)}
-                  placeholder="e.g. 7001"
-                  required
-                />
+                <label className="form-label fw-semibold">Citizen ID</label>
+                <div className="form-control bg-light text-muted" style={{ cursor: 'default' }}>
+                  {citizenId}
+                </div>
               </div>
 
               <div className="col-md-6 col-lg-3">
