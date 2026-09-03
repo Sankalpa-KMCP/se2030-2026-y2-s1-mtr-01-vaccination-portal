@@ -16,7 +16,7 @@ function renderPage(page) {
 afterEach(cleanup);
 
 describe('role dashboards', () => {
-  it('shows the citizen profile and only disabled upcoming services', () => {
+  it('enables only pre-vaccination screening on the citizen dashboard', () => {
     authState.current = { user: {
       fullName: 'Citizen User',
       email: 'citizen@example.com',
@@ -26,7 +26,11 @@ describe('role dashboards', () => {
     renderPage(<CitizenDashboardPage />);
     expect(screen.getByRole('heading', { name: 'Welcome, Citizen User' })).toBeTruthy();
     expect(screen.getByText('citizen@example.com')).toBeTruthy();
-    expect(screen.getAllByText('Coming soon')).toHaveLength(5);
+    expect(screen.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/screening');
+    expect(screen.getAllByText('Coming soon')).toHaveLength(4);
+    for (const title of ['My Eligibility', 'My Appointments', 'Screening History', 'Vaccination History']) {
+      expect(screen.getByRole('heading', { name: title })).toBeTruthy();
+    }
   });
 
   it('shows staff profile, role, and genuinely available routes', () => {

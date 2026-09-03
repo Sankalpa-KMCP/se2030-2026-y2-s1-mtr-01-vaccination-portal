@@ -134,3 +134,22 @@ export function updateEligibilityRule(ruleId, payload) {
 export function deleteEligibilityRule(ruleId) {
   return screeningRequest(`/rules/${ruleId}`, { method: 'DELETE' });
 }
+
+// Citizen screening workflow
+export function getCitizenScreeningForm(campaignId) {
+  return screeningRequest(`/campaigns/${campaignId}/form`, { method: 'GET' });
+}
+
+export function getActiveScreeningSubmission(citizenId, campaignId) {
+  return screeningRequest(
+    `/citizens/${citizenId}/campaigns/${campaignId}/active-submission`,
+    { method: 'GET' },
+  );
+}
+
+export function submitScreening(payload) {
+  return screeningRequest('/submissions', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

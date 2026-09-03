@@ -19,6 +19,8 @@ import {
   deleteQuestion,
   deleteQuestionnaireVersion,
   getAnswerOption,
+  getActiveScreeningSubmission,
+  getCitizenScreeningForm,
   getEligibilityRule,
   getQuestion,
   getQuestionnaire,
@@ -30,6 +32,7 @@ import {
   listQuestionnaireVersions,
   publishQuestionnaireVersion,
   retireQuestionnaireVersion,
+  submitScreening,
   updateAnswerOption,
   updateEligibilityRule,
   updateQuestion,
@@ -217,5 +220,37 @@ describe('screeningApi', () => {
 
     await deleteEligibilityRule(31);
     expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/rules/31', { method: 'DELETE' });
+  });
+
+  it('loads the citizen screening form through the campaign form path', async () => {
+    await getCitizenScreeningForm(22);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/screening/campaigns/22/form', { method: 'GET' });
+  });
+
+  it('loads an active submission using the authenticated citizen and campaign IDs', async () => {
+    await getActiveScreeningSubmission(7, 22);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledWith(
+      '/v1/screening/citizens/7/campaigns/22/active-submission',
+      { method: 'GET' },
+    );
+  });
+
+  it('posts the complete screening payload without changing answer value types', async () => {
+    const payload = {
+      citizenId: 7,
+      campaignId: 22,
+      questionnaireVersionId: 31,
+      consentNoticeVersionId: 4,
+      answers: { 101: 'true', 102: '37.5', 103: 'ASTHMA,DIABETES' },
+    };
+
+    await submitScreening(payload);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/screening/submissions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   });
 });
