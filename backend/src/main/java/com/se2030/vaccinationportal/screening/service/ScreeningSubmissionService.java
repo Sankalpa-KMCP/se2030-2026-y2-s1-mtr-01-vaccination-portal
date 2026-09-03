@@ -38,7 +38,7 @@ public class ScreeningSubmissionService {
     private final ScreeningAnswerRepository answerRepository;
     private final QuestionnaireVersionRepository versionRepository;
     private final QuestionnaireItemRepository itemRepository;
-    private final ConsentNoticeVersionRepository consentNoticeVersionRepository;
+    private final ScreeningConsentNoticeService consentNoticeService;
     private final ScreeningAnswerValidator answerValidator;
     private final PreliminaryScreeningService preliminaryScreeningService;
     private final EligibilityRuleRepository eligibilityRuleRepository;
@@ -52,7 +52,7 @@ public class ScreeningSubmissionService {
             ScreeningAnswerRepository answerRepository,
             QuestionnaireVersionRepository versionRepository,
             QuestionnaireItemRepository itemRepository,
-            ConsentNoticeVersionRepository consentNoticeVersionRepository,
+            ScreeningConsentNoticeService consentNoticeService,
             ScreeningAnswerValidator answerValidator,
             PreliminaryScreeningService preliminaryScreeningService,
             EligibilityRuleRepository eligibilityRuleRepository,
@@ -65,7 +65,7 @@ public class ScreeningSubmissionService {
         this.answerRepository = answerRepository;
         this.versionRepository = versionRepository;
         this.itemRepository = itemRepository;
-        this.consentNoticeVersionRepository = consentNoticeVersionRepository;
+        this.consentNoticeService = consentNoticeService;
         this.answerValidator = answerValidator;
         this.preliminaryScreeningService = preliminaryScreeningService;
         this.eligibilityRuleRepository = eligibilityRuleRepository;
@@ -160,12 +160,14 @@ public class ScreeningSubmissionService {
             );
         }
 
-        // 5. Validate Consent Notice
-        ConsentNoticeVersion consentNotice = consentNoticeVersionRepository.findById(consentNoticeVersionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Consent notice version not found with ID: " + consentNoticeVersionId));
-
-        if (consentNotice.getRetiredAt() != null) {
-            throw new IllegalStateException("The accepted consent notice version is retired. Please accept the latest active notice.");
+        // 5. Validate the exact current canonical MF-01 screening consent notice.
+        ConsentNoticeVersion consentNotice = consentNoticeService.getCurrentScreeningConsentNotice();
+        if (!Objects.equals(consentNotice.getId(), consentNoticeVersionId)) {
+            throw new IllegalStateException(
+                    "The accepted consent notice is not the current "
+                            + ScreeningConsentNoticeService.SCREENING_NOTICE_CODE + " notice. "
+                            + "Please reload the screening form and accept the current notice."
+            );
         }
 
         // 6. Validate all answers before persisting any submission data
