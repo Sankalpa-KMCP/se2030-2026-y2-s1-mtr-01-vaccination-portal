@@ -2,11 +2,16 @@ package com.se2030.vaccinationportal.vaccination.controller;
 
 import com.se2030.vaccinationportal.vaccination.dto.VaccinationApiErrorResponse;
 import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
+import com.se2030.vaccinationportal.vaccination.exception.CertificateVerificationNotFoundException;
+import com.se2030.vaccinationportal.vaccination.exception.DigitalCertificateNotFoundException;
+import com.se2030.vaccinationportal.vaccination.exception.DuplicateDigitalCertificateException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateVerificationTokenException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
@@ -102,6 +107,46 @@ public class VaccinationExceptionHandler {
     @ExceptionHandler(InvalidVaccinationDraftException.class)
     public ResponseEntity<VaccinationApiErrorResponse> handleInvalidDraft(
             InvalidVaccinationDraftException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(DigitalCertificateNotFoundException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleCertificateNotFound(
+            DigitalCertificateNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(VaccinationRecordNotFoundException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleVaccinationRecordNotFound(
+            VaccinationRecordNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(DuplicateDigitalCertificateException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleDuplicateCertificate(
+            DuplicateDigitalCertificateException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(CertificateVerificationNotFoundException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleVerificationNotFound(
+            CertificateVerificationNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidCertificateVerificationTokenException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleInvalidVerificationToken(
+            InvalidCertificateVerificationTokenException ex,
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);

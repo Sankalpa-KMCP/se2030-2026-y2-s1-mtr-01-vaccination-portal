@@ -11,6 +11,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DigitalCertificateRepository extends JpaRepository<DigitalCertificate, Long> {
 
+    boolean existsByVaccinationRecordId(Long vaccinationRecordId);
+
     Optional<DigitalCertificate> findByCertificateReference(String certificateReference);
 
     Optional<DigitalCertificate> findByVerificationToken(String verificationToken);
