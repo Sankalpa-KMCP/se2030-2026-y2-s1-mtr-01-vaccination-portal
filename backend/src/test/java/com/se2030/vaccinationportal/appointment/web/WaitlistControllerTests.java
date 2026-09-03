@@ -3,12 +3,14 @@ package com.se2030.vaccinationportal.appointment.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.dto.WaitlistJoinRequest;
+import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.appointment.service.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.service.TestSlotCapacityPortDouble;
 import com.se2030.vaccinationportal.appointment.service.WaitlistJoinService;
+import com.se2030.vaccinationportal.appointment.service.WaitlistLeaveService;
 import java.time.Instant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +60,9 @@ class WaitlistControllerTests {
     private WaitlistJoinService joinService;
 
     @Autowired
+    private WaitlistLeaveService leaveService;
+
+    @Autowired
     private WaitlistRepository waitlistRepository;
 
     @Autowired
@@ -80,7 +85,7 @@ class WaitlistControllerTests {
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
 
-        WaitlistController waitlistController = new WaitlistController(joinService, waitlistRepository);
+        WaitlistController waitlistController = new WaitlistController(joinService, leaveService, waitlistRepository);
         this.mockMvc = MockMvcBuilders.standaloneSetup(waitlistController)
                 .setControllerAdvice(new AppointmentExceptionHandler())
                 .build();
@@ -136,8 +141,51 @@ class WaitlistControllerTests {
     }
 
     @Test
-    void getWaitlistStatus_found_returns200Ok() throws Exception {
+    void leaveWaitlist_success_returns200Ok() throws Exception {
         Long citizenId = 1003L;
+        Long campaignId = 2001L;
+        Long sessionId = 3001L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setSessionFull(sessionId, true);
+
+        WaitlistEntry entry = joinService.joinWaitlist(citizenId, campaignId, sessionId, Instant.now());
+
+        mockMvc.perform(post("/api/v1/waitlist/" + entry.getId() + "/leave")
+                        .param("citizenId", citizenId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("CANCELLED")));
+    }
+
+    @Test
+    void leaveWaitlist_unauthorizedCitizen_returns400BadRequest() throws Exception {
+        Long citizenId = 1004L;
+        Long otherCitizenId = 9999L;
+        Long campaignId = 2001L;
+        Long sessionId = 3001L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setSessionFull(sessionId, true);
+
+        WaitlistEntry entry = joinService.joinWaitlist(citizenId, campaignId, sessionId, Instant.now());
+
+        mockMvc.perform(post("/api/v1/waitlist/" + entry.getId() + "/leave")
+                        .param("citizenId", otherCitizenId.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("BAD_REQUEST")));
+    }
+
+    @Test
+    void leaveWaitlist_notFound_returns404NotFound() throws Exception {
+        mockMvc.perform(post("/api/v1/waitlist/999999/leave")
+                        .param("citizenId", "1001"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error", is("NOT_FOUND")));
+    }
+
+    @Test
+    void getWaitlistStatus_found_returns200OkWithPosition() throws Exception {
+        Long citizenId = 1005L;
         Long campaignId = 2001L;
         Long sessionId = 3001L;
 
@@ -151,7 +199,8 @@ class WaitlistControllerTests {
                         .param("campaignId", campaignId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.citizenId", is(citizenId.intValue())))
-                .andExpect(jsonPath("$.status", is("WAITING")));
+                .andExpect(jsonPath("$.status", is("WAITING")))
+                .andExpect(jsonPath("$.position", is(1)));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.appointment.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.se2030.vaccinationportal.appointment.dependency.AvailableSessionSummary;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.dto.AppointmentBookingRequest;
 import com.se2030.vaccinationportal.appointment.dto.AppointmentCancellationRequest;
@@ -12,10 +13,13 @@ import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.appointment.service.AppointmentBookingService;
 import com.se2030.vaccinationportal.appointment.service.AppointmentCancellationService;
 import com.se2030.vaccinationportal.appointment.service.AppointmentRescheduleService;
+import com.se2030.vaccinationportal.appointment.service.AppointmentSearchService;
 import com.se2030.vaccinationportal.appointment.service.CheckInService;
 import com.se2030.vaccinationportal.appointment.service.TestEligibilityLookupPortDouble;
+import com.se2030.vaccinationportal.appointment.service.TestSlotAvailabilityPortDouble;
 import com.se2030.vaccinationportal.appointment.service.TestSlotCapacityPortDouble;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +61,11 @@ class AppointmentControllerTests {
         public TestSlotCapacityPortDouble slotCapacityPort() {
             return new TestSlotCapacityPortDouble();
         }
+
+        @Bean
+        public TestSlotAvailabilityPortDouble slotAvailabilityPort() {
+            return new TestSlotAvailabilityPortDouble();
+        }
     }
 
     private MockMvc mockMvc;
@@ -75,6 +84,9 @@ class AppointmentControllerTests {
     private CheckInService checkInService;
 
     @Autowired
+    private AppointmentSearchService searchService;
+
+    @Autowired
     private AppointmentRepository appointmentRepository;
 
     @Autowired
@@ -89,16 +101,20 @@ class AppointmentControllerTests {
     @Autowired
     private TestSlotCapacityPortDouble slotCapacityPortDouble;
 
+    @Autowired
+    private TestSlotAvailabilityPortDouble availabilityPortDouble;
+
     @BeforeEach
     void setUp() {
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
+        availabilityPortDouble.clear();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
 
         AppointmentController appointmentController = new AppointmentController(
-                bookingService, cancellationService, rescheduleService, checkInService);
+                bookingService, cancellationService, rescheduleService, checkInService, searchService, appointmentRepository);
         this.mockMvc = MockMvcBuilders.standaloneSetup(appointmentController)
                 .setControllerAdvice(new AppointmentExceptionHandler())
                 .build();
@@ -109,6 +125,50 @@ class AppointmentControllerTests {
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
+        availabilityPortDouble.clear();
+    }
+
+    @Test
+    void getMyAppointments_returns200OkWithCitizenAppointments() throws Exception {
+        Long citizenId = 1011L;
+        Long campaignId = 2001L;
+        Long slotId = 4010L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+
+        bookingService.bookAppointment(citizenId, campaignId, slotId);
+
+        mockMvc.perform(get("/api/v1/appointments/mine").param("citizenId", citizenId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].citizenId", is(citizenId.intValue())))
+                .andExpect(jsonPath("$[0].status", is("CONFIRMED")));
+    }
+
+    @Test
+    void searchAvailableAppointments_returns200OkWithAvailableSessions() throws Exception {
+        Long citizenId = 1010L;
+        Long campaignId = 2001L;
+        Long centerId = 5001L;
+        Instant now = Instant.now();
+
+        AvailableSessionSummary s1 = new AvailableSessionSummary(
+                6001L, campaignId, centerId, "Center A", "123 Main St",
+                now.plusSeconds(3600), now.plusSeconds(7200), now.plusSeconds(1800), 5
+        );
+        availabilityPortDouble.addSession(s1);
+
+        mockMvc.perform(get("/api/v1/appointments/search")
+                        .param("citizenId", citizenId.toString())
+                        .param("campaignId", campaignId.toString())
+                        .param("centerId", centerId.toString())
+                        .param("fromDate", LocalDate.now().toString())
+                        .param("toDate", LocalDate.now().plusDays(7).toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].sessionId", is(6001)))
+                .andExpect(jsonPath("$[0].centerName", is("Center A")));
     }
 
     @Test

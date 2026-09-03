@@ -1,19 +1,25 @@
 package com.se2030.vaccinationportal.appointment.web;
 
+import com.se2030.vaccinationportal.appointment.dependency.AvailableSessionSummary;
 import com.se2030.vaccinationportal.appointment.dto.AppointmentBookingRequest;
 import com.se2030.vaccinationportal.appointment.dto.AppointmentCancellationRequest;
 import com.se2030.vaccinationportal.appointment.dto.AppointmentRescheduleRequest;
 import com.se2030.vaccinationportal.appointment.dto.AppointmentResponse;
+import com.se2030.vaccinationportal.appointment.dto.AvailableSessionResponse;
 import com.se2030.vaccinationportal.appointment.dto.CheckInRequest;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
+import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.service.AppointmentBookingService;
 import com.se2030.vaccinationportal.appointment.service.AppointmentCancellationService;
 import com.se2030.vaccinationportal.appointment.service.AppointmentRescheduleService;
+import com.se2030.vaccinationportal.appointment.service.AppointmentSearchService;
 import com.se2030.vaccinationportal.appointment.service.CheckInService;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,7 +35,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST Controller exposing appointment booking, cancellation, rescheduling, check-in, check-in reversal, and queue endpoints.
+ * REST Controller exposing appointment booking, availability search, citizen listing, cancellation, rescheduling,
+ * check-in, check-in reversal, and queue endpoints.
  * Thin presentation layer delegating all orchestration strictly to existing domain services.
  */
 @RestController
@@ -40,18 +47,65 @@ public class AppointmentController {
     private final AppointmentCancellationService cancellationService;
     private final AppointmentRescheduleService rescheduleService;
     private final CheckInService checkInService;
+    private final AppointmentSearchService searchService;
+    private final AppointmentRepository appointmentRepository;
 
-    @Autowired
     public AppointmentController(
             AppointmentBookingService bookingService,
             AppointmentCancellationService cancellationService,
             AppointmentRescheduleService rescheduleService,
             CheckInService checkInService
     ) {
+        this(bookingService, cancellationService, rescheduleService, checkInService, null, null);
+    }
+
+    @Autowired
+    public AppointmentController(
+            AppointmentBookingService bookingService,
+            AppointmentCancellationService cancellationService,
+            AppointmentRescheduleService rescheduleService,
+            CheckInService checkInService,
+            @Autowired(required = false) AppointmentSearchService searchService,
+            @Autowired(required = false) AppointmentRepository appointmentRepository
+    ) {
         this.bookingService = bookingService;
         this.cancellationService = cancellationService;
         this.rescheduleService = rescheduleService;
         this.checkInService = checkInService;
+        this.searchService = searchService;
+        this.appointmentRepository = appointmentRepository;
+    }
+
+    @GetMapping("/mine")
+    public ResponseEntity<List<AppointmentResponse>> getMyAppointments(@RequestParam("citizenId") Long citizenId) {
+        if (appointmentRepository == null || citizenId == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        List<Appointment> appointments = appointmentRepository.findByCitizenIdOrderByBookedAtDesc(citizenId);
+        List<AppointmentResponse> responseList = appointments.stream()
+                .map(AppointmentResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(responseList);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<AvailableSessionResponse>> searchAvailableAppointments(
+            @RequestParam("citizenId") Long citizenId,
+            @RequestParam("campaignId") Long campaignId,
+            @RequestParam(value = "centerId", required = false) Long centerId,
+            @RequestParam("fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam("toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
+    ) {
+        if (searchService == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        List<AvailableSessionSummary> summaries = searchService.searchAvailableSessions(
+                citizenId, campaignId, centerId, fromDate, toDate
+        );
+        List<AvailableSessionResponse> responseList = summaries.stream()
+                .map(AvailableSessionResponse::fromSummary)
+                .toList();
+        return ResponseEntity.ok(responseList);
     }
 
     @PostMapping("/book")
