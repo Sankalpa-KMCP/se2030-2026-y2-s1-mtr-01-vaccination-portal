@@ -60,11 +60,14 @@ export default function HeroSection({ onLoginClick }) {
             </p>
 
             <div className="lp-hero__actions">
-              <button type="button" className="lp-btn lp-btn--primary" onClick={onLoginClick}>
-                Sign in
+              <Link to="/register/citizen" className="lp-btn lp-btn--primary">
+                Get started as citizen
                 <span className="lp-btn__arrow" aria-hidden="true">&rarr;</span>
+              </Link>
+              <button type="button" className="lp-btn lp-btn--secondary" onClick={onLoginClick}>
+                Sign in
               </button>
-              <Link to="/how-it-works" className="lp-btn lp-btn--secondary">
+              <Link to="/how-it-works" className="lp-btn lp-btn--quiet">
                 How it works
               </Link>
             </div>

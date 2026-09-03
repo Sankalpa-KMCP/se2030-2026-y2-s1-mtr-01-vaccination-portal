@@ -4,26 +4,26 @@ const PRINCIPLES = [
   {
     num: '01',
     tag: 'Privacy',
-    title: 'Your data is protected',
-    desc: 'Citizens see only their own record. Personal information is stored securely.',
+    title: 'Role-isolated data access',
+    desc: 'Citizens access only their personal bookings and immunization records. Health staff access only their assigned center operations.',
   },
   {
     num: '02',
-    tag: 'Records',
-    title: 'Every change is recorded',
-    desc: 'Campaign, staffing, and session changes keep a record of what changed and who made the change.',
+    tag: 'Accountability',
+    title: 'Auditable operational history',
+    desc: 'Campaign configurations, session schedule changes, and staff assignments preserve an immutable log of who made each change.',
   },
   {
     num: '03',
     tag: 'Safety',
-    title: 'Clinics are checked before opening',
-    desc: 'A session opens only once its hours, stations, and qualified staff are confirmed.',
+    title: 'Pre-session readiness checks',
+    desc: 'A clinic session unlocks for booking only after operating hours, station capacity, and certified staff are confirmed ready.',
   },
   {
     num: '04',
     tag: 'Fairness',
-    title: 'Capacity is planned openly',
-    desc: 'Capacity follows the rooms, stations, and staff actually available — never guessed.',
+    title: 'Transparent capacity planning',
+    desc: 'Appointment limits mirror physical rooms and confirmed staffing allocations — preventing overbooking and clinic delays.',
   },
 ];
 

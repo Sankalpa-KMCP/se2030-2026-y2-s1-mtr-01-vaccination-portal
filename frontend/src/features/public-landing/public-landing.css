@@ -10,40 +10,40 @@
    Design Tokens
    -------------------------------------------------------------------------- */
 .lp-page {
-  /* Surfaces */
-  --lp-bg-paper: #f6f6f2;
+  /* Surfaces -- clean medical slate/teal foundation */
+  --lp-bg-paper: #f8fafc;
   --lp-bg-card: #ffffff;
-  --lp-bg-tint: #edf2ed;
-  --lp-bg-deep: #0f221b;
-  --lp-bg-deep-2: #0a1813;
+  --lp-bg-tint: #f1f5f9;
+  --lp-bg-deep: #0f172a;
+  --lp-bg-deep-2: #020617;
 
-  /* Ink */
-  --lp-text: #1a2924;
-  --lp-text-muted: #4f625b;
-  --lp-text-faint: #5c6b64;
-  --lp-text-on-deep: #f0f5f1;
-  --lp-text-muted-on-deep: #a9bcb2;
+  /* Ink -- align with shared slate typography */
+  --lp-text: var(--text-primary, #1e293b);
+  --lp-text-muted: var(--text-secondary, #64748b);
+  --lp-text-faint: #94a3b8;
+  --lp-text-on-deep: #f8fafc;
+  --lp-text-muted-on-deep: #94a3b8;
 
-  /* Accents */
-  --lp-primary: #0b5d47;
-  --lp-primary-strong: #07452f;
-  --lp-primary-soft: #e1efe8;
-  --lp-rule: #d9e0da;
-  --lp-rule-strong: #c3cfc7;
+  /* Accents -- map directly to shared medical teal palette */
+  --lp-primary: var(--primary, #0e7490);
+  --lp-primary-strong: var(--primary-hover, #155e75);
+  --lp-primary-soft: var(--primary-soft-bg, #ebf7fa);
+  --lp-rule: var(--border-subtle, #e2e8f0);
+  --lp-rule-strong: var(--border-input, #cbd5e1);
 
   /* Shape */
-  --lp-radius-sm: 3px;
-  --lp-radius-md: 5px;
+  --lp-radius-sm: 4px;
+  --lp-radius-md: 6px;
   --lp-radius-card: 8px;
 
   /* Motion */
   --lp-ease: cubic-bezier(0.25, 0.9, 0.35, 1);
   --lp-dur-fast: 200ms;
-  --lp-dur-slow: 450ms;
+  --lp-dur-slow: 400ms;
 
   /* Effects */
-  --lp-card-shadow: 0 1px 2px rgba(22, 41, 34, 0.04), 0 10px 30px rgba(22, 41, 34, 0.06);
-  --lp-card-lift-shadow: 0 2px 4px rgba(22, 41, 34, 0.06), 0 14px 36px rgba(22, 41, 34, 0.09);
+  --lp-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --lp-card-lift-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
 
   /* Type */
   --lp-font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
@@ -610,6 +610,44 @@
   border-block: 1px solid var(--lp-rule);
 }
 
+/* --------------------------------------------------------------------------
+   Section Kicker — index mark, uppercase category, and fine rule
+   -------------------------------------------------------------------------- */
+.lp-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.lp-kicker--centered {
+  justify-content: center;
+  width: 100%;
+}
+
+.lp-kicker__index {
+  font-family: var(--lp-font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--lp-primary);
+}
+
+.lp-kicker__label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lp-text-muted);
+}
+
+.lp-kicker__rule {
+  display: inline-block;
+  width: 32px;
+  height: 1px;
+  background-color: var(--lp-rule-strong);
+}
+
 /* Section headings sit slightly above their bands for breathing room. */
 .lp-section__header {
   display: grid;
@@ -617,6 +655,23 @@
   gap: clamp(1.5rem, 4vw, 3.5rem);
   align-items: end;
   margin-bottom: clamp(2.5rem, 4vw, 3.5rem);
+}
+
+.lp-section__header--centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 780px;
+  margin-inline: auto;
+  margin-bottom: clamp(2.5rem, 4vw, 3.5rem);
+}
+
+.lp-section__header--centered .lp-section__lead {
+  margin-inline: auto;
+  text-align: center;
+  max-width: 64ch;
+  padding-bottom: 0;
 }
 
 .lp-section__header-text {
@@ -652,20 +707,38 @@
 }
 
 /* --------------------------------------------------------------------------
-   Scroll Reveal System (activated via .is-revealed by useLandingReveal)
+   Scroll Reveal System (Progressive Enhancement)
+   Fail-safe default: content is completely visible by default.
+   Reveal animation is only enabled when JS confirms .lp-reveal-ready is active.
    -------------------------------------------------------------------------- */
 [data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+
+.lp-reveal-ready [data-reveal]:not(.is-revealed) {
   opacity: 0;
   transform: translateY(14px);
+}
+
+.lp-reveal-ready [data-reveal] {
   transition:
     opacity var(--lp-dur-slow) var(--lp-ease),
     transform var(--lp-dur-slow) var(--lp-ease);
   transition-delay: var(--reveal-delay, 0ms);
 }
 
-[data-reveal].is-revealed {
+.lp-reveal-ready [data-reveal].is-revealed {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal-ready [data-reveal]:not(.is-revealed) {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -769,6 +842,137 @@
   gap: 0.75rem;
   margin-top: auto;
   padding-top: 0.75rem;
+}
+
+/* --------------------------------------------------------------------------
+   Capabilities — modern responsive card grid
+   -------------------------------------------------------------------------- */
+.lp-capabilities-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.25rem, 2.5vw, 1.75rem);
+}
+
+@media (max-width: 1024px) {
+  .lp-capabilities-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .lp-capabilities-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lp-capability-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1.4rem, 2vw, 1.75rem);
+  border-radius: var(--lp-radius-card);
+  background-color: var(--lp-bg-card);
+  border: 1px solid var(--lp-rule);
+  box-shadow: var(--lp-card-shadow);
+  transition:
+    border-color var(--lp-dur-fast) var(--lp-ease),
+    box-shadow var(--lp-dur-fast) var(--lp-ease),
+    transform var(--lp-dur-fast) var(--lp-ease);
+}
+
+.lp-capability-card:hover {
+  border-color: var(--lp-primary);
+  box-shadow: var(--lp-card-lift-shadow);
+  transform: translateY(-2px);
+}
+
+.lp-capability-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+.lp-capability-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--lp-radius-md);
+  background-color: var(--lp-primary-soft);
+  color: var(--lp-primary);
+  flex-shrink: 0;
+}
+
+.lp-capability-card__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.lp-capability-card__tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lp-primary);
+}
+
+.lp-capability-card__num {
+  margin-left: auto;
+  font-family: var(--lp-font-display);
+  font-size: 1.15rem;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--lp-rule-strong);
+}
+
+.lp-capability-card__title {
+  font-family: var(--lp-font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--lp-text);
+  line-height: 1.3;
+  margin-bottom: 0.55rem;
+  letter-spacing: -0.01em;
+}
+
+.lp-capability-card__desc {
+  font-size: 0.925rem;
+  color: var(--lp-text-muted);
+  line-height: 1.62;
+  margin-bottom: 1.25rem;
+}
+
+.lp-capability-card__points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--lp-rule);
+}
+
+.lp-capability-card__point {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--lp-text-muted);
+  background-color: var(--lp-bg-tint);
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+}
+
+.lp-capability-card__bullet {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--lp-primary);
 }
 
 /* --------------------------------------------------------------------------
@@ -937,7 +1141,8 @@
 
 .lp-workflow__steps {
   position: relative;
-  margin: 0;
+  max-width: 820px;
+  margin: 0 auto;
   padding: 0;
   list-style: none;
 }
