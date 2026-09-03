@@ -12,7 +12,7 @@ This directory contains database-related documentation, environment configuratio
 
 ## Database Architecture & Flyway Migrations
 
-Database schema versioning is managed via Flyway migrations located in [`backend/src/main/resources/db/migration/`](file:///e:/SE%20PROJECT_Vac/se2030-2026-y2-s1-mtr-01-vaccination-portal/backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance.
+Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V12` (13 active migrations).
 
 ### Active Migration Schedule
 
@@ -30,12 +30,13 @@ Database schema versioning is managed via Flyway migrations located in [`backend
 | `V9` | `V9__mf02_session_booking_suspension.sql` | MF-02: Session booking suspension audit flags |
 | `V10` | `V10__mf02_campaign_session_supporting_tables.sql` | MF-02: Recurrence rules, Rosters, Closures, Location targets |
 | `V11` | `V11__mf05_vaccination_foundation.sql` | MF-05: Vaccination administration, Drafts & Certificates |
+| `V12` | `V12__shared_auth_registration_foundation.sql` | Shared Auth: Citizen self-registration & staff registration request audit |
 
 ## Directory Structure
 
-- `migrations/` — Reference DDL exports and supplemental database scripts
-- `seeds/` — Synthetic development, testing, and benchmark seed data
-- `diagrams/` — Entity-Relationship (ER) diagrams and database design materials
+- `migrations/` - Reference DDL exports and supplemental database scripts
+- `seeds/` - Synthetic development, testing, and benchmark seed data
+- `diagrams/` - Entity-Relationship (ER) diagrams and database design materials
 
 ## Local Database Setup
 
