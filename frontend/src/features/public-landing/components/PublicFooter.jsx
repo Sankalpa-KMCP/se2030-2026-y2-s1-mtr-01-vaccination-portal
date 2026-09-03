@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export default function PublicFooter({ onLoginClick }) {
   const currentYear = new Date().getFullYear();
@@ -8,19 +9,17 @@ export default function PublicFooter({ onLoginClick }) {
       <div className="lp-container">
         <div className="lp-footer__top">
           <div className="lp-footer__brand-col">
-            <span className="lp-footer__brand">Web-Based Vaccination Portal</span>
+            <span className="lp-footer__brand">Vaccination Portal</span>
             <p className="lp-footer__desc">
-              Supporting vaccination-program operations for healthcare teams.
+              An official public health service supporting citizens and health
+              teams with vaccination programmes.
             </p>
           </div>
 
           <nav className="lp-footer__nav" aria-label="Footer navigation">
-            <a className="lp-footer__link" href="#capabilities">
-              Capabilities
-            </a>
-            <a className="lp-footer__link" href="#how-it-works">
-              How it works
-            </a>
+            <Link to="/" className="lp-footer__link">Home</Link>
+            <Link to="/how-it-works" className="lp-footer__link">How it works</Link>
+            <Link to="/about" className="lp-footer__link">About</Link>
             <button
               type="button"
               className="lp-footer__btn"
@@ -33,10 +32,10 @@ export default function PublicFooter({ onLoginClick }) {
 
         <div className="lp-footer__bottom">
           <span className="lp-footer__copyright">
-            &copy; {currentYear} Web-Based Vaccination Portal &mdash; SE2030 project.
+            &copy; {currentYear} Vaccination Portal &mdash; SE2030 project.
           </span>
           <span className="lp-footer__status">
-            Operational System
+            Public Health Service
           </span>
         </div>
       </div>

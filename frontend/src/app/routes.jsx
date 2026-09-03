@@ -21,6 +21,8 @@ import {
 } from '../auth/constants/authRoles';
 import { getRoleHomePath } from '../auth/utils/roleRedirect';
 import LandingPage from '../features/public-landing/pages/LandingPage';
+import HowItWorksPage from '../features/public-landing/pages/HowItWorksPage';
+import AboutPage from '../features/public-landing/pages/AboutPage';
 import CampaignManagementPage from '../features/campaign-management/pages/CampaignManagementPage';
 import CenterOperationsPage from '../features/center-operations/pages/CenterOperationsPage';
 import SessionsPage from '../features/session-management/pages/SessionsPage';
@@ -158,6 +160,22 @@ export default function PortalRoutes() {
           isAuthenticated
             ? <RoleHomeRedirect user={user} />
             : <LandingPage onLoginClick={() => navigate('/login')} />
+        }
+      />
+      <Route
+        path="/how-it-works"
+        element={
+          isAuthenticated
+            ? <RoleHomeRedirect user={user} />
+            : <HowItWorksPage onLoginClick={() => navigate('/login')} />
+        }
+      />
+      <Route
+        path="/about"
+        element={
+          isAuthenticated
+            ? <RoleHomeRedirect user={user} />
+            : <AboutPage onLoginClick={() => navigate('/login')} />
         }
       />
       <Route

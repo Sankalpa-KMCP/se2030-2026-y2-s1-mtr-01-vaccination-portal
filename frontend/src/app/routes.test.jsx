@@ -257,10 +257,10 @@ describe('shared routing and role guards', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Create Citizen Account' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Citizen Login' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Request Staff Account' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Staff Login' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /create citizen account/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /citizen login/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /request staff account/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /staff login/i })).toBeTruthy();
   });
 
   it('keeps the generic, citizen, and staff login routes registered', () => {
@@ -316,5 +316,26 @@ describe('shared routing and role guards', () => {
     setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
     view.rerender(<MemoryRouter key="requests-denied" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+  });
+
+  it('keeps all three public pages accessible without authentication', () => {
+    setAuth({ isAuthenticated: false });
+
+    render(<MemoryRouter key="home" initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /vaccination care, coordinated for your community/i })).toBeTruthy();
+    cleanup();
+
+    render(<MemoryRouter key="how" initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /one system, two journeys/i })).toBeTruthy();
+    cleanup();
+
+    render(<MemoryRouter key="about" initialEntries={['/about']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /a system built on responsibility/i })).toBeTruthy();
+  });
+
+  it('redirects authenticated users away from public pages to their role home', () => {
+    setAuth({ roles: ['ROLE_CITIZEN'] });
+    render(<MemoryRouter initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByText('Citizen Dashboard')).toBeTruthy();
   });
 });
