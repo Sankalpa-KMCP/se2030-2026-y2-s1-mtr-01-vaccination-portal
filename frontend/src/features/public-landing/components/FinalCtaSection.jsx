@@ -1,34 +1,28 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export default function FinalCtaSection({ onLoginClick }) {
   return (
-    <section className="lp-cta-section" aria-labelledby="lp-cta-title">
-      <div className="lp-container lp-cta-inner">
-        <div className="lp-cta-panel__content">
-          <div className="lp-cta-kicker">
-            <span className="lp-cta-kicker__label">Portal access</span>
-            <span className="lp-cta-kicker__rule" aria-hidden="true" />
-          </div>
-          <h2 className="lp-cta-panel__title" id="lp-cta-title">
-            Ready to get started?
-          </h2>
-          <p className="lp-cta-panel__text">
-            Sign in to book a vaccination session, or to manage campaigns,
-            clinics, and sessions for your health team.
-          </p>
+    <section className="home-closing" aria-labelledby="lp-cta-title">
+      <div className="lp-container home-closing__layout" data-reveal>
+        <div className="home-closing__index" aria-hidden="true">05</div>
+        <div className="home-closing__copy">
+          <span className="home-section-mark">Begin</span>
+          <h2 id="lp-cta-title">Start with your Citizen account.</h2>
+          <p>Register once, then complete screening separately for each campaign you join.</p>
         </div>
-
-        <div className="lp-cta-panel__actions">
+        <div className="home-closing__actions">
+          <Link to="/register/citizen" className="home-action home-action--secondary">
+            Open citizen registration <span aria-hidden="true">&rarr;</span>
+          </Link>
           <button
             type="button"
-            className="lp-btn lp-btn--inverted"
+            className="home-text-button"
             onClick={onLoginClick}
           >
             Sign in to the portal
           </button>
-          <a className="lp-cta-panel__link" href="#capabilities">
-            See what the portal does
-          </a>
+          <Link className="home-closing__staff" to="/register/staff">Health staff access</Link>
         </div>
       </div>
     </section>

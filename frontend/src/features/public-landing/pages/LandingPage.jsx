@@ -10,6 +10,7 @@ import FinalCtaSection from '../components/FinalCtaSection';
 import PublicFooter from '../components/PublicFooter';
 import useLandingReveal from '../hooks/useLandingReveal';
 import '../public-landing.css';
+import '../landing-page.css';
 
 /**
  * "Continue exploring" band — connects Home to the two interior pages
@@ -17,33 +18,30 @@ import '../public-landing.css';
  */
 function ContinueBand() {
   return (
-    <section className="lp-section lp-continue" aria-label="Explore the portal">
-      <div className="lp-container">
-        <div className="lp-continue__grid">
-          <Link to="/how-it-works" className="lp-continue__link" data-reveal>
-            <span className="lp-continue__index" aria-hidden="true">01</span>
-            <span className="lp-continue__body">
-              <span className="lp-continue__label">The journeys</span>
-              <span className="lp-continue__title">How it works</span>
-              <span className="lp-continue__desc">
-                Follow a citizen or a staff journey end to end.
-              </span>
-            </span>
-            <span className="lp-continue__arrow" aria-hidden="true">&rarr;</span>
-          </Link>
-
-          <Link to="/about" className="lp-continue__link" data-reveal style={{ '--reveal-delay': '100ms' }}>
-            <span className="lp-continue__index" aria-hidden="true">02</span>
-            <span className="lp-continue__body">
-              <span className="lp-continue__label">The structure</span>
-              <span className="lp-continue__title">About the system</span>
-              <span className="lp-continue__desc">
-                Six roles, five domains, one accountable record.
-              </span>
-            </span>
-            <span className="lp-continue__arrow" aria-hidden="true">&rarr;</span>
-          </Link>
+    <section className="home-index" aria-labelledby="home-index-title">
+      <div className="lp-container home-index__layout" data-reveal>
+        <div className="home-index__intro">
+          <span className="home-section-mark">Public information</span>
+          <h2 id="home-index-title">Understand the service before you enter.</h2>
         </div>
+        <nav className="home-index__links" aria-label="Explore public information">
+          <Link to="/how-it-works" className="home-index__link">
+            <span className="home-index__number" aria-hidden="true">01</span>
+            <span>
+              <strong>How it works</strong>
+              <small>Follow the Citizen and Staff journeys.</small>
+            </span>
+            <span className="home-index__arrow" aria-hidden="true">&rarr;</span>
+          </Link>
+          <Link to="/about" className="home-index__link">
+            <span className="home-index__number" aria-hidden="true">02</span>
+            <span>
+              <strong>About the system</strong>
+              <small>See the roles and operational domains.</small>
+            </span>
+            <span className="home-index__arrow" aria-hidden="true">&rarr;</span>
+          </Link>
+        </nav>
       </div>
     </section>
   );
@@ -54,13 +52,13 @@ export default function LandingPage({ onLoginClick }) {
   useLandingReveal(rootRef);
 
   return (
-    <div className="lp-page" ref={rootRef}>
+    <div className="lp-page lp-page--home" ref={rootRef}>
       <a className="lp-skip-link" href="#lp-main">
         Skip to main content
       </a>
       <PublicHeader onLoginClick={onLoginClick} />
       <main id="lp-main" tabIndex={-1}>
-        <HeroSection onLoginClick={onLoginClick} />
+        <HeroSection />
         <PortalAccessSection />
         <CapabilitiesSection />
         <HowItWorksSection />
