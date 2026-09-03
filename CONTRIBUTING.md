@@ -89,6 +89,7 @@ Before submitting a pull request, contributors must run local validation command
 ### Frontend Verification
 ```bash
 cd frontend
+npm test
 npm run lint
 npm run build
 ```
@@ -97,12 +98,18 @@ npm run build
 ```bash
 cd backend
 ./mvnw verify
+
+# Optional targeted/full assurance against MySQL Testcontainers:
+./mvnw verify -Pmysql-concurrency
 ```
 
 On Windows (PowerShell):
 ```powershell
 cd backend
 .\mvnw.cmd verify
+
+# Optional targeted/full assurance against MySQL Testcontainers:
+.\mvnw.cmd verify -Pmysql-concurrency
 ```
 
 Pull requests must pass all automated GitHub Actions CI checks (`Frontend CI` and `Backend CI`) before being merged.
