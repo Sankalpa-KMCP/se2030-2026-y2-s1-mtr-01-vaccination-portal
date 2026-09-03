@@ -2,25 +2,25 @@ import React from 'react';
 
 const STAGES = [
   {
-    node: '1',
-    phase: 'For citizens',
-    title: 'Create your account',
-    desc: 'Register with your details once — your account is ready immediately.',
-    points: ['Register in minutes', 'Secure and private'],
+    node: '01',
+    phase: 'Phase 1 — Eligibility & Planning',
+    title: 'Campaign discovery & clinic planning',
+    desc: 'Citizens explore campaigns eligible for their area and age. Health staff define schedules, locations, and quota targets.',
+    points: ['Citizens: Find eligible campaigns & centers', 'Staff: Configure campaigns & assign rosters'],
   },
   {
-    node: '2',
-    phase: 'For everyone',
-    title: 'Book or schedule',
-    desc: 'Citizens book a session at a nearby clinic. Staff plan one-off or repeating clinic schedules.',
-    points: ['Choose clinic & time', 'Repeating schedules'],
+    node: '02',
+    phase: 'Phase 2 — Booking & Readiness',
+    title: 'Session booking & clinic readiness',
+    desc: 'Citizens select available slots with instant confirmation. Clinic teams verify operating hours and stations before opening.',
+    points: ['Citizens: Real-time slot booking', 'Staff: Pre-opening checklist validation'],
   },
   {
-    node: '3',
-    phase: 'For everyone',
-    title: 'Attend and get your record',
-    desc: 'Visit the clinic for your vaccination — records update automatically for citizens and campaigns alike.',
-    points: ['Automatic records', 'Campaign progress'],
+    node: '03',
+    phase: 'Phase 3 — Care & Documentation',
+    title: 'Attendance, vaccination & verified records',
+    desc: 'Citizens attend their clinic appointment. Clinical staff record dose details, automatically issuing digital records and updating counts.',
+    points: ['Citizens: Instant digital records', 'Staff: Auditable clinical dose logging'],
   },
 ];
 
@@ -40,24 +40,20 @@ export default function HowItWorksSection() {
       aria-labelledby="lp-workflow-title"
     >
       <div className="lp-container">
-        <div className="lp-workflow-layout">
-          {/* Sticky aside */}
-          <aside className="lp-workflow-aside">
-            <div data-reveal>
-              <div className="lp-kicker">
-                <span className="lp-kicker__index">03</span>
-                <span className="lp-kicker__label">How it works</span>
-                <span className="lp-kicker__rule" aria-hidden="true" />
-              </div>
-              <h2 className="lp-section__title" id="lp-workflow-title">
-                How programme operations work
-              </h2>
-              <p className="lp-section__lead">
-                Getting vaccinated &mdash; or running a programme &mdash; takes
-                three simple steps.
-              </p>
-            </div>
-          </aside>
+        <div className="lp-section__header lp-section__header--centered" data-reveal>
+          <div className="lp-kicker lp-kicker--centered">
+            <span className="lp-kicker__index">03</span>
+            <span className="lp-kicker__label">How it works</span>
+            <span className="lp-kicker__rule" aria-hidden="true" />
+          </div>
+          <h2 className="lp-section__title" id="lp-workflow-title">
+            How programme operations work
+          </h2>
+          <p className="lp-section__lead">
+            Every vaccination appointment connects citizen convenience with clinical
+            readiness and accountable record-keeping.
+          </p>
+        </div>
 
           {/* Steps with drawing spine */}
           <ol className="lp-workflow__steps" data-reveal>
@@ -80,7 +76,6 @@ export default function HowItWorksSection() {
               </li>
             ))}
           </ol>
-        </div>
       </div>
     </section>
   );

@@ -51,37 +51,42 @@ const CAPABILITIES = [
   {
     num: '01',
     icon: <CampaignIcon />,
+    tag: 'Campaigns',
     title: 'Vaccination campaigns',
-    desc: 'Health teams set up programmes for specific areas and groups — from planning through to completion.',
+    desc: 'Health teams configure programmes for specific areas and priority groups with multi-dose schedule support.',
     points: ['Area & group targeting', 'Multi-dose schedules'],
   },
   {
     num: '02',
     icon: <ClinicIcon />,
+    tag: 'Facilities',
     title: 'Clinic & center management',
-    desc: 'Each center keeps staffing, opening hours, rooms, and equipment in one place.',
-    points: ['Staff rosters', 'Rooms & stations'],
+    desc: 'Centralise center profiles, operational hours, room allocations, stations, and medical staffing in one place.',
+    points: ['Staff rosters & rooms', 'Equipment & stations'],
   },
   {
     num: '03',
     icon: <SessionIcon />,
+    tag: 'Scheduling',
     title: 'Session planning & booking',
-    desc: 'One-off or repeating sessions, with every schedule change recorded and explained.',
-    points: ['One-off & recurring', 'Recorded changes'],
+    desc: 'Plan one-off or recurring clinic sessions with full audit tracking for every schedule adjustment.',
+    points: ['One-off & recurring', 'Tracked adjustments'],
   },
   {
     num: '04',
     icon: <ReadinessIcon />,
+    tag: 'Safety',
     title: 'Readiness before opening',
-    desc: 'Hours, stations, and qualified staff are all confirmed before a session opens.',
-    points: ['Readiness checks', 'Planned capacity'],
+    desc: 'Confirm operating hours, station capacity, and certified staff before any session opens for bookings.',
+    points: ['Pre-opening checklists', 'Verified capacity'],
   },
   {
     num: '05',
     icon: <AccessIcon />,
+    tag: 'Security',
     title: 'Access you can trust',
-    desc: 'Secure sign-in, with every account seeing only what its role allows.',
-    points: ['Secure sign-in', 'Role-based access'],
+    desc: 'Strict role-based boundaries ensure Citizens, Staff, and Administrators access only authorized capabilities.',
+    points: ['Role-based access', 'Tamper-evident logs'],
   },
 ];
 
@@ -93,53 +98,48 @@ export default function CapabilitiesSection() {
       aria-labelledby="lp-capabilities-title"
     >
       <div className="lp-container">
-        <div className="lp-cap-layout">
-          {/* Sticky editorial aside */}
-          <aside className="lp-cap-aside">
-            <div className="lp-cap-aside__inner" data-reveal>
-              <div className="lp-kicker">
-                <span className="lp-kicker__index">02</span>
-                <span className="lp-kicker__label">Capabilities</span>
-                <span className="lp-kicker__rule" aria-hidden="true" />
-              </div>
-              <h2 className="lp-cap-aside__title" id="lp-capabilities-title">
-                One portal for the whole{' '}
-                <span className="lp-hero__accent">journey</span>
-              </h2>
-              <p className="lp-cap-aside__text">
-                From planning a local campaign to giving a vaccine at a clinic
-                &mdash; every part of the process happens here.
-              </p>
+        <div className="lp-section__header lp-section__header--centered" data-reveal>
+          <div className="lp-kicker lp-kicker--centered">
+            <span className="lp-kicker__index">02</span>
+            <span className="lp-kicker__label">Capabilities</span>
+            <span className="lp-kicker__rule" aria-hidden="true" />
+          </div>
+          <h2 className="lp-section__title" id="lp-capabilities-title">
+            One portal for the whole <span className="lp-hero__accent">journey</span>
+          </h2>
+          <p className="lp-section__lead">
+            From planning a local campaign to administering a dose at a clinic &mdash;
+            every operational capability is coordinated in one accountable system.
+          </p>
+        </div>
 
-              <ul className="lp-cap-index" aria-label="Capability index">
-                {CAPABILITIES.map((cap) => (
-                  <li key={cap.num}>
-                    <span>{cap.title}</span>
-                    <span aria-hidden="true">{cap.num}</span>
+        <div className="lp-capabilities-grid">
+          {CAPABILITIES.map((cap, index) => (
+            <article
+              key={cap.num}
+              className="lp-capability-card"
+              data-reveal
+              style={{ '--reveal-delay': `${index * 60}ms` }}
+            >
+              <div className="lp-capability-card__header">
+                <span className="lp-capability-card__icon" aria-hidden="true">
+                  {cap.icon}
+                </span>
+                <span className="lp-capability-card__tag">{cap.tag}</span>
+                <span className="lp-capability-card__num" aria-hidden="true">{cap.num}</span>
+              </div>
+              <h3 className="lp-capability-card__title">{cap.title}</h3>
+              <p className="lp-capability-card__desc">{cap.desc}</p>
+              <ul className="lp-capability-card__points" aria-label={`Features for ${cap.title}`}>
+                {cap.points.map((point) => (
+                  <li key={point} className="lp-capability-card__point">
+                    <span className="lp-capability-card__bullet" aria-hidden="true" />
+                    <span>{point}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          </aside>
-
-          {/* Ledger rows */}
-          <div className="lp-cap-ledger">
-            {CAPABILITIES.map((cap, index) => (
-              <article
-                key={cap.num}
-                className="lp-cap-row"
-                data-reveal
-                style={{ '--reveal-delay': `${index * 80}ms` }}
-              >
-                <span className="lp-cap-row__num" aria-hidden="true">{cap.num}</span>
-                <div className="lp-cap-row__body">
-                  <h3 className="lp-cap-row__title">{cap.title}</h3>
-                  <p className="lp-cap-row__desc">{cap.desc}</p>
-                </div>
-                <span className="lp-cap-row__icon" aria-hidden="true">{cap.icon}</span>
-              </article>
-            ))}
-          </div>
+            </article>
+          ))}
         </div>
       </div>
     </section>
