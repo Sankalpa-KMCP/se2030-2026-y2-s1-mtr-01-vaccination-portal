@@ -14,6 +14,7 @@ import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
+import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
 import com.se2030.vaccinationportal.screening.validation.RoleAuthorizationInterceptor;
 import com.se2030.vaccinationportal.screening.validation.ScreeningExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +62,9 @@ class EligibilityReviewControllerTests {
     @Mock
     private ScreeningSubmissionMapper submissionMapper;
 
+    @Mock
+    private CitizenScreeningAccessService accessService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -68,7 +72,8 @@ class EligibilityReviewControllerTests {
         EligibilityReviewController controller = new EligibilityReviewController(
                 reviewService,
                 new EligibilityAssessmentMapper(),
-                submissionMapper
+                submissionMapper,
+                accessService
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ScreeningExceptionHandler())

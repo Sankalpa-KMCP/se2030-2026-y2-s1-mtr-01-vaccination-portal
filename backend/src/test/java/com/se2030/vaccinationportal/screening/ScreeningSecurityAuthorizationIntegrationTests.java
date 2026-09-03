@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.screening;
 
 import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
 import com.se2030.vaccinationportal.screening.service.ScreeningConfigurationService;
+import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ class ScreeningSecurityAuthorizationIntegrationTests {
 
     @MockitoBean
     private EligibilityReviewService reviewService;
+
+    @MockitoBean
+    private CitizenScreeningAccessService accessService;
 
     @Test
     void authenticatedAdminCanAccessAdminEndpoint() throws Exception {

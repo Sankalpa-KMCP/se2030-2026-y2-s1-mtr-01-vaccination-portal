@@ -14,7 +14,6 @@ import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmissionStatus;
 import com.se2030.vaccinationportal.screening.model.ScreeningTriggeredRuleEvidence;
 import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
-import com.se2030.vaccinationportal.screening.repository.ConsentNoticeVersionRepository;
 import com.se2030.vaccinationportal.screening.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireVersionRepository;
@@ -68,7 +67,7 @@ class ScreeningSubmissionResubmissionTests {
     private QuestionnaireItemRepository itemRepository;
 
     @Mock
-    private ConsentNoticeVersionRepository consentNoticeVersionRepository;
+    private ScreeningConsentNoticeService consentNoticeService;
 
     @Mock
     private AnswerOptionRepository answerOptionRepository;
@@ -103,7 +102,7 @@ class ScreeningSubmissionResubmissionTests {
                 answerRepository,
                 versionRepository,
                 itemRepository,
-                consentNoticeVersionRepository,
+                consentNoticeService,
                 answerValidator,
                 preliminaryScreeningService,
                 eligibilityRuleRepository,

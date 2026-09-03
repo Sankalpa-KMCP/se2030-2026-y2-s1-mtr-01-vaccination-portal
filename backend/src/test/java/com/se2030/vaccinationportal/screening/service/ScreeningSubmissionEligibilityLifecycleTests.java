@@ -17,7 +17,6 @@ import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmissionStatus;
 import com.se2030.vaccinationportal.screening.mapper.ScreeningReviewDetailsMapper;
 import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
-import com.se2030.vaccinationportal.screening.repository.ConsentNoticeVersionRepository;
 import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
 import com.se2030.vaccinationportal.screening.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
@@ -75,7 +74,7 @@ class ScreeningSubmissionEligibilityLifecycleTests {
     private QuestionnaireItemRepository itemRepository;
 
     @Mock
-    private ConsentNoticeVersionRepository consentRepository;
+    private ScreeningConsentNoticeService consentNoticeService;
 
     @Mock
     private ScreeningAnswerValidator answerValidator;
@@ -125,7 +124,7 @@ class ScreeningSubmissionEligibilityLifecycleTests {
                 answerRepository,
                 versionRepository,
                 itemRepository,
-                consentRepository,
+                consentNoticeService,
                 answerValidator,
                 preliminaryScreeningService,
                 eligibilityRuleRepository,
@@ -292,7 +291,7 @@ class ScreeningSubmissionEligibilityLifecycleTests {
         lenient().when(versionRepository.findById(VERSION_ID)).thenReturn(Optional.of(version));
         lenient().when(assignmentService.getEffectiveAssignmentAt(eq(CAMPAIGN_ID), any(LocalDate.class)))
                 .thenReturn(Optional.of(assignment));
-        lenient().when(consentRepository.findById(CONSENT_ID)).thenReturn(Optional.of(consent));
+        lenient().when(consentNoticeService.getCurrentScreeningConsentNotice()).thenReturn(consent);
         lenient().when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
                 .thenReturn(List.of());
         lenient().when(answerValidator.validateAndNormalize(eq(VERSION_ID), anyList(), any()))
