@@ -33,7 +33,7 @@ export default function HowItWorksSection() {
       <div className="lp-container">
         <div className="home-section-heading home-section-heading--workflow" data-reveal>
           <div>
-            <span className="home-section-mark">03 / A coordinated journey</span>
+            <span className="home-section-mark">Service delivery</span>
             <h2 id="lp-workflow-title">Citizen steps and staff operations move together.</h2>
           </div>
           <p>

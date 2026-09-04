@@ -32,20 +32,12 @@ export default function TrustSection() {
     >
       <div className="lp-container home-assurance__layout">
         <div className="home-assurance__intro" data-reveal>
-          <span className="home-section-mark">04 / Operational assurance</span>
+          <span className="home-section-mark">Operational integrity</span>
           <h2 id="lp-trust-title">Trust is built into the work, not added as a claim.</h2>
           <p>
             The portal makes responsibility visible at the points where access,
             capacity, eligibility, and records are decided.
           </p>
-          <span className="home-assurance__stamp" aria-hidden="true">
-            <svg width="74" height="74" viewBox="0 0 74 74" fill="none">
-              <circle cx="37" cy="37" r="35" stroke="currentColor" />
-              <path d="M37 17l15 6v11c0 10-6 18-15 22-9-4-15-12-15-22V23l15-6Z" stroke="currentColor" />
-              <path d="M29 37l5 5 11-12" stroke="currentColor" strokeWidth="2" />
-            </svg>
-            <span>Control<br />Evidence<br />History</span>
-          </span>
         </div>
 
         <ol className="home-assurance__register" data-reveal>

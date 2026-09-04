@@ -11,7 +11,7 @@ export default function PortalAccessSection() {
       <div className="lp-container">
         <div className="home-section-heading home-section-heading--split" data-reveal>
           <div>
-            <span className="home-section-mark">01 / Access</span>
+            <span className="home-section-mark">Portal access</span>
             <h2 id="portal-access-title">One service. Two ways in.</h2>
           </div>
           <p>
@@ -21,8 +21,7 @@ export default function PortalAccessSection() {
         </div>
 
         <div className="home-access__ledger" data-reveal>
-          <article className="home-access__citizen" data-tilt data-tilt-strength="2.5">
-            <div className="home-access__number" aria-hidden="true">C</div>
+          <article className="home-access__citizen">
             <div className="home-access__body">
               <span className="home-access__role">Citizen access</span>
               <h3>Plan and keep track of your vaccination care.</h3>
@@ -39,8 +38,7 @@ export default function PortalAccessSection() {
             </div>
           </article>
 
-          <article className="home-access__staff" data-tilt data-tilt-strength="2.5">
-            <div className="home-access__number" aria-hidden="true">S</div>
+          <article className="home-access__staff">
             <div className="home-access__body">
               <span className="home-access__role">Staff operations</span>
               <h3>Coordinate campaigns, clinics, and sessions.</h3>

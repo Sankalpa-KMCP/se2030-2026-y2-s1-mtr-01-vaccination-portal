@@ -47,7 +47,7 @@ export default function CapabilitiesSection() {
     >
       <div className="lp-container home-capabilities__layout">
         <div className="home-capabilities__intro" data-reveal>
-          <span className="home-section-mark">02 / What the system coordinates</span>
+          <span className="home-section-mark">System coordination</span>
           <h2 id="lp-capabilities-title">
             The work behind every appointment.
           </h2>
@@ -55,21 +55,17 @@ export default function CapabilitiesSection() {
             A booking is only one point in a larger public-health operation.
             The portal keeps the programme, place, time, attendance, and record connected.
           </p>
-          <div className="home-capabilities__key" aria-hidden="true">
-            <span>INPUT</span><i /><span>CARE EVENT</span><i /><span>RECORD</span>
-          </div>
         </div>
 
         <ol className="home-capabilities__index" data-reveal>
           {CAPABILITIES.map((cap) => (
-            <li key={cap.num} className="home-capability" data-tilt data-tilt-strength="1.5">
+            <li key={cap.num} className="home-capability">
               <span className="home-capability__number" aria-hidden="true">{cap.num}</span>
               <span className="home-capability__domain">{cap.domain}</span>
               <div>
                 <h3>{cap.title}</h3>
                 <p>{cap.desc}</p>
               </div>
-              <span className="home-capability__signal">{cap.signal}</span>
             </li>
           ))}
         </ol>

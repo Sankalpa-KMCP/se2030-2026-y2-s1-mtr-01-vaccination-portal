@@ -5,9 +5,8 @@ export default function FinalCtaSection({ onLoginClick }) {
   return (
     <section className="home-closing" id="get-started" aria-labelledby="lp-cta-title">
       <div className="lp-container home-closing__layout" data-reveal>
-        <div className="home-closing__index" aria-hidden="true">05</div>
         <div className="home-closing__copy">
-          <span className="home-section-mark">Begin</span>
+          <span className="home-section-mark">Get started</span>
           <h2 id="lp-cta-title">Start with your Citizen account.</h2>
           <p>Register once, then complete screening separately for each campaign you join.</p>
         </div>

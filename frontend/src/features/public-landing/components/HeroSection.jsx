@@ -13,7 +13,7 @@ export default function HeroSection() {
             <span>Citizen services</span>
           </p>
           <h1 id="home-hero-title">
-            A clear path from campaign to <em>vaccination record.</em>
+            A clear path from campaign to vaccination record.
           </h1>
           <p className="home-hero__lead">
             Find eligible programmes, reserve a clinic appointment, and keep your
@@ -34,23 +34,18 @@ export default function HeroSection() {
           </p>
         </div>
 
-        <div className="home-hero__visual" aria-hidden="true" data-tilt data-tilt-strength="5">
-          <div className="home-hero__visual-shadow" />
-          <div className="home-hero__visual-layer home-hero__visual-layer--back" />
-          <div className="home-hero__visual-layer home-hero__visual-layer--mid" />
+        <div className="home-hero__visual" aria-hidden="true">
           <div className="home-hero__visual-head">
             <span>Service pathway</span>
-            <span className="home-hero__live"><i /> Citizen &harr; clinic</span>
+            <span className="home-hero__live">Citizen &harr; clinic coordination</span>
           </div>
           <div className="home-hero__visual-screen">
             <HeroArtwork />
-            <span className="home-hero__screen-code">CP / 05</span>
           </div>
           <div className="home-hero__visual-foot">
             <span><i className="home-legend-dot" /> Citizen action</span>
             <span><i className="home-legend-line" /> Staff operation</span>
           </div>
-          <div className="home-hero__visual-edge">CONNECTED CARE REGISTER</div>
         </div>
 
         <aside className="home-hero__rail" aria-label="Portal overview">
