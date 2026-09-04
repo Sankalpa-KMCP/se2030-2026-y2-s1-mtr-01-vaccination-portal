@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AboutPage from './AboutPage';
 
@@ -34,7 +34,7 @@ describe('AboutPage', () => {
       screen.getByRole('heading', { level: 2, name: /three commitments we hold/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /trusted by design. ready when you are/i }),
+      screen.getByRole('heading', { level: 2, name: /see the service from start to record/i }),
     ).toBeTruthy();
     expect(container.querySelector('.premium-visual--registry')).toBeTruthy();
     expect(container.querySelectorAll('.premium-registry-card')).toHaveLength(6);
@@ -75,12 +75,11 @@ describe('AboutPage', () => {
     expect(screen.getByText('Clinics open prepared.')).toBeTruthy();
   });
 
-  it('fires onLoginClick from the closing call-to-action', () => {
-    const onLoginClick = vi.fn();
-    renderPage(onLoginClick);
+  it('continues to the care journey without repeating the login action', () => {
+    renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /sign in to the portal/i }));
-    expect(onLoginClick).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('link', { name: /explore how it works/i }).getAttribute('href')).toBe('/how-it-works');
+    expect(screen.queryByRole('button', { name: /sign in to the portal/i })).toBeNull();
   });
 
   it('provides a skip link targeting main content', () => {
@@ -88,6 +87,5 @@ describe('AboutPage', () => {
 
     expect(screen.getByRole('link', { name: /skip to main content/i }).getAttribute('href')).toBe('#lp-main');
     expect(screen.getByRole('main').getAttribute('id')).toBe('lp-main');
-    expect(screen.getByRole('link', { name: /return to the home page/i }).getAttribute('href')).toBe('/');
   });
 });

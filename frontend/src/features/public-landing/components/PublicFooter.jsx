@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function PublicFooter({ onLoginClick }) {
+export default function PublicFooter() {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -20,13 +20,6 @@ export default function PublicFooter({ onLoginClick }) {
             <Link to="/" className="lp-footer__link">Home</Link>
             <Link to="/how-it-works" className="lp-footer__link">How it works</Link>
             <Link to="/about" className="lp-footer__link">About</Link>
-            <button
-              type="button"
-              className="lp-footer__btn"
-              onClick={onLoginClick}
-            >
-              Login
-            </button>
           </nav>
         </div>
 

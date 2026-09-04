@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function FinalCtaSection({ onLoginClick }) {
+export default function FinalCtaSection() {
   return (
     <section className="home-closing" id="get-started" aria-labelledby="lp-cta-title">
       <div className="lp-container home-closing__layout" data-reveal="cta">
@@ -14,13 +14,6 @@ export default function FinalCtaSection({ onLoginClick }) {
           <Link to="/register/citizen" className="home-action home-action--secondary">
             Open citizen registration <span aria-hidden="true">&rarr;</span>
           </Link>
-          <button
-            type="button"
-            className="home-text-button"
-            onClick={onLoginClick}
-          >
-            Sign in to the portal
-          </button>
           <Link className="home-closing__staff" to="/register/staff">Health staff access</Link>
         </div>
       </div>

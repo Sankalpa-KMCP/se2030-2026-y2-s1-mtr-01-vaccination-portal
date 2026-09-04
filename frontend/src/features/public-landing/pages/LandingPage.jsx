@@ -73,9 +73,9 @@ export default function LandingPage({ onLoginClick }) {
         <HowItWorksSection />
         <TrustSection />
         <ContinueBand />
-        <FinalCtaSection onLoginClick={onLoginClick} />
+        <FinalCtaSection />
       </main>
-      <PublicFooter onLoginClick={onLoginClick} />
+      <PublicFooter />
     </div>
   );
 }

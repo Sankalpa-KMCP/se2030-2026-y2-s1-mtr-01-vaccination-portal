@@ -357,29 +357,26 @@ export default function AboutPage({ onLoginClick }) {
           <div className="lp-container lp-cta-inner">
             <div className="lp-cta-panel__content">
               <div className="lp-cta-kicker">
-                <span className="lp-cta-kicker__label">Portal access</span>
+                <span className="lp-cta-kicker__label">Next: care journey</span>
                 <span className="lp-cta-kicker__rule" aria-hidden="true" />
               </div>
               <h2 className="lp-cta-panel__title" id="lp-cta-title">
-                Trusted by design. Ready when you are.
+                See the service from start to record.
               </h2>
               <p className="lp-cta-panel__text">
-                Sign in to the portal, or see how the system works from
+                Follow the connected steps for citizens and health teams, from
                 registration to a recorded vaccination.
               </p>
             </div>
             <div className="lp-cta-panel__actions">
-              <button type="button" className="lp-btn lp-btn--inverted" onClick={onLoginClick}>
-                Sign in to the portal
-              </button>
-              <Link to="/" className="lp-cta-panel__link">
-                Return to the home page
+              <Link to="/how-it-works" className="lp-cta-panel__link">
+                Explore how it works
               </Link>
             </div>
           </div>
         </section>
       </main>
-      <PublicFooter onLoginClick={onLoginClick} />
+      <PublicFooter />
     </div>
   );
 }

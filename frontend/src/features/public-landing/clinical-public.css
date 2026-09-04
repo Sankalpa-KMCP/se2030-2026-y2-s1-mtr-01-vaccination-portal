@@ -1700,6 +1700,460 @@
   }
 }
 
+/* ========================================================================
+   ROUNDED PUBLIC SERVICE REFINEMENT
+   Shared by Home, How it works, and About. Keeps the clinical character
+   while replacing rigid boxes with a softer, more legible depth system.
+   ======================================================================== */
+
+.lp-page {
+  --clinical-radius: 20px;
+  --clinical-radius-large: 28px;
+  --clinical-shadow: 0 18px 48px rgba(21, 62, 88, 0.09);
+  --clinical-shadow-hover: 0 24px 58px rgba(21, 62, 88, 0.13);
+}
+
+.lp-page .lp-header {
+  min-height: 88px;
+  padding-block: 11px;
+  border-bottom: 0;
+  background: rgba(241, 247, 251, 0.82);
+  box-shadow: none;
+  backdrop-filter: blur(18px) saturate(1.15);
+}
+
+.lp-page .lp-header__inner,
+.lp-page--home .lp-header__inner {
+  width: min(calc(100% - 32px), 1280px);
+  height: 66px;
+  padding: 7px 9px 7px 14px;
+  border: 1px solid rgba(191, 208, 220, 0.82);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 40px rgba(21, 62, 88, 0.09), inset 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.lp-page .lp-header__brand-group {
+  gap: 0.7rem;
+}
+
+.lp-page .lp-header__glyph,
+.lp-page--home .lp-header__glyph {
+  width: 42px;
+  height: 42px;
+  border-color: #cbdde8;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ffffff, #e6f2f8);
+  box-shadow: 0 6px 16px rgba(21, 78, 111, 0.09);
+}
+
+.lp-page .lp-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid #dce8ef;
+  border-radius: 999px;
+  background: #f3f8fb;
+}
+
+.lp-page .lp-header__link {
+  min-height: 42px;
+  padding-inline: 0.95rem;
+  border-radius: 999px;
+  transition: color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.lp-page .lp-header__link::after {
+  display: none;
+}
+
+.lp-page .lp-header__link:hover,
+.lp-page .lp-header__link.lp-is-active {
+  color: var(--clinical-blue-700);
+  background: #ffffff;
+  box-shadow: 0 5px 14px rgba(21, 62, 88, 0.08);
+}
+
+.lp-page .lp-btn--header {
+  min-height: 42px;
+  margin-left: 4px;
+  padding-inline: 1.2rem;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(18, 105, 165, 0.2);
+}
+
+.lp-page .lp-btn--header:hover {
+  box-shadow: 0 11px 24px rgba(11, 79, 125, 0.24);
+  transform: translateY(-1px);
+}
+
+.lp-page :where(.lp-btn, .home-action) {
+  border-radius: 999px;
+}
+
+/* Home: organic care trail and softer supporting surfaces. */
+.lp-page--home .home-hero__visual {
+  overflow: hidden;
+  border-color: #cbdde8;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #ffffff 0%, #f6fafc 58%, #eef6fa 100%);
+  box-shadow: 0 26px 62px rgba(21, 62, 88, 0.12);
+}
+
+.lp-page--home .home-hero__visual-head,
+.lp-page--home .home-hero__visual-foot {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.lp-page--home .home-hero__visual-head {
+  padding: 0.9rem 1.35rem;
+}
+
+.lp-page--home .home-hero__visual-screen {
+  padding: clamp(0.75rem, 2vw, 1.4rem);
+  background:
+    radial-gradient(circle at 70% 24%, rgba(189, 220, 237, 0.34), transparent 34%),
+    radial-gradient(circle at 18% 80%, rgba(218, 241, 239, 0.55), transparent 30%),
+    rgba(248, 252, 254, 0.78);
+}
+
+.lp-page--home .home-hero__visual-screen::before {
+  opacity: 0.62;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), transparent 95%);
+}
+
+.lp-page--home .home-pathway {
+  filter: drop-shadow(0 14px 24px rgba(21, 62, 88, 0.05));
+}
+
+.lp-page--home .home-pathway__atmosphere circle:first-child {
+  fill: rgba(214, 239, 239, 0.48);
+}
+
+.lp-page--home .home-pathway__atmosphere circle:nth-child(2) {
+  fill: rgba(225, 238, 248, 0.72);
+}
+
+.lp-page--home .home-pathway__atmosphere path {
+  fill: none;
+  stroke: rgba(24, 123, 184, 0.08);
+  stroke-width: 36;
+  stroke-linecap: round;
+}
+
+.lp-page--home .home-pathway__labels {
+  fill: #597281;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.lp-page--home .home-pathway__route-shadow {
+  fill: none;
+  stroke: rgba(18, 105, 165, 0.12);
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+
+.lp-page--home .home-pathway__route {
+  fill: none;
+  stroke: url(#home-trail-gradient);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.lp-page--home .home-pathway__staff-pill {
+  filter: url(#home-soft-shadow);
+}
+
+.lp-page--home .home-pathway__staff-pill rect {
+  fill: rgba(255, 255, 255, 0.94);
+  stroke: #c7dbe7;
+}
+
+.lp-page--home .home-pathway__staff-pill circle {
+  fill: #e8f4fa;
+  stroke: #187bb8;
+}
+
+.lp-page--home .home-pathway__staff-pill path {
+  fill: none;
+  stroke: #1269a5;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-page--home .home-pathway__staff-pill text {
+  fill: #183243;
+  font-family: var(--lp-font-body);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.lp-page--home .home-pathway__staff-pill .home-pathway__pill-note {
+  fill: #6d818d;
+  font-size: 8px;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+
+.lp-page--home .home-pathway__staff-connector {
+  fill: none;
+  stroke: #91b9ce;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 4 5;
+}
+
+.lp-page--home .home-pathway__journey-node {
+  color: #127d8d;
+  filter: url(#home-soft-shadow);
+}
+
+.lp-page--home .home-pathway__node-halo {
+  fill: rgba(255, 255, 255, 0.68);
+  stroke: rgba(18, 105, 165, 0.12);
+  stroke-width: 8;
+}
+
+.lp-page--home .home-pathway__node-face {
+  fill: url(#home-node-glow);
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.lp-page--home .home-pathway__journey-node--active {
+  color: #5d6fb8;
+}
+
+.lp-page--home .home-pathway__journey-node > path,
+.lp-page--home .home-pathway__journey-node > rect,
+.lp-page--home .home-pathway__journey-node > circle:not(.home-pathway__node-halo, .home-pathway__node-face) {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-page--home .home-pathway__journey-node > circle:not(.home-pathway__node-halo, .home-pathway__node-face) {
+  fill: #f8fcfe;
+}
+
+.lp-page--home .home-pathway__node-number,
+.lp-page--home .home-pathway__node-label {
+  fill: #486574;
+  font-family: var(--lp-font-body);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
+.lp-page--home .home-pathway__node-label {
+  fill: #126f7d;
+}
+
+.lp-page--home .home-hero__rail {
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: 0 16px 42px rgba(21, 62, 88, 0.07);
+}
+
+.lp-page--home .home-hero__rail > div {
+  min-height: 64px;
+  padding: 0.75rem 0.9rem;
+  border-radius: 15px;
+  background: rgba(242, 248, 252, 0.78);
+}
+
+.lp-page--home .home-hero__staff-link {
+  min-height: 48px;
+  justify-content: space-between;
+  padding-inline: 1.15rem;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #123c5e;
+  box-shadow: 0 9px 22px rgba(15, 57, 88, 0.2);
+}
+
+.lp-page--home .home-hero__staff-link:hover {
+  color: #ffffff;
+  background: #0b4f7d;
+}
+
+.lp-page--home .home-access__ledger {
+  gap: 1rem;
+  border: 0;
+  background: transparent;
+}
+
+.lp-page--home .home-access__ledger article {
+  overflow: hidden;
+  border: 1px solid #d2e1e9;
+  border-radius: 28px;
+  box-shadow: 0 18px 48px rgba(21, 62, 88, 0.08);
+}
+
+.lp-page--home .home-capabilities__index,
+.lp-page--home .home-assurance__register {
+  gap: 0.85rem;
+}
+
+.lp-page--home .home-capability,
+.lp-page--home .home-assurance__register li {
+  padding: 1.35rem 1.4rem;
+  border: 1px solid #d8e5ec;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 32px rgba(21, 62, 88, 0.055);
+}
+
+.lp-page--home .home-workflow__table {
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: 0 20px 52px rgba(21, 62, 88, 0.1);
+}
+
+.lp-page--home .home-index__link,
+.lp-page .lp-guide__link {
+  border-radius: 20px;
+}
+
+.lp-page--home .home-closing__layout,
+.lp-page .lp-cta-inner {
+  border-radius: 28px;
+}
+
+/* Interior pages use the same softened surface language. */
+.lp-page :where(
+  .premium-visual__face,
+  .lp-journey__tabs,
+  .lp-journey__panel,
+  .lp-role,
+  .lp-opledger-row,
+  .lp-commitment,
+  .lp-statement,
+  .lp-faq__item
+) {
+  border-radius: 20px;
+}
+
+.lp-page :where(.lp-role, .lp-commitment, .lp-statement, .lp-faq__item) {
+  box-shadow: 0 14px 38px rgba(21, 62, 88, 0.065);
+}
+
+@media (max-width: 980px) {
+  .lp-page .lp-header__badge {
+    display: none;
+  }
+
+  .lp-page .lp-header__link {
+    padding-inline: 0.75rem;
+  }
+}
+
+@media (max-width: 660px) {
+  .lp-page .lp-header {
+    min-height: 78px;
+    padding-block: 7px;
+  }
+
+  .lp-page .lp-header__inner,
+  .lp-page--home .lp-header__inner {
+    width: min(calc(100% - 20px), 1280px);
+    height: 64px;
+    padding-inline: 9px;
+    border-radius: 18px;
+  }
+
+  .lp-page .lp-header__glyph,
+  .lp-page--home .lp-header__glyph {
+    width: 38px;
+    height: 38px;
+  }
+
+  .lp-page .lp-header__brand {
+    font-size: 0.9rem;
+  }
+
+  .lp-page .lp-header__nav {
+    gap: 0;
+    padding: 3px;
+  }
+
+  .lp-page .lp-header__link,
+  .lp-page .lp-btn--header {
+    min-height: 40px;
+    padding-inline: 0.62rem;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .lp-page .lp-header {
+    min-height: 126px;
+  }
+
+  .lp-page .lp-header__inner,
+  .lp-page--home .lp-header__inner {
+    height: auto;
+    min-height: 112px;
+    flex-wrap: wrap;
+    padding: 9px;
+  }
+
+  .lp-page .lp-header__brand-group {
+    width: 100%;
+    padding-inline: 4px;
+  }
+
+  .lp-page .lp-header__nav {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .lp-page .lp-header__link,
+  .lp-page .lp-btn--header {
+    padding-inline: 0.25rem;
+    font-size: 0.66rem;
+    white-space: nowrap;
+  }
+
+  .lp-page .lp-btn--header {
+    margin-left: 0;
+  }
+
+  .lp-page--home .home-hero__visual {
+    border-radius: 22px;
+  }
+
+  .lp-page--home .home-hero__visual-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .lp-page--home .home-hero__visual-screen {
+    padding: 0.35rem;
+  }
+
+  .lp-page--home .home-pathway__labels {
+    display: none;
+  }
+
+  .lp-page--home .home-hero__rail,
+  .lp-page--home .home-access__ledger article,
+  .lp-page--home .home-closing__layout,
+  .lp-page .lp-cta-inner {
+    border-radius: 22px;
+  }
+}
+
 /* Public service guide -------------------------------------------------- */
 
 .lp-guide {

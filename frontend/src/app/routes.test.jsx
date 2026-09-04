@@ -320,9 +320,9 @@ describe('shared routing and role guards', () => {
     );
 
     expect(screen.getByRole('link', { name: /create citizen account/i })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /citizen login/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /sign in as a citizen/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: /request staff account/i })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /staff login/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /enter staff portal/i })).toBeTruthy();
   });
 
   it('keeps the generic, citizen, and staff login routes registered', () => {

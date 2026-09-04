@@ -33,7 +33,6 @@ export default function PortalAccessSection() {
                 <Link className="home-action home-action--secondary" to="/register/citizen">
                   Register as a Citizen <span aria-hidden="true">&rarr;</span>
                 </Link>
-                <Link className="home-text-link" to="/login/citizen">Citizen login</Link>
               </div>
             </div>
           </article>
@@ -48,9 +47,6 @@ export default function PortalAccessSection() {
               </p>
               <div className="home-access__actions">
                 <Link className="home-action home-action--outline" to="/register/staff">Request staff account</Link>
-                <Link className="home-text-link home-text-link--light" to="/login/staff">
-                  Staff login <span aria-hidden="true">&rarr;</span>
-                </Link>
               </div>
             </div>
           </article>
