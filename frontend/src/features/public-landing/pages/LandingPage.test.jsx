@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LandingPage from './LandingPage';
 
@@ -19,22 +19,22 @@ describe('LandingPage', () => {
     renderLanding();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /vaccination care, coordinated for your community/i }),
+      screen.getByRole('heading', { level: 1, name: /a clear path from campaign to vaccination record/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /choose your portal/i }),
+      screen.getByRole('heading', { level: 2, name: /one service. two ways in/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /one portal for the whole journey/i }),
+      screen.getByRole('heading', { level: 2, name: /the work behind every appointment/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /how programme operations work/i }),
+      screen.getByRole('heading', { level: 2, name: /citizen steps and staff operations move together/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /built for operational trust/i }),
+      screen.getByRole('heading', { level: 2, name: /trust is built into the work/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /ready to get started/i }),
+      screen.getByRole('heading', { level: 2, name: /start with your citizen account/i }),
     ).toBeTruthy();
   });
 
@@ -62,5 +62,23 @@ describe('LandingPage', () => {
 
     expect(screen.getByRole('link', { name: /skip to main content/i }).getAttribute('href')).toBe('#lp-main');
     expect(screen.getByRole('main').getAttribute('id')).toBe('lp-main');
+  });
+
+  it('provides five accessible care-path destinations', () => {
+    renderLanding();
+
+    const rail = screen.getByRole('navigation', { name: /care path progress/i });
+    const expectedDestinations = [
+      ['01 Access', '#portal-access'],
+      ['02 System', '#capabilities'],
+      ['03 Journey', '#how-it-works'],
+      ['04 Assurance', '#accountability'],
+      ['05 Begin', '#get-started'],
+    ];
+
+    expectedDestinations.forEach(([name, href]) => {
+      expect(within(rail).getByRole('link', { name }).getAttribute('href')).toBe(href);
+    });
+    expect(document.getElementById('get-started')).toBeTruthy();
   });
 });

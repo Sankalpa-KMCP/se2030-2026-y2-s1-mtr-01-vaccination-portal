@@ -1,159 +1,81 @@
 import React from 'react';
 
 /**
- * Hero line artwork: a connected care network drawn as fine line-art —
- * a central verified shield, orbiting citizen / clinic / record nodes,
- * linked by routes that draw in on load. Decorative only (aria-hidden).
+ * Hero line artwork: a two-track service schematic connecting staff
+ * operations with the citizen journey from account to vaccination record.
+ * Decorative only (aria-hidden).
  */
 export default function HeroArtwork() {
-  const primaryColor = 'var(--lp-primary, #0e7490)';
-  const primarySoft = 'var(--lp-primary-soft, #ebf7fa)';
-  const ruleColor = 'var(--lp-rule-strong, #cbd5e1)';
-
   return (
     <svg
-      className="lp-hero__artwork"
-      viewBox="0 0 460 400"
+      className="home-pathway"
+      viewBox="0 0 680 390"
       fill="none"
       role="presentation"
       focusable="false"
     >
-      {/* — Connecting routes (draw in, staggered) — */}
-      <g stroke={primaryColor} strokeWidth="1.5" strokeLinecap="round" opacity="0.6">
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 0 }}
-          pathLength="1"
-          d="M230 118 L156 84"
-        />
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 1 }}
-          pathLength="1"
-          d="M230 118 L304 84"
-        />
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 2 }}
-          pathLength="1"
-          d="M230 118 L118 190"
-        />
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 3 }}
-          pathLength="1"
-          d="M230 118 L342 190"
-        />
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 4 }}
-          pathLength="1"
-          d="M230 118 L230 286"
-        />
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 5 }}
-          pathLength="1"
-          d="M118 190 L156 286"
-        />
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 6 }}
-          pathLength="1"
-          d="M342 190 L304 286"
-        />
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 7 }}
-          pathLength="1"
-          d="M156 84 C 100 96, 84 140, 118 190"
-        />
-        <path
-          className="lp-art-stroke"
-          style={{ '--lp-art-i': 8 }}
-          pathLength="1"
-          d="M304 84 C 360 96, 376 140, 342 190"
-        />
+      <g className="home-pathway__grid" stroke="currentColor" strokeWidth="1">
+        <path d="M24 70H656M24 150H656M24 230H656M24 310H656" />
+        <path d="M100 34V352M226 34V352M352 34V352M478 34V352M604 34V352" />
       </g>
-
-      {/* — Fine construction arcs framing the composition — */}
-      <g stroke={ruleColor} strokeWidth="1" opacity="0.75">
-        <path className="lp-art-stroke" style={{ '--lp-art-i': 9 }} pathLength="1" d="M70 200 A 160 160 0 0 1 230 40" />
-        <path className="lp-art-stroke" style={{ '--lp-art-i': 10 }} pathLength="1" d="M390 200 A 160 160 0 0 0 230 40" />
-        <path className="lp-art-stroke" style={{ '--lp-art-i': 11 }} pathLength="1" d="M110 300 A 138 138 0 0 1 94 120" />
-        <path className="lp-art-stroke" style={{ '--lp-art-i': 12 }} pathLength="1" d="M350 300 A 138 138 0 0 0 366 120" />
+      <g className="home-pathway__labels">
+        <text x="24" y="48">STAFF OPERATIONS</text>
+        <text x="24" y="336">CITIZEN JOURNEY</text>
       </g>
-
-      {/* — Central verified shield with heartbeat check — */}
-      <g className="lp-art-node" style={{ '--lp-art-i': 0 }}>
-        <circle cx="230" cy="118" r="52" fill="#ffffff" stroke={primaryColor} strokeWidth="1.5" />
-        <circle cx="230" cy="118" r="45" fill={primarySoft} opacity="0.65" />
-        <path
-          d="M230 92 L210 99.5 V113 C210 125.5 218.4 136.6 230 140 C241.6 136.6 250 125.5 250 113 V99.5 L230 92 Z"
-          fill={primaryColor}
-        />
-        <g className="lp-art-heartbeat">
-          <path
-            d="M220 116 h6 l3.4 -8 4.6 14 3.6 -10 h5.4"
-            stroke="#ffffff"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </g>
+      <g className="home-pathway__route" stroke="currentColor" strokeWidth="2" pathLength="1">
+        <path pathLength="1" d="M75 270H604" />
+        <path pathLength="1" d="M100 115H478" />
+        <path pathLength="1" d="M100 115V270M226 115V270M352 115V270M478 115V270" />
       </g>
-
-      {/* — Orbit nodes — */}
-      <g className="lp-art-node" style={{ '--lp-art-i': 1 }}>
-        <circle cx="156" cy="84" r="26" fill="#ffffff" stroke={primaryColor} strokeWidth="1.5" />
-        {/* Citizen */}
-        <circle cx="156" cy="77" r="5.4" stroke={primaryColor} strokeWidth="1.7" />
-        <path d="M146.5 96.5 c1.8 -6.4 6.8 -9.5 9.5 -9.5 s7.7 3.1 9.5 9.5" stroke={primaryColor} strokeWidth="1.7" strokeLinecap="round" />
+      <g className="home-pathway__staff-node home-pathway__node--1">
+        <rect x="60" y="86" width="80" height="58" />
+        <path d="M76 101h22M76 108h36" />
+        <text x="76" y="129">CAMPAIGN</text>
       </g>
-
-      <g className="lp-art-node" style={{ '--lp-art-i': 2 }}>
-        <circle cx="304" cy="84" r="26" fill="#ffffff" stroke={primaryColor} strokeWidth="1.5" />
-        {/* Clinic / cross */}
-        <path d="M304 73 v6.5 M300.75 76.25 h6.5" stroke={primaryColor} strokeWidth="2.6" strokeLinecap="round" />
-        <rect x="296" y="73" width="16" height="16" rx="2.5" stroke={primaryColor} strokeWidth="1.7" />
+      <g className="home-pathway__staff-node home-pathway__node--2">
+        <rect x="186" y="86" width="80" height="58" />
+        <path d="M208 104h36M226 95v18" />
+        <text x="203" y="129">CENTER</text>
       </g>
-
-      <g className="lp-art-node" style={{ '--lp-art-i': 3 }}>
-        <circle cx="118" cy="190" r="26" fill="#ffffff" stroke={primaryColor} strokeWidth="1.5" />
-        {/* Calendar / appointment */}
-        <rect x="107" y="182" width="22" height="18" rx="2.5" stroke={primaryColor} strokeWidth="1.7" />
-        <path d="M107 188 h22 M112.5 179 v4 M123.5 179 v4" stroke={primaryColor} strokeWidth="1.7" strokeLinecap="round" />
-        <circle cx="112.5" cy="193.5" r="1.4" fill={primaryColor} />
-        <circle cx="118" cy="193.5" r="1.4" fill={primaryColor} />
-        <circle cx="123.5" cy="193.5" r="1.4" fill={primaryColor} />
+      <g className="home-pathway__staff-node home-pathway__node--3">
+        <rect x="312" y="86" width="80" height="58" />
+        <path d="M328 103h48M328 112h32" />
+        <text x="329" y="129">SESSION</text>
       </g>
-
-      <g className="lp-art-node" style={{ '--lp-art-i': 4 }}>
-        <circle cx="342" cy="190" r="26" fill="#ffffff" stroke={primaryColor} strokeWidth="1.5" />
-        {/* Record / document */}
-        <path
-          d="M333 180 h12.5 l4.5 4.5 V200 a2 2 0 0 1 -2 2 H333 a2 2 0 0 1 -2 -2 V182 a2 2 0 0 1 2 -2 Z"
-          stroke={primaryColor}
-          strokeWidth="1.7"
-          strokeLinejoin="round"
-        />
-        <path d="M336 190 h9 M336 194.5 h9" stroke={primaryColor} strokeWidth="1.6" strokeLinecap="round" />
+      <g className="home-pathway__staff-node home-pathway__node--4">
+        <rect x="438" y="86" width="80" height="58" />
+        <path d="M462 101h32M454 110h48" />
+        <text x="454" y="129">READINESS</text>
       </g>
-
-      <g className="lp-art-node" style={{ '--lp-art-i': 5 }}>
-        <circle cx="230" cy="286" r="26" fill="#ffffff" stroke={primaryColor} strokeWidth="1.5" />
-        {/* Vial */}
-        <path d="M225.5 275 h9 M227 275 v4 h6 v-4" stroke={primaryColor} strokeWidth="1.7" strokeLinecap="round" />
-        <path d="M226 279 h8 v11 a4 4 0 0 1 -8 0 Z" stroke={primaryColor} strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="M226.5 286 h7" stroke={primaryColor} strokeWidth="1.4" />
+      <g className="home-pathway__citizen-node home-pathway__node--5">
+        <circle cx="75" cy="270" r="22" />
+        <circle cx="75" cy="263" r="5" />
+        <path d="M64 281c2-7 7-10 11-10s9 3 11 10" />
+        <text x="54" y="309">ACCOUNT</text>
       </g>
-
-      {/* — Grounding baseline ticks — */}
-      <g className="lp-art-node" style={{ '--lp-art-i': 6 }}>
-        <path d="M150 330 h160" stroke={ruleColor} strokeWidth="1.5" strokeLinecap="round" />
-        <path d="M170 338 h120" stroke={ruleColor} strokeWidth="1" strokeLinecap="round" />
+      <g className="home-pathway__citizen-node home-pathway__node--6">
+        <circle cx="226" cy="270" r="22" />
+        <path d="M216 270l7 7 14-16" />
+        <text x="194" y="309">ELIGIBILITY</text>
       </g>
+      <g className="home-pathway__citizen-node home-pathway__node--7">
+        <circle cx="352" cy="270" r="22" />
+        <rect x="342" y="262" width="20" height="17" />
+        <path d="M342 268h20M347 258v7M357 258v7" />
+        <text x="316" y="309">APPOINTMENT</text>
+      </g>
+      <g className="home-pathway__dose-node home-pathway__node--8">
+        <circle cx="478" cy="270" r="25" />
+        <path d="M474 258h8M475 258v5h6v-5M474 263h8v13a4 4 0 0 1-8 0zM474 270h8" />
+        <text x="464" y="309">DOSE</text>
+      </g>
+      <g className="home-pathway__citizen-node home-pathway__node--9">
+        <circle cx="604" cy="270" r="22" />
+        <path d="M596 258h13l5 5v18h-18zM600 269h10M600 274h10" />
+        <text x="584" y="309">RECORD</text>
+      </g>
+      <path className="home-pathway__completion" pathLength="1" d="M604 248V188H540" />
+      <text className="home-pathway__annotation" x="538" y="177">CARE RECORDED</text>
     </svg>
   );
 }

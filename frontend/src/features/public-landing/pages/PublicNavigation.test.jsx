@@ -1,9 +1,10 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
 import PublicFooter from '../components/PublicFooter';
+import PublicServiceGuide from '../components/PublicServiceGuide';
 
 function renderHeader(onLoginClick = vi.fn()) {
   return render(
@@ -70,5 +71,20 @@ describe('Public site navigation', () => {
   it('exposes the service banner', () => {
     renderHeader();
     expect(screen.getByText(/an official public health service/i)).toBeTruthy();
+  });
+
+  it('connects all public pages through a shared service guide', () => {
+    render(
+      <MemoryRouter initialEntries={['/how-it-works']}>
+        <PublicServiceGuide />
+      </MemoryRouter>,
+    );
+
+    const guide = screen.getByRole('navigation', { name: /public service guide/i });
+    expect(within(guide).getByRole('link', { name: /start with the service/i }).getAttribute('href')).toBe('/');
+    const processLink = within(guide).getByRole('link', { name: /follow the care journey/i });
+    expect(processLink.getAttribute('href')).toBe('/how-it-works');
+    expect(processLink.getAttribute('aria-current')).toBe('page');
+    expect(within(guide).getByRole('link', { name: /review roles and safeguards/i }).getAttribute('href')).toBe('/about');
   });
 });
