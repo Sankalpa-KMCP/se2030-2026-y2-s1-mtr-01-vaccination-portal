@@ -46,7 +46,7 @@ export default function CapabilitiesSection() {
       aria-labelledby="lp-capabilities-title"
     >
       <div className="lp-container home-capabilities__layout">
-        <div className="home-capabilities__intro" data-reveal>
+        <div className="home-capabilities__intro" data-reveal="section">
           <span className="home-section-mark">System coordination</span>
           <h2 id="lp-capabilities-title">
             The work behind every appointment.
@@ -57,7 +57,7 @@ export default function CapabilitiesSection() {
           </p>
         </div>
 
-        <ol className="home-capabilities__index" data-reveal>
+        <ol className="home-capabilities__index" data-reveal="sequence">
           {CAPABILITIES.map((cap) => (
             <li key={cap.num} className="home-capability">
               <span className="home-capability__number" aria-hidden="true">{cap.num}</span>

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 export default function FinalCtaSection({ onLoginClick }) {
   return (
     <section className="home-closing" id="get-started" aria-labelledby="lp-cta-title">
-      <div className="lp-container home-closing__layout" data-reveal>
+      <div className="lp-container home-closing__layout" data-reveal="cta">
         <div className="home-closing__copy">
           <span className="home-section-mark">Get started</span>
           <h2 id="lp-cta-title">Start with your Citizen account.</h2>

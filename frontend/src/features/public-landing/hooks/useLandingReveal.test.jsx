@@ -85,6 +85,7 @@ describe('useLandingReveal', () => {
     const root = container.firstElementChild;
     installGeometry(container);
 
+    expect(root.classList.contains('lp-motion-ready')).toBe(true);
     runScheduledFrame();
     expect(root.style.getPropertyValue('--home-care-progress')).toBe('0.0000');
     expect(root.dataset.activeCareStep).toBe('0');
@@ -93,6 +94,7 @@ describe('useLandingReveal', () => {
     scrollTo(2550);
     expect(root.style.getPropertyValue('--home-care-progress')).toBe('0.5000');
     expect(root.dataset.activeCareStep).toBe('3');
+    expect(root.classList.contains('is-public-header-scrolled')).toBe(true);
     expect(root.classList.contains('is-care-rail-visible')).toBe(true);
     expect(container.querySelector('[data-care-marker="1"]').classList.contains('is-complete')).toBe(true);
     expect(container.querySelector('[data-care-marker="2"]').classList.contains('is-complete')).toBe(true);
@@ -111,10 +113,25 @@ describe('useLandingReveal', () => {
 
     expect(container.querySelector('[data-reveal]').classList.contains('is-revealed')).toBe(true);
     expect(container.firstElementChild.classList.contains('lp-reveal-ready')).toBe(false);
+    expect(container.firstElementChild.classList.contains('lp-motion-ready')).toBe(false);
 
     unmount();
     expect(cancelFrame).toHaveBeenCalledWith(41);
     expect(removeListener).toHaveBeenCalledWith('scroll', expect.any(Function));
     expect(removeListener).toHaveBeenCalledWith('resize', expect.any(Function));
+  });
+
+  it('keeps content available when IntersectionObserver construction fails', () => {
+    vi.stubGlobal('IntersectionObserver', vi.fn(() => {
+      throw new Error('observer unavailable');
+    }));
+
+    const { container } = render(<HookHarness />);
+    const root = container.firstElementChild;
+    const revealTarget = container.querySelector('[data-reveal]');
+
+    expect(root.classList.contains('lp-reveal-ready')).toBe(false);
+    expect(root.classList.contains('lp-motion-ready')).toBe(true);
+    expect(revealTarget.classList.contains('is-revealed')).toBe(true);
   });
 });

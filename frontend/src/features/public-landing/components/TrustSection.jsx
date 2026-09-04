@@ -31,7 +31,7 @@ export default function TrustSection() {
       aria-labelledby="lp-trust-title"
     >
       <div className="lp-container home-assurance__layout">
-        <div className="home-assurance__intro" data-reveal>
+        <div className="home-assurance__intro" data-reveal="section">
           <span className="home-section-mark">Operational integrity</span>
           <h2 id="lp-trust-title">Trust is built into the work, not added as a claim.</h2>
           <p>
@@ -40,7 +40,7 @@ export default function TrustSection() {
           </p>
         </div>
 
-        <ol className="home-assurance__register" data-reveal>
+        <ol className="home-assurance__register" data-reveal="assurance">
           {PRINCIPLES.map((item) => (
             <li key={item.num}>
               <span className="home-assurance__number" aria-hidden="true">{item.num}</span>

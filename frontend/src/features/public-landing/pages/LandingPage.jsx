@@ -16,6 +16,7 @@ import '../public-landing.css';
 import '../landing-page.css';
 import '../premium-public.css';
 import '../clinical-public.css';
+import '../landing-motion.css';
 
 /**
  * "Continue exploring" band — connects Home to the two interior pages
@@ -24,7 +25,7 @@ import '../clinical-public.css';
 function ContinueBand() {
   return (
     <section className="home-index" aria-labelledby="home-index-title">
-      <div className="lp-container home-index__layout" data-reveal>
+      <div className="lp-container home-index__layout" data-reveal="links">
         <div className="home-index__intro">
           <span className="home-section-mark">Public information</span>
           <h2 id="home-index-title">Understand the service before you enter.</h2>

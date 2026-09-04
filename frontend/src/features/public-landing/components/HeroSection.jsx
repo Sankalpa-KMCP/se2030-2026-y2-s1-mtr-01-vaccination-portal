@@ -37,7 +37,10 @@ export default function HeroSection() {
         <div className="home-hero__visual" aria-hidden="true">
           <div className="home-hero__visual-head">
             <span>Service pathway</span>
-            <span className="home-hero__live">Citizen &harr; clinic coordination</span>
+            <span className="home-hero__live">
+              <i aria-hidden="true" />
+              Citizen &harr; clinic coordination
+            </span>
           </div>
           <div className="home-hero__visual-screen">
             <HeroArtwork />

@@ -9,7 +9,7 @@ export default function PortalAccessSection() {
       aria-labelledby="portal-access-title"
     >
       <div className="lp-container">
-        <div className="home-section-heading home-section-heading--split" data-reveal>
+        <div className="home-section-heading home-section-heading--split" data-reveal="section">
           <div>
             <span className="home-section-mark">Portal access</span>
             <h2 id="portal-access-title">One service. Two ways in.</h2>
@@ -20,7 +20,7 @@ export default function PortalAccessSection() {
           </p>
         </div>
 
-        <div className="home-access__ledger" data-reveal>
+        <div className="home-access__ledger" data-reveal="access">
           <article className="home-access__citizen">
             <div className="home-access__body">
               <span className="home-access__role">Citizen access</span>

@@ -31,7 +31,7 @@ export default function HowItWorksSection() {
       aria-labelledby="lp-workflow-title"
     >
       <div className="lp-container">
-        <div className="home-section-heading home-section-heading--workflow" data-reveal>
+        <div className="home-section-heading home-section-heading--workflow" data-reveal="section">
           <div>
             <span className="home-section-mark">Service delivery</span>
             <h2 id="lp-workflow-title">Citizen steps and staff operations move together.</h2>
@@ -42,7 +42,7 @@ export default function HowItWorksSection() {
           </p>
         </div>
 
-        <div className="home-workflow__table" data-reveal role="table" aria-label="Citizen and Staff vaccination workflow">
+        <div className="home-workflow__table" data-reveal="workflow" role="table" aria-label="Citizen and Staff vaccination workflow">
           <div className="home-workflow__head" role="row">
             <span role="columnheader">Service point</span>
             <span role="columnheader">Citizen</span>

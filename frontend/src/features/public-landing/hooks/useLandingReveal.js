@@ -32,21 +32,30 @@ export default function useLandingReveal(rootRef) {
     if (targets.length === 0 || prefersReducedMotion) {
       targets.forEach((el) => el.classList.add('is-revealed'));
     } else if (typeof IntersectionObserver !== 'undefined') {
-      root.classList.add('lp-reveal-ready');
+      try {
+        revealObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('is-revealed');
+                revealObserver.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.08, rootMargin: '0px 0px -4% 0px' },
+        );
 
-      revealObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('is-revealed');
-              revealObserver.unobserve(entry.target);
-            }
-          });
-        },
-        { threshold: 0.08, rootMargin: '0px 0px -4% 0px' },
-      );
+        targets.forEach((el) => revealObserver.observe(el));
+        root.classList.add('lp-reveal-ready');
+      } catch {
+        revealObserver?.disconnect();
+        revealObserver = undefined;
+        targets.forEach((el) => el.classList.add('is-revealed'));
+      }
+    }
 
-      targets.forEach((el) => revealObserver.observe(el));
+    if (!prefersReducedMotion) {
+      root.classList.add('lp-motion-ready');
     }
 
     const markers = Array.from(root.querySelectorAll('[data-care-marker]'));
@@ -71,10 +80,12 @@ export default function useLandingReveal(rootRef) {
 
     const updateCareProgress = () => {
       frameId = null;
-      if (careSteps.length < 2) return;
-
       const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 1;
       const scrollTop = window.scrollY || window.pageYOffset || 0;
+      root.classList.toggle('is-public-header-scrolled', scrollTop > 12);
+
+      if (careSteps.length < 2) return;
+
       const cursorPosition = scrollTop + (viewportHeight * CARE_CURSOR_RATIO);
       const stepPositions = careSteps.map(({ target }) => (
         target.getBoundingClientRect().top + scrollTop
@@ -114,11 +125,9 @@ export default function useLandingReveal(rootRef) {
       if (frameId === null) frameId = requestFrame(updateCareProgress);
     };
 
-    if (careSteps.length >= 2) {
-      window.addEventListener('scroll', scheduleCareProgress, { passive: true });
-      window.addEventListener('resize', scheduleCareProgress);
-      scheduleCareProgress();
-    }
+    window.addEventListener('scroll', scheduleCareProgress, { passive: true });
+    window.addEventListener('resize', scheduleCareProgress);
+    scheduleCareProgress();
 
     return () => {
       revealObserver?.disconnect();
@@ -126,6 +135,8 @@ export default function useLandingReveal(rootRef) {
       window.removeEventListener('resize', scheduleCareProgress);
       if (frameId !== null) cancelFrame(frameId);
       root.classList.remove('lp-reveal-ready');
+      root.classList.remove('lp-motion-ready');
+      root.classList.remove('is-public-header-scrolled');
       root.classList.remove('is-care-rail-visible');
       root.style.removeProperty('--home-care-progress');
       delete root.dataset.activeCareStep;
