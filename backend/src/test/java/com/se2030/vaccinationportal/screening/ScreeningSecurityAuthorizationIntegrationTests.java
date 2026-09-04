@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.screening;
 import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
 import com.se2030.vaccinationportal.screening.service.ScreeningConfigurationService;
 import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
+import com.se2030.vaccinationportal.screening.service.ScreeningHistoryService;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,33 @@ class ScreeningSecurityAuthorizationIntegrationTests {
 
     @MockitoBean
     private CitizenScreeningAccessService accessService;
+
+    @MockitoBean
+    private ScreeningHistoryService historyService;
+
+    @Test
+    void authenticatedCitizenCanReachHistoryDetails() throws Exception {
+        mockMvc.perform(get("/api/v1/screening/submissions/{submissionId}/history-details", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_CITIZEN")))
+                .andExpect(status().isOk());
+        org.mockito.Mockito.verify(historyService).getHistoryDetails(1L);
+    }
+
+    @Test
+    void anonymousCallerCannotReadHistoryDetails() throws Exception {
+        mockMvc.perform(get("/api/v1/screening/submissions/{submissionId}/history-details", 1L))
+                .andExpect(status().isUnauthorized());
+        org.mockito.Mockito.verifyNoInteractions(historyService);
+    }
+
+    @Test
+    void unrelatedRoleCannotSpoofCitizenForHistoryDetails() throws Exception {
+        mockMvc.perform(get("/api/v1/screening/submissions/{submissionId}/history-details", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_CAMPAIGN_OFFICER"))
+                        .header(LEGACY_ROLE_HEADER, "CITIZEN"))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(historyService);
+    }
 
     @Test
     void authenticatedAdminCanAccessAdminEndpoint() throws Exception {
