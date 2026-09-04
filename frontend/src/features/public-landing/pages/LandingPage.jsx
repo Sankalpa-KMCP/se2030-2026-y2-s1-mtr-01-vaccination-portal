@@ -11,12 +11,12 @@ import CareProgressRail from '../components/CareProgressRail';
 import PublicFooter from '../components/PublicFooter';
 import PublicServiceGuide from '../components/PublicServiceGuide';
 import useLandingReveal from '../hooks/useLandingReveal';
-import usePremiumMotion from '../hooks/usePremiumMotion';
 import usePublicPageTop from '../hooks/usePublicPageTop';
 import '../public-landing.css';
+import '../landing-page.css';
 import '../premium-public.css';
 import '../clinical-public.css';
-import '../landing-page.css';
+import '../landing-motion.css';
 
 /**
  * "Continue exploring" band — connects Home to the two interior pages
@@ -31,7 +31,7 @@ function ContinueBand() {
           <h2 id="home-index-title">Understand the service before you enter.</h2>
         </div>
         <nav className="home-index__links" aria-label="Explore public information">
-          <Link to="/how-it-works" className="home-index__link" data-tilt data-tilt-strength="1">
+          <Link to="/how-it-works" className="home-index__link">
             <span className="home-index__number" aria-hidden="true">01</span>
             <span>
               <strong>How it works</strong>
@@ -39,7 +39,7 @@ function ContinueBand() {
             </span>
             <span className="home-index__arrow" aria-hidden="true">&rarr;</span>
           </Link>
-          <Link to="/about" className="home-index__link" data-tilt data-tilt-strength="1">
+          <Link to="/about" className="home-index__link">
             <span className="home-index__number" aria-hidden="true">02</span>
             <span>
               <strong>About the system</strong>
@@ -56,7 +56,6 @@ function ContinueBand() {
 export default function LandingPage({ onLoginClick }) {
   const rootRef = useRef(null);
   useLandingReveal(rootRef);
-  usePremiumMotion(rootRef);
   usePublicPageTop();
 
   return (

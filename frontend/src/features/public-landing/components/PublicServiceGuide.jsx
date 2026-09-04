@@ -49,8 +49,6 @@ export default function PublicServiceGuide() {
                 <NavLink
                   to={item.to}
                   end={item.end}
-                  data-tilt
-                  data-tilt-strength="1"
                   className={({ isActive }) => `lp-guide__link${isActive ? ' lp-is-active' : ''}`}
                 >
                   {({ isActive }) => (
