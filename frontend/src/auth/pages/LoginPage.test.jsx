@@ -77,4 +77,53 @@ describe('LoginPage entry experiences', () => {
       });
     },
   );
+
+  it('exposes guided access cards on universal login', () => {
+    renderPage('/login');
+    expect(screen.getByRole('heading', { name: 'Citizen Portal' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Staff Portal' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Continue as Citizen/i }).getAttribute('href')).toBe('/login/citizen');
+    expect(screen.getByRole('link', { name: /Continue as Staff/i }).getAttribute('href')).toBe('/login/staff');
+  });
+
+  it('exposes registration actions on universal login', () => {
+    renderPage('/login');
+    expect(screen.getByRole('link', { name: /Register as Citizen/i }).getAttribute('href')).toBe('/register/citizen');
+    expect(screen.getByRole('link', { name: /Register as Staff/i }).getAttribute('href')).toBe('/register/staff');
+    expect(screen.getByText(/Staff registration may require administrator approval/i)).toBeTruthy();
+  });
+
+  it('toggles password visibility', () => {
+    renderPage('/login');
+    const passwordInput = screen.getByLabelText('Password');
+    const toggleButton = screen.getByRole('button', { name: 'Show password' });
+
+    expect(passwordInput.getAttribute('type')).toBe('password');
+    fireEvent.click(toggleButton);
+    expect(passwordInput.getAttribute('type')).toBe('text');
+    expect(screen.getByRole('button', { name: 'Hide password' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(passwordInput.getAttribute('type')).toBe('password');
+  });
+
+  it('navigates back to portal home when back button is clicked', () => {
+    const handleBack = vi.fn();
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <LoginPage onBackToLanding={handleBack} />
+      </MemoryRouter>,
+    );
+
+    const backBtn = screen.getByRole('button', { name: /Back to portal home/i });
+    fireEvent.click(backBtn);
+    expect(handleBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('displays client validation error for empty fields', () => {
+    renderPage('/login');
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+
+    expect(screen.getByRole('alert').textContent).toBe('Email address is required.');
+  });
 });
