@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -68,6 +69,18 @@ public interface StaffAssignmentRepository extends JpaRepository<StaffAssignment
     default boolean existsOverlappingAssignment(Long userId, Long excludeAssignmentId, Instant startAt, Instant endAt) {
         return existsOverlappingAssignment(userId, excludeAssignmentId, startAt, endAt, SessionLifecycleStatus.CANCELLED);
     }
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM StaffAssignment a " +
+            "WHERE a.staffRoster.id = :staffRosterId " +
+            "AND a.session.id IN (SELECT s.id FROM VaccinationSession s " +
+            "WHERE s.lifecycleStatus IN :statuses AND s.endAt > :now) " +
+            "ORDER BY a.id ASC")
+    List<StaffAssignment> findBlockingOperationalDependenciesForUpdate(
+            @Param("staffRosterId") Long staffRosterId,
+            @Param("statuses") Collection<SessionLifecycleStatus> statuses,
+            @Param("now") Instant now
+    );
 
     /**
      * Count distinct active vaccinators assigned to non-cancelled sessions.

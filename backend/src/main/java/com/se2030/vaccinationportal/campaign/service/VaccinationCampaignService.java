@@ -720,6 +720,13 @@ public class VaccinationCampaignService {
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
         entityManager.refresh(campaign);
 
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalStateException(
+                    "Cannot update service dates for campaign in " + campaign.getStatus() + " status"
+            );
+        }
+
+        campaign.validateDateConsistency();
         validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
 
         campaign.setServiceStartDate(serviceStartDate);

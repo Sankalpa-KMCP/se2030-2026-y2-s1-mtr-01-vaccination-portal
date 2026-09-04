@@ -4,9 +4,12 @@ import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException
 import com.se2030.vaccinationportal.campaign.model.OperationalResource;
 import com.se2030.vaccinationportal.campaign.model.OperationalResourceStatus;
 import com.se2030.vaccinationportal.campaign.model.ResourceType;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,11 +26,17 @@ public class OperationalResourceService {
 
     private final OperationalResourceRepository resourceRepository;
     private final VaccinationCenterRepository centerRepository;
+    private final SessionResourceAssignmentRepository assignmentRepository;
+    private final Clock clock;
 
     public OperationalResourceService(OperationalResourceRepository resourceRepository,
-                                      VaccinationCenterRepository centerRepository) {
+                                      VaccinationCenterRepository centerRepository,
+                                      SessionResourceAssignmentRepository assignmentRepository,
+                                      Clock clock) {
         this.resourceRepository = Objects.requireNonNull(resourceRepository, "resourceRepository must not be null");
         this.centerRepository = Objects.requireNonNull(centerRepository, "centerRepository must not be null");
+        this.assignmentRepository = Objects.requireNonNull(assignmentRepository, "assignmentRepository must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     /**
@@ -110,6 +119,7 @@ public class OperationalResourceService {
             throw new ResourceNotFoundException("Operational resource with ID " + resourceId + " does not belong to center " + centerId);
         }
 
+        validateDeactivationImpact(resource, status);
         resource.setName(name.trim());
         resource.setStatus(status);
         return resourceRepository.saveAndFlush(resource);
@@ -125,10 +135,11 @@ public class OperationalResourceService {
         if (newStatus == null) {
             throw new IllegalArgumentException("Resource status is required");
         }
-        OperationalResource resource = resourceRepository.findById(resourceId)
+        OperationalResource resource = resourceRepository.findByIdForUpdate(resourceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Operational resource not found with ID: " + resourceId));
+        validateDeactivationImpact(resource, newStatus);
         resource.setStatus(newStatus);
-        return resourceRepository.save(resource);
+        return resourceRepository.saveAndFlush(resource);
     }
 
     /**
@@ -213,5 +224,22 @@ public class OperationalResourceService {
                 resourceType,
                 OperationalResourceStatus.ACTIVE
         );
+    }
+
+    private void validateDeactivationImpact(OperationalResource resource, OperationalResourceStatus newStatus) {
+        if (resource.getStatus() != OperationalResourceStatus.ACTIVE
+                || newStatus != OperationalResourceStatus.INACTIVE) {
+            return;
+        }
+        if (!assignmentRepository.findBlockingOperationalDependenciesForUpdate(
+                resource.getId(),
+                SessionLifecycleStatus.blockingOperationalDependencyStatuses(),
+                clock.instant()
+        ).isEmpty()) {
+            throw new IllegalStateException(
+                    "Cannot deactivate operational resource " + resource.getId()
+                            + " because a future or in-progress session depends on it"
+            );
+        }
     }
 }

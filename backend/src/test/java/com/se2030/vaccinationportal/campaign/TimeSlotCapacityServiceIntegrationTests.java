@@ -26,9 +26,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -311,13 +313,39 @@ class TimeSlotCapacityServiceIntegrationTests {
     }
 
     @Test
-    @DisplayName("isSessionFull returns true when slot occupancy exceeds capacity")
-    void isSessionFull_trueWhenOccupancyExceedsCapacity() {
+    @DisplayName("TimeSlot rejects occupancy that exceeds capacity")
+    void reservedCountAboveCapacityIsRejected() {
         TimeSlot slot = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
-        slot.setReservedCount(5);
-        timeSlotRepository.save(slot);
 
-        assertTrue(slotCapacityService.isSessionFull(scheduledSession.getId()));
+        assertThrows(IllegalArgumentException.class, () -> slot.setReservedCount(5));
+        assertEquals(0, slot.getReservedCount());
+    }
+
+    @Test
+    @DisplayName("Valid TimeSlot entity persists")
+    void validTimeSlotEntityPersists() {
+        TimeSlot slot = timeSlotRepository.saveAndFlush(
+                new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4)
+        );
+
+        assertNotNull(slot.getId());
+        assertEquals(4, slot.getCapacity());
+        assertEquals(0, slot.getReservedCount());
+    }
+
+    @Test
+    @DisplayName("JPA lifecycle rejects an invalid mutated TimeSlot during flush")
+    void invalidMutatedTimeSlotCannotFlush() {
+        TimeSlot slot = timeSlotRepository.saveAndFlush(
+                new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4)
+        );
+        ReflectionTestUtils.setField(slot, "reservedCount", 5);
+
+        InvalidDataAccessApiUsageException exception = assertThrows(
+                InvalidDataAccessApiUsageException.class,
+                () -> timeSlotRepository.saveAndFlush(slot)
+        );
+        assertTrue(exception.getMostSpecificCause() instanceof IllegalArgumentException);
     }
 
     @Test

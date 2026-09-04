@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionResourceAssignment;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -66,6 +67,18 @@ public interface SessionResourceAssignmentRepository extends JpaRepository<Sessi
     default boolean existsOverlappingAssignment(Long resourceId, Long excludeAssignmentId, Instant startAt, Instant endAt) {
         return existsOverlappingAssignment(resourceId, excludeAssignmentId, startAt, endAt, SessionLifecycleStatus.CANCELLED);
     }
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM SessionResourceAssignment a " +
+            "WHERE a.resource.id = :resourceId " +
+            "AND a.session.id IN (SELECT s.id FROM VaccinationSession s " +
+            "WHERE s.lifecycleStatus IN :statuses AND s.endAt > :now) " +
+            "ORDER BY a.id ASC")
+    List<SessionResourceAssignment> findBlockingOperationalDependenciesForUpdate(
+            @Param("resourceId") Long resourceId,
+            @Param("statuses") Collection<SessionLifecycleStatus> statuses,
+            @Param("now") Instant now
+    );
 
     /**
      * Count distinct active vaccination station resources assigned to non-cancelled sessions.
