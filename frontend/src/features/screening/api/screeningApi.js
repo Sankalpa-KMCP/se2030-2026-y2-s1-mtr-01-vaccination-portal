@@ -153,3 +153,24 @@ export function submitScreening(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+// Citizen eligibility and historical display (read-only)
+export function listCitizenScreeningSubmissions(citizenId) {
+  return screeningRequest(`/citizens/${citizenId}/submissions`, { method: 'GET' });
+}
+
+export function listCitizenEligibilityAssessments(citizenId) {
+  return screeningRequest(`/citizens/${citizenId}/assessments`, { method: 'GET' });
+}
+
+export function getEligibilityAssessmentBySubmission(submissionId) {
+  return screeningRequest(`/assessments/submissions/${submissionId}`, { method: 'GET' });
+}
+
+export function getCitizenCampaignEligibility(citizenId, campaignId) {
+  return screeningRequest(`/citizens/${citizenId}/campaigns/${campaignId}/eligibility`, { method: 'GET' });
+}
+
+export function getScreeningHistoryDetails(submissionId) {
+  return screeningRequest(`/submissions/${submissionId}/history-details`, { method: 'GET' });
+}

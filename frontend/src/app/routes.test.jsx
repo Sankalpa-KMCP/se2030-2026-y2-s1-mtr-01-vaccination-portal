@@ -41,6 +41,10 @@ import Header from '../components/common/Header';
 import ProtectedRoute from './ProtectedRoute';
 import PortalRoutes from './routes';
 
+vi.mock('../features/screening/pages/CitizenEligibilityPage', () => ({ default: () => 'Citizen Eligibility Test Page' }));
+vi.mock('../features/screening/pages/CitizenScreeningHistoryPage', () => ({ default: () => 'Citizen History Test Page' }));
+vi.mock('../features/screening/pages/CitizenScreeningHistoryDetailsPage', () => ({ default: () => 'Citizen History Details Test Page' }));
+
 function setAuth({ isAuthenticated = true, roles = [] } = {}) {
   const logout = vi.fn();
   authState.current = {
@@ -93,6 +97,29 @@ describe('shared routing and role guards', () => {
     renderGuard();
 
     expect(screen.getByRole('heading', { name: 'Login Route' })).toBeTruthy();
+  });
+
+  describe.each([
+    ['/app/screening/eligibility', 'Citizen Eligibility Test Page'],
+    ['/app/screening/history', 'Citizen History Test Page'],
+    ['/app/screening/history/42', 'Citizen History Details Test Page'],
+  ])('F2 route %s', (path, page) => {
+    it('allows a citizen', () => {
+      setAuth({ roles: ['ROLE_CITIZEN'] });
+      render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByText(page)).toBeTruthy();
+    });
+    it('redirects unauthenticated visitors to login', () => {
+      render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Login to Vaccination Portal' })).toBeTruthy();
+      expect(screen.queryByText(page)).toBeNull();
+    });
+    it.each(['ROLE_ADMIN', 'ROLE_HEALTHCARE_OFFICER', 'ROLE_CENTER_MANAGER', 'ROLE_INVENTORY_OFFICER'])('denies %s', (role) => {
+      setAuth({ roles: [role] });
+      render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+      expect(screen.queryByText(page)).toBeNull();
+    });
   });
 
   it('opens a protected route for an authenticated permitted role', () => {
