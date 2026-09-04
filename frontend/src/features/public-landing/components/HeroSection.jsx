@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import HeroArtwork from './HeroArtwork';
+import HeroThreeScene from './HeroThreeScene';
 
 export default function HeroSection() {
   return (
@@ -34,7 +34,7 @@ export default function HeroSection() {
           </p>
         </div>
 
-        <div className="home-hero__visual" aria-hidden="true">
+        <div className="home-hero__visual">
           <div className="home-hero__visual-head">
             <span>Service pathway</span>
             <span className="home-hero__live">
@@ -42,8 +42,8 @@ export default function HeroSection() {
               Citizen &harr; clinic coordination
             </span>
           </div>
-          <div className="home-hero__visual-screen">
-            <HeroArtwork />
+          <div className="home-hero__visual-screen" aria-label="A visual care pathway from campaign to vaccination record">
+            <HeroThreeScene />
           </div>
           <div className="home-hero__visual-foot">
             <span><i className="home-legend-dot" /> Citizen action</span>

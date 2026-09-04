@@ -21,7 +21,7 @@ export default function PortalAccessSection() {
         </div>
 
         <div className="home-access__ledger" data-reveal="access">
-          <article className="home-access__citizen">
+          <article className="home-access__citizen" data-tilt data-tilt-strength="1.35">
             <div className="home-access__body">
               <span className="home-access__role">Citizen access</span>
               <h3>Plan and keep track of your vaccination care.</h3>
@@ -38,7 +38,7 @@ export default function PortalAccessSection() {
             </div>
           </article>
 
-          <article className="home-access__staff">
+          <article className="home-access__staff" data-tilt data-tilt-strength="1.35">
             <div className="home-access__body">
               <span className="home-access__role">Staff operations</span>
               <h3>Coordinate campaigns, clinics, and sessions.</h3>

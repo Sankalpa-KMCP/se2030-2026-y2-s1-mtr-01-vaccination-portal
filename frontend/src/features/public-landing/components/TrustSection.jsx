@@ -42,7 +42,7 @@ export default function TrustSection() {
 
         <ol className="home-assurance__register" data-reveal="assurance">
           {PRINCIPLES.map((item) => (
-            <li key={item.num}>
+            <li key={item.num} data-tilt data-tilt-strength="0.65">
               <span className="home-assurance__number" aria-hidden="true">{item.num}</span>
               <div>
                 <h3>{item.title}</h3>

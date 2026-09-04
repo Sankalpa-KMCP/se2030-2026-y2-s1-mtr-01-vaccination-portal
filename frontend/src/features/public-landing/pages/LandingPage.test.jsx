@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LandingPage from './LandingPage';
@@ -14,6 +14,9 @@ function renderLanding(onLoginClick = vi.fn()) {
 
 describe('LandingPage', () => {
   afterEach(cleanup);
+  beforeEach(() => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  });
 
   it('renders the hero headline and section headings', () => {
     renderLanding();
