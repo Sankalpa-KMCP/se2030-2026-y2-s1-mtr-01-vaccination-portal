@@ -75,18 +75,14 @@ public class TimeSlot {
         this.session = Objects.requireNonNull(session, "Session must not be null");
         this.startTime = Objects.requireNonNull(startTime, "Start time must not be null");
         this.endTime = Objects.requireNonNull(endTime, "End time must not be null");
-        if (endTime.isBefore(startTime) || endTime.equals(startTime)) {
-            throw new IllegalArgumentException("Slot end time must be strictly after start time");
-        }
-        if (capacity <= 0) {
-            throw new IllegalArgumentException("Slot capacity must be strictly positive");
-        }
         this.capacity = capacity;
         this.reservedCount = 0;
+        validateInvariants();
     }
 
     @PrePersist
     protected void onCreate() {
+        validateInvariants();
         Instant now = Instant.now();
         if (createdAt == null) {
             createdAt = now;
@@ -98,6 +94,7 @@ public class TimeSlot {
 
     @PreUpdate
     protected void onUpdate() {
+        validateInvariants();
         updatedAt = Instant.now();
     }
 
@@ -110,6 +107,7 @@ public class TimeSlot {
     }
 
     public boolean reserve() {
+        validateInvariants();
         if (reservedCount >= capacity) {
             return false;
         }
@@ -118,6 +116,7 @@ public class TimeSlot {
     }
 
     public boolean release() {
+        validateInvariants();
         if (reservedCount <= 0) {
             return false;
         }
@@ -142,7 +141,9 @@ public class TimeSlot {
     }
 
     public void setStartTime(Instant startTime) {
-        this.startTime = startTime;
+        Instant candidate = Objects.requireNonNull(startTime, "Start time must not be null");
+        validateTimeRange(candidate, this.endTime);
+        this.startTime = candidate;
     }
 
     public Instant getEndTime() {
@@ -150,7 +151,9 @@ public class TimeSlot {
     }
 
     public void setEndTime(Instant endTime) {
-        this.endTime = endTime;
+        Instant candidate = Objects.requireNonNull(endTime, "End time must not be null");
+        validateTimeRange(this.startTime, candidate);
+        this.endTime = candidate;
     }
 
     public int getCapacity() {
@@ -158,9 +161,7 @@ public class TimeSlot {
     }
 
     public void setCapacity(int capacity) {
-        if (capacity <= 0) {
-            throw new IllegalArgumentException("Slot capacity must be strictly positive");
-        }
+        validateCapacity(capacity, this.reservedCount);
         this.capacity = capacity;
     }
 
@@ -169,10 +170,33 @@ public class TimeSlot {
     }
 
     public void setReservedCount(int reservedCount) {
+        validateCapacity(this.capacity, reservedCount);
+        this.reservedCount = reservedCount;
+    }
+
+    private void validateInvariants() {
+        validateTimeRange(startTime, endTime);
+        validateCapacity(capacity, reservedCount);
+    }
+
+    private static void validateTimeRange(Instant startTime, Instant endTime) {
+        if (startTime != null && endTime != null && !startTime.isBefore(endTime)) {
+            throw new IllegalArgumentException("Slot end time must be strictly after start time");
+        }
+    }
+
+    private static void validateCapacity(int capacity, int reservedCount) {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("Slot capacity must be strictly positive");
+        }
         if (reservedCount < 0) {
             throw new IllegalArgumentException("Reserved count cannot be negative");
         }
-        this.reservedCount = reservedCount;
+        if (reservedCount > capacity) {
+            throw new IllegalArgumentException(
+                    "Reserved count (" + reservedCount + ") cannot exceed slot capacity (" + capacity + ")"
+            );
+        }
     }
 
     public Long getLockVersion() {

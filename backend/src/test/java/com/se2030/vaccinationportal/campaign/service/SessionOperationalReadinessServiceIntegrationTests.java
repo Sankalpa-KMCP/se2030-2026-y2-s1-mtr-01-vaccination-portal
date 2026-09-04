@@ -257,8 +257,9 @@ class SessionOperationalReadinessServiceIntegrationTests {
     void assertReadyForScheduling_staffInactive_throwsConflict() {
         configureFullReadiness();
 
-        rosterService.updateStaffRoster(center.getId(), vaccinatorRoster.getId(), StaffRole.VACCINATOR, OperationalStaffStatus.INACTIVE);
-        entityManager.flush();
+        OperationalStaffRoster roster = rosterRepository.findById(vaccinatorRoster.getId()).orElseThrow();
+        roster.setStatus(OperationalStaffStatus.INACTIVE);
+        rosterRepository.saveAndFlush(roster);
         entityManager.clear();
 
         VaccinationCampaign lockedCampaign = campaignRepository.findByIdForUpdate(campaign.getId()).orElseThrow();
