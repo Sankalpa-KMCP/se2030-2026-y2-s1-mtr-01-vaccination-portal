@@ -4,14 +4,20 @@ import { ArrowIcon, ShieldMark } from './AuthIcons';
 import '../pages/LoginPage.css';
 
 const ROUTE_META = {
-  '/login': { depth: 0, branch: 'All access', step: '01' },
-  '/login/citizen': { depth: 1, branch: 'Citizen', step: '02' },
-  '/register/citizen': { depth: 2, branch: 'Citizen registration', step: '03' },
-  '/login/staff': { depth: 1, branch: 'Staff', step: '02' },
-  '/register/staff': { depth: 2, branch: 'Staff registration', step: '03' },
+  '/login': { order: 0, branch: 'All access', step: '01' },
+  '/login/citizen': { order: 1, branch: 'Citizen', step: '02' },
+  '/register/citizen': { order: 2, branch: 'Citizen registration', step: '03' },
+  '/login/staff': { order: 3, branch: 'Staff', step: '02' },
+  '/register/staff': { order: 4, branch: 'Staff registration', step: '03' },
 };
 
-const TRANSITION_MS = 460;
+const AUTH_NAVIGATION = [
+  { to: '/login', label: 'All access', branch: 'all' },
+  { to: '/login/citizen', label: 'Citizen', branch: 'citizen' },
+  { to: '/login/staff', label: 'Staff', branch: 'staff' },
+];
+
+const TRANSITION_MS = 480;
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() => (
@@ -33,7 +39,13 @@ function routeDirection(previousPath, nextPath, navigationType) {
   if (navigationType === 'POP') return 'backward';
   const previous = ROUTE_META[previousPath] || ROUTE_META['/login'];
   const next = ROUTE_META[nextPath] || ROUTE_META['/login'];
-  return next.depth < previous.depth ? 'backward' : 'forward';
+  return next.order < previous.order ? 'backward' : 'forward';
+}
+
+function routeBranch(pathname) {
+  if (pathname.includes('citizen')) return 'citizen';
+  if (pathname.includes('staff')) return 'staff';
+  return 'all';
 }
 
 function resetRouteScroll(stage) {
@@ -125,6 +137,7 @@ function AuthBrandPanel() {
 export default function AuthExperience() {
   const { pathname } = useLocation();
   const meta = ROUTE_META[pathname] || ROUTE_META['/login'];
+  const activeBranch = routeBranch(pathname);
 
   useEffect(() => {
     if (!('scrollRestoration' in window.history)) return undefined;
@@ -139,10 +152,22 @@ export default function AuthExperience() {
         <AuthBrandPanel />
         <main className="auth-workspace" id="main-content">
           <header className="auth-workspace__rail">
-            <Link to="/" className="auth-home-link">
-              <ArrowIcon direction="left" />
-              <span>Portal home</span>
-            </Link>
+            <div className="auth-workspace__navigation">
+              <Link to="/" className="auth-home-link">
+                <ArrowIcon direction="left" />
+                <span>Portal home</span>
+              </Link>
+              <nav className="auth-section-nav" aria-label="Access navigation">
+                {AUTH_NAVIGATION.map((item) => {
+                  const isActive = item.branch === activeBranch;
+                  return (
+                    <Link className={isActive ? 'is-active' : undefined} to={item.to} key={item.to} aria-current={isActive ? 'page' : undefined}>
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
             <div className="auth-route-meta" aria-label={`Current area: ${meta.branch}`}>
               <span>{meta.branch}</span>
               <span>{meta.step} / 03</span>
