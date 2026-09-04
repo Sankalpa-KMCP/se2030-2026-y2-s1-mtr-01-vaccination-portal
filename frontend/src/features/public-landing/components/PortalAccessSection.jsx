@@ -21,7 +21,7 @@ export default function PortalAccessSection() {
         </div>
 
         <div className="home-access__ledger" data-reveal>
-          <article className="home-access__citizen">
+          <article className="home-access__citizen" data-tilt data-tilt-strength="2.5">
             <div className="home-access__number" aria-hidden="true">C</div>
             <div className="home-access__body">
               <span className="home-access__role">Citizen access</span>
@@ -39,7 +39,7 @@ export default function PortalAccessSection() {
             </div>
           </article>
 
-          <article className="home-access__staff">
+          <article className="home-access__staff" data-tilt data-tilt-strength="2.5">
             <div className="home-access__number" aria-hidden="true">S</div>
             <div className="home-access__body">
               <span className="home-access__role">Staff operations</span>

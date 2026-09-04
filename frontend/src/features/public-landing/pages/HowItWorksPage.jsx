@@ -8,7 +8,12 @@ import JourneyTimeline from '../components/JourneyTimeline';
 import ReadinessGate from '../components/ReadinessGate';
 import FaqAccordion from '../components/FaqAccordion';
 import useLandingReveal from '../hooks/useLandingReveal';
+import usePremiumMotion from '../hooks/usePremiumMotion';
+import usePublicPageTop from '../hooks/usePublicPageTop';
+import PremiumBackdrop from '../components/PremiumBackdrop';
 import '../public-landing.css';
+import '../premium-public.css';
+import '../clinical-public.css';
 
 const JOURNEYS = [
   {
@@ -20,7 +25,7 @@ const JOURNEYS = [
         phase: 'Minutes',
         title: 'Create your account',
         icon: 'account',
-        desc: 'Register once with your details. Citizen accounts are active immediately &mdash; no approval step.',
+        desc: 'Register once with your details. Citizen accounts are active immediately — no approval step.',
       },
       {
         num: '02',
@@ -48,7 +53,7 @@ const JOURNEYS = [
         phase: 'Afterwards',
         title: 'Your record updates',
         icon: 'record',
-        desc: 'Your immunisation history and certificate are recorded automatically &mdash; visible only to you.',
+        desc: 'Your immunisation history and certificate are recorded automatically — visible only to you.',
       },
     ],
   },
@@ -82,7 +87,7 @@ const JOURNEYS = [
         phase: 'Scheduling',
         title: 'Schedule sessions',
         icon: 'sessions',
-        desc: 'Sessions are created &mdash; one-off or recurring series &mdash; with capacity planned per station and time slot.',
+        desc: 'Sessions are created — one-off or recurring series — with capacity planned per station and time slot.',
       },
       {
         num: '05',
@@ -104,7 +109,7 @@ const FAQ_ITEMS = [
   {
     question: 'How long does staff access take to approve?',
     answer:
-      'Staff accounts are activated after an administrator reviews the request &mdash; usually within one working day.',
+      'Staff accounts are activated after an administrator reviews the request — usually within one working day.',
   },
   {
     question: 'Can I reschedule or cancel my appointment?',
@@ -114,7 +119,7 @@ const FAQ_ITEMS = [
   {
     question: 'What happens if my screening answers change?',
     answer:
-      'If your situation changes before your appointment, you can resubmit your screening &mdash; a health officer reviews any updates that affect eligibility.',
+      'If your situation changes before your appointment, you can resubmit your screening — a health officer reviews any updates that affect eligibility.',
   },
   {
     question: 'How does the portal decide a session is ready?',
@@ -124,24 +129,28 @@ const FAQ_ITEMS = [
   {
     question: 'Does the service cost anything?',
     answer:
-      'No. The Vaccination Portal is a public health service &mdash; registration, booking, and records are free.',
+      'No. The Vaccination Portal is a public health service — registration, booking, and records are free.',
   },
 ];
 
 export default function HowItWorksPage({ onLoginClick }) {
   const rootRef = useRef(null);
   useLandingReveal(rootRef);
+  usePremiumMotion(rootRef);
+  usePublicPageTop();
   const [activeJourney, setActiveJourney] = useState('citizen');
   const journey = JOURNEYS.find((j) => j.id === activeJourney);
 
   return (
-    <div className="lp-page" ref={rootRef}>
+    <div className="lp-page lp-page--how" ref={rootRef}>
+      <PremiumBackdrop />
       <a className="lp-skip-link" href="#lp-main">
         Skip to main content
       </a>
       <PublicHeader onLoginClick={onLoginClick} />
       <main id="lp-main" tabIndex={-1}>
         <PageHero
+          variant="journey"
           index="01"
           label="How it works"
           title="One system,"

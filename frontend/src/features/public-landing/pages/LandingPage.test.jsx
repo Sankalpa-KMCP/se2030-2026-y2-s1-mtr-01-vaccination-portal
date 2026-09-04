@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LandingPage from './LandingPage';
 
@@ -62,5 +62,23 @@ describe('LandingPage', () => {
 
     expect(screen.getByRole('link', { name: /skip to main content/i }).getAttribute('href')).toBe('#lp-main');
     expect(screen.getByRole('main').getAttribute('id')).toBe('lp-main');
+  });
+
+  it('provides five accessible care-path destinations', () => {
+    renderLanding();
+
+    const rail = screen.getByRole('navigation', { name: /care path progress/i });
+    const expectedDestinations = [
+      ['01 Access', '#portal-access'],
+      ['02 System', '#capabilities'],
+      ['03 Journey', '#how-it-works'],
+      ['04 Assurance', '#accountability'],
+      ['05 Begin', '#get-started'],
+    ];
+
+    expectedDestinations.forEach(([name, href]) => {
+      expect(within(rail).getByRole('link', { name }).getAttribute('href')).toBe(href);
+    });
+    expect(document.getElementById('get-started')).toBeTruthy();
   });
 });

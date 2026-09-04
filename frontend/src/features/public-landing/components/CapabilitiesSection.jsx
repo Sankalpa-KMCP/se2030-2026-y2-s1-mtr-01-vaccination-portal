@@ -62,7 +62,7 @@ export default function CapabilitiesSection() {
 
         <ol className="home-capabilities__index" data-reveal>
           {CAPABILITIES.map((cap) => (
-            <li key={cap.num} className="home-capability">
+            <li key={cap.num} className="home-capability" data-tilt data-tilt-strength="1.5">
               <span className="home-capability__number" aria-hidden="true">{cap.num}</span>
               <span className="home-capability__domain">{cap.domain}</span>
               <div>

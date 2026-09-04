@@ -7,10 +7,16 @@ import CapabilitiesSection from '../components/CapabilitiesSection';
 import HowItWorksSection from '../components/HowItWorksSection';
 import TrustSection from '../components/TrustSection';
 import FinalCtaSection from '../components/FinalCtaSection';
+import CareProgressRail from '../components/CareProgressRail';
 import PublicFooter from '../components/PublicFooter';
 import useLandingReveal from '../hooks/useLandingReveal';
+import usePremiumMotion from '../hooks/usePremiumMotion';
+import usePublicPageTop from '../hooks/usePublicPageTop';
+import PremiumBackdrop from '../components/PremiumBackdrop';
 import '../public-landing.css';
 import '../landing-page.css';
+import '../premium-public.css';
+import '../clinical-public.css';
 
 /**
  * "Continue exploring" band — connects Home to the two interior pages
@@ -50,12 +56,16 @@ function ContinueBand() {
 export default function LandingPage({ onLoginClick }) {
   const rootRef = useRef(null);
   useLandingReveal(rootRef);
+  usePremiumMotion(rootRef);
+  usePublicPageTop();
 
   return (
     <div className="lp-page lp-page--home" ref={rootRef}>
+      <PremiumBackdrop />
       <a className="lp-skip-link" href="#lp-main">
         Skip to main content
       </a>
+      <CareProgressRail />
       <PublicHeader onLoginClick={onLoginClick} />
       <main id="lp-main" tabIndex={-1}>
         <HeroSection />

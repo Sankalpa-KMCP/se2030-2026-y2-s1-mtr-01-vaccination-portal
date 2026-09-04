@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export default function FinalCtaSection({ onLoginClick }) {
   return (
-    <section className="home-closing" aria-labelledby="lp-cta-title">
+    <section className="home-closing" id="get-started" aria-labelledby="lp-cta-title">
       <div className="lp-container home-closing__layout" data-reveal>
         <div className="home-closing__index" aria-hidden="true">05</div>
         <div className="home-closing__copy">

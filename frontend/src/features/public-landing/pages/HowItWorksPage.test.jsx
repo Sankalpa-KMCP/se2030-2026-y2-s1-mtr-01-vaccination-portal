@@ -16,7 +16,7 @@ describe('HowItWorksPage', () => {
   afterEach(cleanup);
 
   it('renders the page hero and section headings', () => {
-    renderPage();
+    const { container } = renderPage();
 
     expect(
       screen.getByRole('heading', { level: 1, name: /one system, two journeys/i }),
@@ -33,6 +33,8 @@ describe('HowItWorksPage', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: /ready to begin your journey/i }),
     ).toBeTruthy();
+    expect(container.querySelector('.premium-visual--journey')).toBeTruthy();
+    expect(container.querySelectorAll('.premium-journey-map__node')).toHaveLength(5);
   });
 
   it('renders the citizen journey by default with all five steps', () => {
