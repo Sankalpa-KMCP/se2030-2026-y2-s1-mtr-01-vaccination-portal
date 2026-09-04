@@ -9,10 +9,13 @@ import TrustSection from '../components/TrustSection';
 import FinalCtaSection from '../components/FinalCtaSection';
 import CareProgressRail from '../components/CareProgressRail';
 import PublicFooter from '../components/PublicFooter';
+import PublicServiceGuide from '../components/PublicServiceGuide';
 import useLandingReveal from '../hooks/useLandingReveal';
 import usePublicPageTop from '../hooks/usePublicPageTop';
 import '../public-landing.css';
 import '../landing-page.css';
+import '../premium-public.css';
+import '../clinical-public.css';
 
 /**
  * "Continue exploring" band — connects Home to the two interior pages
@@ -63,6 +66,7 @@ export default function LandingPage({ onLoginClick }) {
       <PublicHeader onLoginClick={onLoginClick} />
       <main id="lp-main" tabIndex={-1}>
         <HeroSection />
+        <PublicServiceGuide />
         <PortalAccessSection />
         <CapabilitiesSection />
         <HowItWorksSection />

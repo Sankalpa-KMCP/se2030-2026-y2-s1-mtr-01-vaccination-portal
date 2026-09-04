@@ -70,53 +70,6 @@
   margin-top: 0;
 }
 
-.lp-page--home .lp-service-banner {
-  padding-block: 0.34rem;
-  background: var(--home-deep-2);
-}
-
-.lp-page--home .lp-service-banner__emblem {
-  font-size: 0.67rem;
-  letter-spacing: 0.2em;
-}
-
-.lp-page--home .lp-header {
-  background: rgba(255, 255, 255, 0.96);
-  border-bottom-color: var(--home-rule);
-}
-
-.lp-page--home .lp-header__inner {
-  height: 64px;
-}
-
-.lp-page--home .lp-header__badge {
-  background: transparent;
-  border: 0;
-  border-left: 1px solid var(--home-rule);
-  border-radius: 0;
-  padding-left: 0.75rem;
-}
-
-.lp-page--home .lp-header__link.lp-is-active {
-  color: var(--home-ink);
-}
-
-.lp-page--home .lp-header__link.lp-is-active::after {
-  transform: scaleX(1);
-}
-
-.lp-page--home .lp-btn--header {
-  color: var(--home-ink);
-  border-color: var(--home-ink);
-  border-radius: 2px;
-}
-
-.lp-page--home :is(a, button):focus-visible {
-  outline: 3px solid var(--home-focus);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px var(--landing-surface);
-}
-
 #portal-access,
 #capabilities,
 #how-it-works,
@@ -1218,11 +1171,6 @@
 }
 
 @media (max-width: 768px) {
-  .lp-page--home .lp-header__inner {
-    height: auto;
-    min-height: 60px;
-    gap: 0.65rem;
-  }
   .home-section-heading {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -1365,21 +1313,6 @@
 @media (max-width: 480px) {
   .lp-page--home .lp-container {
     padding-inline: 1.25rem;
-  }
-  .lp-page--home .lp-header__brand {
-    max-width: 7.5rem;
-    font-size: 0.92rem;
-  }
-  .lp-page--home .lp-header__nav {
-    gap: 0.5rem;
-  }
-  .lp-page--home .lp-header__link {
-    font-size: 0.72rem;
-  }
-  .lp-page--home .lp-btn--header {
-    min-height: 40px;
-    padding-inline: 0.75rem;
-    font-size: 0.75rem;
   }
   .home-hero h1 {
     font-size: clamp(2rem, 9vw, 2.5rem);

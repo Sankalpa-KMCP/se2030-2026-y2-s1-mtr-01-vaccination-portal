@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { Link } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
 import PublicFooter from '../components/PublicFooter';
 import PageHero from '../components/PageHero';
@@ -6,6 +7,7 @@ import useLandingReveal from '../hooks/useLandingReveal';
 import usePremiumMotion from '../hooks/usePremiumMotion';
 import usePublicPageTop from '../hooks/usePublicPageTop';
 import PremiumBackdrop from '../components/PremiumBackdrop';
+import PublicServiceGuide from '../components/PublicServiceGuide';
 import '../public-landing.css';
 import '../premium-public.css';
 import '../clinical-public.css';
@@ -198,6 +200,7 @@ export default function AboutPage({ onLoginClick }) {
           accent="responsibility."
           lead="Six roles, five operational domains, one auditable record of every decision. This is the structure that keeps a vaccination programme trustworthy."
         />
+        <PublicServiceGuide />
 
         {/* Roles registry */}
         <section className="lp-section lp-section--subtle lp-roles" aria-labelledby="lp-roles-title">
@@ -369,9 +372,9 @@ export default function AboutPage({ onLoginClick }) {
               <button type="button" className="lp-btn lp-btn--inverted" onClick={onLoginClick}>
                 Sign in to the portal
               </button>
-              <a href="/" className="lp-cta-panel__link">
+              <Link to="/" className="lp-cta-panel__link">
                 Return to the home page
-              </a>
+              </Link>
             </div>
           </div>
         </section>

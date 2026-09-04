@@ -113,6 +113,13 @@
   height: 72px;
 }
 
+/* Keep the public navigation shell identical across every public route.
+   Home uses a slightly narrower content grid below the header, so its header
+   explicitly returns to the shared shell width. */
+.lp-page--home .lp-header__inner {
+  max-width: 1280px;
+}
+
 .lp-header__glyph {
   width: 38px;
   height: 38px;
@@ -1570,6 +1577,8 @@
 
 @media (max-width: 560px) {
   .lp-header__inner {
+    height: auto;
+    min-height: 70px;
     gap: 0.6rem;
   }
 
@@ -1688,5 +1697,282 @@
   .lp-page--home .lp-header__brand-group,
   .lp-header__brand-group {
     gap: 0.55rem;
+  }
+}
+
+/* Public service guide -------------------------------------------------- */
+
+.lp-guide {
+  position: relative;
+  z-index: 2;
+  padding-block: clamp(2.75rem, 4.5vw, 4rem);
+  background: #ffffff;
+  border-bottom: 1px solid var(--clinical-border);
+}
+
+.lp-guide__layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.62fr) minmax(0, 1.38fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: stretch;
+}
+
+.lp-guide__intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: clamp(1rem, 3vw, 2.5rem);
+  border-right: 1px solid var(--clinical-border);
+}
+
+.lp-guide__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.65rem;
+  color: var(--clinical-blue-600);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.lp-guide__eyebrow::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--clinical-blue-500);
+}
+
+.lp-guide__intro h2 {
+  margin: 0 0 0.6rem;
+  color: var(--clinical-text);
+  font-family: inherit;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.lp-guide__intro p {
+  max-width: 39ch;
+  margin: 0;
+  color: var(--clinical-muted);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.lp-guide__nav,
+.lp-guide__list {
+  min-width: 0;
+}
+
+.lp-guide__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-guide__list li {
+  min-width: 0;
+}
+
+.lp-guide__link {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  gap: 0.7rem 0.85rem;
+  min-height: 152px;
+  height: 100%;
+  padding: 1.15rem;
+  color: var(--clinical-text);
+  background: var(--clinical-background);
+  border: 1px solid var(--clinical-border);
+  border-radius: 9px;
+  text-decoration: none;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.lp-guide__link::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  left: -1px;
+  height: 3px;
+  border-radius: 9px 9px 0 0;
+  background: var(--clinical-blue-500);
+  opacity: 0;
+}
+
+.lp-guide__link:hover {
+  color: var(--clinical-text);
+  background: var(--clinical-blue-50);
+  border-color: var(--clinical-border-strong);
+  box-shadow: 0 7px 18px rgba(21, 62, 88, 0.08);
+  transform: translateY(-2px);
+}
+
+.lp-guide__link.lp-is-active {
+  background: var(--clinical-blue-50);
+  border-color: #a9cadd;
+  box-shadow: 0 6px 16px rgba(18, 105, 165, 0.07);
+}
+
+.lp-guide__link.lp-is-active::before {
+  opacity: 1;
+}
+
+.lp-guide__number {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--clinical-blue-600);
+  background: #ffffff;
+  border: 1px solid var(--clinical-border-strong);
+  border-radius: 6px;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.lp-guide__link.lp-is-active .lp-guide__number {
+  color: #ffffff;
+  background: var(--clinical-blue-600);
+  border-color: var(--clinical-blue-600);
+}
+
+.lp-guide__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.lp-guide__copy small {
+  margin-bottom: 0.25rem;
+  color: var(--clinical-blue-600);
+  font-size: 0.58rem;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.lp-guide__copy strong {
+  color: var(--clinical-text);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.lp-guide__copy > span {
+  margin-top: 0.35rem;
+  color: var(--clinical-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.lp-guide__state {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.65rem;
+  color: #70838f;
+  border-top: 1px solid var(--clinical-border);
+  font-size: 0.58rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lp-guide__state i {
+  color: var(--clinical-blue-600);
+  font-size: 0.85rem;
+  font-style: normal;
+}
+
+.lp-guide__link.lp-is-active .lp-guide__state {
+  color: var(--clinical-blue-700);
+}
+
+/* Keep the first content band visually attached to the guide. */
+
+.lp-guide + .home-access,
+.lp-guide + .lp-journey,
+.lp-guide + .lp-roles {
+  border-top: 0;
+}
+
+@media (max-width: 900px) {
+  .lp-guide__layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .lp-guide__intro {
+    max-width: 650px;
+    padding-right: 0;
+    padding-bottom: 1.35rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--clinical-border);
+  }
+
+  .lp-guide__link {
+    min-height: 142px;
+  }
+}
+
+@media (max-width: 620px) {
+  .lp-guide {
+    padding-block: 2.5rem;
+  }
+
+  .lp-guide__layout {
+    gap: 1.15rem;
+  }
+
+  .lp-guide__list {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .lp-guide__link {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-rows: 1fr;
+    align-items: center;
+    min-height: 88px;
+    padding: 0.85rem;
+  }
+
+  .lp-guide__copy > span {
+    display: none;
+  }
+
+  .lp-guide__state {
+    grid-column: 3;
+    align-self: stretch;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
+    min-width: 48px;
+    padding: 0 0 0 0.7rem;
+    border-top: 0;
+    border-left: 1px solid var(--clinical-border);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-guide__link:hover {
+    transform: none;
   }
 }

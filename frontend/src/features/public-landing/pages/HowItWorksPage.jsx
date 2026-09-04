@@ -11,6 +11,7 @@ import useLandingReveal from '../hooks/useLandingReveal';
 import usePremiumMotion from '../hooks/usePremiumMotion';
 import usePublicPageTop from '../hooks/usePublicPageTop';
 import PremiumBackdrop from '../components/PremiumBackdrop';
+import PublicServiceGuide from '../components/PublicServiceGuide';
 import '../public-landing.css';
 import '../premium-public.css';
 import '../clinical-public.css';
@@ -157,6 +158,7 @@ export default function HowItWorksPage({ onLoginClick }) {
           accent="two journeys."
           lead="Citizens move from registration to a recorded vaccination. Health teams move from planning to an opened, ready clinic. Both share the same secure spine."
         />
+        <PublicServiceGuide />
 
         {/* Journey switcher + timeline */}
         <section className="lp-section lp-section--subtle lp-journey" aria-labelledby="lp-journey-title">

@@ -88,5 +88,6 @@ describe('AboutPage', () => {
 
     expect(screen.getByRole('link', { name: /skip to main content/i }).getAttribute('href')).toBe('#lp-main');
     expect(screen.getByRole('main').getAttribute('id')).toBe('lp-main');
+    expect(screen.getByRole('link', { name: /return to the home page/i }).getAttribute('href')).toBe('/');
   });
 });
