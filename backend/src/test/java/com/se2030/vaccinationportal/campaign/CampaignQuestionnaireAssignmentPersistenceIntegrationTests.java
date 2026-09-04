@@ -170,6 +170,49 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
     }
 
     @Test
+    @DisplayName("Initial questionnaire assignment in the past is rejected without persistence (MF02-BR-17)")
+    void initialAssignmentInPastIsRejectedWithoutPersistence() {
+        LocalDate pastDate = FIXED_EVALUATION_DATE.minusDays(1);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                assignmentService.assignQuestionnaireVersion(campaignA.getId(), 100L, pastDate)
+        );
+
+        assertTrue(exception.getMessage().contains("cannot be in the past"));
+        assertEquals(0, assignmentRepository.count());
+    }
+
+    @Test
+    @DisplayName("Initial questionnaire assignment effective today succeeds (MF02-BR-17)")
+    void initialAssignmentEffectiveTodaySucceeds() {
+        CampaignQuestionnaireAssignment saved = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                100L,
+                FIXED_EVALUATION_DATE
+        );
+
+        assertNotNull(saved.getId());
+        assertEquals(FIXED_EVALUATION_DATE, saved.getActiveFrom());
+        assertEquals(1, assignmentRepository.count());
+    }
+
+    @Test
+    @DisplayName("Initial questionnaire assignment effective in the future succeeds (MF02-BR-17)")
+    void initialAssignmentEffectiveInFutureSucceeds() {
+        LocalDate futureDate = FIXED_EVALUATION_DATE.plusDays(1);
+
+        CampaignQuestionnaireAssignment saved = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                100L,
+                futureDate
+        );
+
+        assertNotNull(saved.getId());
+        assertEquals(futureDate, saved.getActiveFrom());
+        assertEquals(1, assignmentRepository.count());
+    }
+
+    @Test
     @DisplayName("Effective assignment lookup accurately resolves by evaluation date")
     void effectiveAssignmentLookupByDate() {
         assignmentService.assignQuestionnaireVersion(
@@ -397,11 +440,12 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
     @DisplayName("Replacement assignment with past effectiveStartDate is rejected and preserves history (MF02-BR-17)")
     void replacementAssignmentWithPastEffectiveStartDateIsRejected() {
         // Initial assignment active from 2026-07-01 (before fixed today 2026-08-09)
-        CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
-                campaignA.getId(),
+        CampaignQuestionnaireAssignment v1 = assignmentRepository.saveAndFlush(new CampaignQuestionnaireAssignment(
+                campaignA,
                 100L,
-                LocalDate.of(2026, 7, 1)
-        );
+                FIXED_EVALUATION_DATE.minusMonths(1),
+                null
+        ));
         assertNull(v1.getActiveTo());
 
         // Attempt replacement with effectiveStartDate = 2026-08-01 (after activeFrom, but in the past relative to 2026-08-09)
@@ -427,11 +471,12 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
     @DisplayName("Replacement assignment today uses the same half-open transition boundary (MF02-BR-17)")
     void replacementAssignmentEffectiveTodaySucceeds() {
         // Initial assignment active from 2026-07-01
-        CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
-                campaignA.getId(),
+        CampaignQuestionnaireAssignment v1 = assignmentRepository.saveAndFlush(new CampaignQuestionnaireAssignment(
+                campaignA,
                 100L,
-                LocalDate.of(2026, 7, 1)
-        );
+                FIXED_EVALUATION_DATE.minusMonths(1),
+                null
+        ));
 
         // Replacement assignment effective today (2026-08-09)
         CampaignQuestionnaireAssignment v2 = assignmentService.assignQuestionnaireVersion(
@@ -456,11 +501,12 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
     @DisplayName("Replacement assignment in future uses the same half-open transition boundary (MF02-BR-17)")
     void replacementAssignmentEffectiveFutureSucceeds() {
         // Initial assignment active from 2026-07-01
-        CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
-                campaignA.getId(),
+        CampaignQuestionnaireAssignment v1 = assignmentRepository.saveAndFlush(new CampaignQuestionnaireAssignment(
+                campaignA,
                 100L,
-                LocalDate.of(2026, 7, 1)
-        );
+                FIXED_EVALUATION_DATE.minusMonths(1),
+                null
+        ));
 
         LocalDate futureDate = LocalDate.of(2026, 8, 20);
 
