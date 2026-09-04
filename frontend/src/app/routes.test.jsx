@@ -111,7 +111,7 @@ describe('shared routing and role guards', () => {
     });
     it('redirects unauthenticated visitors to login', () => {
       render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
-      expect(screen.getByRole('heading', { name: 'Login to Vaccination Portal' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
       expect(screen.queryByText(page)).toBeNull();
     });
     it.each(['ROLE_ADMIN', 'ROLE_HEALTHCARE_OFFICER', 'ROLE_CENTER_MANAGER', 'ROLE_INVENTORY_OFFICER'])('denies %s', (role) => {
@@ -200,7 +200,7 @@ describe('shared routing and role guards', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Login to Vaccination Portal' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
     });
   });
 
@@ -327,17 +327,17 @@ describe('shared routing and role guards', () => {
 
   it('keeps the generic, citizen, and staff login routes registered', () => {
     const view = render(<MemoryRouter key="generic" initialEntries={['/login']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Login to Vaccination Portal' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
 
     view.rerender(<MemoryRouter key="citizen" initialEntries={['/login/citizen']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Citizen Login' })).toBeTruthy();
-    expect(screen.getByText('Log in with your citizen account.')).toBeTruthy();
-    expect(screen.getByText('Need a citizen account?')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Citizen sign in' })).toBeTruthy();
+    expect(screen.getByText('Access appointments, eligibility, and your available vaccination services.')).toBeTruthy();
+    expect(screen.getByText('New citizen?')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Create Citizen Account' }).getAttribute('href')).toBe('/register/citizen');
 
     view.rerender(<MemoryRouter key="staff" initialEntries={['/login/staff']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Staff Login' })).toBeTruthy();
-    expect(screen.getByText('Log in with your approved staff or administrator account.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Staff sign in' })).toBeTruthy();
+    expect(screen.getByText('For approved clinical, campaign, center, inventory, administrative, and management accounts.')).toBeTruthy();
   });
 
   it('uses /app/overview as a compatibility redirect to the role dashboard', () => {

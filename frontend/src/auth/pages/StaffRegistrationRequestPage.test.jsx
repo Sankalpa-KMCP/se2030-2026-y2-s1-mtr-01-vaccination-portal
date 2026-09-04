@@ -52,7 +52,7 @@ describe('StaffRegistrationRequestPage', () => {
     fillStaffForm();
     fireEvent.click(screen.getByRole('button', { name: 'Submit Staff Account Request' }));
 
-    expect(await screen.findByText(/waiting for administrator approval/i)).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /awaiting approval/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Go to Staff Login' })).toBeTruthy();
     expect(registerStaff).toHaveBeenCalledWith(expect.objectContaining({
       requestedRoleCode: 'ROLE_CAMPAIGN_OFFICER',

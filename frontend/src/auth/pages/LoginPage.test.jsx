@@ -30,22 +30,22 @@ describe('LoginPage entry experiences', () => {
 
   it('renders the citizen login entry', () => {
     renderPage('/login/citizen');
-    expect(screen.getByRole('heading', { name: 'Citizen Login' })).toBeTruthy();
-    expect(screen.getByText('Log in with your citizen account.')).toBeTruthy();
-    expect(screen.getByText('Need a citizen account?')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Citizen sign in' })).toBeTruthy();
+    expect(screen.getByText('Access appointments, eligibility, and your available vaccination services.')).toBeTruthy();
+    expect(screen.getByText('New citizen?')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Create Citizen Account' }).getAttribute('href')).toBe('/register/citizen');
   });
 
   it('renders the staff login entry', () => {
     renderPage('/login/staff');
-    expect(screen.getByRole('heading', { name: 'Staff Login' })).toBeTruthy();
-    expect(screen.getByText('Log in with your approved staff or administrator account.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Staff sign in' })).toBeTruthy();
+    expect(screen.getByText('For approved clinical, campaign, center, inventory, administrative, and management accounts.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Request a Staff Account' })).toBeTruthy();
   });
 
   it('preserves a generic login entry', () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Login to Vaccination Portal' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
   });
 
   it.each([
@@ -70,7 +70,7 @@ describe('LoginPage entry experiences', () => {
       fireEvent.change(screen.getByLabelText('Password'), {
         target: { value: 'Password123!' },
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
       await waitFor(() => {
         expect(authState.current.login).toHaveBeenCalledWith('person@example.gov', 'Password123!');
@@ -80,8 +80,9 @@ describe('LoginPage entry experiences', () => {
 
   it('exposes guided access cards on universal login', () => {
     renderPage('/login');
-    expect(screen.getByRole('heading', { name: 'Citizen Portal' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Staff Portal' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Choose your portal' })).toBeTruthy();
+    expect(screen.getByText('Citizen')).toBeTruthy();
+    expect(screen.getByText('Staff')).toBeTruthy();
     expect(screen.getByRole('link', { name: /Continue as Citizen/i }).getAttribute('href')).toBe('/login/citizen');
     expect(screen.getByRole('link', { name: /Continue as Staff/i }).getAttribute('href')).toBe('/login/staff');
   });
@@ -90,7 +91,7 @@ describe('LoginPage entry experiences', () => {
     renderPage('/login');
     expect(screen.getByRole('link', { name: /Register as Citizen/i }).getAttribute('href')).toBe('/register/citizen');
     expect(screen.getByRole('link', { name: /Register as Staff/i }).getAttribute('href')).toBe('/register/staff');
-    expect(screen.getByText(/Staff registration may require administrator approval/i)).toBeTruthy();
+    expect(screen.getByText(/Staff accounts require administrator approval/i)).toBeTruthy();
   });
 
   it('toggles password visibility', () => {
@@ -122,7 +123,7 @@ describe('LoginPage entry experiences', () => {
 
   it('displays client validation error for empty fields', () => {
     renderPage('/login');
-    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(screen.getByRole('alert').textContent).toBe('Email address is required.');
   });
