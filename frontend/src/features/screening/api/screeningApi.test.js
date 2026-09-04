@@ -9,6 +9,11 @@ vi.mock('../../../services/apiClient', () => clientMocks);
 
 import {
   addQuestionnaireItem,
+  listCitizenScreeningSubmissions,
+  listCitizenEligibilityAssessments,
+  getEligibilityAssessmentBySubmission,
+  getCitizenCampaignEligibility,
+  getScreeningHistoryDetails,
   createAnswerOption,
   createEligibilityRule,
   createQuestion,
@@ -52,6 +57,25 @@ describe('screeningApi', () => {
 
     expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/screening/questions', { method: 'GET' });
     expect(clientMocks.parseApiResponse).toHaveBeenCalledWith(rawResponse);
+  });
+
+  it.each([
+    [listCitizenScreeningSubmissions, [71], '/v1/screening/citizens/71/submissions'],
+    [listCitizenEligibilityAssessments, [71], '/v1/screening/citizens/71/assessments'],
+    [getEligibilityAssessmentBySubmission, [42], '/v1/screening/assessments/submissions/42'],
+    [getCitizenCampaignEligibility, [71, 22], '/v1/screening/citizens/71/campaigns/22/eligibility'],
+    [getScreeningHistoryDetails, [42], '/v1/screening/submissions/42/history-details'],
+  ])('uses the shared GET client for %s', async (request, args, path) => {
+    await expect(request(...args)).resolves.toEqual({ result: 'parsed' });
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith(path, { method: 'GET' });
+    expect(clientMocks.parseApiResponse).toHaveBeenCalledExactlyOnceWith(rawResponse);
+  });
+
+  it('uses the real shared parser to return null for a 204 assessment', async () => {
+    const { parseApiResponse } = await vi.importActual('../../../services/apiClient');
+    clientMocks.apiRequest.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    clientMocks.parseApiResponse.mockImplementationOnce(parseApiResponse);
+    await expect(getEligibilityAssessmentBySubmission(42)).resolves.toBeNull();
   });
 
   it('supports the backend activeOnly question filter', async () => {

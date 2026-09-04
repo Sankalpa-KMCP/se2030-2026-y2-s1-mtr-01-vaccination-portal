@@ -5,9 +5,9 @@ import DashboardServiceCard from '../components/DashboardServiceCard';
 
 const CITIZEN_SERVICES = [
   ['Pre-Vaccination Screening', 'Complete screening before eligible appointments become available.', '/app/screening'],
-  ['My Eligibility', 'Review your vaccination eligibility status.'],
+  ['My Eligibility', 'Review your vaccination eligibility status.', '/app/screening/eligibility'],
   ['My Appointments', 'View and manage your vaccination appointments.'],
-  ['Screening History', 'Review previously submitted screening information.'],
+  ['Screening History', 'Review previously submitted screening information.', '/app/screening/history'],
   ['Vaccination History', 'View your recorded vaccination history.'],
 ];
 

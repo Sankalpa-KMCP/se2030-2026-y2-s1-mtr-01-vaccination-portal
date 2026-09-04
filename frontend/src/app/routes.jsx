@@ -31,6 +31,9 @@ import ScreeningQuestionsPage from '../features/screening/pages/ScreeningQuestio
 import ScreeningQuestionnairesPage from '../features/screening/pages/ScreeningQuestionnairesPage';
 import CitizenScreeningCampaignsPage from '../features/screening/pages/CitizenScreeningCampaignsPage';
 import CitizenScreeningPage from '../features/screening/pages/CitizenScreeningPage';
+import CitizenEligibilityPage from '../features/screening/pages/CitizenEligibilityPage';
+import CitizenScreeningHistoryPage from '../features/screening/pages/CitizenScreeningHistoryPage';
+import CitizenScreeningHistoryDetailsPage from '../features/screening/pages/CitizenScreeningHistoryDetailsPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
@@ -225,6 +228,9 @@ export default function PortalRoutes() {
             <Route path="citizen" element={<CitizenDashboardPage />} />
             <Route path="screening" element={<CitizenScreeningCampaignsPage />} />
             <Route path="screening/campaigns/:campaignId" element={<CitizenScreeningPage />} />
+            <Route path="screening/eligibility" element={<CitizenEligibilityPage />} />
+            <Route path="screening/history" element={<CitizenScreeningHistoryPage />} />
+            <Route path="screening/history/:submissionId" element={<CitizenScreeningHistoryDetailsPage />} />
             <Route path="appointments/book" element={<AppointmentBookingPage />} />
             <Route path="appointments/mine" element={<MyAppointmentsPage />} />
             <Route path="appointments/waitlist" element={<WaitlistPage />} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CitizenDashboardPage from './CitizenDashboardPage';
 import StaffDashboardPage from './StaffDashboardPage';
@@ -16,7 +16,7 @@ function renderPage(page) {
 afterEach(cleanup);
 
 describe('role dashboards', () => {
-  it('enables only pre-vaccination screening on the citizen dashboard', () => {
+  it('enables screening, eligibility and screening history while preserving future cards', () => {
     authState.current = { user: {
       fullName: 'Citizen User',
       email: 'citizen@example.com',
@@ -26,10 +26,16 @@ describe('role dashboards', () => {
     renderPage(<CitizenDashboardPage />);
     expect(screen.getByRole('heading', { name: 'Welcome, Citizen User' })).toBeTruthy();
     expect(screen.getByText('citizen@example.com')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/screening');
-    expect(screen.getAllByText('Coming soon')).toHaveLength(4);
-    for (const title of ['My Eligibility', 'My Appointments', 'Screening History', 'Vaccination History']) {
-      expect(screen.getByRole('heading', { name: title })).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: 'Open' })).toHaveLength(3);
+    for (const [title, path] of [['Pre-Vaccination Screening', '/app/screening'], ['My Eligibility', '/app/screening/eligibility'], ['Screening History', '/app/screening/history']]) {
+      const card = screen.getByRole('heading', { name: title }).closest('.card');
+      expect(within(card).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe(path);
+    }
+    expect(screen.getAllByText('Coming soon')).toHaveLength(2);
+    for (const title of ['My Appointments', 'Vaccination History']) {
+      const card = screen.getByRole('heading', { name: title }).closest('.card');
+      expect(within(card).getByText('Coming soon')).toBeTruthy();
+      expect(within(card).queryByRole('link')).toBeNull();
     }
   });
 

@@ -71,3 +71,17 @@ export const SCREENING_SUBMISSION_STATUS_LABELS = Object.freeze({
   [SCREENING_SUBMISSION_STATUS.CORRECTIONS_REQUIRED]: 'Corrections required',
   [SCREENING_SUBMISSION_STATUS.REVIEWED]: 'Reviewed',
 });
+
+export const ELIGIBILITY_ASSESSMENT_STATUS = Object.freeze({
+  ELIGIBLE: 'ELIGIBLE',
+  INELIGIBLE: 'INELIGIBLE',
+  EXPIRED: 'EXPIRED',
+  REVOKED: 'REVOKED',
+});
+
+export const ELIGIBILITY_ASSESSMENT_STATUS_LABELS = Object.freeze({
+  ELIGIBLE: 'Eligible',
+  INELIGIBLE: 'Ineligible',
+  EXPIRED: 'Expired',
+  REVOKED: 'Revoked',
+});
