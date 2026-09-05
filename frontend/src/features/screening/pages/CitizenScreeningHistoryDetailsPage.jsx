@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import { getCampaignById } from '../../campaign-management/api/campaignApi';
 import { getEligibilityAssessmentBySubmission, getScreeningHistoryDetails } from '../api/screeningApi';
 import RecordedEligibilityAssessment from '../components/RecordedEligibilityAssessment';
@@ -39,14 +40,21 @@ function HistoryDetails({ submissionId }) {
     return () => { active = false; };
   }, [submissionId]);
 
-  if (state.loading) return <LoadingSpinner message="Loading screening details..." />;
   const { details } = state;
   return (
     <section aria-labelledby="screening-history-details-title">
-      <Link className="btn btn-link px-0 mb-3" to="/app/screening/history">← Back to Screening History</Link>
-      <h1 className="display-6 fw-semibold mb-4" id="screening-history-details-title">Screening Details</h1>
-      <ApiErrorAlert error={state.error} />
-      {details && <>
+      <CitizenPageHeader
+        eyebrow="Screening Record"
+        title="Screening Details"
+        titleId="screening-history-details-title"
+        subtitle="Detailed view of your submitted questionnaire responses and evaluation status."
+        backTo="/app/screening/history"
+        backLabel="Back to Screening History"
+        meta={details?.id ? `Submission reference ${details.id}` : undefined}
+      />
+      {state.loading && <LoadingSpinner message="Loading screening details..." />}
+      {!state.loading && <ApiErrorAlert error={state.error} />}
+      {!state.loading && details && <>
         {supplement.errors.campaign && <p className="alert alert-warning">Campaign information is unavailable. Your screening details remain available.</p>}
         <div className="card border-0 shadow-sm mb-4"><div className="card-body p-4">
           <h2 className="h4">{campaignName(supplement.campaign, details.campaignId)}</h2>

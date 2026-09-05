@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import AppointmentCard from '../components/AppointmentCard';
 import RescheduleDialog from '../components/RescheduleDialog';
 import { getMyAppointments, cancelAppointment } from '../api/appointmentApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 
 /**
  * Citizen My Appointments Page (US-03).
@@ -84,21 +86,33 @@ export default function MyAppointmentsPage() {
 
   if (!citizenId) {
     return (
-      <div className="alert alert-warning border-0 shadow-sm" role="alert">
-        <h4 className="h6 alert-heading fw-bold mb-1">Authentication Required</h4>
-        <p className="mb-0">Unable to load appointments. Please sign in again.</p>
+      <div className="my-appointments-page">
+        <CitizenPageHeader
+          eyebrow="Appointment Services"
+          title="My Appointments"
+          subtitle="View and manage your recorded vaccination appointments."
+          backTo="/app/citizen"
+          backLabel="Back to Dashboard"
+          actions={<Link to="/app/appointments/book">Book Appointment</Link>}
+        />
+        <div className="alert alert-warning border-0 shadow-sm" role="alert">
+          <h2 className="h6 alert-heading fw-bold mb-1">Authentication Required</h2>
+          <p className="mb-0">Unable to load appointments. Please sign in again.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="my-appointments-page">
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h1 className="h3 fw-bold text-primary mb-1">My Appointments</h1>
-          <p className="text-muted mb-0">View, track, reschedule, or cancel your vaccination appointments.</p>
-        </div>
-      </div>
+      <CitizenPageHeader
+        eyebrow="Appointment Services"
+        title="My Appointments"
+        subtitle="View and manage your recorded vaccination appointments."
+        backTo="/app/citizen"
+        backLabel="Back to Dashboard"
+        actions={<Link to="/app/appointments/book">Book Appointment</Link>}
+      />
 
       {feedback && (
         <div

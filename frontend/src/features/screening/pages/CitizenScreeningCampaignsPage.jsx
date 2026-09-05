@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import { listCampaigns } from '../../campaign-management/api/campaignApi';
 
 const CITIZEN_INTAKE_STATUSES = new Set(['PUBLISHED', 'ACTIVE']);
@@ -38,19 +39,22 @@ export default function CitizenScreeningCampaignsPage() {
     return () => { active = false; };
   }, []);
 
-  if (loading) return <LoadingSpinner message="Loading vaccination campaigns..." />;
-
   return (
     <section aria-labelledby="screening-campaigns-title">
-      <div className="mb-4">
-        <span className="badge text-bg-primary mb-2">Pre-Vaccination Screening</span>
-        <h1 className="display-6 fw-semibold mb-2" id="screening-campaigns-title">Choose a campaign</h1>
-        <p className="text-muted mb-0">Select an available vaccination campaign to complete its screening questionnaire.</p>
-      </div>
+      <CitizenPageHeader
+        eyebrow="Pre-Vaccination Screening"
+        title="Choose a campaign"
+        titleId="screening-campaigns-title"
+        subtitle="Select an available vaccination campaign to complete its screening questionnaire."
+        backTo="/app/citizen"
+        backLabel="Back to Dashboard"
+      />
 
-      <ApiErrorAlert error={error} />
+      {loading && <LoadingSpinner message="Loading vaccination campaigns..." />}
 
-      {!error && campaigns.length === 0 && (
+      {!loading && <ApiErrorAlert error={error} />}
+
+      {!loading && !error && campaigns.length === 0 && (
         <div className="card border-0 bg-light">
           <div className="card-body p-4 text-center">
             <h2 className="h5">No campaigns available</h2>
@@ -59,7 +63,7 @@ export default function CitizenScreeningCampaignsPage() {
         </div>
       )}
 
-      {!error && campaigns.length > 0 && (
+      {!loading && !error && campaigns.length > 0 && (
         <div className="row g-4">
           {campaigns.map((campaign) => (
             <div className="col-12 col-lg-6" key={campaign.id}>

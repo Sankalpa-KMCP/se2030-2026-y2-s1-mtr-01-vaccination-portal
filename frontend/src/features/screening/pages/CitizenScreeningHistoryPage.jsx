@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import { CITIZEN_PRELIMINARY_RESULT_LABELS, ELIGIBILITY_ASSESSMENT_STATUS_LABELS, SCREENING_SUBMISSION_STATUS_LABELS } from '../constants/screeningConstants';
 import useCitizenScreeningRecords from '../hooks/useCitizenScreeningRecords';
 import { assessmentsBySubmission, campaignName, formatScreeningTimestamp } from '../utils/screeningHistory';
@@ -13,12 +14,7 @@ function HistoryRecords({ citizenId }) {
   const linkedAssessments = assessmentsBySubmission(assessments);
   const campaignMap = new Map(campaigns.map((campaign) => [String(campaign.id), campaign]));
   return (
-    <section aria-labelledby="citizen-history-title">
-      <div className="mb-4">
-        <h1 className="display-6 fw-semibold" id="citizen-history-title">Screening History</h1>
-        <p className="text-muted">Your screening records, newest created first. Preliminary results and recorded eligibility decisions are shown separately.</p>
-        <Link to="/app/screening/eligibility">View My Eligibility</Link>
-      </div>
+    <>
       <ApiErrorAlert error={errors.submissions} />
       {errors.assessments && <p className="alert alert-warning">Final assessment information is unavailable. Your screening history is still shown.</p>}
       {errors.campaigns && <p className="alert alert-warning">Campaign information is unavailable. Campaign references are shown instead.</p>}
@@ -45,12 +41,25 @@ function HistoryRecords({ citizenId }) {
           })}</tbody>
         </table>
       </div>}
-    </section>
+    </>
   );
 }
 
 export default function CitizenScreeningHistoryPage() {
   const { user } = useAuth();
-  return user?.id ? <HistoryRecords key={user.id} citizenId={user.id} />
-    : <ApiErrorAlert error="Your authenticated citizen profile is missing an account identifier." />;
+  return (
+    <section aria-labelledby="citizen-history-title">
+      <CitizenPageHeader
+        eyebrow="Screening & Eligibility"
+        title="Screening History"
+        titleId="citizen-history-title"
+        subtitle="Your recorded screening submissions, preliminary results, and final eligibility assessments."
+        backTo="/app/citizen"
+        backLabel="Back to Dashboard"
+        actions={<Link to="/app/screening/eligibility">View My Eligibility</Link>}
+      />
+      {user?.id ? <HistoryRecords key={user.id} citizenId={user.id} />
+        : <ApiErrorAlert error="Your authenticated citizen profile is missing an account identifier." />}
+    </section>
+  );
 }

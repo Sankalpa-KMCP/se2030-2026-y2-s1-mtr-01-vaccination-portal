@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import { getCitizenCampaignEligibility } from '../api/screeningApi';
 import RecordedEligibilityAssessment from '../components/RecordedEligibilityAssessment';
 import ScreeningCorrectionNotice from '../components/ScreeningCorrectionNotice';
@@ -36,12 +37,7 @@ function EligibilityRecords({ citizenId }) {
 
   if (loading) return <LoadingSpinner message="Loading your eligibility records..." />;
   return (
-    <section aria-labelledby="citizen-eligibility-title">
-      <div className="mb-4">
-        <h1 className="display-6 fw-semibold" id="citizen-eligibility-title">My Eligibility</h1>
-        <p className="text-muted">Your screening progress, recorded decisions and current eligibility by campaign.</p>
-        <Link to="/app/screening/history">View Screening History</Link>
-      </div>
+    <>
       <ApiErrorAlert error={baseError} />
       {errors.campaigns && <p className="alert alert-warning">Campaign information is unavailable. Your records remain visible using campaign references.</p>}
       {!baseError && records.length === 0 && <div className="card bg-light border-0"><div className="card-body p-4">
@@ -87,12 +83,25 @@ function EligibilityRecords({ citizenId }) {
           </div>
         );
       })}</div>}
-    </section>
+    </>
   );
 }
 
 export default function CitizenEligibilityPage() {
   const { user } = useAuth();
-  return user?.id ? <EligibilityRecords key={user.id} citizenId={user.id} />
-    : <ApiErrorAlert error="Your authenticated citizen profile is missing an account identifier." />;
+  return (
+    <section aria-labelledby="citizen-eligibility-title">
+      <CitizenPageHeader
+        eyebrow="Screening & Eligibility"
+        title="My Eligibility"
+        titleId="citizen-eligibility-title"
+        subtitle="Your screening progress, recorded decisions, and current eligibility by campaign."
+        backTo="/app/citizen"
+        backLabel="Back to Dashboard"
+        actions={<Link to="/app/screening/history">View Screening History</Link>}
+      />
+      {user?.id ? <EligibilityRecords key={user.id} citizenId={user.id} />
+        : <ApiErrorAlert error="Your authenticated citizen profile is missing an account identifier." />}
+    </section>
+  );
 }

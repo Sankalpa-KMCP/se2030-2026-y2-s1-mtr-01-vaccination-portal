@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import {
   getActiveScreeningSubmission,
   getCitizenScreeningForm,
@@ -40,7 +41,7 @@ function ActiveSubmissionState({ submission }) {
         <span className="badge text-bg-warning mb-3">
           {SCREENING_SUBMISSION_STATUS_LABELS[submission.status] || submission.status}
         </span>
-        <h1 className="h3">{heading}</h1>
+        <h2 className="h3">{heading}</h2>
         {submission.submittedAt && <p className="text-muted">Submitted {formatTimestamp(submission.submittedAt)}</p>}
         {submission.preliminaryResult && (
           <p><strong>Preliminary result:</strong>{' '}
@@ -155,23 +156,27 @@ export default function CitizenScreeningPage() {
     }
   };
 
-  if (loading) return <LoadingSpinner message="Loading your screening..." />;
-
   return (
     <section aria-labelledby="citizen-screening-title">
-      <Link className="btn btn-link px-0 mb-3" to="/app/screening">← Back to campaigns</Link>
+      <CitizenPageHeader
+        eyebrow="Pre-Vaccination Screening"
+        title="Screening Questionnaire"
+        titleId="citizen-screening-title"
+        subtitle="Answer the campaign questionnaire and review the consent notice before submitting."
+        backTo="/app/screening"
+        backLabel="Back to campaigns"
+        meta={screeningForm?.questionnaireVersionNumber
+          ? `Questionnaire version ${screeningForm.questionnaireVersionNumber}`
+          : undefined}
+      />
 
-      {submissionResult && <ScreeningSubmissionResult submission={submissionResult} />}
-      {!submissionResult && activeSubmission && <ActiveSubmissionState submission={activeSubmission} />}
+      {loading && <LoadingSpinner message="Loading your screening..." />}
 
-      {!submissionResult && !activeSubmission && (
+      {!loading && submissionResult && <ScreeningSubmissionResult submission={submissionResult} />}
+      {!loading && !submissionResult && activeSubmission && <ActiveSubmissionState submission={activeSubmission} />}
+
+      {!loading && !submissionResult && !activeSubmission && (
         <>
-          <div className="mb-4">
-            <span className="badge text-bg-primary mb-2">Citizen Screening</span>
-            <h1 className="display-6 fw-semibold mb-2" id="citizen-screening-title">Pre-Vaccination Screening</h1>
-            <p className="text-muted mb-0">Answer the campaign questionnaire and review the consent notice before submitting.</p>
-          </div>
-
           <ApiErrorAlert error={error} />
           {error?.status === 409 && (
             <button className="btn btn-outline-primary mb-4" type="button" onClick={loadScreening}>

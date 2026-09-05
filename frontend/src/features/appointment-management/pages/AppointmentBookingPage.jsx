@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AvailabilitySearch from '../components/AvailabilitySearch';
 import { bookAppointment } from '../api/appointmentApi';
 import { joinWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 
 /**
  * Appointment Booking Page (US-03).
@@ -103,21 +104,33 @@ export default function AppointmentBookingPage() {
 
   if (!citizenId) {
     return (
-      <div className="alert alert-warning border-0 shadow-sm" role="alert">
-        <h4 className="h6 alert-heading fw-bold mb-1">Authentication Required</h4>
-        <p className="mb-0">Unable to load this page. Please sign in again.</p>
+      <div className="appointment-booking-page">
+        <CitizenPageHeader
+          eyebrow="Appointment Services"
+          title="Book a Vaccination Appointment"
+          subtitle="Search available vaccination sessions and confirm a booking."
+          backTo="/app/citizen"
+          backLabel="Back to Dashboard"
+          actions={<Link to="/app/appointments/mine">View My Appointments</Link>}
+        />
+        <div className="alert alert-warning border-0 shadow-sm" role="alert">
+          <h2 className="h6 alert-heading fw-bold mb-1">Authentication Required</h2>
+          <p className="mb-0">Unable to load this page. Please sign in again.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="appointment-booking-page">
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h1 className="h3 fw-bold text-primary mb-1">Book a Vaccination Appointment</h1>
-          <p className="text-muted mb-0">Search available slots at nearby centers and confirm your booking.</p>
-        </div>
-      </div>
+      <CitizenPageHeader
+        eyebrow="Appointment Services"
+        title="Book a Vaccination Appointment"
+        subtitle="Search available vaccination sessions and confirm a booking."
+        backTo="/app/citizen"
+        backLabel="Back to Dashboard"
+        actions={<Link to="/app/appointments/mine">View My Appointments</Link>}
+      />
 
       {feedback && (
         <div

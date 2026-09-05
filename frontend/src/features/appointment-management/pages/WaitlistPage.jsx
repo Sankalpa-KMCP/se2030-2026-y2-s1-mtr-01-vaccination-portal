@@ -4,6 +4,7 @@ import WaitlistCard from '../components/WaitlistCard';
 import WaitlistPosition from '../components/WaitlistPosition';
 import { getWaitlistStatus, leaveWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 
 /**
  * Citizen Waitlist Page (US-05).
@@ -74,21 +75,31 @@ export default function WaitlistPage() {
 
   if (!citizenId) {
     return (
-      <div className="alert alert-warning border-0 shadow-sm" role="alert">
-        <h4 className="h6 alert-heading fw-bold mb-1">Authentication Required</h4>
-        <p className="mb-0">Unable to load waitlist status. Please sign in again.</p>
+      <div className="waitlist-page">
+        <CitizenPageHeader
+          eyebrow="Appointment Services"
+          title="My Waitlist Status"
+          subtitle="Check or manage your waitlist entry for a vaccination campaign."
+          backTo="/app/citizen"
+          backLabel="Back to Dashboard"
+        />
+        <div className="alert alert-warning border-0 shadow-sm" role="alert">
+          <h2 className="h6 alert-heading fw-bold mb-1">Authentication Required</h2>
+          <p className="mb-0">Unable to load waitlist status. Please sign in again.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="waitlist-page">
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h1 className="h3 fw-bold text-primary mb-1">My Waitlist Status</h1>
-          <p className="text-muted mb-0">Track your position in line for full vaccination sessions or manage your entry.</p>
-        </div>
-      </div>
+      <CitizenPageHeader
+        eyebrow="Appointment Services"
+        title="My Waitlist Status"
+        subtitle="Check or manage your waitlist entry for a vaccination campaign."
+        backTo="/app/citizen"
+        backLabel="Back to Dashboard"
+      />
 
       <div className="card shadow-sm border-0 mb-4">
         <div className="card-body p-3">
