@@ -8,9 +8,10 @@ export default function HeroSection() {
       <div className="lp-container home-hero__frame">
         <div className="home-hero__copy">
           <p className="home-hero__overline">
-            <span>Vaccination Portal</span>
-            <span aria-hidden="true">/</span>
-            <span>Citizen services</span>
+            <span className="home-hero__badge">
+              <span className="home-hero__badge-text--desktop">Secure Access &amp; Verification Gateway</span>
+              <span className="home-hero__badge-text--mobile">Secure Verification Gateway</span>
+            </span>
           </p>
           <h1 id="home-hero-title">
             A clear path from <em>campaign</em> to vaccination record.

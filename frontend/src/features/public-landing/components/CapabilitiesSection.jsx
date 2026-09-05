@@ -59,7 +59,10 @@ export default function CapabilitiesSection() {
                 aria-controls="home-operation-detail"
                 onClick={() => setSelected(capability.id)}
               >
-                <span className="home-operations__number" aria-hidden="true">0{index + 1}</span>
+                <span className="home-operations__number" aria-hidden="true">
+                  <span className="home-operations__indicator" />
+                  0{index + 1}
+                </span>
                 <span>{capability.domain}{' '}<small>{capability.title}</small></span>
                 <span className="home-operations__arrow" aria-hidden="true">↗</span>
               </button>

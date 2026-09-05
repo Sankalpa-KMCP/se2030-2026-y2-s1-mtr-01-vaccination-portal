@@ -98,34 +98,77 @@ export default function AccountRegistrationForm({ accountType, apiError, isSubmi
       )}
       <ApiErrorAlert error={apiError} onDismiss={onDismissError} />
 
-      <div className="auth-registration-grid">
-        <div className="auth-field">
-          <label htmlFor={`${accountType}-full-name`}>Full Name</label>
-          <input className="auth-input" id={`${accountType}-full-name`} name="fullName" value={form.fullName} onChange={updateField} maxLength={255} autoComplete="name" disabled={isSubmitting} aria-invalid={hasError} placeholder="Your full name" required />
-        </div>
-
-        <div className="auth-field">
-          <label htmlFor={`${accountType}-email`}>Email Address</label>
-          <input className="auth-input" id={`${accountType}-email`} name="email" type="email" value={form.email} onChange={updateField} maxLength={255} autoComplete="email" inputMode="email" disabled={isSubmitting} aria-invalid={hasError} placeholder="name@example.gov" required />
-        </div>
-
-        <div className="auth-field">
-          <label htmlFor={`${accountType}-phone`}>Phone Number</label>
-          <input className="auth-input" id={`${accountType}-phone`} name="phoneNumber" type="tel" value={form.phoneNumber} onChange={updateField} maxLength={32} autoComplete="tel" inputMode="tel" disabled={isSubmitting} aria-invalid={hasError} placeholder="Your contact number" required />
-        </div>
-
+      <div className="auth-form-steps" aria-hidden="true">
+        <span className="auth-form-step auth-form-step--current">
+          <span className="auth-form-step__num">1</span>
+          <span>{isStaff ? 'Identity' : 'Personal'}</span>
+        </span>
+        <span className="auth-form-step__divider" />
         {isStaff && (
-          <div className="auth-field">
-            <label htmlFor="staff-requested-role">Requested Staff Role</label>
-            <select className="auth-input auth-select" id="staff-requested-role" name="requestedRoleCode" value={form.requestedRoleCode} onChange={updateField} disabled={isSubmitting} required>
-              {REQUESTABLE_STAFF_ROLES.map(({ code, label }) => <option key={code} value={code}>{label}</option>)}
-            </select>
-          </div>
+          <>
+            <span className="auth-form-step auth-form-step--current">
+              <span className="auth-form-step__num">2</span>
+              <span>Role</span>
+            </span>
+            <span className="auth-form-step__divider" />
+          </>
         )}
-
-        <PasswordField accountType={accountType} value={form.password} onChange={updateField} disabled={isSubmitting} invalid={hasError} visible={passwordVisibility.password} onToggle={() => togglePassword('password')} />
-        <PasswordField accountType={accountType} confirmation value={form.confirmPassword} onChange={updateField} disabled={isSubmitting} invalid={hasError} visible={passwordVisibility.confirmPassword} onToggle={() => togglePassword('confirmPassword')} />
+        <span className="auth-form-step auth-form-step--current">
+          <span className="auth-form-step__num">{isStaff ? '3' : '2'}</span>
+          <span>Security</span>
+        </span>
       </div>
+
+      <fieldset className="auth-form-group">
+        <legend className="auth-form-group__legend">
+          <span className="auth-form-group__num">01</span>
+          <span>{isStaff ? 'Identity & Contact Details' : 'Personal Details'}</span>
+        </legend>
+        <div className="auth-registration-grid">
+          <div className="auth-field">
+            <label htmlFor={`${accountType}-full-name`}>Full Name</label>
+            <input className="auth-input" id={`${accountType}-full-name`} name="fullName" value={form.fullName} onChange={updateField} maxLength={255} autoComplete="name" disabled={isSubmitting} aria-invalid={hasError} placeholder="Your full name" required />
+          </div>
+
+          <div className="auth-field">
+            <label htmlFor={`${accountType}-email`}>Email Address</label>
+            <input className="auth-input" id={`${accountType}-email`} name="email" type="email" value={form.email} onChange={updateField} maxLength={255} autoComplete="email" inputMode="email" disabled={isSubmitting} aria-invalid={hasError} placeholder="name@example.gov" required />
+          </div>
+
+          <div className="auth-field auth-field--full">
+            <label htmlFor={`${accountType}-phone`}>Phone Number</label>
+            <input className="auth-input" id={`${accountType}-phone`} name="phoneNumber" type="tel" value={form.phoneNumber} onChange={updateField} maxLength={32} autoComplete="tel" inputMode="tel" disabled={isSubmitting} aria-invalid={hasError} placeholder="Your contact number" required />
+          </div>
+        </div>
+      </fieldset>
+
+      {isStaff && (
+        <fieldset className="auth-form-group">
+          <legend className="auth-form-group__legend">
+            <span className="auth-form-group__num">02</span>
+            <span>Role Assignment</span>
+          </legend>
+          <div className="auth-registration-grid">
+            <div className="auth-field auth-field--full">
+              <label htmlFor="staff-requested-role">Requested Staff Role</label>
+              <select className="auth-input auth-select" id="staff-requested-role" name="requestedRoleCode" value={form.requestedRoleCode} onChange={updateField} disabled={isSubmitting} required>
+                {REQUESTABLE_STAFF_ROLES.map(({ code, label }) => <option key={code} value={code}>{label}</option>)}
+              </select>
+            </div>
+          </div>
+        </fieldset>
+      )}
+
+      <fieldset className="auth-form-group">
+        <legend className="auth-form-group__legend">
+          <span className="auth-form-group__num">{isStaff ? '03' : '02'}</span>
+          <span>Account Security</span>
+        </legend>
+        <div className="auth-registration-grid">
+          <PasswordField accountType={accountType} value={form.password} onChange={updateField} disabled={isSubmitting} invalid={hasError} visible={passwordVisibility.password} onToggle={() => togglePassword('password')} />
+          <PasswordField accountType={accountType} confirmation value={form.confirmPassword} onChange={updateField} disabled={isSubmitting} invalid={hasError} visible={passwordVisibility.confirmPassword} onToggle={() => togglePassword('confirmPassword')} />
+        </div>
+      </fieldset>
 
       <button className="auth-primary-action" type="submit" disabled={isSubmitting}>
         <span className="auth-primary-action__label">

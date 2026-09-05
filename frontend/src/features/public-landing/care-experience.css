@@ -51,6 +51,24 @@
 .lp-page--home .home-hero__overline { margin-bottom: 24px; font-size: 0.72rem; }
 .lp-page--home .home-hero__overline,
 .lp-page--home .home-hero__overline span:first-child { color: var(--health-green-deep); }
+.lp-page--home .home-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--health-green-border);
+  border-radius: 999px;
+  background: var(--health-surface-subtle);
+  color: var(--health-green-deep);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.lp-page--home .home-hero__badge-text--mobile {
+  display: none;
+}
 .lp-page--home .home-hero h1 {
   max-width: 13ch;
   font-size: clamp(3rem, 4.9vw, 6.25rem);
@@ -113,8 +131,27 @@
 .lp-page--home .home-operations__choice { display: grid; grid-template-columns: 28px 1fr 24px; gap: 16px; align-items: center; width: 100%; text-align: left; padding: 22px 18px; color: var(--health-on-dark); border: 1px solid transparent; border-bottom-color: var(--health-rule-dark); border-radius: 0; background: transparent; font: inherit; font-size: 1.05rem; transition: background-color 180ms ease, border-color 180ms ease; }
 .lp-page--home .home-operations__choice:last-child { border-bottom-color: transparent; }
 .lp-page--home .home-operations__choice small { display: block; margin-top: 6px; font-size: 0.79rem; line-height: 1.5; color: var(--health-muted-dark); }
-.lp-page--home .home-operations__number { align-self: start; padding-top: 4px; font-size: 0.72rem; color: var(--health-green-light); }
-.lp-page--home .home-operations__choice[aria-pressed='true'] { background: var(--health-navy-raised); border-color: var(--health-green); border-radius: 8px; }
+.lp-page--home .home-operations__number { align-self: start; padding-top: 4px; font-size: 0.72rem; color: var(--health-green-light); display: inline-flex; align-items: center; }
+.lp-page--home .home-operations__indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: transparent;
+  vertical-align: middle;
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+.lp-page--home .home-operations__choice[aria-pressed='true'] .home-operations__indicator {
+  background: var(--health-green-light);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+.lp-page--home .home-operations__choice[aria-pressed='true'] {
+  background: var(--health-navy-raised);
+  border-color: var(--health-green);
+  border-radius: 8px;
+  box-shadow: inset 3px 0 0 0 var(--health-green-light);
+}
 .lp-page--home .home-operations__choice:hover { background: var(--health-navy-raised); }
 .lp-page--home .home-operations__arrow { color: var(--health-green-light); transition: transform 180ms ease; }
 .lp-page--home .home-operations__choice[aria-pressed='true'] .home-operations__arrow { transform: rotate(45deg); }
@@ -263,7 +300,7 @@
   .lp-page--home .home-journey__stage::before { transform-origin: left; transition: transform var(--home-motion-slow) var(--home-motion-ease); }
   .lp-page--home.lp-reveal-ready .home-journey:not(.is-revealed) .home-journey__stage::before { transform: scaleX(0); }
 }
-.lp-page--home .home-operations__choice[aria-pressed='true'] { border-color: var(--health-green-light); }
+.lp-page--home .home-operations__choice[aria-pressed='true'] { border-color: var(--health-green-light); box-shadow: inset 3px 0 0 0 var(--health-green-light); }
 .lp-page--home .home-access__citizen::after { background: var(--health-green); }
 .lp-page--home .home-access__staff::after { background: var(--health-green-light); }
 .lp-page--home .home-assurance__register li:hover { transform: none; }
@@ -330,4 +367,18 @@
   .lp-page--home .home-pathway__node-label { font-size: 16px; }
   .lp-page--home .home-pathway__node-number { font-size: 11px; }
   .lp-page--home .home-pathway__mobile-note { fill: var(--health-muted-dark); font: 400 12px var(--lp-font-body); }
+}
+
+@media (max-width: 360px) {
+  .lp-page--home .home-hero__badge {
+    font-size: 0.58rem;
+    padding: 3px 8px;
+    letter-spacing: 0.07em;
+  }
+  .lp-page--home .home-hero__badge-text--desktop {
+    display: none;
+  }
+  .lp-page--home .home-hero__badge-text--mobile {
+    display: inline;
+  }
 }
