@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
 import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
+import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
 import {
   getActiveScreeningSubmission,
   getCitizenScreeningForm,
@@ -176,11 +177,10 @@ export default function CitizenScreeningPage() {
           : undefined}
       />
 
-      <ol className="citizen-workflow-steps" aria-label="Screening steps">
-        <li><span>1</span><strong>Review questions</strong></li>
-        <li><span>2</span><strong>Confirm consent</strong></li>
-        <li><span>3</span><strong>Submit screening</strong></li>
-      </ol>
+      <CitizenWorkflowGuide
+        titleId="screening-workflow-guide"
+        steps={['Review questions', 'Confirm consent', 'Submit screening']}
+      />
 
       {loading && (
         <CitizenStatePanel eyebrow="Screening form" title="Loading your screening" tone="loading" status>
@@ -193,11 +193,15 @@ export default function CitizenScreeningPage() {
 
       {!loading && !submissionResult && !activeSubmission && (
         <>
-          {error && <div className="citizen-page__notice"><ApiErrorAlert error={error} /></div>}
-          {error?.status === 409 && (
-            <button className="citizen-action citizen-action--secondary" type="button" onClick={loadScreening}>
-              Reload screening form
-            </button>
+          {error && (
+            <CitizenErrorState
+              error={error}
+              actions={error?.status === 409 ? (
+                <button className="citizen-action citizen-action--secondary" type="button" onClick={loadScreening}>
+                  Reload screening form
+                </button>
+              ) : undefined}
+            />
           )}
 
           {!error && screeningForm && sortedQuestions.length === 0 && (

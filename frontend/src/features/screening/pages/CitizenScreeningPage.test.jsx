@@ -87,7 +87,7 @@ describe('CitizenScreeningPage', () => {
   });
 
   it('displays all six question types and backend-provided consent without its hash', async () => {
-    renderPage();
+    const { container } = renderPage();
     await waitForForm();
 
     expect(screen.getByRole('radio', { name: 'Yes' })).toBeTruthy();
@@ -98,6 +98,8 @@ describe('CitizenScreeningPage', () => {
     expect(screen.getByRole('textbox', { name: /additional details/i })).toBeTruthy();
     expect(screen.getByText('Development screening consent')).toBeTruthy();
     expect(screen.getByText('Backend-provided consent wording.')).toBeTruthy();
+    expect(screen.getByText('How it works')).toBeTruthy();
+    expect(container.querySelector('[aria-current], [data-completed]')).toBeNull();
     expect(screen.queryByText(/contentHash/i)).toBeNull();
   });
 
@@ -201,6 +203,7 @@ describe('CitizenScreeningPage', () => {
     screeningApiMocks.getCitizenScreeningForm.mockRejectedValue(new Error('No screening form is configured'));
     renderPage();
     expect(await screen.findByText('No screening form is configured')).toBeTruthy();
+    expect(screen.getByRole('alert').className).toContain('citizen-state--error');
   });
 
   it('displays submission errors and offers reload for a stale consent conflict', async () => {

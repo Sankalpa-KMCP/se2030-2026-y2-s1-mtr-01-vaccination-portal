@@ -2,8 +2,10 @@ import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import CitizenSection from './CitizenSection';
+import CitizenErrorState from './CitizenErrorState';
 import CitizenStatePanel from './CitizenStatePanel';
 import CitizenStatusBadge from './CitizenStatusBadge';
+import CitizenWorkflowGuide from './CitizenWorkflowGuide';
 
 afterEach(cleanup);
 
@@ -24,5 +26,22 @@ describe('citizen UI primitives', () => {
   it('renders readable status text', () => {
     render(<CitizenStatusBadge tone="positive">Eligible</CitizenStatusBadge>);
     expect(screen.getByText('Eligible')).toBeTruthy();
+  });
+
+  it('presents workflow steps as neutral instructions without invented progress', () => {
+    const { container } = render(
+      <CitizenWorkflowGuide titleId="guide" steps={['Search', 'Choose', 'Confirm']} />,
+    );
+    expect(screen.getByText('How it works')).toBeTruthy();
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(container.querySelector('[aria-current]')).toBeNull();
+    expect(container.querySelector('[data-completed]')).toBeNull();
+  });
+
+  it('keeps meaningful API error text in the subdued citizen alert', () => {
+    render(<CitizenErrorState error={Object.assign(new Error('Campaign unavailable'), { status: 404 })} />);
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.getByText('Information not found')).toBeTruthy();
+    expect(screen.getByText('Campaign unavailable')).toBeTruthy();
   });
 });

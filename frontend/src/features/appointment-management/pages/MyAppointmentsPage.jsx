@@ -4,6 +4,7 @@ import AppointmentCard from '../components/AppointmentCard';
 import RescheduleDialog from '../components/RescheduleDialog';
 import { getMyAppointments, cancelAppointment } from '../api/appointmentApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
 import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
@@ -97,10 +98,9 @@ export default function MyAppointmentsPage() {
           backLabel="Back to Dashboard"
           actions={<Link to="/app/appointments/book">Book Appointment</Link>}
         />
-        <div className="alert alert-warning border-0 shadow-sm citizen-page__notice" role="alert">
-          <h2 className="h6 alert-heading fw-bold mb-1">Authentication Required</h2>
-          <p className="mb-0">Unable to load appointments. Please sign in again.</p>
-        </div>
+        <CitizenStatePanel title="Authentication required" tone="warning">
+          <p>Unable to load appointments. Please sign in again.</p>
+        </CitizenStatePanel>
       </div>
     );
   }
@@ -113,10 +113,20 @@ export default function MyAppointmentsPage() {
         subtitle="View and manage your recorded vaccination appointments."
         backTo="/app/citizen"
         backLabel="Back to Dashboard"
-        actions={<Link to="/app/appointments/book">Book Appointment</Link>}
+        actions={appointments?.length > 0 ? <Link to="/app/appointments/book">Book Appointment</Link> : undefined}
       />
 
-      {feedback && (
+      {feedback?.type === 'danger' ? (
+        <CitizenErrorState
+          error={feedback.message}
+          title={feedback.title}
+          actions={(
+            <button className="citizen-action citizen-action--secondary" type="button" onClick={() => setFeedback(null)}>
+              Dismiss
+            </button>
+          )}
+        />
+      ) : feedback ? (
         <div className="citizen-page__notice">
           <div
             className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
@@ -132,7 +142,7 @@ export default function MyAppointmentsPage() {
           ></button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {loading && (
         <CitizenStatePanel title="Fetching your appointments..." tone="loading" status>
@@ -140,7 +150,7 @@ export default function MyAppointmentsPage() {
         </CitizenStatePanel>
       )}
 
-      {!loading && appointments !== null && (
+      {!loading && appointments !== null && feedback?.type !== 'danger' && (
         <div className="appointments-list-section">
           <header className="citizen-section__header mb-3">
             <div>

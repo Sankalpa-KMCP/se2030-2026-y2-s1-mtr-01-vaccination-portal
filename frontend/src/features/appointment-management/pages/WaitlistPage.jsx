@@ -4,8 +4,10 @@ import WaitlistCard from '../components/WaitlistCard';
 import WaitlistPosition from '../components/WaitlistPosition';
 import { getWaitlistStatus, leaveWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
 
 /**
  * Citizen Waitlist Page (US-05).
@@ -84,10 +86,9 @@ export default function WaitlistPage() {
           backTo="/app/citizen"
           backLabel="Back to Dashboard"
         />
-        <div className="alert alert-warning border-0 shadow-sm citizen-page__notice" role="alert">
-          <h2 className="h6 alert-heading fw-bold mb-1">Authentication Required</h2>
-          <p className="mb-0">Unable to load waitlist status. Please sign in again.</p>
-        </div>
+        <CitizenStatePanel title="Authentication required" tone="warning">
+          <p>Unable to load waitlist status. Please sign in again.</p>
+        </CitizenStatePanel>
       </div>
     );
   }
@@ -102,11 +103,10 @@ export default function WaitlistPage() {
         backLabel="Back to Dashboard"
       />
 
-      <ol className="citizen-workflow-steps" aria-label="Waitlist steps">
-        <li><span>1</span><strong>Enter a campaign reference</strong></li>
-        <li><span>2</span><strong>Check your recorded entry</strong></li>
-        <li><span>3</span><strong>Keep or leave the waitlist</strong></li>
-      </ol>
+      <CitizenWorkflowGuide
+        titleId="waitlist-workflow-guide"
+        steps={['Enter a campaign reference', 'Check your recorded entry', 'Keep or leave the waitlist']}
+      />
 
       <div className="card shadow-sm border-0 citizen-waitlist-filter">
         <div className="card-body p-3">
@@ -115,13 +115,11 @@ export default function WaitlistPage() {
             <h2 className="h5 mb-1">Find your waitlist entry</h2>
             <p className="text-muted small mb-0">Waitlist status is checked one campaign at a time.</p>
           </div>
-          <form onSubmit={handleCampaignSubmit} className="row g-2 align-items-center">
-            <div className="col-auto">
-              <label htmlFor="campaignIdFilter" className="col-form-label fw-semibold">
-                Campaign ID:
-              </label>
-            </div>
-            <div className="col-auto">
+          <form onSubmit={handleCampaignSubmit} className="citizen-waitlist-lookup">
+            <label htmlFor="campaignIdFilter" className="citizen-waitlist-lookup__label">
+              Campaign ID
+            </label>
+            <div className="citizen-waitlist-lookup__controls">
               <input
                 type="number"
                 id="campaignIdFilter"
@@ -131,8 +129,6 @@ export default function WaitlistPage() {
                 placeholder="Enter Campaign ID"
                 required
               />
-            </div>
-            <div className="col-auto">
               <button type="submit" className="btn btn-primary fw-semibold" disabled={loading}>
                 {loading ? 'Checking...' : 'Check Status'}
               </button>
@@ -141,7 +137,17 @@ export default function WaitlistPage() {
         </div>
       </div>
 
-      {feedback && (
+      {feedback?.type === 'danger' ? (
+        <CitizenErrorState
+          error={feedback.message}
+          title={feedback.title}
+          actions={(
+            <button className="citizen-action citizen-action--secondary" type="button" onClick={() => setFeedback(null)}>
+              Dismiss
+            </button>
+          )}
+        />
+      ) : feedback ? (
         <div className="citizen-page__notice">
           <div
             className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
@@ -157,7 +163,7 @@ export default function WaitlistPage() {
           ></button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {loading && (
         <CitizenStatePanel title="Checking waitlist status..." tone="loading" status>

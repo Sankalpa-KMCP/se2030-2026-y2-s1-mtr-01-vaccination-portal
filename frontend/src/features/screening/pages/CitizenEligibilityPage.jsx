@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenSection from '../../citizen-ui/components/CitizenSection';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
@@ -51,7 +51,7 @@ function EligibilityRecords({ citizenId }) {
   );
   return (
     <>
-      {baseError && <div className="citizen-page__notice"><ApiErrorAlert error={baseError} /></div>}
+      {baseError && <CitizenErrorState error={baseError} />}
       {errors.campaigns && <CitizenStatePanel title="Campaign information unavailable" tone="warning"><p>Your records remain visible using campaign references.</p></CitizenStatePanel>}
       {!baseError && records.length === 0 && (
         <CitizenStatePanel
@@ -150,7 +150,7 @@ export default function CitizenEligibilityPage() {
         actions={<Link to="/app/screening/history">View Screening History</Link>}
       />
       {user?.id ? <EligibilityRecords key={user.id} citizenId={user.id} />
-        : <ApiErrorAlert error="Your authenticated citizen profile is missing an account identifier." />}
+        : <CitizenErrorState error="Your authenticated citizen profile is missing an account identifier." />}
     </section>
   );
 }

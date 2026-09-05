@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const mocks = vi.hoisted(() => ({
@@ -39,13 +39,15 @@ afterEach(cleanup);
 
 describe('citizen appointment pages', () => {
   it('keeps the booking flow accessible and truthful', () => {
-    show(<AppointmentBookingPage />);
+    const { container } = show(<AppointmentBookingPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Book a Vaccination Appointment' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Back to Dashboard' }).getAttribute('href')).toBe('/app/citizen');
     expect(screen.getByRole('link', { name: 'View My Appointments' }).getAttribute('href')).toBe('/app/appointments/mine');
     expect(screen.getByRole('spinbutton', { name: /Campaign ID/i })).toBeTruthy();
     expect(screen.getByRole('spinbutton', { name: /Center ID/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Search Sessions' })).toBeTruthy();
+    expect(screen.getByText('How it works')).toBeTruthy();
+    expect(container.querySelector('[aria-current], [data-completed]')).toBeNull();
     expect(screen.queryByText(/nearby|closest|distance/i)).toBeNull();
   });
 
@@ -53,9 +55,9 @@ describe('citizen appointment pages', () => {
     show(<MyAppointmentsPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'My Appointments' })).toBeTruthy();
     expect(await screen.findByText('No Appointments Found')).toBeTruthy();
-    expect(screen.getAllByRole('link', { name: 'Book Appointment' }).every(
-      (link) => link.getAttribute('href') === '/app/appointments/book',
-    )).toBe(true);
+    const bookingLinks = screen.getAllByRole('link', { name: 'Book Appointment' });
+    expect(bookingLinks).toHaveLength(1);
+    expect(bookingLinks[0].getAttribute('href')).toBe('/app/appointments/book');
     expect(screen.queryByText(/upcoming appointment/i)).toBeNull();
   });
 
@@ -71,17 +73,37 @@ describe('citizen appointment pages', () => {
     show(<MyAppointmentsPage />);
     expect(await screen.findByRole('button', { name: 'Reschedule' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Cancel Appointment' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Book Appointment' }).getAttribute('href')).toBe('/app/appointments/book');
     expect(screen.queryByText(/center|address/i)).toBeNull();
   });
 
+  it('does not offer a contradictory booking action while appointments load or fail', async () => {
+    mocks.getMyAppointments.mockReturnValue(new Promise(() => {}));
+    const view = show(<MyAppointmentsPage />);
+    expect(screen.queryByRole('link', { name: 'Book Appointment' })).toBeNull();
+
+    view.unmount();
+    mocks.getMyAppointments.mockRejectedValue(new Error('Appointments are temporarily unavailable'));
+    show(<MyAppointmentsPage />);
+    expect(await screen.findByText('Appointments are temporarily unavailable')).toBeTruthy();
+    expect(screen.getByRole('alert').className).toContain('citizen-state--error');
+    expect(screen.queryByRole('link', { name: 'Book Appointment' })).toBeNull();
+  });
+
   it('keeps waitlist lookup and empty-state actions available', async () => {
-    show(<WaitlistPage />);
+    const { container } = show(<WaitlistPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'My Waitlist Status' })).toBeTruthy();
     expect(screen.getByRole('spinbutton', { name: /Campaign ID/i })).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Check Status' })).toBeTruthy();
+    expect(screen.getByText('How it works')).toBeTruthy();
+    expect(container.querySelector('[aria-current], [data-completed]')).toBeNull();
     expect(await screen.findByText("You're not on any waitlist")).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Browse Available Sessions' }).getAttribute('href')).toBe('/app/appointments/book');
     expect(screen.queryByText(/estimated time|automatic promotion|notification/i)).toBeNull();
+
+    fireEvent.change(screen.getByRole('spinbutton', { name: /Campaign ID/i }), { target: { value: '9001' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Check Status' }));
+    await waitFor(() => expect(mocks.getWaitlistStatus).toHaveBeenCalledWith({ citizenId: 71, campaignId: '9001' }));
   });
 
   it('retains the leave action for an actual waiting entry', async () => {

@@ -80,14 +80,14 @@ describe('citizen historical screening details', () => {
   it('distinguishes assessment request failure from no recorded assessment', async () => {
     mocks.getEligibilityAssessmentBySubmission.mockRejectedValue(new Error('Assessment lookup failed'));
     render(page());
-    expect(await screen.findByText('Final assessment information is unavailable.')).toBeTruthy();
+    expect(await screen.findByText('Final assessment information is unavailable')).toBeTruthy();
     expect(screen.queryByText('No final eligibility assessment has been recorded for this screening yet.')).toBeNull();
     expect(screen.getByText('Asthma, Diabetes')).toBeTruthy();
   });
   it.each([403, 404, 500])('handles primary HTTP %s failure without loading supplements or leaking details', async (status) => {
     mocks.getScreeningHistoryDetails.mockRejectedValue(Object.assign(new Error(`History details unavailable (${status})`), { status }));
     render(page());
-    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect((await screen.findByRole('alert')).className).toContain('citizen-state--error');
     expect(screen.queryByText('Asthma, Diabetes')).toBeNull();
     expect(mocks.getCampaignById).not.toHaveBeenCalled();
     expect(mocks.getEligibilityAssessmentBySubmission).not.toHaveBeenCalled();

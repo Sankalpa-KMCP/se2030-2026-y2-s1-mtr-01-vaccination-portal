@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenSection from '../../citizen-ui/components/CitizenSection';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
@@ -24,7 +24,7 @@ function HistoryRecords({ citizenId }) {
   const campaignMap = new Map(campaigns.map((campaign) => [String(campaign.id), campaign]));
   return (
     <>
-      {errors.submissions && <div className="citizen-page__notice"><ApiErrorAlert error={errors.submissions} /></div>}
+      {errors.submissions && <CitizenErrorState error={errors.submissions} />}
       {errors.assessments && <CitizenStatePanel title="Final assessment information is unavailable" tone="warning"><p>Your screening history is still shown.</p></CitizenStatePanel>}
       {errors.campaigns && <CitizenStatePanel title="Campaign information is unavailable" tone="warning"><p>Campaign references are shown instead.</p></CitizenStatePanel>}
       {!errors.submissions && submissions.length === 0 && (
@@ -89,7 +89,7 @@ export default function CitizenScreeningHistoryPage() {
         actions={<Link to="/app/screening/eligibility">View My Eligibility</Link>}
       />
       {user?.id ? <HistoryRecords key={user.id} citizenId={user.id} />
-        : <ApiErrorAlert error="Your authenticated citizen profile is missing an account identifier." />}
+        : <CitizenErrorState error="Your authenticated citizen profile is missing an account identifier." />}
     </section>
   );
 }

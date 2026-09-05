@@ -4,7 +4,10 @@ import AvailabilitySearch from '../components/AvailabilitySearch';
 import { bookAppointment } from '../api/appointmentApi';
 import { joinWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
 
 /**
  * Appointment Booking Page (US-03).
@@ -113,10 +116,9 @@ export default function AppointmentBookingPage() {
           backLabel="Back to Dashboard"
           actions={<Link to="/app/appointments/mine">View My Appointments</Link>}
         />
-        <div className="alert alert-warning border-0 shadow-sm citizen-page__notice" role="alert">
-          <h2 className="h6 alert-heading fw-bold mb-1">Authentication Required</h2>
-          <p className="mb-0">Unable to load this page. Please sign in again.</p>
-        </div>
+        <CitizenStatePanel title="Authentication required" tone="warning">
+          <p>Unable to load this page. Please sign in again.</p>
+        </CitizenStatePanel>
       </div>
     );
   }
@@ -132,13 +134,34 @@ export default function AppointmentBookingPage() {
         actions={<Link to="/app/appointments/mine">View My Appointments</Link>}
       />
 
-      <ol className="citizen-workflow-steps" aria-label="Appointment booking steps">
-        <li><span>1</span><strong>Search sessions</strong></li>
-        <li><span>2</span><strong>Choose availability</strong></li>
-        <li><span>3</span><strong>Confirm booking</strong></li>
-      </ol>
+      <CitizenWorkflowGuide
+        titleId="appointment-workflow-guide"
+        steps={['Search sessions', 'Choose availability', 'Confirm booking']}
+      />
 
-      {feedback && (
+      {feedback?.type === 'danger' ? (
+        <CitizenErrorState
+          error={feedback.message}
+          title={feedback.title}
+          actions={(
+            <>
+              {feedback.isSlotFull && feedback.sessionToWaitlist && (
+                <button
+                  type="button"
+                  className="citizen-action citizen-action--secondary"
+                  disabled={joiningWaitlist}
+                  onClick={() => handleJoinWaitlist(feedback.sessionToWaitlist)}
+                >
+                  {joiningWaitlist ? 'Joining Waitlist...' : 'Join Waitlist for This Session'}
+                </button>
+              )}
+              <button className="citizen-action citizen-action--secondary" type="button" onClick={() => setFeedback(null)}>
+                Dismiss
+              </button>
+            </>
+          )}
+        />
+      ) : feedback ? (
         <div className="citizen-page__notice">
           <div
             className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
@@ -146,25 +169,6 @@ export default function AppointmentBookingPage() {
           >
           <h4 className="h6 alert-heading fw-bold mb-1">{feedback.title}</h4>
           <p className="mb-0">{feedback.message}</p>
-          {feedback.isSlotFull && feedback.sessionToWaitlist && (
-            <div className="mt-3 pt-2 border-top">
-              <button
-                type="button"
-                className="btn btn-warning btn-sm fw-bold shadow-sm"
-                disabled={joiningWaitlist}
-                onClick={() => handleJoinWaitlist(feedback.sessionToWaitlist)}
-              >
-                {joiningWaitlist ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Joining Waitlist...
-                  </>
-                ) : (
-                  'Join Waitlist for This Session'
-                )}
-              </button>
-            </div>
-          )}
           <button
             type="button"
             className="btn-close"
@@ -173,7 +177,7 @@ export default function AppointmentBookingPage() {
           ></button>
           </div>
         </div>
-      )}
+      ) : null}
 
       <section aria-label="Appointment availability search">
         <AvailabilitySearch

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenSection from '../../citizen-ui/components/CitizenSection';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
@@ -58,7 +58,12 @@ export default function CitizenScreeningCampaignsPage() {
         </CitizenStatePanel>
       )}
 
-      {!loading && error && <div className="citizen-page__notice"><ApiErrorAlert error={error} /></div>}
+      {!loading && error && (
+        <CitizenErrorState
+          error={error}
+          actions={<Link className="citizen-action citizen-action--secondary" to="/app/citizen">Return to Dashboard</Link>}
+        />
+      )}
 
       {!loading && !error && campaigns.length === 0 && (
         <CitizenStatePanel

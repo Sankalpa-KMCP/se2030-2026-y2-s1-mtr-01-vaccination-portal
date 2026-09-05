@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
 import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
@@ -61,7 +61,7 @@ function HistoryDetails({ submissionId }) {
         meta={details?.id ? `Submission reference ${details.id}` : undefined}
       />
       {state.loading && <CitizenStatePanel title="Loading screening details..." tone="loading" status><p>Retrieving the selected questionnaire record and its assessment.</p></CitizenStatePanel>}
-      {!state.loading && state.error && <div className="citizen-page__notice"><ApiErrorAlert error={state.error} /></div>}
+      {!state.loading && state.error && <CitizenErrorState error={state.error} />}
       {!state.loading && details && <>
         {supplement.errors.campaign && <CitizenStatePanel title="Campaign information is unavailable" tone="warning"><p>Your screening details remain available.</p></CitizenStatePanel>}
         <section className="citizen-detail-panel" aria-labelledby="record-summary-title">
@@ -107,7 +107,7 @@ function HistoryDetails({ submissionId }) {
           </header>
           <div className="citizen-detail-panel__body">
           {supplement.loading ? <CitizenStatePanel title="Loading assessment information..." tone="loading" status />
-            : supplement.errors.assessment ? <><p>Final assessment information is unavailable.</p><ApiErrorAlert error={supplement.errors.assessment} /></>
+            : supplement.errors.assessment ? <CitizenErrorState error={supplement.errors.assessment} title="Final assessment information is unavailable" />
               : supplement.assessment ? <RecordedEligibilityAssessment assessment={supplement.assessment} />
                 : <p>No final eligibility assessment has been recorded for this screening yet.</p>}
           </div>

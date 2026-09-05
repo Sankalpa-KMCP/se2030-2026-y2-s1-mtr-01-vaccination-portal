@@ -692,47 +692,69 @@
 }
 
 /* Screening form and record system */
-.citizen-workflow-steps {
+.citizen-workflow-guide {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem 1rem;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
   border: 1px solid var(--citizen-border);
   border-radius: var(--citizen-radius-md);
-  background: var(--citizen-surface);
+  background: var(--citizen-paper);
+}
+
+.citizen-workflow-guide__label {
+  margin: 0;
+  color: var(--citizen-muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.citizen-workflow-guide ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
   list-style: none;
 }
 
-.citizen-workflow-steps li {
+.citizen-workflow-guide li {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.7rem;
+  gap: 0.45rem;
   align-items: center;
   min-width: 0;
-  padding: 0.8rem 1rem;
-  border-left: 1px solid var(--citizen-border);
 }
 
-.citizen-workflow-steps li:first-child {
-  border-left: 0;
-}
-
-.citizen-workflow-steps span {
+.citizen-workflow-guide span {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   place-items: center;
-  color: var(--citizen-green);
+  color: var(--citizen-muted);
+  border: 1px solid var(--citizen-border-strong);
   border-radius: 50%;
-  background: var(--citizen-green-soft);
-  font-size: 0.7rem;
+  background: var(--citizen-surface);
+  font-size: 0.64rem;
   font-weight: 800;
 }
 
-.citizen-workflow-steps strong {
+.citizen-workflow-guide strong {
   color: var(--citizen-ink);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.citizen-error-fields {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.45rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--citizen-danger);
+  font-size: 0.72rem;
 }
 
 .citizen-form-panel,
@@ -1242,15 +1264,26 @@
   padding: 1rem 1.15rem !important;
 }
 
-.citizen-waitlist-filter form {
-  display: grid !important;
-  grid-template-columns: auto minmax(160px, 260px) auto;
-  gap: 0.7rem !important;
-  align-items: end !important;
+.citizen-waitlist-lookup {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 620px;
 }
 
-.citizen-waitlist-filter form > div {
-  width: auto;
+.citizen-waitlist-lookup__label {
+  margin: 0;
+  font-weight: 700;
+}
+
+.citizen-waitlist-lookup__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: stretch;
+}
+
+.citizen-waitlist-lookup__controls .form-control {
+  width: 100%;
 }
 
 @keyframes citizen-ui-pulse {
@@ -1294,18 +1327,12 @@
   }
 
   .citizen-campaign-grid,
-  .citizen-workflow-steps,
   .citizen-record-card__facts {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .citizen-workflow-steps li {
-    border-top: 1px solid var(--citizen-border);
-    border-left: 0;
-  }
-
-  .citizen-workflow-steps li:first-child {
-    border-top: 0;
+  .citizen-workflow-guide {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .citizen-summary-strip > div {
@@ -1317,12 +1344,11 @@
     border-top: 0;
   }
 
-  .citizen-waitlist-filter form {
+  .citizen-waitlist-lookup__controls {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .citizen-waitlist-filter form > div,
-  .citizen-waitlist-filter .btn {
+  .citizen-waitlist-lookup__controls .btn {
     width: 100%;
   }
 
@@ -1336,6 +1362,15 @@
 }
 
 @media (max-width: 440px) {
+  .citizen-workflow-guide ol {
+    gap: 0.45rem;
+  }
+
+  .citizen-workflow-guide li {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+
   .citizen-action,
   .citizen-state__actions,
   .citizen-state__actions > * {
