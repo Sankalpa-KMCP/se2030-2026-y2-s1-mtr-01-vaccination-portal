@@ -7,7 +7,16 @@ import StaffDashboardPage from './StaffDashboardPage';
 import AdminDashboardPage from './AdminDashboardPage';
 
 const authState = vi.hoisted(() => ({ current: null }));
+const dashboardState = vi.hoisted(() => ({
+  current: {
+    appointments: { loading: false, data: [], error: null },
+    screening: { loading: false, submissions: [], assessments: [], campaigns: [], errors: {} },
+  },
+}));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => authState.current }));
+vi.mock('../../features/citizen-dashboard/hooks/useCitizenDashboardData', () => ({
+  default: () => dashboardState.current,
+}));
 
 function renderPage(page) {
   return render(<MemoryRouter>{page}</MemoryRouter>);
@@ -16,8 +25,9 @@ function renderPage(page) {
 afterEach(cleanup);
 
 describe('role dashboards', () => {
-  it('enables screening, eligibility and screening history while preserving future cards', () => {
+  it('exposes all implemented citizen services without future-feature placeholders', () => {
     authState.current = { user: {
+      id: 71,
       fullName: 'Citizen User',
       email: 'citizen@example.com',
       phoneNumber: '+94 77 123 4567',
@@ -25,18 +35,12 @@ describe('role dashboards', () => {
     } };
     renderPage(<CitizenDashboardPage />);
     expect(screen.getByRole('heading', { name: 'Welcome, Citizen User' })).toBeTruthy();
-    expect(screen.getByText('citizen@example.com')).toBeTruthy();
-    expect(screen.getAllByRole('link', { name: 'Open' })).toHaveLength(3);
-    for (const [title, path] of [['Pre-Vaccination Screening', '/app/screening'], ['My Eligibility', '/app/screening/eligibility'], ['Screening History', '/app/screening/history']]) {
-      const card = screen.getByRole('heading', { name: title }).closest('.card');
-      expect(within(card).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe(path);
-    }
-    expect(screen.getAllByText('Coming soon')).toHaveLength(2);
-    for (const title of ['My Appointments', 'Vaccination History']) {
-      const card = screen.getByRole('heading', { name: title }).closest('.card');
-      expect(within(card).getByText('Coming soon')).toBeTruthy();
-      expect(within(card).queryByRole('link')).toBeNull();
-    }
+    expect(screen.getAllByText('citizen@example.com').length).toBeGreaterThan(0);
+    const shortcuts = screen.getByRole('navigation', { name: 'Citizen service shortcuts' });
+    expect(within(shortcuts).getByRole('link', { name: /my appointments/i }).getAttribute('href')).toBe('/app/appointments/mine');
+    expect(within(shortcuts).getAllByRole('link')).toHaveLength(6);
+    expect(screen.queryByText('Coming soon')).toBeNull();
+    expect(screen.queryByRole('link', { name: /vaccination history/i })).toBeNull();
   });
 
   it('shows staff profile, role, and genuinely available routes', () => {
