@@ -154,6 +154,17 @@ export function submitScreening(payload) {
   });
 }
 
+export function getScreeningCorrectionForm(submissionId) {
+  return screeningRequest(`/submissions/${submissionId}/correction-form`, { method: 'GET' });
+}
+
+export function resubmitScreening(submissionId, answers) {
+  return screeningRequest(`/submissions/${submissionId}/resubmit`, {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  });
+}
+
 // Citizen eligibility and historical display (read-only)
 export function listCitizenScreeningSubmissions(citizenId) {
   return screeningRequest(`/citizens/${citizenId}/submissions`, { method: 'GET' });

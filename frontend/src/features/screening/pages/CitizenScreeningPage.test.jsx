@@ -172,6 +172,7 @@ describe('CitizenScreeningPage', () => {
     expect(await screen.findByText('Your screening has already been submitted and is awaiting review.')).toBeTruthy();
     expect(screeningApiMocks.getCitizenScreeningForm).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Submit screening' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Correct Screening' })).toBeNull();
   });
 
   it('prevents a new form and displays instructions when corrections are required', async () => {
@@ -184,7 +185,19 @@ describe('CitizenScreeningPage', () => {
 
     expect(await screen.findByText('Corrections are required for this screening.')).toBeTruthy();
     expect(screen.getByText('Please clarify the date supplied.')).toBeTruthy();
-    expect(screen.getByText(/upcoming correction workflow/i)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Correct Screening' }).getAttribute('href'))
+      .toBe('/app/screening/history/51/correct');
+    expect(screen.queryByText(/upcoming correction workflow/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Submit screening' })).toBeNull();
+    expect(screeningApiMocks.getCitizenScreeningForm).not.toHaveBeenCalled();
+  });
+
+  it('does not show the correction action for a reviewed submission', async () => {
+    screeningApiMocks.getActiveScreeningSubmission.mockResolvedValue({ id: 53, status: 'REVIEWED' });
+    renderPage();
+
+    await screen.findByText('Your screening has already been submitted and is awaiting review.');
+    expect(screen.queryByRole('link', { name: 'Correct Screening' })).toBeNull();
     expect(screeningApiMocks.getCitizenScreeningForm).not.toHaveBeenCalled();
   });
 

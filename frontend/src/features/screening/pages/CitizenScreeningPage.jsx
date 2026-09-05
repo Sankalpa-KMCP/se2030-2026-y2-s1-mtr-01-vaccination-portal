@@ -54,7 +54,9 @@ function ActiveSubmissionState({ submission }) {
           </div>
         )}
         {isCorrectionsRequired && (
-          <p className="mb-0">Correction and resubmission will be available in the upcoming correction workflow.</p>
+          <Link className="btn btn-primary" to={`/app/screening/history/${submission.id}/correct`}>
+            Correct Screening
+          </Link>
         )}
         {isDraft && (
           <p className="mb-0">A second screening cannot be started while this draft remains active.</p>

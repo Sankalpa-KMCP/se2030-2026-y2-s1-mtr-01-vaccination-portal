@@ -7,7 +7,11 @@ import { getCampaignById } from '../../campaign-management/api/campaignApi';
 import { getEligibilityAssessmentBySubmission, getScreeningHistoryDetails } from '../api/screeningApi';
 import RecordedEligibilityAssessment from '../components/RecordedEligibilityAssessment';
 import ScreeningCorrectionNotice from '../components/ScreeningCorrectionNotice';
-import { CITIZEN_PRELIMINARY_RESULT_LABELS, SCREENING_SUBMISSION_STATUS_LABELS } from '../constants/screeningConstants';
+import {
+  CITIZEN_PRELIMINARY_RESULT_LABELS,
+  SCREENING_SUBMISSION_STATUS,
+  SCREENING_SUBMISSION_STATUS_LABELS,
+} from '../constants/screeningConstants';
 import { campaignName, formatScreeningTimestamp } from '../utils/screeningHistory';
 
 function HistoryDetails({ submissionId }) {
@@ -59,6 +63,14 @@ function HistoryDetails({ submissionId }) {
           </dl>
           <p className="small text-muted mt-2 mb-0">A preliminary result is not a final eligibility decision.</p>
           <ScreeningCorrectionNotice submission={details} />
+          {details.status === SCREENING_SUBMISSION_STATUS.CORRECTIONS_REQUIRED && (
+            <Link
+              className="btn btn-primary mt-3"
+              to={`/app/screening/history/${details.id ?? submissionId}/correct`}
+            >
+              Correct Screening
+            </Link>
+          )}
         </div></div>
         <div className="card border-0 shadow-sm mb-4"><div className="card-body p-4">
           <h2 className="h4 mb-3">Submitted answers</h2>

@@ -44,6 +44,7 @@ import PortalRoutes from './routes';
 vi.mock('../features/screening/pages/CitizenEligibilityPage', () => ({ default: () => 'Citizen Eligibility Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningHistoryPage', () => ({ default: () => 'Citizen History Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningHistoryDetailsPage', () => ({ default: () => 'Citizen History Details Test Page' }));
+vi.mock('../features/screening/pages/CitizenScreeningCorrectionPage', () => ({ default: () => 'Citizen Correction Test Page' }));
 
 function setAuth({ isAuthenticated = true, roles = [] } = {}) {
   const logout = vi.fn();
@@ -103,7 +104,8 @@ describe('shared routing and role guards', () => {
     ['/app/screening/eligibility', 'Citizen Eligibility Test Page'],
     ['/app/screening/history', 'Citizen History Test Page'],
     ['/app/screening/history/42', 'Citizen History Details Test Page'],
-  ])('F2 route %s', (path, page) => {
+    ['/app/screening/history/42/correct', 'Citizen Correction Test Page'],
+  ])('citizen screening route %s', (path, page) => {
     it('allows a citizen', () => {
       setAuth({ roles: ['ROLE_CITIZEN'] });
       render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);

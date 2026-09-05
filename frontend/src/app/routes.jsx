@@ -35,6 +35,7 @@ import CitizenScreeningPage from '../features/screening/pages/CitizenScreeningPa
 import CitizenEligibilityPage from '../features/screening/pages/CitizenEligibilityPage';
 import CitizenScreeningHistoryPage from '../features/screening/pages/CitizenScreeningHistoryPage';
 import CitizenScreeningHistoryDetailsPage from '../features/screening/pages/CitizenScreeningHistoryDetailsPage';
+import CitizenScreeningCorrectionPage from '../features/screening/pages/CitizenScreeningCorrectionPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
@@ -215,6 +216,7 @@ export default function PortalRoutes() {
             <Route path="screening/eligibility" element={<CitizenEligibilityPage />} />
             <Route path="screening/history" element={<CitizenScreeningHistoryPage />} />
             <Route path="screening/history/:submissionId" element={<CitizenScreeningHistoryDetailsPage />} />
+            <Route path="screening/history/:submissionId/correct" element={<CitizenScreeningCorrectionPage />} />
             <Route path="appointments/book" element={<AppointmentBookingPage />} />
             <Route path="appointments/mine" element={<MyAppointmentsPage />} />
             <Route path="appointments/waitlist" element={<WaitlistPage />} />
