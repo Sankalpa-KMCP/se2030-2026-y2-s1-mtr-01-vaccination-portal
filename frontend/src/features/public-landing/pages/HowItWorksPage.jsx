@@ -241,29 +241,26 @@ export default function HowItWorksPage({ onLoginClick }) {
           <div className="lp-container lp-cta-inner">
             <div className="lp-cta-panel__content">
               <div className="lp-cta-kicker">
-                <span className="lp-cta-kicker__label">Portal access</span>
+                <span className="lp-cta-kicker__label">Next: system overview</span>
                 <span className="lp-cta-kicker__rule" aria-hidden="true" />
               </div>
               <h2 className="lp-cta-panel__title" id="lp-cta-title">
-                Ready to begin your journey?
+                See what keeps the service trustworthy.
               </h2>
               <p className="lp-cta-panel__text">
-                Sign in to book a vaccination session, or to run campaigns and
-                clinics for your health team.
+                Review the roles, safeguards, and operating principles behind
+                the portal.
               </p>
             </div>
             <div className="lp-cta-panel__actions">
-              <button type="button" className="lp-btn lp-btn--inverted" onClick={onLoginClick}>
-                Sign in to the portal
-              </button>
               <Link to="/about" className="lp-cta-panel__link">
-                Learn about the system
+                Explore system safeguards
               </Link>
             </div>
           </div>
         </section>
       </main>
-      <PublicFooter onLoginClick={onLoginClick} />
+      <PublicFooter />
     </div>
   );
 }

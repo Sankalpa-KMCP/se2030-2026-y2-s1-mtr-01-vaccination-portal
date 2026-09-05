@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LandingPage from './LandingPage';
 
@@ -42,9 +42,52 @@ describe('LandingPage', () => {
     renderLanding();
 
     expect(screen.getByRole('link', { name: /create citizen account/i }).getAttribute('href')).toBe('/register/citizen');
-    expect(screen.getByRole('link', { name: /citizen login/i }).getAttribute('href')).toBe('/login/citizen');
+    expect(screen.getByRole('link', { name: /sign in as a citizen/i }).getAttribute('href')).toBe('/login/citizen');
     expect(screen.getByRole('link', { name: /request staff account/i }).getAttribute('href')).toBe('/register/staff');
-    expect(screen.getByRole('link', { name: /staff login/i }).getAttribute('href')).toBe('/login/staff');
+    expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login/staff');
+  });
+
+  it('explains the selected capability and updates its connected outcome', () => {
+    renderLanding();
+    const choices = screen.getByRole('group', { name: /explore portal capabilities/i });
+    const time = within(choices).getByRole('button', { name: /time sessions and capacity/i });
+    const record = within(choices).getByRole('button', { name: /record vaccination history and certificates/i });
+    expect(time.getAttribute('aria-pressed')).toBe('true');
+    const detail = document.getElementById(time.getAttribute('aria-controls'));
+    expect(within(detail).getByRole('heading', { name: /sessions and capacity/i })).toBeTruthy();
+    expect(within(detail).getByText('Bookable time slots')).toBeTruthy();
+    fireEvent.click(record);
+    expect(record.getAttribute('aria-pressed')).toBe('true');
+    expect(time.getAttribute('aria-pressed')).toBe('false');
+    expect(within(detail).getByRole('heading', { name: /vaccination history and certificates/i })).toBeTruthy();
+    expect(within(detail).getByText('History & certificate')).toBeTruthy();
+    expect(within(detail).queryByText('Bookable time slots')).toBeNull();
+    expect(detail.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('pairs each citizen journey stage with its staff operation', () => {
+    renderLanding();
+    const journey = screen.getByRole('list', { name: /citizen and staff vaccination journey/i });
+    const stages = within(journey).getAllByRole('listitem');
+    expect(stages).toHaveLength(4);
+    stages.forEach((stage) => {
+      expect(within(stage).getByRole('heading', { level: 3 })).toBeTruthy();
+      expect(within(stage).getByText('Behind the scenes')).toBeTruthy();
+    });
+    expect(screen.getByRole('link', { name: /already registered\? access the portal/i }).getAttribute('href')).toBe('/login');
+  });
+
+  it('renders an animation-ready care path with readiness before appointments', () => {
+    const { container } = renderLanding();
+    const artwork = container.querySelector('.home-pathway');
+
+    expect(artwork).toBeTruthy();
+    expect(artwork.querySelectorAll('.home-pathway__node-core')).toHaveLength(5);
+    expect(artwork.querySelector('.home-pathway__route').getAttribute('pathLength')).toBe('1');
+    expect(artwork.querySelector('.home-pathway__route-progress')).toBeTruthy();
+    expect(artwork.querySelector('.home-pathway__staff-connector--ready')).toBeTruthy();
+    expect(artwork.textContent).toContain('Session readiness');
+    expect(artwork.textContent).toContain('Center, capacity and staff confirmed');
   });
 
   it('fires onLoginClick from the login call-to-action', () => {

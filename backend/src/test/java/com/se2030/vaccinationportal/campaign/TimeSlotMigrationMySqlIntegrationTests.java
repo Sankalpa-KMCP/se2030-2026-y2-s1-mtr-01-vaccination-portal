@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -50,6 +51,22 @@ class TimeSlotMigrationMySqlIntegrationTests extends AbstractMySqlTestContainers
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
     @Autowired private PlatformTransactionManager transactionManager;
+
+    @AfterEach
+    void tearDown() {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("DELETE FROM time_slots");
+        } catch (Exception ignored) {
+        }
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            sessionRepository.deleteAllInBatch();
+            campaignRepository.deleteAllInBatch();
+            centerRepository.deleteAllInBatch();
+            targetGroupRepository.deleteAllInBatch();
+            vaccineTypeRepository.deleteAllInBatch();
+        });
+    }
 
     @Test
     @Timeout(30)

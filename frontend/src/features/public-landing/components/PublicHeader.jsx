@@ -32,7 +32,7 @@ function BannerEmblem() {
         />
         <path d="M9 12.2v2.2h1.6v-2.2h2.4v2.2h1.6v-2.2h1.3v-1.4H9v1.4Z" fill="currentColor" />
       </svg>
-      An official public health service
+      Vaccination services · Citizen &amp; healthcare team access
     </span>
   );
 }

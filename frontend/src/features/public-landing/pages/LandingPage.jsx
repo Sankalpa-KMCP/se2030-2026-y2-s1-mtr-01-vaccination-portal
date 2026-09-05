@@ -17,6 +17,7 @@ import '../landing-page.css';
 import '../premium-public.css';
 import '../clinical-public.css';
 import '../landing-motion.css';
+import '../care-experience.css';
 
 /**
  * "Continue exploring" band — connects Home to the two interior pages
@@ -73,9 +74,9 @@ export default function LandingPage({ onLoginClick }) {
         <HowItWorksSection />
         <TrustSection />
         <ContinueBand />
-        <FinalCtaSection onLoginClick={onLoginClick} />
+        <FinalCtaSection />
       </main>
-      <PublicFooter onLoginClick={onLoginClick} />
+      <PublicFooter />
     </div>
   );
 }

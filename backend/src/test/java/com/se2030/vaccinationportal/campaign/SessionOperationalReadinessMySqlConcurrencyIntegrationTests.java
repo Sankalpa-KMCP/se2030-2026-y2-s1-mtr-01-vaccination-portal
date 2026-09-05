@@ -40,6 +40,7 @@ import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRep
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
@@ -90,6 +91,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
     @Autowired private SessionResourceAssignmentRepository resourceAssignmentRepository;
     @Autowired private StaffAssignmentRepository staffAssignmentRepository;
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
+    @Autowired private TimeSlotRepository timeSlotRepository;
     @Autowired private OperationalResourceRepository resourceRepository;
     @Autowired private OperationalStaffRosterRepository staffRosterRepository;
     @Autowired private OperationalStaffIdentityRepository identityRepository;
@@ -206,6 +208,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
 
     private void cleanupDatabase() {
         transactionTemplate.executeWithoutResult(status -> {
+            timeSlotRepository.deleteAllInBatch();
             resourceAssignmentRepository.deleteAllInBatch();
             staffAssignmentRepository.deleteAllInBatch();
             capacityPlanRepository.deleteAllInBatch();
