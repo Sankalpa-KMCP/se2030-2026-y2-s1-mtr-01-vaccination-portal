@@ -14,6 +14,7 @@ import {
   getEligibilityAssessmentBySubmission,
   getCitizenCampaignEligibility,
   getScreeningHistoryDetails,
+  getScreeningCorrectionForm,
   createAnswerOption,
   createEligibilityRule,
   createQuestion,
@@ -37,6 +38,7 @@ import {
   listQuestionnaireVersions,
   publishQuestionnaireVersion,
   retireQuestionnaireVersion,
+  resubmitScreening,
   submitScreening,
   updateAnswerOption,
   updateEligibilityRule,
@@ -276,5 +278,28 @@ describe('screeningApi', () => {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  });
+
+  it('loads the historical correction form through the exact GET path', async () => {
+    await getScreeningCorrectionForm(42);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith(
+      '/v1/screening/submissions/42/correction-form',
+      { method: 'GET' },
+    );
+    expect(clientMocks.parseApiResponse).toHaveBeenCalledExactlyOnceWith(rawResponse);
+  });
+
+  it('posts only the complete answer map when resubmitting corrections', async () => {
+    const answers = { 101: 'true', 102: 'NO', 103: 'ASTHMA,DIABETES' };
+
+    await resubmitScreening(42, answers);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith(
+      '/v1/screening/submissions/42/resubmit',
+      { method: 'POST', body: JSON.stringify({ answers }) },
+    );
+    expect(JSON.parse(clientMocks.apiRequest.mock.calls[0][1].body)).toEqual({ answers });
+    expect(clientMocks.parseApiResponse).toHaveBeenCalledExactlyOnceWith(rawResponse);
   });
 });
