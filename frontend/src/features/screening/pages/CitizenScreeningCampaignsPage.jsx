@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
-import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenSection from '../../citizen-ui/components/CitizenSection';
+import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
 import { listCampaigns } from '../../campaign-management/api/campaignApi';
 
 const CITIZEN_INTAKE_STATUSES = new Set(['PUBLISHED', 'ACTIVE']);
@@ -40,7 +42,7 @@ export default function CitizenScreeningCampaignsPage() {
   }, []);
 
   return (
-    <section aria-labelledby="screening-campaigns-title">
+    <section className="citizen-page" aria-labelledby="screening-campaigns-title">
       <CitizenPageHeader
         eyebrow="Pre-Vaccination Screening"
         title="Choose a campaign"
@@ -50,44 +52,59 @@ export default function CitizenScreeningCampaignsPage() {
         backLabel="Back to Dashboard"
       />
 
-      {loading && <LoadingSpinner message="Loading vaccination campaigns..." />}
+      {loading && (
+        <CitizenStatePanel eyebrow="Campaign directory" title="Loading vaccination campaigns" tone="loading" status>
+          <p>Checking which campaigns are currently open for citizen screening.</p>
+        </CitizenStatePanel>
+      )}
 
-      {!loading && <ApiErrorAlert error={error} />}
+      {!loading && error && <div className="citizen-page__notice"><ApiErrorAlert error={error} /></div>}
 
       {!loading && !error && campaigns.length === 0 && (
-        <div className="card border-0 bg-light">
-          <div className="card-body p-4 text-center">
-            <h2 className="h5">No campaigns available</h2>
-            <p className="text-muted mb-0">No vaccination campaigns are currently available for screening.</p>
-          </div>
-        </div>
+        <CitizenStatePanel
+          eyebrow="Campaign directory"
+          title="No campaigns available"
+          actions={<Link className="citizen-action citizen-action--secondary" to="/app/citizen">Return to Dashboard</Link>}
+        >
+          <p>No vaccination campaigns are currently available for screening.</p>
+          <p>You can return later without losing any existing records.</p>
+        </CitizenStatePanel>
       )}
 
       {!loading && !error && campaigns.length > 0 && (
-        <div className="row g-4">
-          {campaigns.map((campaign) => (
-            <div className="col-12 col-lg-6" key={campaign.id}>
-              <div className="card h-100 shadow-sm border-primary-subtle">
-                <div className="card-body p-4 d-flex flex-column">
-                  <div className="d-flex justify-content-between gap-3 mb-2">
-                    <h2 className="h4 mb-0">{campaign.name}</h2>
-                    <span className="badge text-bg-success align-self-start">{campaign.status}</span>
+        <CitizenSection
+          eyebrow="Available now"
+          title="Campaign directory"
+          titleId="campaign-directory-title"
+          description="Each screening is tied to one campaign. Review the recorded details before you continue."
+          aside={<CitizenStatusBadge tone="positive">{campaigns.length} available</CitizenStatusBadge>}
+        >
+          <ul className="citizen-campaign-grid">
+            {campaigns.map((campaign) => (
+              <li key={campaign.id}>
+                <article className="citizen-campaign-card" aria-labelledby={`campaign-${campaign.id}-title`}>
+                  <div className="citizen-campaign-card__heading">
+                    <div>
+                      <h3 id={`campaign-${campaign.id}-title`}>{campaign.name}</h3>
+                      <p className="citizen-campaign-card__code">Campaign code: {campaign.code}</p>
+                    </div>
+                    <CitizenStatusBadge tone="active">{campaign.status}</CitizenStatusBadge>
                   </div>
-                  <p className="text-muted small mb-3">Campaign code: {campaign.code}</p>
-                  <dl className="row small mb-4">
-                    <dt className="col-5">Vaccine</dt><dd className="col-7">{campaign.vaccineTypeCode || 'Not specified'}</dd>
-                    <dt className="col-5">Target group</dt><dd className="col-7">{campaign.targetGroupCode || 'Not specified'}</dd>
-                    <dt className="col-5">Service dates</dt>
-                    <dd className="col-7">{formatDate(campaign.serviceStartDate)} – {formatDate(campaign.serviceEndDate)}</dd>
+                  <dl className="citizen-data-grid">
+                    <div><dt>Vaccine</dt><dd>{campaign.vaccineTypeCode || 'Not specified'}</dd></div>
+                    <div><dt>Target group</dt><dd>{campaign.targetGroupCode || 'Not specified'}</dd></div>
+                    <div><dt>Service dates</dt><dd>{formatDate(campaign.serviceStartDate)} – {formatDate(campaign.serviceEndDate)}</dd></div>
                   </dl>
-                  <Link className="btn btn-primary align-self-start mt-auto" to={`/app/screening/campaigns/${campaign.id}`}>
-                    Start screening
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+                  <footer className="citizen-campaign-card__footer">
+                    <Link className="citizen-action citizen-action--primary" to={`/app/screening/campaigns/${campaign.id}`}>
+                      Start screening <span aria-hidden="true">→</span>
+                    </Link>
+                  </footer>
+                </article>
+              </li>
+            ))}
+          </ul>
+        </CitizenSection>
       )}
     </section>
   );

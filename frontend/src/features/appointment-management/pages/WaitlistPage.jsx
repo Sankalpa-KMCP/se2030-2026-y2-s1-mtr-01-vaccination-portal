@@ -5,6 +5,7 @@ import WaitlistPosition from '../components/WaitlistPosition';
 import { getWaitlistStatus, leaveWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
 
 /**
  * Citizen Waitlist Page (US-05).
@@ -75,7 +76,7 @@ export default function WaitlistPage() {
 
   if (!citizenId) {
     return (
-      <div className="waitlist-page">
+      <div className="waitlist-page citizen-page">
         <CitizenPageHeader
           eyebrow="Appointment Services"
           title="My Waitlist Status"
@@ -83,7 +84,7 @@ export default function WaitlistPage() {
           backTo="/app/citizen"
           backLabel="Back to Dashboard"
         />
-        <div className="alert alert-warning border-0 shadow-sm" role="alert">
+        <div className="alert alert-warning border-0 shadow-sm citizen-page__notice" role="alert">
           <h2 className="h6 alert-heading fw-bold mb-1">Authentication Required</h2>
           <p className="mb-0">Unable to load waitlist status. Please sign in again.</p>
         </div>
@@ -92,7 +93,7 @@ export default function WaitlistPage() {
   }
 
   return (
-    <div className="waitlist-page">
+    <div className="waitlist-page citizen-page">
       <CitizenPageHeader
         eyebrow="Appointment Services"
         title="My Waitlist Status"
@@ -101,8 +102,19 @@ export default function WaitlistPage() {
         backLabel="Back to Dashboard"
       />
 
-      <div className="card shadow-sm border-0 mb-4">
+      <ol className="citizen-workflow-steps" aria-label="Waitlist steps">
+        <li><span>1</span><strong>Enter a campaign reference</strong></li>
+        <li><span>2</span><strong>Check your recorded entry</strong></li>
+        <li><span>3</span><strong>Keep or leave the waitlist</strong></li>
+      </ol>
+
+      <div className="card shadow-sm border-0 citizen-waitlist-filter">
         <div className="card-body p-3">
+          <div className="mb-3">
+            <p className="citizen-ui-eyebrow">Campaign lookup</p>
+            <h2 className="h5 mb-1">Find your waitlist entry</h2>
+            <p className="text-muted small mb-0">Waitlist status is checked one campaign at a time.</p>
+          </div>
           <form onSubmit={handleCampaignSubmit} className="row g-2 align-items-center">
             <div className="col-auto">
               <label htmlFor="campaignIdFilter" className="col-form-label fw-semibold">
@@ -130,10 +142,11 @@ export default function WaitlistPage() {
       </div>
 
       {feedback && (
-        <div
-          className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm mb-4`}
-          role="alert"
-        >
+        <div className="citizen-page__notice">
+          <div
+            className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
+            role="alert"
+          >
           <h4 className="h6 alert-heading fw-bold mb-1">{feedback.title}</h4>
           <p className="mb-0">{feedback.message}</p>
           <button
@@ -142,45 +155,38 @@ export default function WaitlistPage() {
             aria-label="Close"
             onClick={() => setFeedback(null)}
           ></button>
+          </div>
         </div>
       )}
 
       {loading && (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="text-muted mt-2 fw-semibold">Checking waitlist status...</p>
-        </div>
+        <CitizenStatePanel title="Checking waitlist status..." tone="loading" status>
+          <p>Looking for an entry linked to Campaign #{campaignId}.</p>
+        </CitizenStatePanel>
       )}
 
       {!loading && waitlistEntry && (
-        <div className="waitlist-content">
+        <section className="waitlist-content citizen-waitlist-content" aria-label="Current waitlist entry">
           <WaitlistPosition position={waitlistEntry.position} />
           <WaitlistCard
             entry={waitlistEntry}
             onLeave={handleLeaveWaitlist}
             isLeaving={leaving}
           />
-        </div>
+        </section>
       )}
 
       {!loading && !waitlistEntry && (
-        <div className="card border-0 shadow-sm text-center p-5">
-          <div className="mb-3 text-muted">
-            <span className="display-4">📋</span>
-          </div>
-          <h4 className="h5 fw-bold text-dark mb-2">You're not on any waitlist</h4>
-          <p className="text-muted mb-4 mx-auto" style={{ maxWidth: '480px' }}>
+        <CitizenStatePanel
+          eyebrow="Campaign status"
+          title="You're not on any waitlist"
+          actions={<Link to="/app/appointments/book" className="citizen-action citizen-action--primary">Browse Available Sessions</Link>}
+        >
+          <p>
             You do not currently hold an active waitlist entry for Campaign #{campaignId}.
             Browse available vaccination sessions to book an open slot or join a waitlist.
           </p>
-          <div>
-            <Link to="/app/appointments/book" className="btn btn-primary px-4 fw-bold shadow-sm">
-              Browse Available Sessions
-            </Link>
-          </div>
-        </div>
+        </CitizenStatePanel>
       )}
     </div>
   );

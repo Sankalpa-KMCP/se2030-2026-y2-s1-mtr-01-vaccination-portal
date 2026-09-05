@@ -27,7 +27,8 @@ describe('citizen historical screening details', () => {
   it('shows primary loading', () => {
     mocks.getScreeningHistoryDetails.mockReturnValue(new Promise(() => {}));
     render(page());
-    expect(screen.getByRole('status').textContent).toBe('Loading screening details...');
+    expect(screen.getByRole('heading', { level: 1, name: 'Screening Details' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('Loading screening details...');
   });
   it('uses only history-details and citizen-safe supplementary requests with correct IDs', async () => {
     render(page());

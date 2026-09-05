@@ -104,7 +104,7 @@ export default function AppointmentBookingPage() {
 
   if (!citizenId) {
     return (
-      <div className="appointment-booking-page">
+      <div className="appointment-booking-page citizen-page citizen-appointment-flow">
         <CitizenPageHeader
           eyebrow="Appointment Services"
           title="Book a Vaccination Appointment"
@@ -113,7 +113,7 @@ export default function AppointmentBookingPage() {
           backLabel="Back to Dashboard"
           actions={<Link to="/app/appointments/mine">View My Appointments</Link>}
         />
-        <div className="alert alert-warning border-0 shadow-sm" role="alert">
+        <div className="alert alert-warning border-0 shadow-sm citizen-page__notice" role="alert">
           <h2 className="h6 alert-heading fw-bold mb-1">Authentication Required</h2>
           <p className="mb-0">Unable to load this page. Please sign in again.</p>
         </div>
@@ -122,7 +122,7 @@ export default function AppointmentBookingPage() {
   }
 
   return (
-    <div className="appointment-booking-page">
+    <div className="appointment-booking-page citizen-page citizen-appointment-flow">
       <CitizenPageHeader
         eyebrow="Appointment Services"
         title="Book a Vaccination Appointment"
@@ -132,11 +132,18 @@ export default function AppointmentBookingPage() {
         actions={<Link to="/app/appointments/mine">View My Appointments</Link>}
       />
 
+      <ol className="citizen-workflow-steps" aria-label="Appointment booking steps">
+        <li><span>1</span><strong>Search sessions</strong></li>
+        <li><span>2</span><strong>Choose availability</strong></li>
+        <li><span>3</span><strong>Confirm booking</strong></li>
+      </ol>
+
       {feedback && (
-        <div
-          className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm mb-4`}
-          role="alert"
-        >
+        <div className="citizen-page__notice">
+          <div
+            className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
+            role="alert"
+          >
           <h4 className="h6 alert-heading fw-bold mb-1">{feedback.title}</h4>
           <p className="mb-0">{feedback.message}</p>
           {feedback.isSlotFull && feedback.sessionToWaitlist && (
@@ -164,14 +171,17 @@ export default function AppointmentBookingPage() {
             aria-label="Close"
             onClick={() => setFeedback(null)}
           ></button>
+          </div>
         </div>
       )}
 
-      <AvailabilitySearch
-        citizenId={citizenId}
-        onBookSession={handleBookSession}
-        bookingSessionId={bookingSessionId}
-      />
+      <section aria-label="Appointment availability search">
+        <AvailabilitySearch
+          citizenId={citizenId}
+          onBookSession={handleBookSession}
+          bookingSessionId={bookingSessionId}
+        />
+      </section>
     </div>
   );
 }

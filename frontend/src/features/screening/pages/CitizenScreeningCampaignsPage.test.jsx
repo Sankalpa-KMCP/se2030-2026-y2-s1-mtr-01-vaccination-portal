@@ -20,6 +20,8 @@ describe('CitizenScreeningCampaignsPage', () => {
     campaignApiMocks.listCampaigns.mockReturnValue(new Promise(() => {}));
     renderPage();
     expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Choose a campaign' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Back to Dashboard' }).getAttribute('href')).toBe('/app/citizen');
   });
 
   it('shows a normal empty state when no intake campaigns are available', async () => {
@@ -36,6 +38,7 @@ describe('CitizenScreeningCampaignsPage', () => {
     campaignApiMocks.listCampaigns.mockRejectedValue(new Error('Campaign service unavailable'));
     renderPage();
     expect(await screen.findByText('Campaign service unavailable')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Back to Dashboard' })).toBeTruthy();
   });
 
   it('shows only published and active campaigns with screening navigation', async () => {
