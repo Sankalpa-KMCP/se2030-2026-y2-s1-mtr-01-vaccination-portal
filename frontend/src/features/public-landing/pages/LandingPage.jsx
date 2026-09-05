@@ -17,6 +17,7 @@ import '../landing-page.css';
 import '../premium-public.css';
 import '../clinical-public.css';
 import '../landing-motion.css';
+import '../care-experience.css';
 
 /**
  * "Continue exploring" band — connects Home to the two interior pages

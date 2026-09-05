@@ -11,7 +11,7 @@ export default function PublicFooter() {
           <div className="lp-footer__brand-col">
             <span className="lp-footer__brand">Vaccination Portal</span>
             <p className="lp-footer__desc">
-              An official public health service supporting citizens and health
+              A vaccination portal supporting citizens and health
               teams with vaccination programmes.
             </p>
           </div>

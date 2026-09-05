@@ -14,7 +14,7 @@ export default function FinalCtaSection() {
           <Link to="/register/citizen" className="home-action home-action--secondary">
             Open citizen registration <span aria-hidden="true">&rarr;</span>
           </Link>
-          <Link className="home-closing__staff" to="/register/staff">Health staff access</Link>
+          <Link className="home-closing__staff" to="/login">Already registered? Access the portal <span aria-hidden="true">&rarr;</span></Link>
         </div>
       </div>
     </section>

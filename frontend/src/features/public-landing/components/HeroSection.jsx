@@ -13,7 +13,7 @@ export default function HeroSection() {
             <span>Citizen services</span>
           </p>
           <h1 id="home-hero-title">
-            A clear path from campaign to vaccination record.
+            A clear path from <em>campaign</em> to vaccination record.
           </h1>
           <p className="home-hero__lead">
             Find eligible programmes, reserve a clinic appointment, and keep your
@@ -36,18 +36,18 @@ export default function HeroSection() {
 
         <div className="home-hero__visual" aria-hidden="true">
           <div className="home-hero__visual-head">
-            <span>Service pathway</span>
-            <span className="home-hero__live">
-              <i aria-hidden="true" />
-              Citizen &harr; clinic coordination
-            </span>
+            <span>Vaccination pathway</span>
+            <span className="home-hero__visual-context">Citizen services</span>
+          </div>
+          <div className="home-hero__visual-title">
+            <span>Every step, connected.</span>
+            <p>From your first screening to a lasting record.</p>
           </div>
           <div className="home-hero__visual-screen">
             <HeroArtwork />
           </div>
           <div className="home-hero__visual-foot">
-            <span><i className="home-legend-dot" /> Citizen action</span>
-            <span><i className="home-legend-line" /> Staff operation</span>
+            <p>Clinical review and session readiness support each appointment.</p>
           </div>
         </div>
 

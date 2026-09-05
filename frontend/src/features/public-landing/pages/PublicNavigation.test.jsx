@@ -69,7 +69,7 @@ describe('Public site navigation', () => {
 
   it('exposes the service banner', () => {
     renderHeader();
-    expect(screen.getByText(/an official public health service/i)).toBeTruthy();
+    expect(screen.getByText(/vaccination services · citizen & healthcare team access/i)).toBeTruthy();
   });
 
   it('connects all public pages through a shared service guide', () => {
