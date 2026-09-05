@@ -1862,6 +1862,14 @@
   stroke-linecap: round;
 }
 
+.lp-page--home .home-pathway__route-progress {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
 .lp-page--home .home-pathway__staff-pill {
   filter: url(#home-soft-shadow);
 }
@@ -1928,9 +1936,9 @@
   color: #5d6fb8;
 }
 
-.lp-page--home .home-pathway__journey-node > path,
-.lp-page--home .home-pathway__journey-node > rect,
-.lp-page--home .home-pathway__journey-node > circle:not(.home-pathway__node-halo, .home-pathway__node-face) {
+.lp-page--home .home-pathway__node-core > path,
+.lp-page--home .home-pathway__node-core > rect,
+.lp-page--home .home-pathway__node-core > circle:not(.home-pathway__node-halo, .home-pathway__node-face) {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -1938,7 +1946,7 @@
   stroke-linejoin: round;
 }
 
-.lp-page--home .home-pathway__journey-node > circle:not(.home-pathway__node-halo, .home-pathway__node-face) {
+.lp-page--home .home-pathway__node-core > circle:not(.home-pathway__node-halo, .home-pathway__node-face) {
   fill: #f8fcfe;
 }
 

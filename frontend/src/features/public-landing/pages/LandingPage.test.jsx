@@ -47,6 +47,19 @@ describe('LandingPage', () => {
     expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login/staff');
   });
 
+  it('renders an animation-ready care path with readiness before appointments', () => {
+    const { container } = renderLanding();
+    const artwork = container.querySelector('.home-pathway');
+
+    expect(artwork).toBeTruthy();
+    expect(artwork.querySelectorAll('.home-pathway__node-core')).toHaveLength(5);
+    expect(artwork.querySelector('.home-pathway__route').getAttribute('pathLength')).toBe('1');
+    expect(artwork.querySelector('.home-pathway__route-progress')).toBeTruthy();
+    expect(artwork.querySelector('.home-pathway__staff-connector--ready').getAttribute('d')).toMatch(/^M375/);
+    expect(artwork.textContent).toContain('SESSION READY');
+    expect(artwork.textContent).toContain('Center, capacity and staff confirmed');
+  });
+
   it('fires onLoginClick from the login call-to-action', () => {
     const onLoginClick = vi.fn();
     renderLanding(onLoginClick);
