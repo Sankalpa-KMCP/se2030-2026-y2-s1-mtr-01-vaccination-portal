@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
@@ -62,7 +62,9 @@ function ActiveSubmissionState({ submission }) {
           </div>
         )}
         {isCorrectionsRequired && (
-          <p className="mb-0">Correction and resubmission will be available in the upcoming correction workflow.</p>
+          <Link className="btn btn-primary citizen-action citizen-action--primary mt-3" to={`/app/screening/history/${submission.id}/correct`}>
+            Correct Screening
+          </Link>
         )}
         {isDraft && (
           <p className="mb-0">A second screening cannot be started while this draft remains active.</p>

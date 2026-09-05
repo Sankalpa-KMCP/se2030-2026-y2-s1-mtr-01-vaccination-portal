@@ -49,14 +49,21 @@ describe('citizen historical screening details', () => {
     for (const answer of answers) expect(screen.getByText(answer.displayAnswer)).toBeTruthy();
     expect(screen.queryByText('RAW MUST NOT APPEAR')).toBeNull();
   });
-  it.each(['CORRECTIONS_REQUIRED', 'PENDING_REVIEW'])('shows correction instructions/date for %s without correction controls', async (status) => {
-    mocks.getScreeningHistoryDetails.mockResolvedValue(details({ status, correctionInstructions: 'Please clarify the date.', correctionRequestedAt: '2026-08-28' }));
+  it('shows the correction action for a currently active correction request', async () => {
+    mocks.getScreeningHistoryDetails.mockResolvedValue(details({ status: 'CORRECTIONS_REQUIRED', correctionInstructions: 'Please clarify the date.', correctionRequestedAt: '2026-08-28' }));
     render(page());
     expect(await screen.findByText('Please clarify the date.')).toBeTruthy();
     expect(screen.getByText(/2026-08-28/)).toBeTruthy();
-    expect(screen.getByRole('heading', { name: status === 'PENDING_REVIEW' ? 'Corrections requested — historical information' : 'Corrections requested' })).toBeTruthy();
-    expect(screen.queryByRole('link', { name: /edit|resubmit/i })).toBeNull();
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Corrections requested' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Correct Screening' }).getAttribute('href'))
+      .toBe('/app/screening/history/42/correct');
+  });
+  it.each(['PENDING_REVIEW', 'REVIEWED'])('keeps historical correction information without an action for %s', async (status) => {
+    mocks.getScreeningHistoryDetails.mockResolvedValue(details({ status, correctionInstructions: 'Please clarify the date.', correctionRequestedAt: '2026-08-28' }));
+    render(page());
+    expect(await screen.findByText('Please clarify the date.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Corrections requested — historical information' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Correct Screening' })).toBeNull();
   });
   it('treats a null assessment as not yet recorded rather than ineligible', async () => {
     render(page());

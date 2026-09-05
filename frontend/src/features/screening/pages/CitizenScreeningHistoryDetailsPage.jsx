@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
@@ -9,7 +9,11 @@ import { getCampaignById } from '../../campaign-management/api/campaignApi';
 import { getEligibilityAssessmentBySubmission, getScreeningHistoryDetails } from '../api/screeningApi';
 import RecordedEligibilityAssessment from '../components/RecordedEligibilityAssessment';
 import ScreeningCorrectionNotice from '../components/ScreeningCorrectionNotice';
-import { CITIZEN_PRELIMINARY_RESULT_LABELS, SCREENING_SUBMISSION_STATUS_LABELS } from '../constants/screeningConstants';
+import {
+  CITIZEN_PRELIMINARY_RESULT_LABELS,
+  SCREENING_SUBMISSION_STATUS,
+  SCREENING_SUBMISSION_STATUS_LABELS,
+} from '../constants/screeningConstants';
 import { campaignName, formatScreeningTimestamp } from '../utils/screeningHistory';
 
 function screeningTone(status) {
@@ -84,6 +88,14 @@ function HistoryDetails({ submissionId }) {
           </dl>
           <p className="small text-muted mt-3 mb-0">A preliminary result is not a final eligibility decision.</p>
           <ScreeningCorrectionNotice submission={details} />
+          {details.status === SCREENING_SUBMISSION_STATUS.CORRECTIONS_REQUIRED && (
+            <Link
+              className="btn btn-primary mt-3 citizen-action citizen-action--primary"
+              to={`/app/screening/history/${details.id ?? submissionId}/correct`}
+            >
+              Correct Screening
+            </Link>
+          )}
           </div>
         </section>
         <section className="citizen-detail-panel" aria-labelledby="submitted-answers-title">
