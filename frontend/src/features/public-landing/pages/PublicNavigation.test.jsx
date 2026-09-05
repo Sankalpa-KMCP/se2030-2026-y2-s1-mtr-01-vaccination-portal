@@ -14,10 +14,10 @@ function renderHeader(onLoginClick = vi.fn()) {
   );
 }
 
-function renderFooter(onLoginClick = vi.fn()) {
+function renderFooter() {
   return render(
     <MemoryRouter>
-      <PublicFooter onLoginClick={onLoginClick} />
+      <PublicFooter />
     </MemoryRouter>,
   );
 }
@@ -56,21 +56,20 @@ describe('Public site navigation', () => {
     expect(screen.getByRole('link', { name: 'About' }).getAttribute('href')).toBe('/about');
   });
 
-  it('fires onLoginClick from header and footer buttons', () => {
+  it('fires onLoginClick from the single shared header button', () => {
     const onLoginClick = vi.fn();
     renderHeader(onLoginClick);
     fireEvent.click(screen.getByRole('button', { name: 'Login' }));
     expect(onLoginClick).toHaveBeenCalledTimes(1);
 
     cleanup();
-    renderFooter(onLoginClick);
-    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
-    expect(onLoginClick).toHaveBeenCalledTimes(2);
+    renderFooter();
+    expect(screen.queryByRole('button', { name: 'Login' })).toBeNull();
   });
 
   it('exposes the service banner', () => {
     renderHeader();
-    expect(screen.getByText(/an official public health service/i)).toBeTruthy();
+    expect(screen.getByText(/vaccination services · citizen & healthcare team access/i)).toBeTruthy();
   });
 
   it('connects all public pages through a shared service guide', () => {

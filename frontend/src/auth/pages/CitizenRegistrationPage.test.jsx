@@ -43,7 +43,7 @@ describe('CitizenRegistrationPage', () => {
 
   it('renders all citizen registration fields', () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Create Citizen Account' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeTruthy();
     expect(screen.getByLabelText('Full Name')).toBeTruthy();
     expect(screen.getByLabelText('Email Address')).toBeTruthy();
     expect(screen.getByLabelText('Phone Number')).toBeTruthy();
@@ -79,7 +79,7 @@ describe('CitizenRegistrationPage', () => {
     fillCitizenForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
 
-    expect(await screen.findByText('Account created successfully')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Your citizen account is ready.' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Go to Citizen Login' })).toBeTruthy();
   });
 

@@ -14,6 +14,7 @@ import CitizenDashboardPage from '../auth/pages/CitizenDashboardPage';
 import StaffDashboardPage from '../auth/pages/StaffDashboardPage';
 import AdminDashboardPage from '../auth/pages/AdminDashboardPage';
 import PendingStaffRequestsPage from '../auth/pages/PendingStaffRequestsPage';
+import AuthExperience from '../auth/components/AuthExperience';
 import {
   ADMIN_ROLE,
   CITIZEN_ROLE,
@@ -193,30 +194,13 @@ export default function PortalRoutes() {
             : <AboutPage onLoginClick={() => navigate('/login')} />
         }
       />
-      <Route
-        path="/login"
-        element={
-          isAuthenticated
-            ? <RoleHomeRedirect user={user} />
-            : <LoginPage audience="generic" onBackToLanding={() => navigate('/')} />
-        }
-      />
-      <Route
-        path="/login/citizen"
-        element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <LoginPage audience="citizen" onBackToLanding={() => navigate('/')} />}
-      />
-      <Route
-        path="/login/staff"
-        element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <LoginPage audience="staff" onBackToLanding={() => navigate('/')} />}
-      />
-      <Route
-        path="/register/citizen"
-        element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <CitizenRegistrationPage />}
-      />
-      <Route
-        path="/register/staff"
-        element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <StaffRegistrationRequestPage />}
-      />
+      <Route element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <AuthExperience />}>
+        <Route path="/login" element={<LoginPage audience="generic" />} />
+        <Route path="/login/citizen" element={<LoginPage audience="citizen" />} />
+        <Route path="/login/staff" element={<LoginPage audience="staff" />} />
+        <Route path="/register/citizen" element={<CitizenRegistrationPage />} />
+        <Route path="/register/staff" element={<StaffRegistrationRequestPage />} />
+      </Route>
 
       <Route element={<ProtectedRoute />}>
         <Route path="/app" element={<AuthenticatedLayout onLogout={handleVoluntaryLogout} />}>
