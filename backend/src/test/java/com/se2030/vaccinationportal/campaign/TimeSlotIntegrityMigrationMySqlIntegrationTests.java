@@ -32,11 +32,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 class TimeSlotIntegrityMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
 
@@ -47,6 +50,23 @@ class TimeSlotIntegrityMigrationMySqlIntegrationTests extends AbstractMySqlTestC
     @Autowired private VaccinationCenterRepository centerRepository;
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
+    @Autowired private PlatformTransactionManager transactionManager;
+
+    @AfterEach
+    void tearDown() {
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.execute("DELETE FROM time_slots");
+        } catch (Exception ignored) {
+        }
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            sessionRepository.deleteAllInBatch();
+            campaignRepository.deleteAllInBatch();
+            centerRepository.deleteAllInBatch();
+            targetGroupRepository.deleteAllInBatch();
+            vaccineTypeRepository.deleteAllInBatch();
+        });
+    }
 
     @TestFactory
     @Timeout(30)
