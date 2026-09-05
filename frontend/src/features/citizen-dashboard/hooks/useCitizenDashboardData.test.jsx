@@ -74,4 +74,65 @@ describe('useCitizenDashboardData', () => {
     expect(apiMocks.getMyAppointments).not.toHaveBeenCalled();
     expect(apiMocks.listCitizenScreeningSubmissions).not.toHaveBeenCalled();
   });
+
+  it('treats appointments response null as a localized error rather than confirmed empty', async () => {
+    apiMocks.getMyAppointments.mockResolvedValue(null);
+    apiMocks.listCitizenScreeningSubmissions.mockResolvedValue([{ id: 5, status: 'PENDING_REVIEW' }]);
+
+    const { result } = renderHook(() => useCitizenDashboardData(71));
+    await waitFor(() => expect(result.current.appointments.loading).toBe(false));
+    await waitFor(() => expect(result.current.screening.loading).toBe(false));
+
+    expect(result.current.appointments.error?.message).toMatch(/malformed/i);
+    expect(result.current.appointments.data).toEqual([]);
+    expect(result.current.screening.submissions).toHaveLength(1);
+  });
+
+  it('treats appointments response object as a localized error rather than confirmed empty', async () => {
+    apiMocks.getMyAppointments.mockResolvedValue({ unexpected: 'object' });
+
+    const { result } = renderHook(() => useCitizenDashboardData(71));
+    await waitFor(() => expect(result.current.appointments.loading).toBe(false));
+
+    expect(result.current.appointments.error?.message).toMatch(/malformed/i);
+    expect(result.current.appointments.data).toEqual([]);
+  });
+
+  it('treats screening submissions response null as a localized error rather than confirmed empty', async () => {
+    apiMocks.getMyAppointments.mockResolvedValue([{ id: 80, status: 'CONFIRMED' }]);
+    apiMocks.listCitizenScreeningSubmissions.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useCitizenDashboardData(71));
+    await waitFor(() => expect(result.current.screening.loading).toBe(false));
+    await waitFor(() => expect(result.current.appointments.loading).toBe(false));
+
+    expect(result.current.screening.errors.submissions?.message).toMatch(/malformed/i);
+    expect(result.current.screening.submissions).toEqual([]);
+    expect(result.current.appointments.data).toHaveLength(1);
+  });
+
+  it('treats screening assessments malformed payload as a localized error', async () => {
+    apiMocks.listCitizenEligibilityAssessments.mockResolvedValue({ notAnArray: true });
+    apiMocks.listCitizenScreeningSubmissions.mockResolvedValue([{ id: 6, status: 'REVIEWED' }]);
+
+    const { result } = renderHook(() => useCitizenDashboardData(71));
+    await waitFor(() => expect(result.current.screening.loading).toBe(false));
+
+    expect(result.current.screening.errors.assessments?.message).toMatch(/malformed/i);
+    expect(result.current.screening.assessments).toEqual([]);
+    expect(result.current.screening.submissions).toHaveLength(1);
+  });
+
+  it('does not block core screening loading when the optional campaign request remains unresolved', async () => {
+    apiMocks.listCampaigns.mockReturnValue(new Promise(() => {}));
+    apiMocks.listCitizenScreeningSubmissions.mockResolvedValue([{ id: 12, campaignId: 44, status: 'PENDING_REVIEW' }]);
+    apiMocks.listCitizenEligibilityAssessments.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useCitizenDashboardData(71));
+    await waitFor(() => expect(result.current.screening.loading).toBe(false));
+
+    expect(result.current.screening.submissions).toHaveLength(1);
+    expect(result.current.screening.submissions[0].id).toBe(12);
+    expect(result.current.screening.campaigns).toEqual([]);
+  });
 });

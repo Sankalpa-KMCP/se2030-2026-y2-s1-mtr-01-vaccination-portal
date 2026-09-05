@@ -166,6 +166,56 @@ describe('CitizenDashboardPage', () => {
     expect(screen.queryByText('INTERNAL SECRET')).toBeNull();
   });
 
+  it('renders localized error instead of confirmed empty state when appointments payload is malformed', () => {
+    mocks.dashboardData = {
+      appointments: { loading: false, data: [], error: new Error('Malformed appointments data received.') },
+      screening: {
+        loading: false,
+        submissions: [{ id: 12, campaignId: 22, status: 'PENDING_REVIEW', preliminaryResult: 'PRELIMINARY_PASS' }],
+        assessments: [],
+        campaigns: [{ id: 22, name: 'Community Campaign' }],
+        errors: {},
+      },
+    };
+    renderDashboard();
+    expect(screen.getByText('Appointments could not be loaded')).toBeTruthy();
+    expect(screen.queryByText('No appointments recorded')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Community Campaign' })).toBeTruthy();
+  });
+
+  it('renders localized error instead of confirmed empty state when screening submissions payload is malformed', () => {
+    mocks.dashboardData = {
+      appointments: { loading: false, data: [{ id: 84, status: 'CONFIRMED', campaignId: 22, slotId: 902 }], error: null },
+      screening: {
+        loading: false,
+        submissions: [],
+        assessments: [],
+        campaigns: [],
+        errors: { submissions: new Error('Malformed screening submissions data received.') },
+      },
+    };
+    renderDashboard();
+    expect(screen.getByText('Screening history could not be loaded')).toBeTruthy();
+    expect(screen.queryByText('No screening submitted')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Appointment #84' })).toBeTruthy();
+  });
+
+  it('renders localized warning when assessment payload is malformed while keeping submissions visible', () => {
+    mocks.dashboardData = {
+      appointments: { loading: false, data: [], error: null },
+      screening: {
+        loading: false,
+        submissions: [{ id: 12, campaignId: 22, status: 'REVIEWED', createdAt: '2026-09-01' }],
+        assessments: [],
+        campaigns: [{ id: 22, name: 'Community Campaign' }],
+        errors: { assessments: new Error('Malformed screening assessments data received.') },
+      },
+    };
+    renderDashboard();
+    expect(screen.getByRole('heading', { name: 'Community Campaign' })).toBeTruthy();
+    expect(screen.getByText(/recorded assessment information is temporarily unavailable/i)).toBeTruthy();
+  });
+
   it('contains no fabricated metrics or unsupported citizen data', () => {
     renderDashboard();
     expect(screen.queryByText(/health score|notification count|vaccination record|digital certificate/i)).toBeNull();

@@ -1,18 +1,32 @@
 const ACTIVE_APPOINTMENT_STATUSES = new Set(['CONFIRMED', 'CHECKED_IN']);
 
+const SUBMISSION_DATE_FIELDS = [
+  'correctionRequestedAt',
+  'submittedAt',
+  'createdAt',
+  'updatedAt',
+];
+
 function timestampOf(record, fields) {
+  let latest = Number.NEGATIVE_INFINITY;
   for (const field of fields) {
     const timestamp = Date.parse(record?.[field]);
-    if (Number.isFinite(timestamp)) return timestamp;
+    if (Number.isFinite(timestamp) && timestamp > latest) {
+      latest = timestamp;
+    }
   }
-  return Number.NEGATIVE_INFINITY;
+  return latest;
 }
 
 export function selectLatest(records, fields) {
   if (!Array.isArray(records) || records.length === 0) return null;
-  return records.reduce((latest, candidate) => (
-    timestampOf(candidate, fields) > timestampOf(latest, fields) ? candidate : latest
-  ));
+  return records.reduce((latest, candidate) => {
+    const candidateTime = timestampOf(candidate, fields);
+    const latestTime = timestampOf(latest, fields);
+    if (candidateTime > latestTime) return candidate;
+    if (candidateTime < latestTime) return latest;
+    return (Number(candidate?.id) || 0) > (Number(latest?.id) || 0) ? candidate : latest;
+  });
 }
 
 export function findActiveAppointment(appointments) {
@@ -31,36 +45,42 @@ function recordedDecisionTitle(status) {
 }
 
 export function getNextAction({ appointments, screening }) {
-  const submissionsAvailable = !screening.loading && !screening.errors?.submissions;
-  const assessmentsAvailable = !screening.loading && !screening.errors?.assessments;
-  const latestSubmission = submissionsAvailable
-    ? selectLatest(screening.submissions, ['createdAt', 'submittedAt'])
-    : null;
+  const submissionsAvailable = !screening?.loading && !screening?.errors?.submissions;
+  const assessmentsAvailable = !screening?.loading && !screening?.errors?.assessments;
+
+  if (submissionsAvailable) {
+    const submissions = Array.isArray(screening?.submissions) ? screening.submissions : [];
+
+    const corrections = submissions.filter((item) => item?.status === 'CORRECTIONS_REQUIRED');
+    const latestCorrection = selectLatest(corrections, SUBMISSION_DATE_FIELDS);
+    if (latestCorrection) {
+      return {
+        eyebrow: 'Action required',
+        title: 'Review your screening correction request',
+        description: 'A healthcare reviewer requested clarification. Review the recorded instructions; correction submission is not available from this dashboard.',
+        to: `/app/screening/history/${latestCorrection.id}`,
+        linkLabel: 'Review correction request',
+        tone: 'attention',
+      };
+    }
+
+    const pendingSubmissions = submissions.filter((item) => item?.status === 'PENDING_REVIEW');
+    const latestPending = selectLatest(pendingSubmissions, SUBMISSION_DATE_FIELDS);
+    if (latestPending) {
+      return {
+        eyebrow: 'Screening in progress',
+        title: 'Your screening is awaiting review',
+        description: 'No new medical action is implied. You can review the submitted screening while the recorded decision is pending.',
+        to: `/app/screening/history/${latestPending.id}`,
+        linkLabel: 'View submitted screening',
+        tone: 'pending',
+      };
+    }
+  }
+
   const latestAssessment = assessmentsAvailable
-    ? selectLatest(screening.assessments, ['reviewedAt', 'createdAt'])
+    ? selectLatest(screening?.assessments, ['reviewedAt', 'createdAt'])
     : null;
-
-  if (latestSubmission?.status === 'CORRECTIONS_REQUIRED') {
-    return {
-      eyebrow: 'Action required',
-      title: 'Review your screening correction request',
-      description: 'A healthcare reviewer requested clarification. Review the recorded instructions; correction submission is not available from this dashboard.',
-      to: `/app/screening/history/${latestSubmission.id}`,
-      linkLabel: 'Review correction request',
-      tone: 'attention',
-    };
-  }
-
-  if (latestSubmission?.status === 'PENDING_REVIEW') {
-    return {
-      eyebrow: 'Screening in progress',
-      title: 'Your screening is awaiting review',
-      description: 'No new medical action is implied. You can review the submitted screening while the recorded decision is pending.',
-      to: `/app/screening/history/${latestSubmission.id}`,
-      linkLabel: 'View submitted screening',
-      tone: 'pending',
-    };
-  }
 
   if (latestAssessment) {
     return {
@@ -73,8 +93,8 @@ export function getNextAction({ appointments, screening }) {
     };
   }
 
-  const activeAppointment = !appointments.loading && !appointments.error
-    ? findActiveAppointment(appointments.data)
+  const activeAppointment = !appointments?.loading && !appointments?.error
+    ? findActiveAppointment(appointments?.data)
     : null;
 
   if (activeAppointment) {
@@ -88,7 +108,7 @@ export function getNextAction({ appointments, screening }) {
     };
   }
 
-  if (submissionsAvailable && screening.submissions.length === 0) {
+  if (submissionsAvailable && screening?.submissions?.length === 0) {
     return {
       eyebrow: 'Start here',
       title: 'Complete pre-vaccination screening',
@@ -99,7 +119,7 @@ export function getNextAction({ appointments, screening }) {
     };
   }
 
-  if (appointments.loading || screening.loading) {
+  if (appointments?.loading || screening?.loading) {
     return {
       eyebrow: 'Checking your records',
       title: 'Finding your next available action',

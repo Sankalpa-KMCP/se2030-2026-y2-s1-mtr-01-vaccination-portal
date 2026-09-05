@@ -79,4 +79,129 @@ describe('citizenDashboardState', () => {
     expect(action.title).toBe('Choose the service you need');
     expect(action.description).toContain('no personal status has been inferred');
   });
+
+  it('prioritizes an older unresolved correction over a newer resolved submission across multiple campaigns', () => {
+    const campaignACorrection = {
+      id: 101,
+      campaignId: 10,
+      status: 'CORRECTIONS_REQUIRED',
+      submittedAt: '2026-08-15T09:00:00Z',
+    };
+    const campaignBResolved = {
+      id: 202,
+      campaignId: 20,
+      status: 'REVIEWED',
+      submittedAt: '2026-09-01T09:00:00Z',
+    };
+    const campaignBAssessment = {
+      status: 'ELIGIBLE',
+      reviewedAt: '2026-09-02T10:00:00Z',
+    };
+
+    const action = getNextAction({
+      appointments: readyAppointments(),
+      screening: readyScreening({
+        submissions: [campaignACorrection, campaignBResolved],
+        assessments: [campaignBAssessment],
+      }),
+    });
+
+    expect(action.title).toBe('Review your screening correction request');
+    expect(action.to).toBe('/app/screening/history/101');
+    expect(action.tone).toBe('attention');
+  });
+
+  it('selects the newest record deterministically when multiple corrections coexist', () => {
+    const olderCorrection = {
+      id: 10,
+      campaignId: 1,
+      status: 'CORRECTIONS_REQUIRED',
+      submittedAt: '2026-08-10T09:00:00Z',
+    };
+    const newerCorrection = {
+      id: 11,
+      campaignId: 2,
+      status: 'CORRECTIONS_REQUIRED',
+      submittedAt: '2026-08-20T09:00:00Z',
+    };
+
+    const actionFromAsc = getNextAction({
+      appointments: readyAppointments(),
+      screening: readyScreening({ submissions: [olderCorrection, newerCorrection] }),
+    });
+    const actionFromDesc = getNextAction({
+      appointments: readyAppointments(),
+      screening: readyScreening({ submissions: [newerCorrection, olderCorrection] }),
+    });
+
+    expect(actionFromAsc.to).toBe('/app/screening/history/11');
+    expect(actionFromDesc.to).toBe('/app/screening/history/11');
+  });
+
+  it('breaks timestamp ties deterministically by record id for corrections', () => {
+    const sameTimeA = {
+      id: 30,
+      campaignId: 1,
+      status: 'CORRECTIONS_REQUIRED',
+      submittedAt: '2026-08-20T09:00:00Z',
+    };
+    const sameTimeB = {
+      id: 50,
+      campaignId: 2,
+      status: 'CORRECTIONS_REQUIRED',
+      submittedAt: '2026-08-20T09:00:00Z',
+    };
+
+    const action1 = getNextAction({
+      appointments: readyAppointments(),
+      screening: readyScreening({ submissions: [sameTimeA, sameTimeB] }),
+    });
+    const action2 = getNextAction({
+      appointments: readyAppointments(),
+      screening: readyScreening({ submissions: [sameTimeB, sameTimeA] }),
+    });
+
+    expect(action1.to).toBe('/app/screening/history/50');
+    expect(action2.to).toBe('/app/screening/history/50');
+  });
+
+  it('selects the newest pending review deterministically when multiple pending coexist', () => {
+    const olderPending = {
+      id: 21,
+      campaignId: 1,
+      status: 'PENDING_REVIEW',
+      submittedAt: '2026-08-12T09:00:00Z',
+    };
+    const newerPending = {
+      id: 22,
+      campaignId: 2,
+      status: 'PENDING_REVIEW',
+      submittedAt: '2026-08-25T09:00:00Z',
+    };
+
+    const action = getNextAction({
+      appointments: readyAppointments(),
+      screening: readyScreening({ submissions: [olderPending, newerPending] }),
+    });
+
+    expect(action.title).toBe('Your screening is awaiting review');
+    expect(action.to).toBe('/app/screening/history/22');
+  });
+
+  it('does not treat terminal/resolved submissions as unresolved actions', () => {
+    const reviewedSubmission = {
+      id: 15,
+      campaignId: 1,
+      status: 'REVIEWED',
+      submittedAt: '2026-08-20T09:00:00Z',
+    };
+
+    const action = getNextAction({
+      appointments: readyAppointments(),
+      screening: readyScreening({ submissions: [reviewedSubmission] }),
+    });
+
+    expect(action.title).toBe('Choose the service you need');
+    expect(action.to).toBe('/app/screening');
+  });
 });

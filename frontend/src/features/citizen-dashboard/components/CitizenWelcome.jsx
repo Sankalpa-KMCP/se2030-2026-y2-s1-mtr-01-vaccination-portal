@@ -12,7 +12,7 @@ export default function CitizenWelcome({ user }) {
           Review your screening and appointment records, then move directly to the service you need.
         </p>
       </div>
-      <div className="citizen-dashboard__welcome-meta" aria-label="Account context">
+      <div className="citizen-dashboard__welcome-meta">
         <span>Secure self-service</span>
         <strong>Citizen account</strong>
         {user?.email && <small>{user.email}</small>}

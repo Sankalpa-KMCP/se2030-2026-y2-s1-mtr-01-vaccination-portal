@@ -38,26 +38,103 @@ export default function useCitizenDashboardData(citizenId) {
 
     getMyAppointments(citizenId)
       .then((data) => {
-        if (active) setAppointments({ loading: false, data: Array.isArray(data) ? data : [], error: null });
+        if (!active) return;
+        if (Array.isArray(data)) {
+          setAppointments({ loading: false, data, error: null });
+        } else {
+          setAppointments({
+            loading: false,
+            data: [],
+            error: new Error('Malformed appointments response received.'),
+          });
+        }
       })
       .catch((error) => {
         if (active) setAppointments({ loading: false, data: [], error });
       });
 
-    Promise.allSettled([
-      listCitizenScreeningSubmissions(citizenId),
-      listCitizenEligibilityAssessments(citizenId),
-      listCampaigns(),
-    ]).then((results) => {
+    let submissionsSettled = false;
+    let assessmentsSettled = false;
+
+    const checkAndSetScreening = (updateFn) => {
       if (!active) return;
-      const next = { loading: false, submissions: [], assessments: [], campaigns: [], errors: {} };
-      ['submissions', 'assessments', 'campaigns'].forEach((key, index) => {
-        const result = results[index];
-        if (result.status === 'fulfilled') next[key] = Array.isArray(result.value) ? result.value : [];
-        else next.errors[key] = result.reason;
+      setScreening((prev) => {
+        const next = updateFn(prev);
+        if (submissionsSettled && assessmentsSettled) {
+          next.loading = false;
+        }
+        return next;
       });
-      setScreening(next);
-    });
+    };
+
+    listCitizenScreeningSubmissions(citizenId)
+      .then((data) => {
+        submissionsSettled = true;
+        checkAndSetScreening((prev) => {
+          const next = { ...prev, errors: { ...prev.errors } };
+          if (Array.isArray(data)) {
+            next.submissions = data;
+          } else {
+            next.submissions = [];
+            next.errors.submissions = new Error('Malformed screening submissions response received.');
+          }
+          return next;
+        });
+      })
+      .catch((error) => {
+        submissionsSettled = true;
+        checkAndSetScreening((prev) => {
+          const next = { ...prev, submissions: [], errors: { ...prev.errors } };
+          next.errors.submissions = error;
+          return next;
+        });
+      });
+
+    listCitizenEligibilityAssessments(citizenId)
+      .then((data) => {
+        assessmentsSettled = true;
+        checkAndSetScreening((prev) => {
+          const next = { ...prev, errors: { ...prev.errors } };
+          if (Array.isArray(data)) {
+            next.assessments = data;
+          } else {
+            next.assessments = [];
+            next.errors.assessments = new Error('Malformed screening assessments response received.');
+          }
+          return next;
+        });
+      })
+      .catch((error) => {
+        assessmentsSettled = true;
+        checkAndSetScreening((prev) => {
+          const next = { ...prev, assessments: [], errors: { ...prev.errors } };
+          next.errors.assessments = error;
+          return next;
+        });
+      });
+
+    listCampaigns()
+      .then((data) => {
+        if (!active) return;
+        setScreening((prev) => {
+          const next = { ...prev, errors: { ...prev.errors } };
+          if (Array.isArray(data)) {
+            next.campaigns = data;
+          } else {
+            next.campaigns = [];
+            next.errors.campaigns = new Error('Malformed campaigns response received.');
+          }
+          return next;
+        });
+      })
+      .catch((error) => {
+        if (!active) return;
+        setScreening((prev) => {
+          const next = { ...prev, campaigns: [], errors: { ...prev.errors } };
+          next.errors.campaigns = error;
+          return next;
+        });
+      });
 
     return () => {
       active = false;
