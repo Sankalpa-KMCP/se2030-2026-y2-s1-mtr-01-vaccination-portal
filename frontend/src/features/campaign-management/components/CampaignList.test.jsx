@@ -168,4 +168,69 @@ describe('CampaignList — Archive Authorization and Action Visibility', () => {
 
     expect(screen.queryByRole('button', { name: 'Archive' })).toBeNull();
   });
+
+  it('renders Edit button for ROLE_ADMIN on allowed states and invokes onEditCampaign', () => {
+    authMocks.currentUser = { id: 1, roles: ['ROLE_ADMIN'] };
+    const onEditCampaign = vi.fn();
+
+    render(
+      <CampaignList
+        {...defaultProps}
+        campaigns={[sampleDraftCampaign, sampleActiveCampaign]}
+        onEditCampaign={onEditCampaign}
+      />
+    );
+
+    const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+    expect(editButtons.length).toBe(2);
+
+    fireEvent.click(editButtons[0]);
+    expect(onEditCampaign).toHaveBeenCalledWith(sampleDraftCampaign);
+  });
+
+  it('renders Edit button for ROLE_CAMPAIGN_OFFICER on allowed states', () => {
+    authMocks.currentUser = { id: 2, roles: ['ROLE_CAMPAIGN_OFFICER'] };
+
+    render(
+      <CampaignList
+        {...defaultProps}
+        campaigns={[sampleDraftCampaign, sampleActiveCampaign]}
+      />
+    );
+
+    const editButtons = screen.getAllByRole('button', { name: 'Edit' });
+    expect(editButtons.length).toBe(2);
+  });
+
+  it('does NOT render Edit button for non-manager roles (e.g. ROLE_CITIZEN, ROLE_CENTER_MANAGER)', () => {
+    authMocks.currentUser = { id: 3, roles: ['ROLE_CENTER_MANAGER'] };
+
+    render(
+      <CampaignList
+        {...defaultProps}
+        campaigns={[sampleDraftCampaign, sampleActiveCampaign]}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  });
+
+  it('does NOT render Edit button for closed states (COMPLETED, CANCELLED, ARCHIVED) even for ROLE_ADMIN', () => {
+    authMocks.currentUser = { id: 1, roles: ['ROLE_ADMIN'] };
+    const sampleArchivedCampaign = {
+      id: 5,
+      code: 'CMP-005',
+      name: 'Archived Drive',
+      status: 'ARCHIVED',
+    };
+
+    render(
+      <CampaignList
+        {...defaultProps}
+        campaigns={[sampleCompletedCampaign, sampleCancelledCampaign, sampleArchivedCampaign]}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  });
 });

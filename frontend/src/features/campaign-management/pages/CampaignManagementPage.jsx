@@ -3,6 +3,7 @@ import {
   listCampaigns,
   getCampaignById,
   createCampaign,
+  updateCampaign,
   getCampaignLifecycleEvents,
   scheduleCampaign,
   publishCampaign,
@@ -40,6 +41,11 @@ export default function CampaignManagementPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState(null);
+
+  // Edit Form state
+  const [editingCampaign, setEditingCampaign] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState(null);
 
   // Details Modal state
   const [selectedCampaign, setSelectedCampaign] = useState(null);
@@ -82,6 +88,43 @@ export default function CampaignManagementPage() {
       setCreateError(err);
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  // Handle Campaign Edit Initiation
+  const handleInitiateEdit = async (campaign) => {
+    setShowCreateForm(false);
+    setCreateError(null);
+    setEditError(null);
+    try {
+      if (!campaign.bookingOpenAt || !campaign.bookingCloseAt) {
+        setLoading(true);
+        const detailed = await getCampaignById(campaign.id);
+        setEditingCampaign(detailed);
+      } else {
+        setEditingCampaign(campaign);
+      }
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Campaign Edit Submission
+  const handleEditSubmit = async (payload) => {
+    if (!editingCampaign) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      const updated = await updateCampaign(editingCampaign.id, payload);
+      setEditingCampaign(null);
+      setSuccessMessage(`Campaign "${updated.name}" updated successfully.`);
+      await fetchCampaigns();
+    } catch (err) {
+      setEditError(err);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -217,6 +260,20 @@ export default function CampaignManagementPage() {
         />
       )}
 
+      {/* Edit Campaign Form Card */}
+      {isManager && editingCampaign && (
+        <CampaignForm
+          initialCampaign={editingCampaign}
+          onSubmit={handleEditSubmit}
+          onCancel={() => {
+            setEditingCampaign(null);
+            setEditError(null);
+          }}
+          loading={editLoading}
+          error={editError}
+        />
+      )}
+
       {/* Campaign List View */}
       {loading ? (
         <LoadingSpinner message="Fetching vaccination campaigns..." />
@@ -227,7 +284,10 @@ export default function CampaignManagementPage() {
           onStatusFilterChange={setSelectedStatus}
           onSelectCampaign={handleSelectCampaign}
           onInitiateAction={handleInitiateAction}
+          onEditCampaign={handleInitiateEdit}
           onCreateNew={() => {
+            setEditingCampaign(null);
+            setEditError(null);
             setShowCreateForm(true);
             setCreateError(null);
           }}
