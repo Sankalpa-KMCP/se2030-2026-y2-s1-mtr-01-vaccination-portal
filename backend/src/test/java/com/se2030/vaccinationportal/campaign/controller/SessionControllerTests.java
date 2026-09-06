@@ -497,6 +497,18 @@ class SessionControllerTests {
                 .andExpect(jsonPath("$.message", containsString("Invalid session lifecycle transition from DRAFT to IN_PROGRESS")));
     }
 
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/start with forbidden parent campaign status returns 409 Conflict")
+    void startSessionCampaignLifecycleConflict() throws Exception {
+        when(sessionService.startSession(500L))
+                .thenThrow(new IllegalStateException("Cannot start vaccination session for campaign with ID 10 in SUSPENDED status"));
+
+        mockMvc.perform(post("/api/v1/sessions/500/start"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.message", containsString("Cannot start vaccination session for campaign with ID 10 in SUSPENDED status")));
+    }
+
     // ==========================================
     // 6. POST /api/v1/sessions/{id}/complete
     // ==========================================
@@ -549,6 +561,18 @@ class SessionControllerTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status", is(409)))
                 .andExpect(jsonPath("$.message", containsString("Invalid session lifecycle transition from SCHEDULED to COMPLETED")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/sessions/{id}/complete with forbidden parent campaign status returns 409 Conflict")
+    void completeSessionCampaignLifecycleConflict() throws Exception {
+        when(sessionService.completeSession(500L))
+                .thenThrow(new IllegalStateException("Cannot complete vaccination session for campaign with ID 10 in COMPLETED status"));
+
+        mockMvc.perform(post("/api/v1/sessions/500/complete"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.message", containsString("Cannot complete vaccination session for campaign with ID 10 in COMPLETED status")));
     }
 
     // ==========================================

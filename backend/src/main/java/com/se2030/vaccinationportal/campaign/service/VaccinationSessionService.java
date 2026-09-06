@@ -241,18 +241,38 @@ public class VaccinationSessionService {
 
     /**
      * Starts a SCHEDULED vaccination session (transitions to IN_PROGRESS).
+     * Enforces deterministic parent lock ordering (campaign -&gt; session) and parent campaign lifecycle integrity.
      * Lifecycle-only transition: does NOT create a SessionChangeEvent.
      *
      * @param sessionId ID of the target VaccinationSession
      * @return Saved VaccinationSession in IN_PROGRESS lifecycle status
+     * @throws ResourceNotFoundException if session or parent campaign is not found
+     * @throws IllegalStateException    if parent campaign lifecycle status is not PUBLISHED or ACTIVE,
+     *                                  if start time has not been reached, or if session lifecycle transition is invalid
      */
     public VaccinationSession startSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
+        Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
+
+        if (!session.getCampaign().getId().equals(campaignId)) {
+            throw new IllegalStateException("Authoritative session parent relationship changed concurrently");
+        }
+
+        requireCampaignAllowsSessionStart(campaign);
+
         Instant now = clock.instant();
         if (now.isBefore(session.getStartAt())) {
             throw new IllegalStateException(
@@ -264,20 +284,62 @@ public class VaccinationSessionService {
 
     /**
      * Completes an IN_PROGRESS vaccination session (transitions to COMPLETED).
+     * Enforces deterministic parent lock ordering (campaign -&gt; session) and parent campaign lifecycle integrity.
      * Lifecycle-only transition: does NOT create a SessionChangeEvent.
      *
      * @param sessionId ID of the target VaccinationSession
      * @return Saved VaccinationSession in COMPLETED lifecycle status
+     * @throws ResourceNotFoundException if session or parent campaign is not found
+     * @throws IllegalStateException    if parent campaign lifecycle status does not permit session completion,
+     *                                  or if session lifecycle transition is invalid
      */
     public VaccinationSession completeSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
+        Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
+
+        if (!session.getCampaign().getId().equals(campaignId)) {
+            throw new IllegalStateException("Authoritative session parent relationship changed concurrently");
+        }
+
+        requireCampaignAllowsSessionCompletion(campaign);
+
         session.complete();
         return sessionRepository.save(session);
+    }
+
+    private void requireCampaignAllowsSessionStart(VaccinationCampaign campaign) {
+        CampaignStatus status = campaign.getStatus();
+        if (status != CampaignStatus.PUBLISHED && status != CampaignStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "Cannot start vaccination session for campaign with ID " + campaign.getId()
+                            + " in " + status + " status. Only PUBLISHED or ACTIVE campaigns permit session start."
+            );
+        }
+    }
+
+    private void requireCampaignAllowsSessionCompletion(VaccinationCampaign campaign) {
+        CampaignStatus status = campaign.getStatus();
+        if (status != CampaignStatus.PUBLISHED
+                && status != CampaignStatus.ACTIVE
+                && status != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot complete vaccination session for campaign with ID " + campaign.getId()
+                            + " in " + status + " status. Campaign is not operational or is operationally closed."
+            );
+        }
     }
 
     /**
