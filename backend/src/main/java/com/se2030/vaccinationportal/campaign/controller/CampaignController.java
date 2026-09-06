@@ -160,7 +160,7 @@ public class CampaignController {
     }
 
     @PostMapping("/{id}/archive")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CampaignResponse> archiveCampaign(
             @PathVariable Long id,
             @Valid @RequestBody ArchiveCampaignRequest request,
