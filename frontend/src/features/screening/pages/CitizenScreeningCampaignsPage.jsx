@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
-import { listCampaigns } from '../../campaign-management/api/campaignApi';
+import { listCitizenCampaigns } from '../../campaign-management/api/campaignApi';
 
 const CITIZEN_INTAKE_STATUSES = new Set(['PUBLISHED', 'ACTIVE']);
 
@@ -21,7 +21,7 @@ export default function CitizenScreeningCampaignsPage() {
 
   useEffect(() => {
     let active = true;
-    listCampaigns()
+    listCitizenCampaigns()
       .then((data) => {
         if (active) {
           setCampaigns((Array.isArray(data) ? data : []).filter(
@@ -76,9 +76,15 @@ export default function CitizenScreeningCampaignsPage() {
                     <dt className="col-5">Service dates</dt>
                     <dd className="col-7">{formatDate(campaign.serviceStartDate)} – {formatDate(campaign.serviceEndDate)}</dd>
                   </dl>
-                  <Link className="btn btn-primary align-self-start mt-auto" to={`/app/screening/campaigns/${campaign.id}`}>
-                    Start screening
-                  </Link>
+                  {campaign.currentlyAcceptingScreening ? (
+                    <Link className="btn btn-primary align-self-start mt-auto" to={`/app/screening/campaigns/${campaign.id}`}>
+                      Start screening
+                    </Link>
+                  ) : (
+                    <button className="btn btn-secondary align-self-start mt-auto" type="button" disabled>
+                      Start screening
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

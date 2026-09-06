@@ -138,24 +138,92 @@ public class SessionSecurityAuthorizationIntegrationTests {
     // =========================================================================
     // 1. PUBLIC DISCOVERY READS
     // =========================================================================
+    // 1. ADMINISTRATIVE SESSION READS REQUIRE AUTHORIZED OPERATIONAL STAFF (MF02-R-001)
+    // =========================================================================
 
     @Nested
-    @DisplayName("Public Session Discovery")
-    class PublicSessionDiscovery {
+    @DisplayName("Administrative Session Reads")
+    class AdministrativeSessionReads {
 
         @Test
-        @DisplayName("Anonymous GET /api/v1/sessions succeeds with 200 OK")
-        void anonymousListSessionsSucceeds() throws Exception {
+        @DisplayName("Anonymous GET /api/v1/sessions is denied 403")
+        void anonymousListSessionsDenied() throws Exception {
             mockMvc.perform(get("/api/v1/sessions"))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isForbidden());
         }
 
         @Test
-        @DisplayName("Anonymous GET /api/v1/sessions/{id} succeeds with 200 OK")
-        void anonymousGetSessionByIdSucceeds() throws Exception {
+        @DisplayName("Anonymous GET /api/v1/sessions/{id} is denied 403")
+        void anonymousGetSessionByIdDenied() throws Exception {
             mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id", is(draftSession.getId().intValue())));
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN GET session endpoints is denied 403")
+        void citizenSessionReadsDenied() throws Exception {
+            String auth = token(501L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+
+            mockMvc.perform(get("/api/v1/sessions")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_INVENTORY_OFFICER GET session endpoints is denied 403")
+        void inventoryOfficerSessionReadsDenied() throws Exception {
+            String auth = token(601L, "inventory@portal.gov", List.of("ROLE_INVENTORY_OFFICER"));
+
+            mockMvc.perform(get("/api/v1/sessions")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_MANAGEMENT_USER GET session endpoints is denied 403")
+        void managementUserSessionReadsDenied() throws Exception {
+            String auth = token(701L, "management@portal.gov", List.of("ROLE_MANAGEMENT_USER"));
+
+            mockMvc.perform(get("/api/v1/sessions")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Authorized staff roles succeed on GET /api/v1/sessions and GET /api/v1/sessions/{id} with 200 OK")
+        void authorizedStaffRolesSucceed() throws Exception {
+            List<String> authorizedRoles = List.of(
+                    "ROLE_ADMIN",
+                    "ROLE_CENTER_MANAGER",
+                    "ROLE_CAMPAIGN_OFFICER",
+                    "ROLE_HEALTHCARE_OFFICER"
+            );
+
+            long userId = 101L;
+            for (String role : authorizedRoles) {
+                String auth = token(userId++, role.toLowerCase() + "@portal.gov", List.of(role));
+
+                mockMvc.perform(get("/api/v1/sessions")
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId())
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.id", is(draftSession.getId().intValue())));
+            }
         }
     }
 

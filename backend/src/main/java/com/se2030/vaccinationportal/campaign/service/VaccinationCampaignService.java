@@ -14,7 +14,9 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.dto.response.CitizenCampaignDiscoveryResponse;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
+import com.se2030.vaccinationportal.campaign.mapper.CampaignDtoMapper;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
@@ -802,5 +804,26 @@ public class VaccinationCampaignService {
                 );
             }
         }
+    }
+
+    /**
+     * Retrieve campaigns visible for authenticated citizen discovery (MF02-R-001).
+     * Returns only PUBLISHED and ACTIVE campaigns ordered by ID ascending.
+     * Derives currentlyAcceptingScreening from canonical booking window and lifecycle openness.
+     *
+     * @return List of minimal citizen campaign projections
+     */
+    @Transactional(readOnly = true)
+    public List<CitizenCampaignDiscoveryResponse> getCitizenDiscoveryCampaigns() {
+        List<VaccinationCampaign> campaigns = campaignRepository.findByStatusInOrderByIdAsc(
+                List.of(CampaignStatus.PUBLISHED, CampaignStatus.ACTIVE)
+        );
+        Instant now = clock.instant();
+        return campaigns.stream()
+                .map(campaign -> CampaignDtoMapper.toCitizenDiscoveryResponse(
+                        campaign,
+                        campaign.isBookingWindowOpenAt(now)
+                ))
+                .toList();
     }
 }

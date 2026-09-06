@@ -39,6 +39,16 @@ export async function listCampaigns(status = null) {
 }
 
 /**
+ * Fetch list of visible campaigns for authenticated citizens (MF02-R-001).
+ *
+ * @returns {Promise<Array>} List of CitizenCampaignDiscoveryResponse objects
+ */
+export async function listCitizenCampaigns() {
+  const response = await apiRequest('/v1/citizen/campaigns', { method: 'GET' });
+  return handleResponse(response);
+}
+
+/**
  * Fetch detailed campaign record by identifier.
  *
  * @param {number|string} id - Campaign identifier
