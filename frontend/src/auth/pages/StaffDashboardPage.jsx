@@ -7,11 +7,17 @@ import {
   canViewCampaigns,
   canViewCenters,
   canViewSessions,
+  hasRole,
 } from '../utils/roleUtils';
 
 export default function StaffDashboardPage() {
   const { user } = useAuth();
   const services = [
+    hasRole(user, 'ROLE_HEALTHCARE_OFFICER') && [
+      'Screening Review',
+      'Review citizen pre-vaccination screenings, request corrections, and record eligibility decisions.',
+      '/app/staff/screening/reviews',
+    ],
     canViewCampaigns(user) && ['Campaigns', 'View vaccination campaigns available to your assigned role.', '/app/campaigns'],
     canViewCenters(user) && ['Center Operations', 'Access vaccination-center operational information.', '/app/center-operations'],
     canViewSessions(user) && ['Sessions', 'View and manage vaccination sessions permitted for your role.', '/app/sessions'],

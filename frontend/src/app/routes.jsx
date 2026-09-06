@@ -36,6 +36,8 @@ import CitizenEligibilityPage from '../features/screening/pages/CitizenEligibili
 import CitizenScreeningHistoryPage from '../features/screening/pages/CitizenScreeningHistoryPage';
 import CitizenScreeningHistoryDetailsPage from '../features/screening/pages/CitizenScreeningHistoryDetailsPage';
 import CitizenScreeningCorrectionPage from '../features/screening/pages/CitizenScreeningCorrectionPage';
+import HealthcareOfficerScreeningReviewQueuePage from '../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage';
+import HealthcareOfficerScreeningReviewDetailsPage from '../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
@@ -76,6 +78,7 @@ const CHECK_IN_STAFF_ROLES = [
 ];
 
 const SCREENING_ADMIN_ROLES = ['ROLE_ADMIN'];
+const SCREENING_REVIEW_ROLES = ['ROLE_HEALTHCARE_OFFICER'];
 
 function RoleHomeRedirect({ user }) {
   return <Navigate to={getRoleHomePath(user)} replace />;
@@ -220,6 +223,11 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={STAFF_DASHBOARD_ROLES} />}>
             <Route path="staff" element={<StaffDashboardPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={SCREENING_REVIEW_ROLES} />}>
+            <Route path="staff/screening/reviews" element={<HealthcareOfficerScreeningReviewQueuePage />} />
+            <Route path="staff/screening/reviews/:submissionId" element={<HealthcareOfficerScreeningReviewDetailsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={[ADMIN_ROLE]} />}>

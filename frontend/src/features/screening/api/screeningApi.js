@@ -185,3 +185,39 @@ export function getCitizenCampaignEligibility(citizenId, campaignId) {
 export function getScreeningHistoryDetails(submissionId) {
   return screeningRequest(`/submissions/${submissionId}/history-details`, { method: 'GET' });
 }
+
+// Healthcare-officer screening review workflow
+export function listScreeningReviewQueue({ campaignId } = {}) {
+  const query = new URLSearchParams();
+  if (campaignId !== undefined && campaignId !== null && campaignId !== '') {
+    query.set('campaignId', String(campaignId));
+  }
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+  return screeningRequest(`/assessments/queue${suffix}`, { method: 'GET' });
+}
+
+export function getScreeningReviewDetails(submissionId) {
+  return screeningRequest(`/submissions/${submissionId}/review-details`, { method: 'GET' });
+}
+
+export function requestScreeningCorrections(submissionId, instructions) {
+  return screeningRequest(`/assessments/submissions/${submissionId}/corrections`, {
+    method: 'POST',
+    body: JSON.stringify({ instructions }),
+  });
+}
+
+export function recordEligibilityDecision(submissionId, payload) {
+  const decision = {
+    status: payload.status,
+    reason: payload.reason,
+  };
+  if (payload.status === 'ELIGIBLE' && payload.validUntil) {
+    decision.validUntil = payload.validUntil;
+  }
+
+  return screeningRequest(`/assessments/submissions/${submissionId}/decision`, {
+    method: 'POST',
+    body: JSON.stringify(decision),
+  });
+}
