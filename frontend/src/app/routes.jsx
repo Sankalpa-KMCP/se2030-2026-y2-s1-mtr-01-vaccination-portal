@@ -42,6 +42,7 @@ import WaitlistPage from '../features/appointment-management/pages/WaitlistPage'
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import NotAuthorizedPage from './pages/NotAuthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -83,12 +84,7 @@ function RoleHomeRedirect({ user }) {
 function InitializingPage() {
   return (
     <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-      <div className="text-center p-4">
-        <div className="spinner-border text-primary mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
-          <span className="visually-hidden">Loading authentication state...</span>
-        </div>
-        <p className="text-muted small mb-0">Initializing application session...</p>
-      </div>
+      <LoadingSpinner message="Initializing application session..." />
     </div>
   );
 }
@@ -101,7 +97,7 @@ function InitializationErrorPage({ error, onRetry, onLogout }) {
           <div className="card border-0 shadow-sm">
             <div className="card-body p-4 text-center">
               <div className="text-danger mb-3">
-                <span className="display-6">⚠️</span>
+                <i className="bi bi-exclamation-triangle display-6" aria-hidden="true"></i>
               </div>
               <h1 className="h4 text-danger mb-2">Service Temporarily Unavailable</h1>
               <p className="text-muted small mb-4">{error}</p>

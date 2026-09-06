@@ -717,7 +717,10 @@ export default function SessionCapacityPlanTab({ session }) {
                 {parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value != null &&
                   parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value > previewResult.recommendedThroughput && (
                   <div className="alert alert-warning border-0 shadow-sm small mb-3" role="alert">
-                    <div className="fw-bold mb-1">⚠️ Capacity Override Detected</div>
+                    <div className="fw-bold mb-1">
+                      <i className="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                      Capacity Override Detected
+                    </div>
                     <div>
                       The target approved capacity (<strong>{formData.approvedCapacity} doses</strong>) exceeds the recommended throughput (<strong>{previewResult.recommendedThroughput} doses</strong>).
                     </div>

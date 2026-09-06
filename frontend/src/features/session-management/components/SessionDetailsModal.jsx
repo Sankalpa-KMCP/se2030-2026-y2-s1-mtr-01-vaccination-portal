@@ -15,6 +15,12 @@ import SessionChangeControlTab from './SessionChangeControlTab';
 import SessionReadinessTab from './SessionReadinessTab';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import StatusBadge from '../../../components/common/StatusBadge';
+import {
+  sessionStatusVariants,
+  sessionBookingStatusVariants,
+  sessionBookingStatusTitles as BOOKING_STATUS_TITLES,
+} from '../../../components/common/statusVariants';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { canManageSessionBooking } from '../../../auth/utils/roleUtils';
 
@@ -101,38 +107,17 @@ export default function SessionDetailsModal({
   const center = session ? centersMap[session.centerId] : null;
   const tz = session?.scheduleTimezone || 'UTC';
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'DRAFT':
-        return <span className="badge bg-secondary text-white">DRAFT</span>;
-      case 'SCHEDULED':
-        return <span className="badge bg-primary text-white">SCHEDULED</span>;
-      case 'IN_PROGRESS':
-        return <span className="badge bg-success text-white">IN_PROGRESS</span>;
-      case 'COMPLETED':
-        return <span className="badge bg-dark text-white">COMPLETED</span>;
-      case 'CANCELLED':
-        return <span className="badge bg-danger text-white">CANCELLED</span>;
-      default:
-        return <span className="badge bg-light text-dark border">{status || 'UNKNOWN'}</span>;
-    }
-  };
+  const getStatusBadge = (status) => (
+    <StatusBadge status={status || 'UNKNOWN'} variants={sessionStatusVariants} />
+  );
 
-  const getBookingStatusBadge = (bookingStatus) => {
-    switch (bookingStatus) {
-      case 'OPEN':
-        return <span className="badge bg-success text-white" title="Booking Intake Open">OPEN</span>;
-      case 'FULL':
-        return <span className="badge bg-warning text-dark" title="Fully Booked (Waitlist Available)">FULL</span>;
-      case 'SUSPENDED':
-        return <span className="badge bg-danger text-white" title="Booking Intake Suspended">SUSPENDED</span>;
-      case 'NOT_OPEN':
-        return <span className="badge bg-info text-dark" title="Booking Window Not Open Yet">NOT_OPEN</span>;
-      case 'CLOSED':
-      default:
-        return <span className="badge bg-secondary text-white" title="Booking Closed">CLOSED</span>;
-    }
-  };
+  const getBookingStatusBadge = (bookingStatus) => (
+    <StatusBadge
+      status={bookingStatus || 'CLOSED'}
+      variants={sessionBookingStatusVariants}
+      title={BOOKING_STATUS_TITLES[bookingStatus]}
+    />
+  );
 
   const handleInitiateAction = (actionType) => {
     setLifecycleError(null);

@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import PageHeader from '../../../components/common/PageHeader';
+import SuccessAlert from '../../../components/common/SuccessAlert';
+import { questionnaireVersionStatusVariants } from '../../../components/common/statusVariants';
+import StatusBadge from '../../../components/common/StatusBadge';
 import {
   addQuestionnaireItem,
   createEligibilityRule,
@@ -29,11 +33,7 @@ import {
   QUESTION_TYPE_LABELS,
 } from '../constants/screeningConstants';
 
-const STATUS_BADGE = {
-  [QUESTIONNAIRE_VERSION_STATUS.DRAFT]: 'text-bg-warning',
-  [QUESTIONNAIRE_VERSION_STATUS.PUBLISHED]: 'text-bg-success',
-  [QUESTIONNAIRE_VERSION_STATUS.RETIRED]: 'text-bg-secondary',
-};
+const STATUS_BADGE = 'badge';
 
 function sortItems(items = []) {
   return [...items].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -295,19 +295,17 @@ export default function ScreeningQuestionnairesPage() {
 
   return (
     <section aria-labelledby="screeningQuestionnairesTitle">
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
-        <div>
-          <h1 className="h3 mb-1" id="screeningQuestionnairesTitle">Screening Questionnaires</h1>
-          <p className="text-muted mb-0">Build versioned screening questionnaires and their eligibility rules.</p>
-        </div>
-        <button type="button" className="btn btn-primary" onClick={() => { setFormError(null); setQuestionnaireFormOpen(true); }}>Create Questionnaire</button>
-      </div>
+      <PageHeader
+        id="screeningQuestionnairesTitle"
+        title="Screening Questionnaires"
+        subtitle="Build versioned screening questionnaires and their eligibility rules."
+        actions={(
+          <button type="button" className="btn btn-primary btn-sm fw-semibold" onClick={() => { setFormError(null); setQuestionnaireFormOpen(true); }}>Create Questionnaire</button>
+        )}
+      />
 
       {successMessage && (
-        <div className="alert alert-success alert-dismissible shadow-sm" role="status">
-          {successMessage}
-          <button type="button" className="btn-close" aria-label="Dismiss success" onClick={() => setSuccessMessage(null)} />
-        </div>
+        <SuccessAlert message={successMessage} onDismiss={() => setSuccessMessage(null)} />
       )}
       <ApiErrorAlert error={loadError} onDismiss={() => setLoadError(null)} />
 
@@ -386,7 +384,10 @@ export default function ScreeningQuestionnairesPage() {
                     <div className="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                       <div className="d-flex align-items-center gap-2">
                         <h2 className="h5 mb-0">Version {selectedVersion.versionNumber}</h2>
-                        <span className={`badge ${STATUS_BADGE[selectedVersion.status] || 'text-bg-light'}`}>{QUESTIONNAIRE_VERSION_STATUS_LABELS[selectedVersion.status] || selectedVersion.status}</span>
+                        <StatusBadge
+                          status={QUESTIONNAIRE_VERSION_STATUS_LABELS[selectedVersion.status] || selectedVersion.status}
+                          variants={questionnaireVersionStatusVariants}
+                        />
                       </div>
                       <div className="d-flex flex-wrap gap-2">
                         {isDraft && <button type="button" className="btn btn-success btn-sm" onClick={() => openConfirmation('publish')}>Publish</button>}

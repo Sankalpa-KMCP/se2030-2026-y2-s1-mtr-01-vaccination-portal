@@ -1,10 +1,11 @@
-/* Landing-only refinement. Keep shared public and authentication tokens intact. */
+/* Landing-only refinement. Green accents are re-pointed to the shared
+   application teal family so the home page matches the signed-in product. */
 .lp-page--home {
-  --health-green: #2f855f;
-  --health-green-deep: #206245;
-  --health-green-soft: #eaf4eb;
-  --health-green-border: #bcd5c4;
-  --health-green-light: #9ddbb4;
+  --health-green: var(--primary, #0e7490);
+  --health-green-deep: var(--primary-hover, #155e75);
+  --health-green-soft: #ebf7fa;
+  --health-green-border: #bfe5ee;
+  --health-green-light: #8adbe0;
   --health-teal-light: #8ccdc8;
   --health-navy: #102f3a;
   --health-navy-raised: #1c424a;

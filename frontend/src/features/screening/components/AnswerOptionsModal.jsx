@@ -158,14 +158,14 @@ export default function AnswerOptionsModal({ question, onClose }) {
     >
       <div className="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
         <div className="modal-content shadow-lg border-0">
-          <div className="modal-header bg-primary text-white">
+          <div className="modal-header bg-light">
             <div>
               <h2 className="modal-title h5" id="answerOptionsTitle">Answer Options</h2>
               <div className="small opacity-75">{question.code} — {question.text}</div>
             </div>
             <button
               type="button"
-              className="btn-close btn-close-white"
+              className="btn-close"
               aria-label="Close"
               onClick={onClose}
               disabled={saving || deleting}
