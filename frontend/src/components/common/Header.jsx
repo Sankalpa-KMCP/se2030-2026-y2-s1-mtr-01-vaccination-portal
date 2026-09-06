@@ -30,6 +30,7 @@ export default function Header({ onLogout }) {
   const showCheckIn = hasRole(user, ADMIN_ROLE, 'ROLE_HEALTHCARE_OFFICER', 'ROLE_CENTER_MANAGER');
   const showAdminNavigation = hasRole(user, ADMIN_ROLE);
   const showCitizenNavigation = hasRole(user, CITIZEN_ROLE);
+  const showScreeningReview = hasRole(user, 'ROLE_HEALTHCARE_OFFICER');
   const dashboardPath = getRoleHomePath(user);
 
   const closeNav = () => setNavOpen(false);
@@ -82,6 +83,14 @@ export default function Header({ onLogout }) {
                     </NavLink>
                   </li>
                 </>
+              )}
+
+              {showScreeningReview && (
+                <li className="nav-item">
+                  <NavLink className={navigationClassName} to="/app/staff/screening/reviews" onClick={closeNav}>
+                    Screening Review
+                  </NavLink>
+                </li>
               )}
 
               {showCampaigns && (

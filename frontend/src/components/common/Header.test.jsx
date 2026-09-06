@@ -54,6 +54,7 @@ describe('Header', () => {
     expect(screen.queryByText('Campaigns')).toBeNull();
     expect(screen.queryByText('Staff Requests')).toBeNull();
     expect(screen.queryByText('Screening Questions')).toBeNull();
+    expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
   it('marks the active destination and keeps authorization visibility for an admin', () => {
@@ -72,6 +73,36 @@ describe('Header', () => {
     expect(screen.getByText('Questionnaires').getAttribute('href')).toBe('/app/screening/questionnaires');
     expect(screen.queryByText('Book Appointment')).toBeNull();
     expect(screen.queryByText('Waitlist')).toBeNull();
+    expect(screen.queryByText('Screening Review')).toBeNull();
+  });
+
+  it('shows the screening review link only for a healthcare officer and keeps existing links', () => {
+    mockUser({
+      id: 3,
+      fullName: 'Healthcare Officer',
+      email: 'hco@test.local',
+      roles: ['ROLE_HEALTHCARE_OFFICER'],
+    });
+    renderHeader('/app/staff/screening/reviews');
+
+    const reviewLink = screen.getByText('Screening Review');
+    expect(reviewLink.getAttribute('href')).toBe('/app/staff/screening/reviews');
+    expect(reviewLink.className).toContain('active');
+    expect(screen.getByText('Campaigns')).toBeTruthy();
+    expect(screen.getByText('Center Operations')).toBeTruthy();
+    expect(screen.getByText('Sessions')).toBeTruthy();
+  });
+
+  it('does not show screening review to an unrelated staff role', () => {
+    mockUser({
+      id: 4,
+      fullName: 'Inventory Officer',
+      email: 'inventory@test.local',
+      roles: ['ROLE_INVENTORY_OFFICER'],
+    });
+    renderHeader('/app/staff');
+
+    expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
   it('opens the mobile menu from the collapsed state', () => {

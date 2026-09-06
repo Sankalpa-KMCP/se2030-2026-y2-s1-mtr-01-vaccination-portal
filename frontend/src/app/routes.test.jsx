@@ -45,6 +45,8 @@ vi.mock('../features/screening/pages/CitizenEligibilityPage', () => ({ default: 
 vi.mock('../features/screening/pages/CitizenScreeningHistoryPage', () => ({ default: () => 'Citizen History Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningHistoryDetailsPage', () => ({ default: () => 'Citizen History Details Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningCorrectionPage', () => ({ default: () => 'Citizen Correction Test Page' }));
+vi.mock('../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage', () => ({ default: () => 'HCO Screening Review Queue Test Page' }));
+vi.mock('../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage', () => ({ default: () => 'HCO Screening Review Details Test Page' }));
 
 function setAuth({ isAuthenticated = true, roles = [] } = {}) {
   const logout = vi.fn();
@@ -367,6 +369,35 @@ describe('shared routing and role guards', () => {
     setAuth({ roles: ['ROLE_CITIZEN'] });
     view.rerender(<MemoryRouter initialEntries={['/app/staff']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+  });
+
+  describe.each([
+    ['/app/staff/screening/reviews', 'HCO Screening Review Queue Test Page'],
+    ['/app/staff/screening/reviews/42', 'HCO Screening Review Details Test Page'],
+  ])('healthcare-officer review route %s', (path, page) => {
+    it('allows a healthcare officer', () => {
+      setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
+      render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByText(page)).toBeTruthy();
+    });
+
+    it('redirects an unauthenticated visitor to login', () => {
+      setAuth({ isAuthenticated: false });
+      render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
+    });
+
+    it.each([
+      'ROLE_CITIZEN',
+      'ROLE_INVENTORY_OFFICER',
+      'ROLE_ADMIN',
+      'ROLE_SYSTEM_ADMINISTRATOR',
+    ])('denies %s', (role) => {
+      setAuth({ roles: [role] });
+      render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+      expect(screen.queryByText(page)).toBeNull();
+    });
   });
 
   it('allows only ADMIN to open admin dashboard and staff requests', () => {
