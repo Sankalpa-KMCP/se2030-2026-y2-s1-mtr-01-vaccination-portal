@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.campaign.service;
 
 import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
@@ -65,6 +66,7 @@ public class TimeSlotService {
         if (!session.getCenter().getId().equals(centerId)) {
             throw new IllegalStateException("Authoritative session parent center changed concurrently");
         }
+        requireTimeSlotConfigurationAllowed(session);
 
         if (startTime.isBefore(session.getStartAt()) || endTime.isAfter(session.getEndAt())) {
             throw new IllegalArgumentException("Slot interval must fall within session operating window");
@@ -131,6 +133,7 @@ public class TimeSlotService {
         if (!session.getCenter().getId().equals(centerId)) {
             throw new IllegalStateException("Authoritative session parent center changed concurrently");
         }
+        requireTimeSlotConfigurationAllowed(session);
 
         List<TimeSlot> sessionSlots = timeSlotRepository.findBySessionIdForUpdateOrderByIdAsc(sessionId);
         TimeSlot slot = sessionSlots.stream()
@@ -210,5 +213,12 @@ public class TimeSlotService {
     @Transactional(readOnly = true)
     public List<TimeSlot> getSlotsForSession(Long sessionId) {
         return timeSlotRepository.findBySessionIdOrderByStartTimeAsc(sessionId);
+    }
+
+    private void requireTimeSlotConfigurationAllowed(VaccinationSession session) {
+        SessionLifecycleStatus status = session.getLifecycleStatus();
+        if (status != SessionLifecycleStatus.DRAFT && status != SessionLifecycleStatus.SCHEDULED) {
+            throw new IllegalStateException("Cannot configure time slots for session in " + status + " lifecycle status");
+        }
     }
 }
