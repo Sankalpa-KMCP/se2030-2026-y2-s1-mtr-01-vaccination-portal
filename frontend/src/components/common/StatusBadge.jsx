@@ -10,8 +10,13 @@ import { FALLBACK_BADGE_CLASS } from './statusVariants';
  * @param {string} props.status - Raw status value (e.g. 'SCHEDULED').
  * @param {Record<string, string>} props.variants - Domain status -> class map.
  * @param {string} [props.className] - Extra classes for spacing utilities.
+ * @param {string} [props.title] - Optional tooltip for the chip.
  */
-export default function StatusBadge({ status, variants, className = '' }) {
+export default function StatusBadge({ status, variants, className = '', title }) {
   const badgeClass = variants?.[status] ?? FALLBACK_BADGE_CLASS;
-  return <span className={`${badgeClass}${className ? ` ${className}` : ''}`}>{status}</span>;
+  return (
+    <span className={`${badgeClass}${className ? ` ${className}` : ''}`} title={title}>
+      {status}
+    </span>
+  );
 }

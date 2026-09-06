@@ -42,6 +42,15 @@ export const sessionBookingStatusVariants = {
   CLOSED: soft('secondary'),
 };
 
+/* Tooltip copy for booking-window chips (session management). */
+export const sessionBookingStatusTitles = {
+  OPEN: 'Booking Intake Open',
+  FULL: 'Fully Booked (Waitlist Available)',
+  SUSPENDED: 'Booking Intake Suspended',
+  NOT_OPEN: 'Booking Window Not Open Yet',
+  CLOSED: 'Booking Closed',
+};
+
 /* Citizen appointment lifecycle (appointment management). */
 export const appointmentStatusVariants = {
   CONFIRMED: soft('success'),

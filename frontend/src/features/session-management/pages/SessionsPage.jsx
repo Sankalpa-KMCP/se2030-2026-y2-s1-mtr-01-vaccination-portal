@@ -8,6 +8,8 @@ import SessionDetailsModal from '../components/SessionDetailsModal';
 import SessionRecurrencePanel from '../components/SessionRecurrencePanel';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import PageHeader from '../../../components/common/PageHeader';
+import SuccessAlert from '../../../components/common/SuccessAlert';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { canPlanSessions } from '../../../auth/utils/roleUtils';
 
@@ -155,20 +157,14 @@ export default function SessionsPage() {
   }, [fetchSessions]);
 
   return (
-    <div className="container-fluid px-0">
-      {/* Page Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-          <h1 className="h2 text-dark fw-bold mb-1">Vaccination Sessions</h1>
-          <p className="text-secondary mb-0">
-            Operational Session Inventory, Core Scheduling & Recurrence Management
-          </p>
-        </div>
-
-        {isPlanner && pageTab === 'sessions' && (
+    <div>
+      <PageHeader
+        title="Vaccination Sessions"
+        subtitle="Operational Session Inventory, Core Scheduling & Recurrence Management"
+        actions={isPlanner && pageTab === 'sessions' && (
           <button
             type="button"
-            className="btn btn-primary d-inline-flex align-items-center gap-2"
+            className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 fw-semibold"
             onClick={() => setIsCreateModalOpen(true)}
             disabled={cataloguesLoading}
             id="btn-open-create-session"
@@ -177,7 +173,7 @@ export default function SessionsPage() {
             Create Draft Session
           </button>
         )}
-      </div>
+      />
 
       {/* Main Tab Navigation */}
       <ul className="nav nav-tabs mb-4" role="tablist" aria-label="Vaccination sessions views">
@@ -211,15 +207,10 @@ export default function SessionsPage() {
 
       {/* Success Notification Alert */}
       {successMessage && (
-        <div className="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="status">
-          <strong>Success:</strong> {successMessage}
-          <button
-            type="button"
-            className="btn-close"
-            aria-label="Close"
-            onClick={() => setSuccessMessage(null)}
-          />
-        </div>
+        <SuccessAlert
+          message={<span><strong className="me-1">Success:</strong> {successMessage}</span>}
+          onDismiss={() => setSuccessMessage(null)}
+        />
       )}
 
       {/* Catalogue Loading / Error state */}
