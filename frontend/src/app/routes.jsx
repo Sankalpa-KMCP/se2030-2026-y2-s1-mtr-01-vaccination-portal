@@ -42,6 +42,7 @@ import WaitlistPage from '../features/appointment-management/pages/WaitlistPage'
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import NotAuthorizedPage from './pages/NotAuthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -83,12 +84,7 @@ function RoleHomeRedirect({ user }) {
 function InitializingPage() {
   return (
     <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-      <div className="text-center p-4">
-        <div className="spinner-border text-primary mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
-          <span className="visually-hidden">Loading authentication state...</span>
-        </div>
-        <p className="text-muted small mb-0">Initializing application session...</p>
-      </div>
+      <LoadingSpinner message="Initializing application session..." />
     </div>
   );
 }
