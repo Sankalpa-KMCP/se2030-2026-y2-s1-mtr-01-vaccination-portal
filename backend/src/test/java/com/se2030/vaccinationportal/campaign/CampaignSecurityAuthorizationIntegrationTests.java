@@ -476,6 +476,100 @@ public class CampaignSecurityAuthorizationIntegrationTests {
         }
 
         @Test
+        @DisplayName("Only ROLE_ADMIN can archive a COMPLETED campaign; all other roles and anonymous are denied 403")
+        void onlyAdminCanArchiveCompletedCampaign() throws Exception {
+            VaccinationCampaign completedCampaign = campaignRepository.save(CampaignTestFixtures.campaign(
+                    "CMP-ARCH-CMP", "Completed Campaign", "Desc",
+                    vaccine, targetGroup, START_DATE, END_DATE, REG_START, REG_END,
+                    CampaignStatus.COMPLETED
+            ));
+
+            String payload = """
+                    {
+                        "reason": "Archived after regulatory retention period"
+                    }
+                    """;
+
+            // Anonymous -> 403
+            mockMvc.perform(post("/api/v1/campaigns/" + completedCampaign.getId() + "/archive")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+
+            // Non-admin roles -> 403
+            List<String> unauthorizedRoles = List.of(
+                    "ROLE_CAMPAIGN_OFFICER",
+                    "ROLE_CENTER_MANAGER",
+                    "ROLE_HEALTHCARE_OFFICER",
+                    "ROLE_MANAGEMENT_USER",
+                    "ROLE_INVENTORY_OFFICER",
+                    "ROLE_CITIZEN"
+            );
+
+            long userId = 200L;
+            for (String role : unauthorizedRoles) {
+                String auth = token(userId++, role.toLowerCase() + "@portal.gov", List.of(role));
+                mockMvc.perform(post("/api/v1/campaigns/" + completedCampaign.getId() + "/archive")
+                                .header(HttpHeaders.AUTHORIZATION, auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                        .andExpect(status().isForbidden());
+            }
+
+            // Verify status remains COMPLETED before admin executes
+            assertEquals(CampaignStatus.COMPLETED, campaignRepository.findById(completedCampaign.getId()).orElseThrow().getStatus());
+
+            // ROLE_ADMIN -> 200 OK
+            String adminAuth = token(100L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+            mockMvc.perform(post("/api/v1/campaigns/" + completedCampaign.getId() + "/archive")
+                            .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status", is("ARCHIVED")));
+
+            assertEquals(CampaignStatus.ARCHIVED, campaignRepository.findById(completedCampaign.getId()).orElseThrow().getStatus());
+        }
+
+        @Test
+        @DisplayName("Only ROLE_ADMIN can archive a CANCELLED campaign; CAMPAIGN_OFFICER is denied 403")
+        void campaignOfficerCannotArchiveCancelledCampaign() throws Exception {
+            VaccinationCampaign cancelledCampaign = campaignRepository.save(CampaignTestFixtures.campaign(
+                    "CMP-ARCH-CAN", "Cancelled Campaign", "Desc",
+                    vaccine, targetGroup, START_DATE, END_DATE, REG_START, REG_END,
+                    CampaignStatus.CANCELLED
+            ));
+
+            String payload = """
+                    {
+                        "reason": "Administrative archival"
+                    }
+                    """;
+
+            // CAMPAIGN_OFFICER on CANCELLED fixture is denied 403 (explicit MF02-R-005 check)
+            String officerAuth = token(250L, "officer@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+            mockMvc.perform(post("/api/v1/campaigns/" + cancelledCampaign.getId() + "/archive")
+                            .header(HttpHeaders.AUTHORIZATION, officerAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+
+            // Still CANCELLED
+            assertEquals(CampaignStatus.CANCELLED, campaignRepository.findById(cancelledCampaign.getId()).orElseThrow().getStatus());
+
+            // ROLE_ADMIN succeeds 200 OK
+            String adminAuth = token(100L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+            mockMvc.perform(post("/api/v1/campaigns/" + cancelledCampaign.getId() + "/archive")
+                            .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status", is("ARCHIVED")));
+
+            assertEquals(CampaignStatus.ARCHIVED, campaignRepository.findById(cancelledCampaign.getId()).orElseThrow().getStatus());
+        }
+
+        @Test
         @DisplayName("Anonymous access to Complete, Cancel, Archive is denied 403")
         void anonymousTerminalActionsDenied() throws Exception {
             String payload = """

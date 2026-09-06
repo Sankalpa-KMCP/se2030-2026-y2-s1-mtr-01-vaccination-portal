@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../../auth/context/AuthContext';
-import { canManageCampaigns } from '../../../auth/utils/roleUtils';
+import { canManageCampaigns, hasRole } from '../../../auth/utils/roleUtils';
 
 /**
  * Returns a Bootstrap badge class based on the CampaignStatus enum value.
@@ -61,6 +61,7 @@ export default function CampaignList({
 }) {
   const { user } = useAuth();
   const isManager = canManageCampaigns(user);
+  const isAdmin = hasRole(user, 'ROLE_ADMIN');
 
   const statusOptions = [
     { label: 'All Statuses', value: '' },
@@ -300,7 +301,7 @@ export default function CampaignList({
                           </>
                         )}
 
-                        {isManager && (camp.status === 'COMPLETED' || camp.status === 'CANCELLED') && (
+                        {isAdmin && (camp.status === 'COMPLETED' || camp.status === 'CANCELLED') && (
                           <button
                             type="button"
                             className="btn btn-outline-secondary"
