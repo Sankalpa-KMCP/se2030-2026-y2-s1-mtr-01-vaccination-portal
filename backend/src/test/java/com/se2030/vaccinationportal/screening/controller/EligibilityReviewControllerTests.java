@@ -17,19 +17,21 @@ import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
 import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
 import com.se2030.vaccinationportal.screening.validation.RoleAuthorizationInterceptor;
 import com.se2030.vaccinationportal.screening.validation.ScreeningExceptionHandler;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.junit.jupiter.api.AfterEach;
 
 import java.time.Instant;
@@ -39,6 +41,7 @@ import java.util.Optional;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -78,6 +81,7 @@ class EligibilityReviewControllerTests {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ScreeningExceptionHandler())
                 .addInterceptors(new RoleAuthorizationInterceptor())
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
         authenticateAs("HEALTHCARE_OFFICER");
     }
@@ -88,7 +92,7 @@ class EligibilityReviewControllerTests {
     }
 
     @Test
-    void recordDecisionReturnsCreatedMappedAssessmentResponse() throws Exception {
+    void authenticatedHealthcareOfficerRecordsEligibleDecisionWithPrincipalReviewerId() throws Exception {
         EligibilityAssessment assessment = assessment(
                 50L,
                 SUBMISSION_ID,
@@ -112,7 +116,6 @@ class EligibilityReviewControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "reviewerId": 40,
                                   "status": "ELIGIBLE",
                                   "reason": "Citizen is clinically eligible",
                                   "clinicalNotes": "No clinical concerns",
@@ -141,6 +144,228 @@ class EligibilityReviewControllerTests {
                 "No clinical concerns",
                 VALID_UNTIL
         );
+    }
+
+    @Test
+    void authenticatedHealthcareOfficerRecordsIneligibleDecisionWithPrincipalReviewerId() throws Exception {
+        EligibilityAssessment assessment = assessment(
+                51L,
+                SUBMISSION_ID,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Citizen is clinically ineligible",
+                REVIEWED_AT,
+                null
+        );
+        when(reviewService.recordDecision(
+                SUBMISSION_ID,
+                REVIEWER_ID,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Citizen is clinically ineligible",
+                null,
+                null
+        )).thenReturn(assessment);
+
+        mockMvc.perform(post(
+                        "/api/v1/screening/assessments/submissions/{submissionId}/decision",
+                        SUBMISSION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "INELIGIBLE",
+                                  "reason": "Citizen is clinically ineligible"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.reviewerId").value(REVIEWER_ID))
+                .andExpect(jsonPath("$.status").value("INELIGIBLE"));
+
+        verify(reviewService).recordDecision(
+                SUBMISSION_ID,
+                REVIEWER_ID,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Citizen is clinically ineligible",
+                null,
+                null
+        );
+    }
+
+    @ParameterizedTest
+    @CsvSource({"ADMIN, 41", "SYSTEM_ADMINISTRATOR, 42"})
+    void authenticatedAdministrativeDecisionUsesPrincipalReviewerId(String role, Long userId) throws Exception {
+        authenticate(userId, role);
+        EligibilityAssessment assessment = assessment(
+                52L,
+                SUBMISSION_ID,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Administrative clinical decision",
+                REVIEWED_AT,
+                null
+        );
+        assessment.setReviewerId(userId);
+        when(reviewService.recordDecision(
+                SUBMISSION_ID,
+                userId,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Administrative clinical decision",
+                null,
+                null
+        )).thenReturn(assessment);
+
+        mockMvc.perform(post(
+                        "/api/v1/screening/assessments/submissions/{submissionId}/decision",
+                        SUBMISSION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "INELIGIBLE",
+                                  "reason": "Administrative clinical decision"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.reviewerId").value(userId));
+
+        verify(reviewService).recordDecision(
+                SUBMISSION_ID,
+                userId,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Administrative clinical decision",
+                null,
+                null
+        );
+    }
+
+    @Test
+    void legacyReviewerIdCannotOverrideAuthenticatedPrincipal() throws Exception {
+        long authenticatedUserId = 42L;
+        authenticate(authenticatedUserId, "HEALTHCARE_OFFICER");
+        EligibilityAssessment assessment = assessment(
+                53L,
+                SUBMISSION_ID,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Principal attribution test",
+                REVIEWED_AT,
+                null
+        );
+        assessment.setReviewerId(authenticatedUserId);
+        when(reviewService.recordDecision(
+                SUBMISSION_ID,
+                authenticatedUserId,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Principal attribution test",
+                null,
+                null
+        )).thenReturn(assessment);
+
+        mockMvc.perform(post(
+                        "/api/v1/screening/assessments/submissions/{submissionId}/decision",
+                        SUBMISSION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "reviewerId": 999,
+                                  "status": "INELIGIBLE",
+                                  "reason": "Principal attribution test"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.reviewerId").value(authenticatedUserId));
+
+        verify(reviewService).recordDecision(
+                SUBMISSION_ID,
+                authenticatedUserId,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                "Principal attribution test",
+                null,
+                null
+        );
+    }
+
+    @Test
+    void anonymousCallerCannotRecordDecision() throws Exception {
+        SecurityContextHolder.clearContext();
+
+        mockMvc.perform(post(
+                        "/api/v1/screening/assessments/submissions/{submissionId}/decision",
+                        SUBMISSION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "INELIGIBLE",
+                                  "reason": "Unauthorized decision"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(reviewService);
+    }
+
+    @Test
+    void unauthorizedRoleCannotRecordDecision() throws Exception {
+        authenticateAs("CITIZEN");
+
+        mockMvc.perform(post(
+                        "/api/v1/screening/assessments/submissions/{submissionId}/decision",
+                        SUBMISSION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "INELIGIBLE",
+                                  "reason": "Unauthorized decision"
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(reviewService);
+    }
+
+    @Test
+    void decisionRequestRejectsMissingStatus() throws Exception {
+        mockMvc.perform(post(
+                        "/api/v1/screening/assessments/submissions/{submissionId}/decision",
+                        SUBMISSION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "reason": "Missing status"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(reviewService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   "})
+    void decisionRequestRejectsBlankReason(String reason) throws Exception {
+        mockMvc.perform(post(
+                        "/api/v1/screening/assessments/submissions/{submissionId}/decision",
+                        SUBMISSION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "INELIGIBLE",
+                                  "reason": "%s"
+                                }
+                                """.formatted(reason)))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(reviewService);
+    }
+
+    @Test
+    void decisionRequestRejectsMissingReason() throws Exception {
+        mockMvc.perform(post(
+                        "/api/v1/screening/assessments/submissions/{submissionId}/decision",
+                        SUBMISSION_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "INELIGIBLE"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(reviewService);
     }
 
     @Test
@@ -244,11 +469,20 @@ class EligibilityReviewControllerTests {
     }
 
     private void authenticateAs(String role) {
+        authenticate(REVIEWER_ID, role);
+    }
+
+    private void authenticate(Long userId, String role) {
+        UserPrincipal principal = UserPrincipal.fromClaims(
+                userId,
+                "reviewer@portal.test",
+                List.of("ROLE_" + role)
+        );
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
-                        "test-user",
+                        principal,
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                        principal.getAuthorities()
                 )
         );
     }

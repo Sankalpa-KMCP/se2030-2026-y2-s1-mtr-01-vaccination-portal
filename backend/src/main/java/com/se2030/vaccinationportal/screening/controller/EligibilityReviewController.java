@@ -14,9 +14,12 @@ import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
 import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
 import com.se2030.vaccinationportal.screening.validation.RequireRoles;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -125,11 +128,15 @@ public class EligibilityReviewController {
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
     public ResponseEntity<EligibilityAssessmentResponse> recordDecision(
             @PathVariable("submissionId") Long submissionId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody EligibilityDecisionRequest request
     ) {
+        if (principal == null) {
+            throw new AccessDeniedException("Authenticated reviewer identity is unavailable");
+        }
         EligibilityAssessment assessment = reviewService.recordDecision(
                 submissionId,
-                request.reviewerId(),
+                principal.getUserId(),
                 request.status(),
                 request.reason(),
                 request.clinicalNotes(),
