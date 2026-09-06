@@ -74,6 +74,21 @@ export async function createCampaign(payload) {
 }
 
 /**
+ * Update an existing campaign.
+ *
+ * @param {number|string} id - Campaign identifier
+ * @param {Object} payload - UpdateCampaignRequest payload
+ * @returns {Promise<Object>} Updated CampaignResponse object
+ */
+export async function updateCampaign(id, payload) {
+  const response = await apiRequest(`/v1/campaigns/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
  * Fetch lifecycle audit event history for a campaign.
  *
  * @param {number|string} id - Campaign identifier

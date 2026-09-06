@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -689,6 +690,124 @@ public class CampaignSecurityAuthorizationIntegrationTests {
                             .content(payload))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.centerId", is(center.getId().intValue())));
+        }
+    }
+
+    @Nested
+    @DisplayName("Campaign Update Authorization")
+    class CampaignUpdateAuthorization {
+
+        private String validUpdatePayload() {
+            return String.format("""
+                    {
+                        "name": "Authorized Update Name",
+                        "description": "Authorized Description",
+                        "serviceStartDate": "%s",
+                        "serviceEndDate": "%s",
+                        "bookingOpenAt": "%s",
+                        "bookingCloseAt": "%s"
+                    }
+                    """,
+                    START_DATE,
+                    END_DATE,
+                    REG_START,
+                    REG_END
+            );
+        }
+
+        @Test
+        @DisplayName("ROLE_ADMIN PUT update is authorized 200")
+        void adminUpdateAuthorized() throws Exception {
+            String auth = token(101L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name", is("Authorized Update Name")));
+        }
+
+        @Test
+        @DisplayName("ROLE_CAMPAIGN_OFFICER PUT update is authorized 200")
+        void campaignOfficerUpdateAuthorized() throws Exception {
+            String auth = token(102L, "officer@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name", is("Authorized Update Name")));
+        }
+
+        @Test
+        @DisplayName("ROLE_CENTER_MANAGER PUT update is denied 403")
+        void centerManagerUpdateDenied() throws Exception {
+            String auth = token(103L, "center_mgr@portal.gov", List.of("ROLE_CENTER_MANAGER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_HEALTHCARE_OFFICER PUT update is denied 403")
+        void healthcareOfficerUpdateDenied() throws Exception {
+            String auth = token(104L, "health_officer@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_MANAGEMENT_USER PUT update is denied 403")
+        void managementUserUpdateDenied() throws Exception {
+            String auth = token(105L, "mgmt@portal.gov", List.of("ROLE_MANAGEMENT_USER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_INVENTORY_OFFICER PUT update is denied 403")
+        void inventoryOfficerUpdateDenied() throws Exception {
+            String auth = token(106L, "inventory@portal.gov", List.of("ROLE_INVENTORY_OFFICER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN PUT update is denied 403")
+        void citizenUpdateDenied() throws Exception {
+            String auth = token(107L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Anonymous PUT update is denied 403")
+        void anonymousUpdateDenied() throws Exception {
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
         }
     }
 }

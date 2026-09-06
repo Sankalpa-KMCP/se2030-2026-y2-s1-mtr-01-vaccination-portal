@@ -51,6 +51,8 @@ function formatDateTime(dateTimeStr) {
   }
 }
 
+const EDITABLE_STATUSES = new Set(['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ACTIVE', 'SUSPENDED']);
+
 export default function CampaignList({
   campaigns,
   selectedStatus,
@@ -58,6 +60,7 @@ export default function CampaignList({
   onSelectCampaign,
   onInitiateAction,
   onCreateNew,
+  onEditCampaign,
 }) {
   const { user } = useAuth();
   const isManager = canManageCampaigns(user);
@@ -184,6 +187,17 @@ export default function CampaignList({
                         >
                           Details
                         </button>
+
+                        {isManager && EDITABLE_STATUSES.has(camp.status) && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-primary"
+                            onClick={() => onEditCampaign && onEditCampaign(camp)}
+                            title="Edit Campaign"
+                          >
+                            Edit
+                          </button>
+                        )}
 
                         {isManager && camp.status === 'DRAFT' && (
                           <>
