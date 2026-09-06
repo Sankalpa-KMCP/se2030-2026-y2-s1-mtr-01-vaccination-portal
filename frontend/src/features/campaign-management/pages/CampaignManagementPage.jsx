@@ -21,6 +21,8 @@ import CampaignActionModal from '../components/CampaignActionModal';
 import MasterDataManagementModal from '../components/MasterDataManagementModal';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import PageHeader from '../../../components/common/PageHeader';
+import SuccessAlert from '../../../components/common/SuccessAlert';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { canManageCampaigns } from '../../../auth/utils/roleUtils';
 
@@ -207,41 +209,27 @@ export default function CampaignManagementPage() {
   };
 
   return (
-    <div className="campaign-management-container">
-      {/* Header section */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
-        <div>
-          <h1 className="h3 text-primary fw-bold mb-1">Vaccination Campaign Management</h1>
-          <p className="text-secondary small mb-0">
-            Define, schedule, activate, and manage vaccination campaigns and lifecycle states.
-          </p>
-        </div>
-        {isManager && (
-          <div className="mt-2 mt-md-0">
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm shadow-sm"
-              onClick={() => setShowMasterDataModal(true)}
-            >
-              Manage Master Data
-            </button>
-          </div>
+    <div>
+      <PageHeader
+        title="Vaccination Campaign Management"
+        subtitle="Define, schedule, activate, and manage vaccination campaigns and lifecycle states."
+        actions={isManager && (
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm"
+            onClick={() => setShowMasterDataModal(true)}
+          >
+            Manage Master Data
+          </button>
         )}
-      </div>
+      />
 
       {/* Success Notification Banner */}
       {successMessage && (
-        <div className="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
-          <div className="d-flex align-items-center">
-            <strong className="me-2">Success:</strong> {successMessage}
-          </div>
-          <button
-            type="button"
-            className="btn-close"
-            aria-label="Close"
-            onClick={() => setSuccessMessage(null)}
-          />
-        </div>
+        <SuccessAlert
+          message={<span><strong className="me-1">Success:</strong> {successMessage}</span>}
+          onDismiss={() => setSuccessMessage(null)}
+        />
       )}
 
       {/* Global Page Error */}

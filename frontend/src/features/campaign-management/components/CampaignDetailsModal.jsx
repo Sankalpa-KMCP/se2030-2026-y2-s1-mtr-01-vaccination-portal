@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import StatusBadge from '../../../components/common/StatusBadge';
+import { campaignStatusVariants } from '../../../components/common/statusVariants';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { canManageCampaigns } from '../../../auth/utils/roleUtils';
 import DoseProgrammeTab from './DoseProgrammeTab';
@@ -28,20 +30,6 @@ import {
   getLocationTargets,
   createLocationTarget,
 } from '../api/campaignConfigurationApi';
-
-function getStatusBadgeClass(status) {
-  switch (status) {
-    case 'DRAFT': return 'badge bg-secondary';
-    case 'SCHEDULED': return 'badge bg-info text-dark';
-    case 'PUBLISHED': return 'badge bg-primary';
-    case 'ACTIVE': return 'badge bg-success';
-    case 'SUSPENDED': return 'badge bg-warning text-dark';
-    case 'CANCELLED': return 'badge bg-danger';
-    case 'COMPLETED': return 'badge bg-dark';
-    case 'ARCHIVED': return 'badge bg-secondary opacity-75';
-    default: return 'badge bg-secondary';
-  }
-}
 
 function formatDate(dateStr) {
   if (!dateStr) return '—';
@@ -340,9 +328,7 @@ export default function CampaignDetailsModal({
                 {campaign ? `${campaign.name} (${campaign.code})` : 'Campaign Details'}
               </h5>
               {campaign?.status && (
-                <span className={`${getStatusBadgeClass(campaign.status)} fs-7`}>
-                  {campaign.status}
-                </span>
+                <StatusBadge status={campaign.status} variants={campaignStatusVariants} className="fs-7" />
               )}
             </div>
             <button

@@ -1,32 +1,9 @@
 import React from 'react';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { canManageCampaigns, hasRole } from '../../../auth/utils/roleUtils';
-
-/**
- * Returns a Bootstrap badge class based on the CampaignStatus enum value.
- */
-function getStatusBadgeClass(status) {
-  switch (status) {
-    case 'DRAFT':
-      return 'badge bg-secondary';
-    case 'SCHEDULED':
-      return 'badge bg-info text-dark';
-    case 'PUBLISHED':
-      return 'badge bg-primary';
-    case 'ACTIVE':
-      return 'badge bg-success';
-    case 'SUSPENDED':
-      return 'badge bg-warning text-dark';
-    case 'CANCELLED':
-      return 'badge bg-danger';
-    case 'COMPLETED':
-      return 'badge bg-dark';
-    case 'ARCHIVED':
-      return 'badge bg-secondary opacity-75';
-    default:
-      return 'badge bg-secondary';
-  }
-}
+import StatusBadge from '../../../components/common/StatusBadge';
+import EmptyState from '../../../components/common/EmptyState';
+import { campaignStatusVariants } from '../../../components/common/statusVariants';
 
 /**
  * Formats ISO timestamps or date strings into user-friendly locale format.
@@ -113,14 +90,10 @@ export default function CampaignList({
 
       <div className="card-body p-0">
         {campaigns.length === 0 ? (
-          <div className="text-center py-5 text-secondary">
-            <h5 className="h6 text-muted mb-2">No vaccination campaigns found</h5>
-            <p className="small text-muted mb-3">
-              {selectedStatus
-                ? `No campaigns match the filter '${selectedStatus}'.`
-                : 'No campaigns have been created yet.'}
-            </p>
-            {isManager && (
+          <EmptyState
+            icon="bi-megaphone"
+            title="No vaccination campaigns found"
+            action={isManager && (
               <button
                 type="button"
                 className="btn btn-outline-primary btn-sm"
@@ -129,7 +102,11 @@ export default function CampaignList({
                 Create First Campaign
               </button>
             )}
-          </div>
+          >
+            {selectedStatus
+              ? `No campaigns match the filter '${selectedStatus}'.`
+              : 'No campaigns have been created yet.'}
+          </EmptyState>
         ) : (
           <div className="table-responsive">
             <table className="table table-hover align-middle mb-0">
@@ -164,18 +141,18 @@ export default function CampaignList({
                     </td>
                     <td className="small">
                       <div>{formatDate(camp.serviceStartDate)}</div>
-                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                      <div className="text-muted fs-7">
                         to {formatDate(camp.serviceEndDate)}
                       </div>
                     </td>
                     <td className="small">
                       <div>{formatDateTime(camp.bookingOpenAt)}</div>
-                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                      <div className="text-muted fs-7">
                         to {formatDateTime(camp.bookingCloseAt)}
                       </div>
                     </td>
                     <td>
-                      <span className={getStatusBadgeClass(camp.status)}>{camp.status}</span>
+                      <StatusBadge status={camp.status} variants={campaignStatusVariants} />
                     </td>
                     <td className="text-end pe-3">
                       <div className="btn-group btn-group-sm" role="group" aria-label="Campaign Actions">
