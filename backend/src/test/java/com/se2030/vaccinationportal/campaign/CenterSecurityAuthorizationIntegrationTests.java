@@ -75,40 +75,105 @@ public class CenterSecurityAuthorizationIntegrationTests {
     }
 
     // =========================================================================
-    // 1. PUBLIC DISCOVERY READS
+    // 1. ADMINISTRATIVE CENTER READS REQUIRE AUTHORIZED STAFF ROLES (MF02-R-001)
     // =========================================================================
 
     @Nested
-    @DisplayName("Public Center Discovery")
-    class PublicCenterDiscovery {
+    @DisplayName("Administrative Center Reads")
+    class AdministrativeCenterReads {
 
         @Test
-        @DisplayName("Anonymous GET /api/v1/centers succeeds with 200 OK")
-        void anonymousListCentersSucceeds() throws Exception {
+        @DisplayName("Anonymous GET center endpoints are denied 403")
+        void anonymousCenterReadsDenied() throws Exception {
             mockMvc.perform(get("/api/v1/centers"))
-                    .andExpect(status().isOk());
-        }
+                    .andExpect(status().isForbidden());
 
-        @Test
-        @DisplayName("Anonymous GET /api/v1/centers/{id} succeeds with 200 OK")
-        void anonymousGetCenterByIdSucceeds() throws Exception {
             mockMvc.perform(get("/api/v1/centers/" + center.getId()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id", is(center.getId().intValue())));
-        }
+                    .andExpect(status().isForbidden());
 
-        @Test
-        @DisplayName("Anonymous GET /api/v1/centers/{id}/operating-hours succeeds with 200 OK")
-        void anonymousGetOperatingHoursSucceeds() throws Exception {
             mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/operating-hours"))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/closures"))
+                    .andExpect(status().isForbidden());
         }
 
         @Test
-        @DisplayName("Anonymous GET /api/v1/centers/{id}/closures succeeds with 200 OK")
-        void anonymousGetClosuresSucceeds() throws Exception {
-            mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/closures"))
-                    .andExpect(status().isOk());
+        @DisplayName("ROLE_CITIZEN GET center endpoints are denied 403")
+        void citizenCenterReadsDenied() throws Exception {
+            String auth = token(501L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+
+            mockMvc.perform(get("/api/v1/centers")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/centers/" + center.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/operating-hours")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/closures")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_INVENTORY_OFFICER GET center endpoints are denied 403")
+        void inventoryOfficerCenterReadsDenied() throws Exception {
+            String auth = token(601L, "inventory@portal.gov", List.of("ROLE_INVENTORY_OFFICER"));
+
+            mockMvc.perform(get("/api/v1/centers")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/centers/" + center.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/operating-hours")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/closures")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Authorized staff roles succeed on all center GET endpoints with 200 OK")
+        void authorizedStaffRolesSucceed() throws Exception {
+            List<String> authorizedRoles = List.of(
+                    "ROLE_ADMIN",
+                    "ROLE_CAMPAIGN_OFFICER",
+                    "ROLE_CENTER_MANAGER",
+                    "ROLE_HEALTHCARE_OFFICER",
+                    "ROLE_MANAGEMENT_USER"
+            );
+
+            long userId = 101L;
+            for (String role : authorizedRoles) {
+                String auth = token(userId++, role.toLowerCase() + "@portal.gov", List.of(role));
+
+                mockMvc.perform(get("/api/v1/centers")
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/v1/centers/" + center.getId())
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.id", is(center.getId().intValue())));
+
+                mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/operating-hours")
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/closures")
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk());
+            }
         }
     }
 

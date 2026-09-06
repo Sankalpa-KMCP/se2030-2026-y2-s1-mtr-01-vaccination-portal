@@ -78,6 +78,7 @@ public class SessionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<SessionResponse> getSessionById(@PathVariable Long id) {
         VaccinationSession session = sessionService.getRequiredSessionById(id);
         SessionBookingStatus bookingStatus = bookingStatusService.deriveBookingStatus(session);
@@ -92,6 +93,7 @@ public class SessionController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<List<SessionSummaryResponse>> getSessions(
             @RequestParam(required = false) Long campaignId,
             @RequestParam(required = false) Long centerId,

@@ -62,12 +62,14 @@ public class CampaignController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<CampaignResponse> getCampaignById(@PathVariable Long id) {
         VaccinationCampaign campaign = campaignService.getRequiredCampaignById(id);
         return ResponseEntity.ok(CampaignDtoMapper.toResponse(campaign));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignSummaryResponse>> getCampaigns(
             @RequestParam(required = false) CampaignStatus status
     ) {

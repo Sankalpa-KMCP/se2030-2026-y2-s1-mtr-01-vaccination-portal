@@ -72,12 +72,14 @@ public class CenterController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<CenterResponse> getCenterById(@PathVariable Long id) {
         VaccinationCenter center = centerService.getRequiredCenterById(id);
         return ResponseEntity.ok(CenterDtoMapper.toResponse(center));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CenterSummaryResponse>> getCenters(
             @RequestParam(required = false) CenterStatus status
     ) {
@@ -139,6 +141,7 @@ public class CenterController {
     }
 
     @GetMapping("/{id}/operating-hours")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<OperatingHoursResponse>> getOperatingHours(@PathVariable Long id) {
         List<OperatingHours> hours = operatingHoursService.getOperatingHoursByCenter(id);
         List<OperatingHoursResponse> response = hours.stream()
@@ -199,6 +202,7 @@ public class CenterController {
     }
 
     @GetMapping("/{id}/closures")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CenterClosureResponse>> getClosures(@PathVariable Long id) {
         List<CenterClosure> closures = closureService.getClosuresForCenter(id);
         List<CenterClosureResponse> response = closures.stream()

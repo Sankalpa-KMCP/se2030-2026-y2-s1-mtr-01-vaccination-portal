@@ -102,26 +102,87 @@ public class CampaignSecurityAuthorizationIntegrationTests {
     }
 
     // =========================================================================
-    // 1. PUBLIC DISCOVERY READS
+    // 1. ADMINISTRATIVE CAMPAIGN READS REQUIRE AUTHORIZED STAFF ROLES (MF02-R-001)
     // =========================================================================
 
     @Nested
-    @DisplayName("Public Campaign Discovery")
-    class PublicCampaignDiscovery {
+    @DisplayName("Administrative Campaign Reads")
+    class AdministrativeCampaignReads {
 
         @Test
-        @DisplayName("Anonymous GET /api/v1/campaigns succeeds with 200 OK")
-        void anonymousListCampaignsSucceeds() throws Exception {
+        @DisplayName("Anonymous GET /api/v1/campaigns is denied 403")
+        void anonymousListCampaignsDenied() throws Exception {
             mockMvc.perform(get("/api/v1/campaigns"))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isForbidden());
         }
 
         @Test
-        @DisplayName("Anonymous GET /api/v1/campaigns/{id} succeeds with 200 OK")
-        void anonymousGetCampaignByIdSucceeds() throws Exception {
+        @DisplayName("Anonymous GET /api/v1/campaigns/{id} is denied 403")
+        void anonymousGetCampaignByIdDenied() throws Exception {
             mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id", is(draftCampaign.getId().intValue())));
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN GET /api/v1/campaigns is denied 403")
+        void citizenListCampaignsDenied() throws Exception {
+            String auth = token(501L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+            mockMvc.perform(get("/api/v1/campaigns")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN GET /api/v1/campaigns/{id} is denied 403")
+        void citizenGetCampaignByIdDenied() throws Exception {
+            String auth = token(501L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_INVENTORY_OFFICER GET /api/v1/campaigns is denied 403")
+        void inventoryOfficerListCampaignsDenied() throws Exception {
+            String auth = token(601L, "inventory@portal.gov", List.of("ROLE_INVENTORY_OFFICER"));
+            mockMvc.perform(get("/api/v1/campaigns")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_INVENTORY_OFFICER GET /api/v1/campaigns/{id} is denied 403")
+        void inventoryOfficerGetCampaignByIdDenied() throws Exception {
+            String auth = token(601L, "inventory@portal.gov", List.of("ROLE_INVENTORY_OFFICER"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Authorized staff roles succeed on GET /api/v1/campaigns and GET /api/v1/campaigns/{id} with 200 OK")
+        void authorizedStaffRolesSucceed() throws Exception {
+            List<String> authorizedRoles = List.of(
+                    "ROLE_ADMIN",
+                    "ROLE_CAMPAIGN_OFFICER",
+                    "ROLE_CENTER_MANAGER",
+                    "ROLE_HEALTHCARE_OFFICER",
+                    "ROLE_MANAGEMENT_USER"
+            );
+
+            long userId = 101L;
+            for (String role : authorizedRoles) {
+                String auth = token(userId++, role.toLowerCase() + "@portal.gov", List.of(role));
+
+                mockMvc.perform(get("/api/v1/campaigns")
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId())
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.id", is(draftCampaign.getId().intValue())));
+            }
         }
     }
 
