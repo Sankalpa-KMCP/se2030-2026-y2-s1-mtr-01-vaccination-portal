@@ -298,4 +298,145 @@ class VaccinationSessionServiceIntegrationTests {
             assertEquals(SessionLifecycleStatus.DRAFT, sessionRepository.findById(draftSession.getId()).orElseThrow().getLifecycleStatus());
         }
     }
+
+    @Test
+    void startSession_allowedCampaignStates_succeeds() {
+        LocalDate startDate = LocalDate.now().minusDays(5);
+        LocalDate endDate = LocalDate.now().plusDays(30);
+        Instant startAt = Instant.now().minus(java.time.Duration.ofHours(1));
+        Instant endAt = Instant.now().plus(java.time.Duration.ofHours(2));
+        Instant bookingCloseAt = startAt.minus(java.time.Duration.ofHours(1));
+
+        for (CampaignStatus status : List.of(CampaignStatus.PUBLISHED, CampaignStatus.ACTIVE)) {
+            VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-START-OK-" + status.name(), "Vaccine"));
+            TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-START-OK-" + status.name(), "Group"));
+            VaccinationCampaign c = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                    "CMP-START-OK-" + status.name(), "Campaign " + status.name(), null, vax, tg,
+                    startDate, endDate,
+                    Instant.now().minus(java.time.Duration.ofDays(10)), Instant.now().plus(java.time.Duration.ofDays(30)),
+                    status));
+            assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                    c, center, startDate, endDate.plusDays(1)));
+
+            VaccinationSession session = new VaccinationSession(c, center, startAt, endAt, bookingCloseAt, "Asia/Colombo");
+            session.schedule();
+            session = sessionRepository.saveAndFlush(session);
+
+            VaccinationSession started = service.startSession(session.getId());
+            assertEquals(SessionLifecycleStatus.IN_PROGRESS, started.getLifecycleStatus());
+            assertEquals(SessionLifecycleStatus.IN_PROGRESS, sessionRepository.findById(session.getId()).orElseThrow().getLifecycleStatus());
+        }
+    }
+
+    @Test
+    void startSession_forbiddenCampaignStates_throwsIllegalStateExceptionAndLeavesSessionUnchanged() {
+        LocalDate startDate = LocalDate.now().minusDays(5);
+        LocalDate endDate = LocalDate.now().plusDays(30);
+        Instant startAt = Instant.now().minus(java.time.Duration.ofHours(1));
+        Instant endAt = Instant.now().plus(java.time.Duration.ofHours(2));
+        Instant bookingCloseAt = startAt.minus(java.time.Duration.ofHours(1));
+
+        List<CampaignStatus> forbidden = List.of(
+                CampaignStatus.DRAFT,
+                CampaignStatus.SCHEDULED,
+                CampaignStatus.SUSPENDED,
+                CampaignStatus.COMPLETED,
+                CampaignStatus.CANCELLED,
+                CampaignStatus.ARCHIVED
+        );
+
+        for (CampaignStatus status : forbidden) {
+            VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-START-NO-" + status.name(), "Vaccine"));
+            TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-START-NO-" + status.name(), "Group"));
+            VaccinationCampaign c = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                    "CMP-START-NO-" + status.name(), "Campaign " + status.name(), null, vax, tg,
+                    startDate, endDate,
+                    Instant.now().minus(java.time.Duration.ofDays(10)), Instant.now().plus(java.time.Duration.ofDays(30)),
+                    status));
+            assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                    c, center, startDate, endDate.plusDays(1)));
+
+            VaccinationSession session = new VaccinationSession(c, center, startAt, endAt, bookingCloseAt, "Asia/Colombo");
+            session.schedule();
+            session = sessionRepository.saveAndFlush(session);
+
+            Long sessionId = session.getId();
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.startSession(sessionId));
+            assertTrue(ex.getMessage().contains("Cannot start vaccination session for campaign"));
+            assertTrue(ex.getMessage().contains(status.name()));
+
+            assertEquals(SessionLifecycleStatus.SCHEDULED, sessionRepository.findById(sessionId).orElseThrow().getLifecycleStatus());
+        }
+    }
+
+    @Test
+    void completeSession_allowedCampaignStates_succeeds() {
+        LocalDate startDate = LocalDate.now().minusDays(5);
+        LocalDate endDate = LocalDate.now().plusDays(30);
+        Instant startAt = Instant.now().minus(java.time.Duration.ofHours(2));
+        Instant endAt = Instant.now().plus(java.time.Duration.ofHours(1));
+        Instant bookingCloseAt = startAt.minus(java.time.Duration.ofHours(1));
+
+        for (CampaignStatus status : List.of(CampaignStatus.PUBLISHED, CampaignStatus.ACTIVE, CampaignStatus.SUSPENDED)) {
+            VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-COMP-OK-" + status.name(), "Vaccine"));
+            TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-COMP-OK-" + status.name(), "Group"));
+            VaccinationCampaign c = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                    "CMP-COMP-OK-" + status.name(), "Campaign " + status.name(), null, vax, tg,
+                    startDate, endDate,
+                    Instant.now().minus(java.time.Duration.ofDays(10)), Instant.now().plus(java.time.Duration.ofDays(30)),
+                    status));
+            assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                    c, center, startDate, endDate.plusDays(1)));
+
+            VaccinationSession session = new VaccinationSession(c, center, startAt, endAt, bookingCloseAt, "Asia/Colombo");
+            session.schedule();
+            session.start();
+            session = sessionRepository.saveAndFlush(session);
+
+            VaccinationSession completed = service.completeSession(session.getId());
+            assertEquals(SessionLifecycleStatus.COMPLETED, completed.getLifecycleStatus());
+            assertEquals(SessionLifecycleStatus.COMPLETED, sessionRepository.findById(session.getId()).orElseThrow().getLifecycleStatus());
+        }
+    }
+
+    @Test
+    void completeSession_forbiddenCampaignStates_throwsIllegalStateExceptionAndLeavesSessionUnchanged() {
+        LocalDate startDate = LocalDate.now().minusDays(5);
+        LocalDate endDate = LocalDate.now().plusDays(30);
+        Instant startAt = Instant.now().minus(java.time.Duration.ofHours(2));
+        Instant endAt = Instant.now().plus(java.time.Duration.ofHours(1));
+        Instant bookingCloseAt = startAt.minus(java.time.Duration.ofHours(1));
+
+        List<CampaignStatus> forbidden = List.of(
+                CampaignStatus.DRAFT,
+                CampaignStatus.SCHEDULED,
+                CampaignStatus.COMPLETED,
+                CampaignStatus.CANCELLED,
+                CampaignStatus.ARCHIVED
+        );
+
+        for (CampaignStatus status : forbidden) {
+            VaccineType vax = vaccineTypeRepository.saveAndFlush(new VaccineType("VAX-COMP-NO-" + status.name(), "Vaccine"));
+            TargetGroup tg = targetGroupRepository.saveAndFlush(new TargetGroup("TG-COMP-NO-" + status.name(), "Group"));
+            VaccinationCampaign c = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                    "CMP-COMP-NO-" + status.name(), "Campaign " + status.name(), null, vax, tg,
+                    startDate, endDate,
+                    Instant.now().minus(java.time.Duration.ofDays(10)), Instant.now().plus(java.time.Duration.ofDays(30)),
+                    status));
+            assignmentRepository.saveAndFlush(new CampaignCenterAssignment(
+                    c, center, startDate, endDate.plusDays(1)));
+
+            VaccinationSession session = new VaccinationSession(c, center, startAt, endAt, bookingCloseAt, "Asia/Colombo");
+            session.schedule();
+            session.start();
+            session = sessionRepository.saveAndFlush(session);
+
+            Long sessionId = session.getId();
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.completeSession(sessionId));
+            assertTrue(ex.getMessage().contains("Cannot complete vaccination session for campaign"));
+            assertTrue(ex.getMessage().contains(status.name()));
+
+            assertEquals(SessionLifecycleStatus.IN_PROGRESS, sessionRepository.findById(sessionId).orElseThrow().getLifecycleStatus());
+        }
+    }
 }
