@@ -97,7 +97,7 @@ function InitializationErrorPage({ error, onRetry, onLogout }) {
           <div className="card border-0 shadow-sm">
             <div className="card-body p-4 text-center">
               <div className="text-danger mb-3">
-                <span className="display-6">⚠️</span>
+                <i className="bi bi-exclamation-triangle display-6" aria-hidden="true"></i>
               </div>
               <h1 className="h4 text-danger mb-2">Service Temporarily Unavailable</h1>
               <p className="text-muted small mb-4">{error}</p>

@@ -548,7 +548,9 @@ export default function CenterOperationsPage() {
       ) : centers.length === 0 ? (
         <div className="card shadow-sm border-0 py-5 text-center">
           <div className="card-body p-5">
-            <div className="display-4 text-muted mb-3">🏥</div>
+            <div className="display-4 text-muted mb-3">
+              <i className="bi bi-hospital" aria-hidden="true"></i>
+            </div>
             <h4 className="h5 text-dark fw-bold mb-2">No Vaccination Centers Registered</h4>
             <p className="text-muted small mb-4">
               There are currently no vaccination centers registered in the system.

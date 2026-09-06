@@ -152,7 +152,9 @@ export default function CenterClosuresPanel({
           </div>
         ) : closures.length === 0 ? (
           <div className="text-center py-5 text-secondary border rounded bg-light">
-            <div className="display-6 text-muted mb-3">🏥</div>
+            <div className="display-6 text-muted mb-3">
+              <i className="bi bi-hospital" aria-hidden="true"></i>
+            </div>
             <h5 className="h6 text-muted mb-2">No Closures Recorded</h5>
             <p className="small text-muted mb-3">
               This vaccination center has no scheduled or historical closures. Operations are fully available according to operating hours.

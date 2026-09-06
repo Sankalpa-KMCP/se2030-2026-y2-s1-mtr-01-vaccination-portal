@@ -143,7 +143,9 @@ export default function OperatingHoursPanel({
           </div>
         ) : operatingHours.length === 0 ? (
           <div className="text-center py-5 text-secondary border rounded bg-light">
-            <div className="display-6 text-muted mb-3">🕒</div>
+            <div className="display-6 text-muted mb-3">
+              <i className="bi bi-clock-history" aria-hidden="true"></i>
+            </div>
             <h5 className="h6 text-muted mb-2">No Operating Hours Defined</h5>
             <p className="small text-muted mb-3">
               This vaccination center currently has no configured operating hours schedule shifts.

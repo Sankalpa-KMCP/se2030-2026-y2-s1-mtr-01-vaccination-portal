@@ -204,7 +204,8 @@ export default function CheckInManagementPage() {
           <div className="mt-3 pt-3 border-top">
             <details>
               <summary className="text-secondary small fw-semibold cursor-pointer">
-                🔍 Don't know the Time Slot ID? Find slots by Session ID
+                <i className="bi bi-search me-1" aria-hidden="true"></i>
+                Don't know the Time Slot ID? Find slots by Session ID
               </summary>
               <div className="row g-2 align-items-center mt-2">
                 <div className="col-auto">

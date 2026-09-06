@@ -806,7 +806,7 @@ export default function SessionRecurrencePanel({
           onClick={() => setIsCreateModalOpen(true)}
           id="btn-create-recurrence-rule"
         >
-          <span className="fs-5 lh-1">+</span>
+          <i className="bi bi-plus-lg" aria-hidden="true"></i>
           Create Recurrence Rule
         </button>
       </div>

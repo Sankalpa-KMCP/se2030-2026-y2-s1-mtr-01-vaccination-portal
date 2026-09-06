@@ -173,7 +173,7 @@ export default function SessionsPage() {
             disabled={cataloguesLoading}
             id="btn-open-create-session"
           >
-            <span className="fs-5 lh-1">+</span>
+            <i className="bi bi-plus-lg" aria-hidden="true"></i>
             Create Draft Session
           </button>
         )}

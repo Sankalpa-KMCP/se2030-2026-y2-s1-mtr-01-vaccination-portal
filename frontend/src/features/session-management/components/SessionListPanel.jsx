@@ -232,7 +232,7 @@ export default function SessionListPanel({
                   <tr>
                     <td colSpan="7" className="text-center py-5 text-muted">
                       <div className="d-flex flex-column align-items-center gap-2">
-                        <span className="fs-4 text-secondary">📅</span>
+                        <i className="bi bi-calendar-week fs-4 text-secondary" aria-hidden="true"></i>
                         <p className="mb-0 fw-semibold">No vaccination sessions found</p>
                         <p className="small text-muted mb-2">
                           {sessions.length === 0
