@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import EmptyState from '../../../components/common/EmptyState';
 import { formatInTimezone } from '../../../services/timezoneUtils';
 
 function formatDateTime(instantStr, timeZone = 'UTC') {
@@ -151,15 +152,10 @@ export default function CenterClosuresPanel({
             <LoadingSpinner message="Loading center closure records..." />
           </div>
         ) : closures.length === 0 ? (
-          <div className="text-center py-5 text-secondary border rounded bg-light">
-            <div className="display-6 text-muted mb-3">
-              <i className="bi bi-hospital" aria-hidden="true"></i>
-            </div>
-            <h5 className="h6 text-muted mb-2">No Closures Recorded</h5>
-            <p className="small text-muted mb-3">
-              This vaccination center has no scheduled or historical closures. Operations are fully available according to operating hours.
-            </p>
-            {canMutate && (
+          <EmptyState
+            icon="bi-hospital"
+            title="No Closures Recorded"
+            action={canMutate && (
               <button
                 type="button"
                 className="btn btn-primary btn-sm fw-semibold"
@@ -169,7 +165,9 @@ export default function CenterClosuresPanel({
                 Schedule First Temporary Closure
               </button>
             )}
-          </div>
+          >
+            This vaccination center has no scheduled or historical closures. Operations are fully available according to operating hours.
+          </EmptyState>
         ) : filteredClosures.length === 0 ? (
           <div className="alert alert-light border text-center py-4">
             <p className="text-muted mb-0 small">

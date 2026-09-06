@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import PageHeader from '../../../components/common/PageHeader';
+import EmptyState from '../../../components/common/EmptyState';
+import SuccessAlert from '../../../components/common/SuccessAlert';
 import {
   createQuestion,
   deleteQuestion,
@@ -106,23 +109,19 @@ export default function ScreeningQuestionsPage() {
 
   return (
     <section aria-labelledby="screeningQuestionsTitle">
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
-        <div>
-          <h1 className="h3 mb-1" id="screeningQuestionsTitle">Screening Questions</h1>
-          <p className="text-muted mb-0">
-            Configure the reusable question catalogue and answer options used by screening questionnaires.
-          </p>
-        </div>
-        <button type="button" className="btn btn-primary" onClick={openCreate}>
-          Create Question
-        </button>
-      </div>
+      <PageHeader
+        id="screeningQuestionsTitle"
+        title="Screening Questions"
+        subtitle="Configure the reusable question catalogue and answer options used by screening questionnaires."
+        actions={(
+          <button type="button" className="btn btn-primary btn-sm fw-semibold" onClick={openCreate}>
+            Create Question
+          </button>
+        )}
+      />
 
       {successMessage && (
-        <div className="alert alert-success alert-dismissible shadow-sm" role="status">
-          {successMessage}
-          <button type="button" className="btn-close" aria-label="Dismiss success" onClick={() => setSuccessMessage(null)} />
-        </div>
+        <SuccessAlert message={successMessage} onDismiss={() => setSuccessMessage(null)} />
       )}
 
       <ApiErrorAlert error={loadError} onDismiss={() => setLoadError(null)} />
@@ -131,11 +130,13 @@ export default function ScreeningQuestionsPage() {
         <LoadingSpinner message="Loading screening questions..." />
       ) : questions.length === 0 ? (
         <div className="card border-0 shadow-sm">
-          <div className="card-body text-center py-5">
-            <h2 className="h5">No screening questions have been configured yet.</h2>
-            <p className="text-muted mb-3">Create the first catalogue question to begin configuring MF-01 screening.</p>
-            <button type="button" className="btn btn-primary" onClick={openCreate}>Create First Question</button>
-          </div>
+          <EmptyState
+            icon="bi-question-circle"
+            title="No screening questions have been configured yet."
+            action={<button type="button" className="btn btn-primary" onClick={openCreate}>Create First Question</button>}
+          >
+            Create the first catalogue question to begin configuring MF-01 screening.
+          </EmptyState>
         </div>
       ) : (
         <div className="card border-0 shadow-sm">
@@ -166,8 +167,8 @@ export default function ScreeningQuestionsPage() {
                       {question.description && <div className="small text-muted mt-1">{question.description}</div>}
                     </td>
                     <td><span className="badge text-bg-light border">{QUESTION_TYPE_LABELS[question.questionType] || question.questionType}</span></td>
-                    <td>{question.defaultRequired ? <span className="badge text-bg-info">Required</span> : <span className="text-muted">Optional</span>}</td>
-                    <td>{question.active ? <span className="badge text-bg-success">Active</span> : <span className="badge text-bg-secondary">Inactive</span>}</td>
+                    <td>{question.defaultRequired ? <span className="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold">Required</span> : <span className="text-muted">Optional</span>}</td>
+                    <td>{question.active ? <span className="badge bg-success-subtle text-success-emphasis border border-success-subtle fw-semibold">Active</span> : <span className="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle fw-semibold">Inactive</span>}</td>
                     <td className="text-end">
                       <div className="d-inline-flex flex-wrap justify-content-end gap-1">
                         {isChoiceQuestionType(question.questionType) && (

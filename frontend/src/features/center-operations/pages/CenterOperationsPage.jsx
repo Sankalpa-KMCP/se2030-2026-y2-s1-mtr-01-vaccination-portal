@@ -33,6 +33,8 @@ import StaffRosterPanel from '../components/StaffRosterPanel';
 import StaffRosterModal from '../components/StaffRosterModal';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import PageHeader from '../../../components/common/PageHeader';
+import EmptyState from '../../../components/common/EmptyState';
 import { useAuth } from '../../../auth/context/AuthContext';
 
 export default function CenterOperationsPage() {
@@ -502,42 +504,35 @@ export default function CenterOperationsPage() {
   const isDataLoading = hoursLoading || closuresLoading || resourcesLoading || staffLoading;
 
   return (
-    <div className="container-fluid px-0 py-2">
-      {/* Page Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-        <div>
-          <h1 className="h3 text-primary fw-bold mb-1">
-            <i className="bi bi-hospital me-2"></i>
-            Vaccination Center Operations
-          </h1>
-          <p className="text-secondary mb-0">
-            Center lifecycle registry, operational calendar, operating hours, closures, and physical workforce management.
-          </p>
-        </div>
-
-        <div className="d-flex align-items-center gap-2">
-          <button
-            type="button"
-            className="btn btn-outline-primary btn-sm"
-            onClick={() => fetchCenters(selectedCenterId)}
-            disabled={centersLoading}
-          >
-            <i className="bi bi-arrow-clockwise me-1"></i>
-            Refresh Centers
-          </button>
-
-          {isAuthorizedManager && (
+    <div>
+      <PageHeader
+        title="Vaccination Center Operations"
+        subtitle="Center lifecycle registry, operational calendar, operating hours, closures, and physical workforce management."
+        actions={(
+          <>
             <button
               type="button"
-              className="btn btn-primary btn-sm fw-semibold shadow-sm"
-              onClick={handleOpenCreateCenterModal}
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => fetchCenters(selectedCenterId)}
+              disabled={centersLoading}
             >
-              <i className="bi bi-plus-lg me-1"></i>
-              + New Center
+              <i className="bi bi-arrow-clockwise me-1"></i>
+              Refresh Centers
             </button>
-          )}
-        </div>
-      </div>
+
+            {isAuthorizedManager && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm fw-semibold"
+                onClick={handleOpenCreateCenterModal}
+              >
+                <i className="bi bi-plus-lg me-1"></i>
+                + New Center
+              </button>
+            )}
+          </>
+        )}
+      />
 
       <ApiErrorAlert error={centersError || statusMutationError} onDismiss={() => setStatusMutationError(null)} />
 
@@ -546,16 +541,11 @@ export default function CenterOperationsPage() {
           <LoadingSpinner message="Loading vaccination center registry..." />
         </div>
       ) : centers.length === 0 ? (
-        <div className="card shadow-sm border-0 py-5 text-center">
-          <div className="card-body p-5">
-            <div className="display-4 text-muted mb-3">
-              <i className="bi bi-hospital" aria-hidden="true"></i>
-            </div>
-            <h4 className="h5 text-dark fw-bold mb-2">No Vaccination Centers Registered</h4>
-            <p className="text-muted small mb-4">
-              There are currently no vaccination centers registered in the system.
-            </p>
-            {isAuthorizedManager && (
+        <div className="card shadow-sm border-0 py-5">
+          <EmptyState
+            icon="bi-hospital"
+            title="No Vaccination Centers Registered"
+            action={isAuthorizedManager && (
               <button
                 type="button"
                 className="btn btn-primary fw-semibold"
@@ -565,7 +555,9 @@ export default function CenterOperationsPage() {
                 Register First Center
               </button>
             )}
-          </div>
+          >
+            There are currently no vaccination centers registered in the system.
+          </EmptyState>
         </div>
       ) : (
         <>

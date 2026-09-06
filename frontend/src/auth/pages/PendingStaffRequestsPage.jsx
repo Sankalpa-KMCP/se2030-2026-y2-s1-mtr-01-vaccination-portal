@@ -7,6 +7,11 @@ import {
 } from '../api/adminStaffRequestsApi';
 import ApiErrorAlert from '../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import PageHeader from '../../components/common/PageHeader';
+import StatusBadge from '../../components/common/StatusBadge';
+import EmptyState from '../../components/common/EmptyState';
+import SuccessAlert from '../../components/common/SuccessAlert';
+import { staffRequestStatusVariants } from '../../components/common/statusVariants';
 import StaffRequestReviewModal from '../components/StaffRequestReviewModal';
 import { getRoleLabel } from '../constants/authRoles';
 
@@ -71,29 +76,27 @@ export default function PendingStaffRequestsPage() {
 
   return (
     <section aria-labelledby="staff-requests-title">
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-          <span className="badge text-bg-danger mb-2">Administrator Only</span>
-          <h1 className="h2 mb-1" id="staff-requests-title">Staff Account Requests</h1>
-          <p className="text-muted mb-0">Review pending requests and assign only the authoritative role you approve.</p>
-        </div>
-        <button type="button" className="btn btn-outline-primary" onClick={loadRequests}>Refresh</button>
-      </div>
+      <PageHeader
+        id="staff-requests-title"
+        title="Staff Account Requests"
+        eyebrow="Administrator Only"
+        eyebrowClass="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle fw-semibold"
+        subtitle="Review pending requests and assign only the authoritative role you approve."
+        actions={(
+          <button type="button" className="btn btn-outline-primary btn-sm" onClick={loadRequests}>Refresh</button>
+        )}
+      />
 
       <ApiErrorAlert error={error} onDismiss={() => setError(null)} />
       {successMessage && (
-        <div className="alert alert-success alert-dismissible" role="status">
-          {successMessage}
-          <button type="button" className="btn-close" aria-label="Dismiss success message" onClick={() => setSuccessMessage('')} />
-        </div>
+        <SuccessAlert message={successMessage} onDismiss={() => setSuccessMessage('')} />
       )}
 
       {requests.length === 0 ? (
         <div className="card border-0 shadow-sm">
-          <div className="card-body p-5 text-center">
-            <h2 className="h4">No pending requests</h2>
-            <p className="text-muted mb-0">There are currently no staff account requests waiting for review.</p>
-          </div>
+          <EmptyState icon="bi-person-badge" title="No pending requests">
+            There are currently no staff account requests waiting for review.
+          </EmptyState>
         </div>
       ) : (
         <div className="card border-0 shadow-sm">
@@ -116,7 +119,7 @@ export default function PendingStaffRequestsPage() {
                     <td>{request.phoneNumber}</td>
                     <td>{getRoleLabel(request.requestedRoleCode)}</td>
                     <td>{formatDate(request.createdAt)}</td>
-                    <td><span className="badge text-bg-warning">{request.accountStatus}</span></td>
+                    <td><StatusBadge status={request.accountStatus} variants={staffRequestStatusVariants} /></td>
                     <td>
                       <div className="d-flex justify-content-end gap-2">
                         <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => openView(request)}>View</button>

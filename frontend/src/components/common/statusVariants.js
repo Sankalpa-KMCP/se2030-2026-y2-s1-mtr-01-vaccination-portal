@@ -80,4 +80,19 @@ export const screeningStatusVariants = {
   ARCHIVED: soft('secondary'),
 };
 
+/* Staff account request review (administrator). */
+export const staffRequestStatusVariants = {
+  PENDING: soft('warning'),
+  APPROVED: soft('success'),
+  REJECTED: soft('danger'),
+};
+
+/* Questionnaire version lifecycle, keyed by display label
+   (DRAFT -> Draft, PUBLISHED -> Published, RETIRED -> Retired). */
+export const questionnaireVersionStatusVariants = {
+  Draft: soft('warning'),
+  Published: soft('success'),
+  Retired: soft('secondary'),
+};
+
 export const FALLBACK_BADGE_CLASS = soft('secondary');
