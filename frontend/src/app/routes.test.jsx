@@ -217,52 +217,57 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('heading', { name: 'Not Authorized Route' })).toBeTruthy();
   });
 
-  it('allows an ADMIN to open the screening questions route', () => {
-    setAuth({ roles: ['ROLE_ADMIN'] });
+  describe.each([
+    ['ROLE_ADMIN', 'ADMIN'],
+    ['ROLE_SYSTEM_ADMINISTRATOR', 'SYSTEM_ADMINISTRATOR'],
+  ])('screening configuration access for %s', (role) => {
+    it('opens the screening questions route', () => {
+      setAuth({ roles: [role] });
 
-    render(
-      <MemoryRouter initialEntries={['/app/screening/questions']}>
-        <PortalRoutes />
-      </MemoryRouter>,
-    );
+      render(
+        <MemoryRouter initialEntries={['/app/screening/questions']}>
+          <PortalRoutes />
+        </MemoryRouter>,
+      );
 
-    expect(screen.getByText('Screening Questions Test Page')).toBeTruthy();
+      expect(screen.getByText('Screening Questions Test Page')).toBeTruthy();
+    });
+
+    it('opens the screening questionnaires route', () => {
+      setAuth({ roles: [role] });
+
+      render(
+        <MemoryRouter initialEntries={['/app/screening/questionnaires']}>
+          <PortalRoutes />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText('Screening Questionnaires Test Page')).toBeTruthy();
+    });
   });
 
-  it('denies the screening questions route to a non-ADMIN role', () => {
-    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
+  describe.each([
+    'ROLE_HEALTHCARE_OFFICER',
+    'ROLE_CITIZEN',
+    'ROLE_CAMPAIGN_OFFICER',
+    'ROLE_CENTER_MANAGER',
+    'ROLE_MANAGEMENT_USER',
+    'ROLE_INVENTORY_OFFICER',
+  ])('screening configuration denial for %s', (role) => {
+    it.each([
+      '/app/screening/questions',
+      '/app/screening/questionnaires',
+    ])('denies %s', (path) => {
+      setAuth({ roles: [role] });
 
-    render(
-      <MemoryRouter initialEntries={['/app/screening/questions']}>
-        <PortalRoutes />
-      </MemoryRouter>,
-    );
+      render(
+        <MemoryRouter initialEntries={[path]}>
+          <PortalRoutes />
+        </MemoryRouter>,
+      );
 
-    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
-  });
-
-  it('allows an ADMIN to open the screening questionnaires route', () => {
-    setAuth({ roles: ['ROLE_ADMIN'] });
-
-    render(
-      <MemoryRouter initialEntries={['/app/screening/questionnaires']}>
-        <PortalRoutes />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByText('Screening Questionnaires Test Page')).toBeTruthy();
-  });
-
-  it('denies the screening questionnaires route to a non-ADMIN role', () => {
-    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
-
-    render(
-      <MemoryRouter initialEntries={['/app/screening/questionnaires']}>
-        <PortalRoutes />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+    });
   });
 
   it('allows citizens to open both citizen screening routes', () => {
@@ -292,7 +297,7 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
   });
 
-  it('shows the screening navigation entry only to ADMIN users', () => {
+  it('shows screening configuration navigation to ADMIN and SYSTEM_ADMINISTRATOR only', () => {
     setAuth({ roles: ['ROLE_ADMIN'] });
     const view = render(
       <MemoryRouter>
@@ -304,7 +309,18 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('link', { name: 'Questionnaires' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Staff Requests' })).toBeTruthy();
 
-    setAuth({ roles: ['ROLE_CITIZEN'] });
+    setAuth({ roles: ['ROLE_SYSTEM_ADMINISTRATOR'] });
+    view.rerender(
+      <MemoryRouter>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Screening Questions' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Questionnaires' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Staff Requests' })).toBeNull();
+
+    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
     view.rerender(
       <MemoryRouter>
         <Header />

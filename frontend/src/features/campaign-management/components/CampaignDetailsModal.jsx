@@ -4,7 +4,11 @@ import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import StatusBadge from '../../../components/common/StatusBadge';
 import { campaignStatusVariants } from '../../../components/common/statusVariants';
 import { useAuth } from '../../../auth/context/AuthContext';
-import { canManageCampaigns } from '../../../auth/utils/roleUtils';
+import {
+  canManageCampaigns,
+  canManageQuestionnaireAssignments,
+  canViewQuestionnaireAssignments,
+} from '../../../auth/utils/roleUtils';
 import DoseProgrammeTab from './DoseProgrammeTab';
 import DoseProgrammeFormModal from './DoseProgrammeFormModal';
 import QuestionnaireTab from './QuestionnaireTab';
@@ -61,6 +65,8 @@ export default function CampaignDetailsModal({
 }) {
   const { user } = useAuth();
   const isManager = canManageCampaigns(user);
+  const canViewQuestionnaireAssignmentHistory = canViewQuestionnaireAssignments(user);
+  const canManageQuestionnaireAssignment = canManageQuestionnaireAssignments(user);
 
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -212,14 +218,20 @@ export default function CampaignDetailsModal({
   useEffect(() => {
     if (campaign?.id) {
       fetchDoseProgrammes(campaign.id);
-      fetchQuestionnaireAssignments(campaign.id);
-      fetchQuestionnaireCatalogue();
+      if (canViewQuestionnaireAssignmentHistory) {
+        fetchQuestionnaireAssignments(campaign.id);
+      }
+      if (canManageQuestionnaireAssignment) {
+        fetchQuestionnaireCatalogue();
+      }
       fetchCenterAssignments(campaign.id);
       fetchActiveCentersList();
       fetchLocationTargets(campaign.id);
     }
   }, [
     campaign?.id,
+    canManageQuestionnaireAssignment,
+    canViewQuestionnaireAssignmentHistory,
     fetchDoseProgrammes,
     fetchQuestionnaireAssignments,
     fetchQuestionnaireCatalogue,
@@ -248,7 +260,7 @@ export default function CampaignDetailsModal({
   };
 
   const handleQuestionnaireSubmit = async (payload) => {
-    if (!campaign?.id) return;
+    if (!campaign?.id || !canManageQuestionnaireAssignment) return;
     setQuestionnaireModalLoading(true);
     setQuestionnaireModalError(null);
     try {
@@ -366,20 +378,22 @@ export default function CampaignDetailsModal({
                     )}
                   </button>
                 </li>
-                <li className="nav-item" role="presentation">
-                  <button
-                    type="button"
-                    className={`nav-link border-0 fw-semibold small ${activeTab === 'questionnaire' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
-                    onClick={() => setActiveTab('questionnaire')}
-                  >
-                    Questionnaire{' '}
-                    {activeQuestionnaireAssignment && (
-                      <span className="badge bg-success-subtle text-success border border-success-subtle ms-1" style={{ fontSize: '0.7rem' }}>
-                        Assigned
-                      </span>
-                    )}
-                  </button>
-                </li>
+                {canViewQuestionnaireAssignmentHistory && (
+                  <li className="nav-item" role="presentation">
+                    <button
+                      type="button"
+                      className={`nav-link border-0 fw-semibold small ${activeTab === 'questionnaire' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
+                      onClick={() => setActiveTab('questionnaire')}
+                    >
+                      Questionnaire{' '}
+                      {activeQuestionnaireAssignment && (
+                        <span className="badge bg-success-subtle text-success border border-success-subtle ms-1" style={{ fontSize: '0.7rem' }}>
+                          Assigned
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )}
                 <li className="nav-item" role="presentation">
                   <button
                     type="button"
@@ -607,13 +621,14 @@ export default function CampaignDetailsModal({
                 )}
 
                 {/* Tab: Questionnaire Linkage */}
-                {activeTab === 'questionnaire' && (
+                {canViewQuestionnaireAssignmentHistory && activeTab === 'questionnaire' && (
                   <QuestionnaireTab
                     campaign={campaign}
                     assignments={questionnaireAssignments}
                     versionsMap={versionsMap}
                     loading={questionnaireLoading}
                     error={questionnaireError}
+                    canManageAssignment={canManageQuestionnaireAssignment}
                     onOpenAssignModal={() => {
                       setQuestionnaireModalError(null);
                       setShowQuestionnaireModal(true);
@@ -733,7 +748,7 @@ export default function CampaignDetailsModal({
       )}
 
       {/* Questionnaire Assignment Form Modal */}
-      {showQuestionnaireModal && (
+      {canManageQuestionnaireAssignment && showQuestionnaireModal && (
         <QuestionnaireAssignmentFormModal
           campaign={campaign}
           currentAssignment={activeQuestionnaireAssignment}

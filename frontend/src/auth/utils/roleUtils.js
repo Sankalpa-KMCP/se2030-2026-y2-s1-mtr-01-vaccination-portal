@@ -49,6 +49,22 @@ export function canManageCampaigns(user) {
 }
 
 /**
+ * Whether user can view campaign questionnaire assignment history.
+ * Authorized by the assignment history endpoint: ADMIN, CAMPAIGN_OFFICER, MANAGEMENT_USER.
+ */
+export function canViewQuestionnaireAssignments(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER', 'ROLE_MANAGEMENT_USER');
+}
+
+/**
+ * Whether user can assign or replace a campaign questionnaire version.
+ * Authorized by the assignment mutation endpoint: ADMIN, CAMPAIGN_OFFICER.
+ */
+export function canManageQuestionnaireAssignments(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER');
+}
+
+/**
  * Whether user can view Center Operations navigation and center details.
  * Authorized: ADMIN, CAMPAIGN_OFFICER, CENTER_MANAGER, HEALTHCARE_OFFICER, MANAGEMENT_USER
  */
