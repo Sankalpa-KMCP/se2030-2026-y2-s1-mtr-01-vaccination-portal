@@ -24,6 +24,13 @@ const ADMIN_USER = {
   roles: ['ROLE_ADMIN'],
 };
 
+const SYSTEM_ADMIN_USER = {
+  id: 3,
+  fullName: 'System Administrator',
+  email: 'system-admin@test.local',
+  roles: ['ROLE_SYSTEM_ADMINISTRATOR'],
+};
+
 function renderHeader(path = '/app/citizen', onLogout) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -74,6 +81,16 @@ describe('Header', () => {
     expect(screen.queryByText('Book Appointment')).toBeNull();
     expect(screen.queryByText('Waitlist')).toBeNull();
     expect(screen.queryByText('Screening Review')).toBeNull();
+  });
+
+  it('shows only screening configuration administration links to a system administrator', () => {
+    mockUser(SYSTEM_ADMIN_USER);
+    renderHeader('/app/screening/questions');
+
+    expect(screen.getByText('Screening Questions').getAttribute('href')).toBe('/app/screening/questions');
+    expect(screen.getByText('Questionnaires').getAttribute('href')).toBe('/app/screening/questionnaires');
+    expect(screen.queryByText('Staff Requests')).toBeNull();
+    expect(screen.queryByText('Campaigns')).toBeNull();
   });
 
   it('shows the screening review link only for a healthcare officer and keeps existing links', () => {
