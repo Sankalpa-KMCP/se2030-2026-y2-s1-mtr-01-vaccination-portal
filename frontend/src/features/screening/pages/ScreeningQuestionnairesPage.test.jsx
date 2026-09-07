@@ -18,6 +18,9 @@ const apiMocks = vi.hoisted(() => ({
   getQuestionnaireVersion: vi.fn(),
   createQuestionnaireVersion: vi.fn(),
   addQuestionnaireItem: vi.fn(),
+  createQuestion: vi.fn(),
+  createAnswerOption: vi.fn(),
+  listAnswerOptions: vi.fn(),
   publishQuestionnaireVersion: vi.fn(),
   retireQuestionnaireVersion: vi.fn(),
   deleteQuestionnaireVersion: vi.fn(),
@@ -63,7 +66,7 @@ const eligibilityRule = {
   questionnaireVersionId: 12,
   ruleCode: 'AGE_REVIEW',
   ruleName: 'Age review',
-  conditionExpression: 'AGE < 18',
+  conditionExpression: 'AGE == 18',
   preliminaryResult: 'PRELIMINARY_REVIEW_REQUIRED',
   priority: 1,
   message: 'Clinical review required',
@@ -93,6 +96,19 @@ async function openDraft() {
   await screen.findByText('What is your age?');
 }
 
+function fillNewQuestion(dialog, { code = 'NEW_QUESTION', type = 'BOOLEAN' } = {}) {
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Create New' }));
+  fireEvent.change(within(dialog).getByLabelText(/Question Code/), { target: { value: code } });
+  fireEvent.change(within(dialog).getByLabelText(/Question Text/), { target: { value: 'A newly created screening question?' } });
+  fireEvent.change(within(dialog).getByLabelText(/Question Type/), { target: { value: type } });
+}
+
+function fillOption(row, { code, label, typedValue }) {
+  fireEvent.change(within(row).getByLabelText(/Option Code/), { target: { value: code } });
+  fireEvent.change(within(row).getByLabelText(/^Label/), { target: { value: label } });
+  fireEvent.change(within(row).getByLabelText(/Typed Value/), { target: { value: typedValue } });
+}
+
 describe('ScreeningQuestionnairesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -102,6 +118,7 @@ describe('ScreeningQuestionnairesPage', () => {
     apiMocks.listQuestionnaireVersions.mockResolvedValue([draftVersion]);
     apiMocks.getQuestionnaireVersion.mockResolvedValue(draftVersion);
     apiMocks.listEligibilityRules.mockResolvedValue([eligibilityRule]);
+    apiMocks.listAnswerOptions.mockResolvedValue([]);
   });
 
   afterEach(() => cleanup());
@@ -198,6 +215,170 @@ describe('ScreeningQuestionnairesPage', () => {
     expect(await screen.findByText('Question added to the draft version.')).toBeTruthy();
   });
 
+  it('creates a global Boolean question and automatically attaches it before refreshing', async () => {
+    const createdQuestion = {
+      id: 3,
+      code: 'NEW_QUESTION',
+      text: 'A newly created screening question?',
+      description: null,
+      questionType: 'BOOLEAN',
+      defaultRequired: true,
+      active: true,
+    };
+    const attachedItem = { id: 103, questionnaireVersionId: 12, questionId: 3, displayOrder: 3, requiredOverride: false };
+    apiMocks.createQuestion.mockResolvedValue(createdQuestion);
+    apiMocks.addQuestionnaireItem.mockResolvedValue(attachedItem);
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add Question to Version' });
+    fillNewQuestion(dialog);
+    expect(within(dialog).queryByText('Answer Options')).toBeNull();
+    fireEvent.change(within(dialog).getByLabelText('Required Override'), { target: { value: 'false' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create and Add Question' }));
+
+    await waitFor(() => expect(apiMocks.createQuestion).toHaveBeenCalledWith({
+      code: 'NEW_QUESTION',
+      text: 'A newly created screening question?',
+      description: null,
+      questionType: 'BOOLEAN',
+      defaultRequired: true,
+    }));
+    await waitFor(() => expect(apiMocks.addQuestionnaireItem).toHaveBeenCalledWith(12, {
+      questionId: 3,
+      displayOrder: 3,
+      requiredOverride: false,
+    }));
+    expect(apiMocks.createQuestion.mock.invocationCallOrder[0]).toBeLessThan(apiMocks.addQuestionnaireItem.mock.invocationCallOrder[0]);
+    expect(await screen.findByText('Question created and added to this questionnaire version.')).toBeTruthy();
+    expect(apiMocks.listQuestions).toHaveBeenCalledTimes(2);
+    expect(apiMocks.getQuestionnaireVersion).toHaveBeenCalledTimes(2);
+  });
+
+  it('creates choice options in display order before attaching the new question', async () => {
+    const createdQuestion = { id: 4, code: 'REACTION', text: 'A newly created screening question?', questionType: 'SINGLE_CHOICE', defaultRequired: true, active: true };
+    apiMocks.createQuestion.mockResolvedValue(createdQuestion);
+    apiMocks.listAnswerOptions.mockResolvedValue([]);
+    apiMocks.createAnswerOption.mockImplementation(async (_questionId, option) => ({ id: option.displayOrder, questionId: 4, ...option }));
+    apiMocks.addQuestionnaireItem.mockResolvedValue({ id: 104, questionId: 4, displayOrder: 3, requiredOverride: null });
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add Question to Version' });
+    fillNewQuestion(dialog, { code: 'REACTION', type: 'SINGLE_CHOICE' });
+    let rows = within(dialog).getAllByTestId('new-question-option-row');
+    fillOption(rows[0], { code: 'NO', label: 'No reaction', typedValue: 'none' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add Option' }));
+    rows = within(dialog).getAllByTestId('new-question-option-row');
+    fillOption(rows[1], { code: 'YES', label: 'Severe reaction', typedValue: 'severe' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create and Add Question' }));
+
+    await waitFor(() => expect(apiMocks.createAnswerOption).toHaveBeenCalledTimes(2));
+    expect(apiMocks.createAnswerOption).toHaveBeenNthCalledWith(1, 4, {
+      code: 'NO', label: 'No reaction', typedValue: 'none', displayOrder: 1,
+    });
+    expect(apiMocks.createAnswerOption).toHaveBeenNthCalledWith(2, 4, {
+      code: 'YES', label: 'Severe reaction', typedValue: 'severe', displayOrder: 2,
+    });
+    expect(apiMocks.createAnswerOption.mock.invocationCallOrder[1]).toBeLessThan(apiMocks.addQuestionnaireItem.mock.invocationCallOrder[0]);
+  });
+
+  it('preserves partial option progress and safely retries without recreating successful records', async () => {
+    const createdQuestion = { id: 4, code: 'REACTION', text: 'A newly created screening question?', questionType: 'MULTI_CHOICE', defaultRequired: true, active: true };
+    const savedFirst = { id: 41, questionId: 4, code: 'NO', label: 'No reaction', typedValue: 'none', displayOrder: 1 };
+    apiMocks.createQuestion.mockResolvedValue(createdQuestion);
+    apiMocks.listAnswerOptions.mockResolvedValueOnce([]).mockResolvedValue([savedFirst]);
+    apiMocks.createAnswerOption
+      .mockResolvedValueOnce(savedFirst)
+      .mockRejectedValueOnce(new ApiError('Temporary option failure', 500))
+      .mockResolvedValueOnce({ id: 42, questionId: 4, code: 'YES', label: 'Severe reaction', typedValue: 'severe', displayOrder: 2 });
+    apiMocks.addQuestionnaireItem.mockResolvedValue({ id: 104, questionId: 4, displayOrder: 3, requiredOverride: null });
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add Question to Version' });
+    fillNewQuestion(dialog, { code: 'REACTION', type: 'MULTI_CHOICE' });
+    let rows = within(dialog).getAllByTestId('new-question-option-row');
+    fillOption(rows[0], { code: 'NO', label: 'No reaction', typedValue: 'none' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add Option' }));
+    rows = within(dialog).getAllByTestId('new-question-option-row');
+    fillOption(rows[1], { code: 'YES', label: 'Severe reaction', typedValue: 'severe' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create and Add Question' }));
+
+    expect(await within(dialog).findByText(/one or more answer options could not be saved/i)).toBeTruthy();
+    expect(apiMocks.addQuestionnaireItem).not.toHaveBeenCalled();
+    expect(within(dialog).getAllByText(/now exists in the global catalogue/i)).toHaveLength(2);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Retry Create and Add' }));
+
+    await waitFor(() => expect(apiMocks.addQuestionnaireItem).toHaveBeenCalledTimes(1));
+    expect(apiMocks.createQuestion).toHaveBeenCalledTimes(1);
+    expect(apiMocks.createAnswerOption).toHaveBeenCalledTimes(3);
+    expect(await screen.findByText('Question created and added to this questionnaire version.')).toBeTruthy();
+  });
+
+  it('does not create options or attach when existing option reconciliation fails', async () => {
+    const createdQuestion = { id: 4, code: 'REACTION', text: 'A newly created screening question?', questionType: 'SINGLE_CHOICE', defaultRequired: true, active: true };
+    apiMocks.createQuestion.mockResolvedValue(createdQuestion);
+    apiMocks.listAnswerOptions.mockRejectedValue(new ApiError('Options unavailable', 500));
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add Question to Version' });
+    fillNewQuestion(dialog, { code: 'REACTION', type: 'SINGLE_CHOICE' });
+    const row = within(dialog).getByTestId('new-question-option-row');
+    fillOption(row, { code: 'YES', label: 'Severe reaction', typedValue: 'severe' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create and Add Question' }));
+
+    expect(await within(dialog).findByText(/current answer options could not be loaded safely/i)).toBeTruthy();
+    expect(apiMocks.createAnswerOption).not.toHaveBeenCalled();
+    expect(apiMocks.addQuestionnaireItem).not.toHaveBeenCalled();
+  });
+
+  it('keeps a created catalogue question when attachment fails and offers retry', async () => {
+    const createdQuestion = { id: 3, code: 'NEW_QUESTION', text: 'A newly created screening question?', questionType: 'BOOLEAN', defaultRequired: true, active: true };
+    apiMocks.createQuestion.mockResolvedValue(createdQuestion);
+    apiMocks.addQuestionnaireItem.mockRejectedValue(new ApiError('Display order already used', 409));
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add Question to Version' });
+    fillNewQuestion(dialog);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create and Add Question' }));
+
+    expect(await within(dialog).findByText(/could not be added to this questionnaire version/i)).toBeTruthy();
+    expect(within(dialog).getByText(/now exists in the global catalogue/i)).toBeTruthy();
+    expect(apiMocks.createQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the form and makes no later calls when question creation fails', async () => {
+    apiMocks.createQuestion.mockRejectedValue(new ApiError("Screening question with code 'NEW_QUESTION' already exists", 409));
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add Question to Version' });
+    fillNewQuestion(dialog);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create and Add Question' }));
+
+    expect(await within(dialog).findByText(/already exists/i)).toBeTruthy();
+    expect(within(dialog).getByLabelText(/Question Code/).value).toBe('NEW_QUESTION');
+    expect(apiMocks.createAnswerOption).not.toHaveBeenCalled();
+    expect(apiMocks.addQuestionnaireItem).not.toHaveBeenCalled();
+  });
+
+  it('disables Create New submission while the first API call is pending', async () => {
+    apiMocks.createQuestion.mockReturnValue(new Promise(() => {}));
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add Question to Version' });
+    fillNewQuestion(dialog);
+    const submit = within(dialog).getByRole('button', { name: 'Create and Add Question' });
+    fireEvent.click(submit);
+    await waitFor(() => expect(submit.disabled).toBe(true));
+    fireEvent.click(submit);
+    expect(apiMocks.createQuestion).toHaveBeenCalledTimes(1);
+  });
+
   it('renders and creates eligibility rules with exact enum values', async () => {
     apiMocks.createEligibilityRule.mockResolvedValue({ ...eligibilityRule, id: 32, ruleCode: 'TRAVEL_REVIEW', ruleName: 'Travel review' });
     await openDraft();
@@ -207,7 +388,9 @@ describe('ScreeningQuestionnairesPage', () => {
     const dialog = screen.getByRole('dialog', { name: 'Create Eligibility Rule' });
     fireEvent.change(within(dialog).getByLabelText(/Rule Code/), { target: { value: 'TRAVEL_REVIEW' } });
     fireEvent.change(within(dialog).getByLabelText(/Rule Name/), { target: { value: 'Travel review' } });
-    fireEvent.change(within(dialog).getByLabelText(/Condition Expression/), { target: { value: 'TRAVEL == true' } });
+    fireEvent.change(within(dialog).getByLabelText(/Question/), { target: { value: '2' } });
+    expect(within(dialog).getByLabelText(/Operator/).value).toBe('==');
+    expect(within(dialog).getByLabelText(/Value/).value).toBe('true');
     fireEvent.change(within(dialog).getByLabelText(/Priority/), { target: { value: '2' } });
     fireEvent.change(within(dialog).getByLabelText(/Result Message/), { target: { value: 'Review travel history' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Create Rule' }));
@@ -229,6 +412,8 @@ describe('ScreeningQuestionnairesPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit rule AGE_REVIEW' }));
     const editDialog = screen.getByRole('dialog', { name: 'Edit Eligibility Rule' });
+    expect(within(editDialog).getByLabelText(/Question/).value).toBe('1');
+    expect(within(editDialog).getByLabelText(/Value/).value).toBe('18');
     fireEvent.change(within(editDialog).getByLabelText(/Rule Name/), { target: { value: 'Minor age review' } });
     fireEvent.click(within(editDialog).getByRole('button', { name: 'Save Rule' }));
     await waitFor(() => expect(apiMocks.updateEligibilityRule).toHaveBeenCalledWith(31, expect.objectContaining({ ruleName: 'Minor age review' })));
@@ -238,6 +423,25 @@ describe('ScreeningQuestionnairesPage', () => {
     expect(apiMocks.deleteEligibilityRule).not.toHaveBeenCalled();
     fireEvent.click(within(deleteDialog).getByRole('button', { name: 'Delete Rule' }));
     await waitFor(() => expect(apiMocks.deleteEligibilityRule).toHaveBeenCalledWith(31));
+  });
+
+  it('preserves an unsupported existing expression until explicit replacement', async () => {
+    const legacyRule = { ...eligibilityRule, conditionExpression: 'AGE < 18' };
+    apiMocks.listEligibilityRules.mockResolvedValue([legacyRule]);
+    apiMocks.updateEligibilityRule.mockResolvedValue({ ...legacyRule, ruleName: 'Legacy age review' });
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit rule AGE_REVIEW' }));
+    const dialog = screen.getByRole('dialog', { name: 'Edit Eligibility Rule' });
+    expect(within(dialog).getByText(/not supported by the current screening evaluator/i)).toBeTruthy();
+    expect(within(dialog).getByText('AGE < 18')).toBeTruthy();
+    expect(within(dialog).queryByLabelText(/Question/)).toBeNull();
+
+    fireEvent.change(within(dialog).getByLabelText(/Rule Name/), { target: { value: 'Legacy age review' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save Rule' }));
+    await waitFor(() => expect(apiMocks.updateEligibilityRule).toHaveBeenCalledWith(31, expect.objectContaining({
+      conditionExpression: 'AGE < 18',
+    })));
   });
 
   it('represents published immutability and exposes only the supported retire action', async () => {

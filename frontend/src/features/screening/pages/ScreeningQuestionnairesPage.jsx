@@ -7,13 +7,16 @@ import { questionnaireVersionStatusVariants } from '../../../components/common/s
 import StatusBadge from '../../../components/common/StatusBadge';
 import {
   addQuestionnaireItem,
+  createAnswerOption,
   createEligibilityRule,
+  createQuestion,
   createQuestionnaire,
   createQuestionnaireVersion,
   deleteEligibilityRule,
   deleteQuestionnaireVersion,
   getQuestionnaire,
   getQuestionnaireVersion,
+  listAnswerOptions,
   listEligibilityRules,
   listQuestionnaires,
   listQuestionnaireVersions,
@@ -31,6 +34,7 @@ import {
   QUESTIONNAIRE_VERSION_STATUS,
   QUESTIONNAIRE_VERSION_STATUS_LABELS,
   QUESTION_TYPE_LABELS,
+  isChoiceQuestionType,
 } from '../constants/screeningConstants';
 
 const STATUS_BADGE = 'badge';
@@ -58,6 +62,7 @@ export default function ScreeningQuestionnairesPage() {
 
   const [questionnaireFormOpen, setQuestionnaireFormOpen] = useState(false);
   const [itemFormOpen, setItemFormOpen] = useState(false);
+  const [creationProgress, setCreationProgress] = useState(null);
   const [ruleFormTarget, setRuleFormTarget] = useState(undefined);
   const [formError, setFormError] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -96,6 +101,13 @@ export default function ScreeningQuestionnairesPage() {
   const availableQuestions = useMemo(
     () => questions.filter((question) => !attachedQuestionIds.has(question.id)),
     [attachedQuestionIds, questions],
+  );
+
+  const attachedQuestions = useMemo(
+    () => (selectedVersion?.items || [])
+      .map((item) => questionById.get(item.questionId))
+      .filter(Boolean),
+    [questionById, selectedVersion],
   );
 
   const replaceVersion = (updated) => {
@@ -189,6 +201,112 @@ export default function ScreeningQuestionnairesPage() {
       replaceVersion(updated);
       setItemFormOpen(false);
       setSuccessMessage('Question added to the draft version.');
+    } catch (error) {
+      setFormError(error);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const finishCreateAndAttach = async (question, attachedItem = null) => {
+    try {
+      const [version, rules, catalogue] = await Promise.all([
+        getQuestionnaireVersion(selectedVersion.id),
+        listEligibilityRules(selectedVersion.id),
+        listQuestions({ activeOnly: true }),
+      ]);
+      replaceVersion({ ...version, rules: Array.isArray(rules) ? rules : [] });
+      setQuestions(Array.isArray(catalogue) ? catalogue : []);
+    } catch (error) {
+      if (attachedItem) {
+        replaceVersion({
+          ...selectedVersion,
+          items: sortItems([...(selectedVersion.items || []), attachedItem]),
+        });
+        setQuestions((current) => current.some((item) => item.id === question.id)
+          ? current
+          : [...current, question]);
+      }
+      setBuilderError(error);
+    }
+    setItemFormOpen(false);
+    setCreationProgress(null);
+    setSuccessMessage('Question created and added to this questionnaire version.');
+  };
+
+  const handleCreateAndAttach = async ({ question: questionPayload, options, attachment }) => {
+    setProcessing(true);
+    setFormError(null);
+    let createdQuestion = creationProgress?.question || null;
+    let savedOptions = creationProgress?.options || [];
+
+    try {
+      if (!createdQuestion) {
+        createdQuestion = await createQuestion(questionPayload);
+        setCreationProgress({ question: createdQuestion, options: [] });
+      } else {
+        const currentVersion = await getQuestionnaireVersion(selectedVersion.id);
+        const existingItem = (currentVersion.items || []).find((item) => item.questionId === createdQuestion.id);
+        if (existingItem) {
+          await finishCreateAndAttach(createdQuestion);
+          return;
+        }
+      }
+
+      if (isChoiceQuestionType(createdQuestion.questionType)) {
+        try {
+          savedOptions = await listAnswerOptions(createdQuestion.id);
+        } catch (error) {
+          setFormError(`Question was created, but its current answer options could not be loaded safely. It now exists in the global catalogue. ${error.message}`);
+          return;
+        }
+        setCreationProgress({ question: createdQuestion, options: savedOptions });
+
+        for (const optionPayload of options) {
+          const existing = savedOptions.find(
+            (option) => option.code.trim().toLocaleLowerCase() === optionPayload.code.trim().toLocaleLowerCase(),
+          );
+          if (existing) {
+            const matches = existing.label === optionPayload.label
+              && existing.typedValue === optionPayload.typedValue
+              && existing.displayOrder === optionPayload.displayOrder;
+            if (!matches) {
+              setFormError(`Question was created, but answer option ${optionPayload.code} already exists with different values. Review it in the global Question Catalogue.`);
+              return;
+            }
+            continue;
+          }
+
+          try {
+            const saved = await createAnswerOption(createdQuestion.id, optionPayload);
+            savedOptions = [...savedOptions, saved];
+            setCreationProgress({ question: createdQuestion, options: savedOptions });
+          } catch (error) {
+            try {
+              const reconciledOptions = await listAnswerOptions(createdQuestion.id);
+              savedOptions = Array.isArray(reconciledOptions) ? reconciledOptions : savedOptions;
+            } catch {
+              // Keep the confirmed local progress when the reconciliation request also fails.
+            }
+            setCreationProgress({ question: createdQuestion, options: savedOptions });
+            setFormError(`Question was created, but one or more answer options could not be saved. It now exists in the global catalogue. ${error.message}`);
+            return;
+          }
+        }
+      }
+
+      let attachedItem;
+      try {
+        attachedItem = await addQuestionnaireItem(selectedVersion.id, {
+          questionId: createdQuestion.id,
+          ...attachment,
+        });
+      } catch (error) {
+        setFormError(`Question was created, but could not be added to this questionnaire version. You can retry or select it later from the existing question catalogue. ${error.message}`);
+        return;
+      }
+
+      await finishCreateAndAttach(createdQuestion, attachedItem);
     } catch (error) {
       setFormError(error);
     } finally {
@@ -404,7 +522,7 @@ export default function ScreeningQuestionnairesPage() {
 
                       <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
                         <h3 className="h5 mb-0">Questionnaire Items</h3>
-                        {isDraft && <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => { setFormError(null); setItemFormOpen(true); }}>Add Question</button>}
+                        {isDraft && <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => { setFormError(null); setCreationProgress(null); setItemFormOpen(true); }}>Add Question</button>}
                       </div>
                       {sortedVersionItems.length === 0 ? (
                         <div className="border rounded bg-light text-center text-muted py-4 mb-4">No questions are attached to this version.</div>
@@ -475,8 +593,23 @@ export default function ScreeningQuestionnairesPage() {
       )}
 
       <QuestionnaireFormModal show={questionnaireFormOpen} processing={processing} apiError={formError} onClose={() => !processing && setQuestionnaireFormOpen(false)} onSubmit={handleCreateQuestionnaire} />
-      <AddQuestionnaireItemModal show={itemFormOpen} questions={availableQuestions} suggestedOrder={suggestedOrder} processing={processing} apiError={formError} onClose={() => !processing && setItemFormOpen(false)} onSubmit={handleAddItem} />
-      <EligibilityRuleFormModal show={ruleFormTarget !== undefined} rule={ruleFormTarget || null} processing={processing} apiError={formError} onClose={() => !processing && setRuleFormTarget(undefined)} onSubmit={handleSaveRule} />
+      <AddQuestionnaireItemModal
+        show={itemFormOpen}
+        questions={availableQuestions}
+        suggestedOrder={suggestedOrder}
+        processing={processing}
+        apiError={formError}
+        creationProgress={creationProgress}
+        onClose={() => {
+          if (!processing) {
+            setItemFormOpen(false);
+            setCreationProgress(null);
+          }
+        }}
+        onSubmit={handleAddItem}
+        onCreateAndAttach={handleCreateAndAttach}
+      />
+      <EligibilityRuleFormModal show={ruleFormTarget !== undefined} rule={ruleFormTarget || null} questions={attachedQuestions} processing={processing} apiError={formError} onClose={() => !processing && setRuleFormTarget(undefined)} onSubmit={handleSaveRule} />
       <QuestionnaireActionModal action={confirmation} processing={processing} error={formError} onClose={() => !processing && setConfirmation(null)} onConfirm={handleConfirmedAction} />
     </section>
   );
