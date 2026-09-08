@@ -7,7 +7,9 @@ import com.se2030.vaccinationportal.vaccination.exception.DigitalCertificateNotF
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateDigitalCertificateException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateVerificationTokenException;
+import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationCorrectionException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
@@ -147,6 +149,22 @@ public class VaccinationExceptionHandler {
     @ExceptionHandler(InvalidCertificateVerificationTokenException.class)
     public ResponseEntity<VaccinationApiErrorResponse> handleInvalidVerificationToken(
             InvalidCertificateVerificationTokenException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidVaccinationCorrectionException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleInvalidCorrection(
+            InvalidVaccinationCorrectionException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(UnsupportedVaccinationCorrectionFieldException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleUnsupportedCorrectionField(
+            UnsupportedVaccinationCorrectionFieldException ex,
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
