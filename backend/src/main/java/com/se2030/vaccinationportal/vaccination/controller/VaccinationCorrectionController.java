@@ -1,9 +1,10 @@
 package com.se2030.vaccinationportal.vaccination.controller;
 
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationCorrectionRequest;
+import com.se2030.vaccinationportal.vaccination.dto.VaccinationCorrectionLifecycleResponse;
 import com.se2030.vaccinationportal.vaccination.dto.VaccinationCorrectionResponse;
 import com.se2030.vaccinationportal.vaccination.mapper.VaccinationCorrectionMapper;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrection;
+import com.se2030.vaccinationportal.vaccination.service.VaccinationCorrectionLifecycleService;
 import com.se2030.vaccinationportal.vaccination.service.VaccinationCorrectionService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -24,21 +25,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class VaccinationCorrectionController {
 
     private final VaccinationCorrectionService correctionService;
+    private final VaccinationCorrectionLifecycleService lifecycleService;
 
-    public VaccinationCorrectionController(VaccinationCorrectionService correctionService) {
+    public VaccinationCorrectionController(
+            VaccinationCorrectionService correctionService,
+            VaccinationCorrectionLifecycleService lifecycleService
+    ) {
         this.correctionService = correctionService;
+        this.lifecycleService = lifecycleService;
     }
 
     @PostMapping
-    public ResponseEntity<VaccinationCorrectionResponse> createCorrection(
+    public ResponseEntity<VaccinationCorrectionLifecycleResponse> createCorrection(
             @PathVariable Long recordId,
             @Valid @RequestBody CreateVaccinationCorrectionRequest request
     ) {
-        VaccinationCorrection created = correctionService.createCorrection(recordId, request);
+        VaccinationCorrectionLifecycleResponse response = lifecycleService.applyCorrection(recordId, request);
         URI location = URI.create(
-                "/api/v1/vaccination/records/" + recordId + "/corrections/" + created.getId()
+                "/api/v1/vaccination/records/" + recordId + "/corrections/" + response.correction().id()
         );
-        return ResponseEntity.created(location).body(VaccinationCorrectionMapper.toResponse(created));
+        return ResponseEntity.created(location).body(response);
     }
 
     @GetMapping

@@ -14,10 +14,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationCorrectionRequest;
+import com.se2030.vaccinationportal.vaccination.dto.VaccinationCorrectionLifecycleResponse;
 import com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
+import com.se2030.vaccinationportal.vaccination.mapper.VaccinationCorrectionMapper;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.service.VaccinationCorrectionLifecycleService;
 import com.se2030.vaccinationportal.vaccination.service.VaccinationCorrectionService;
 import java.time.Instant;
 import java.util.List;
@@ -39,11 +42,16 @@ class VaccinationCorrectionControllerTests {
     @Mock
     private VaccinationCorrectionService correctionService;
 
+    @Mock
+    private VaccinationCorrectionLifecycleService lifecycleService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new VaccinationCorrectionController(correctionService))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new VaccinationCorrectionController(correctionService, lifecycleService)
+                )
                 .setControllerAdvice(new VaccinationExceptionHandler())
                 .build();
     }
@@ -51,8 +59,13 @@ class VaccinationCorrectionControllerTests {
     @Test
     void postCreatesAppendOnlyCorrectionAndReturnsSafeResponse() throws Exception {
         VaccinationCorrection correction = correction(301L, VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
-        when(correctionService.createCorrection(eq(101L), any(CreateVaccinationCorrectionRequest.class)))
-                .thenReturn(correction);
+        when(lifecycleService.applyCorrection(eq(101L), any(CreateVaccinationCorrectionRequest.class)))
+                .thenReturn(new VaccinationCorrectionLifecycleResponse(
+                        VaccinationCorrectionMapper.toResponse(correction),
+                        true,
+                        false,
+                        null
+                ));
 
         mockMvc.perform(post("/api/v1/vaccination/records/101/corrections")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -69,14 +82,19 @@ class VaccinationCorrectionControllerTests {
                         "Location",
                         "/api/v1/vaccination/records/101/corrections/301"
                 ))
-                .andExpect(jsonPath("$.id", is(301)))
-                .andExpect(jsonPath("$.vaccinationRecordId", is(101)))
-                .andExpect(jsonPath("$.fieldName", is("doseNumber")))
-                .andExpect(jsonPath("$.oldValue", is("1")))
-                .andExpect(jsonPath("$.newValue", is("2")))
-                .andExpect(jsonPath("$.status", is("APPLIED")))
-                .andExpect(jsonPath("$.correctedBy", is(91)))
-                .andExpect(jsonPath("$.correctedAt", is(CORRECTED_AT.toString())));
+                .andExpect(jsonPath("$.correction.id", is(301)))
+                .andExpect(jsonPath("$.correction.vaccinationRecordId", is(101)))
+                .andExpect(jsonPath("$.correction.fieldName", is("doseNumber")))
+                .andExpect(jsonPath("$.correction.oldValue", is("1")))
+                .andExpect(jsonPath("$.correction.newValue", is("2")))
+                .andExpect(jsonPath("$.correction.status", is("APPLIED")))
+                .andExpect(jsonPath("$.correction.correctedBy", is(91)))
+                .andExpect(jsonPath("$.correction.correctedAt", is(CORRECTED_AT.toString())))
+                .andExpect(jsonPath("$.certificateImpacted", is(true)))
+                .andExpect(jsonPath("$.certificateReissued", is(false)))
+                .andExpect(jsonPath("$.certificateReissue").doesNotExist())
+                .andExpect(jsonPath("$.verificationToken").doesNotExist())
+                .andExpect(jsonPath("$.lockVersion").doesNotExist());
     }
 
     @Test
@@ -116,7 +134,7 @@ class VaccinationCorrectionControllerTests {
 
     @Test
     void unsupportedFieldReturnsStructured400() throws Exception {
-        when(correctionService.createCorrection(eq(101L), any(CreateVaccinationCorrectionRequest.class)))
+        when(lifecycleService.applyCorrection(eq(101L), any(CreateVaccinationCorrectionRequest.class)))
                 .thenThrow(new UnsupportedVaccinationCorrectionFieldException(
                         "Unsupported vaccination correction field: citizenId"
                 ));
