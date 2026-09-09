@@ -11,6 +11,7 @@ import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationCorrectionRepository;
@@ -84,6 +85,7 @@ class VaccinationCorrectionIntegrationTests {
         assertEquals("Corrected clinical note", history.get(1).getNewValue());
         assertNotNull(history.get(0).getCorrectedAt());
         assertEquals(91L, history.get(0).getCorrectedBy());
+        assertEquals(VaccinationCorrectionStatus.APPLIED, history.get(0).getStatus());
 
         assertEquals(recordCount, vaccinationRecordRepository.count());
         assertEquals(1, unchangedRecord.getDoseNumber());

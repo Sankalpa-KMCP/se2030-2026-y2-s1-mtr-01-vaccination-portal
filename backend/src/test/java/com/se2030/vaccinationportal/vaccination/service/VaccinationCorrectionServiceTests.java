@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -17,9 +16,11 @@ import com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccination
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.vaccination.validation.VaccinationCorrectionValueCodec;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -55,18 +56,21 @@ class VaccinationCorrectionServiceTests {
 
     @BeforeEach
     void setUp() {
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        VaccinationCorrectionValueCodec valueCodec = new VaccinationCorrectionValueCodec(clock);
+        EffectiveVaccinationRecordService effectiveRecordService = new EffectiveVaccinationRecordService(
+                vaccinationRecordRepository,
+                correctionRepository,
+                valueCodec
+        );
         service = new VaccinationCorrectionService(
                 vaccinationRecordRepository,
                 correctionRepository,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                effectiveRecordService,
+                valueCodec,
+                clock
         );
         record = record();
-        lenient().when(correctionRepository
-                        .findFirstByVaccinationRecordIdAndFieldNameOrderByCorrectedAtDescIdDesc(
-                                any(),
-                                any()
-                        ))
-                .thenReturn(Optional.empty());
     }
 
     @Test
@@ -87,6 +91,7 @@ class VaccinationCorrectionServiceTests {
         assertEquals("Wrong batch recorded", correction.getReason());
         assertEquals(91L, correction.getCorrectedBy());
         assertEquals(NOW, correction.getCorrectedAt());
+        assertEquals(VaccinationCorrectionStatus.APPLIED, correction.getStatus());
         assertEquals(56L, record.getVaccineBatchId());
         verify(vaccinationRecordRepository, never()).save(any(VaccinationRecord.class));
     }
@@ -193,12 +198,8 @@ class VaccinationCorrectionServiceTests {
     void chainedCorrectionUsesLatestSameFieldValueAsEffectiveOldValue() {
         VaccinationCorrection prior = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
-        when(correctionRepository
-                .findFirstByVaccinationRecordIdAndFieldNameOrderByCorrectedAtDescIdDesc(
-                        RECORD_ID,
-                        VaccinationCorrectionField.VACCINE_BATCH_ID
-                ))
-                .thenReturn(Optional.of(prior));
+        when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
+                .thenReturn(List.of(prior));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -216,12 +217,8 @@ class VaccinationCorrectionServiceTests {
     void duplicateEffectiveValueIsRejected() {
         VaccinationCorrection prior = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
-        when(correctionRepository
-                .findFirstByVaccinationRecordIdAndFieldNameOrderByCorrectedAtDescIdDesc(
-                        RECORD_ID,
-                        VaccinationCorrectionField.VACCINE_BATCH_ID
-                ))
-                .thenReturn(Optional.of(prior));
+        when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
+                .thenReturn(List.of(prior));
 
         assertThrows(
                 InvalidVaccinationCorrectionException.class,
@@ -238,12 +235,8 @@ class VaccinationCorrectionServiceTests {
     void correctionBackToOriginalValueIsAllowedWhenEffectiveValueDiffers() {
         VaccinationCorrection prior = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
-        when(correctionRepository
-                .findFirstByVaccinationRecordIdAndFieldNameOrderByCorrectedAtDescIdDesc(
-                        RECORD_ID,
-                        VaccinationCorrectionField.VACCINE_BATCH_ID
-                ))
-                .thenReturn(Optional.of(prior));
+        when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
+                .thenReturn(List.of(prior));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -260,12 +253,6 @@ class VaccinationCorrectionServiceTests {
     @Test
     void latestCorrectionForAnotherFieldDoesNotAffectEffectiveValue() {
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
-        when(correctionRepository
-                .findFirstByVaccinationRecordIdAndFieldNameOrderByCorrectedAtDescIdDesc(
-                        RECORD_ID,
-                        VaccinationCorrectionField.VACCINE_BATCH_ID
-                ))
-                .thenReturn(Optional.empty());
         when(correctionRepository.save(any(VaccinationCorrection.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -275,11 +262,7 @@ class VaccinationCorrectionServiceTests {
         );
 
         assertEquals("56", correction.getOldValue());
-        verify(correctionRepository)
-                .findFirstByVaccinationRecordIdAndFieldNameOrderByCorrectedAtDescIdDesc(
-                        RECORD_ID,
-                        VaccinationCorrectionField.VACCINE_BATCH_ID
-                );
+        verify(correctionRepository).findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID);
     }
 
     @Test
@@ -290,12 +273,8 @@ class VaccinationCorrectionServiceTests {
                 null
         );
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
-        when(correctionRepository
-                .findFirstByVaccinationRecordIdAndFieldNameOrderByCorrectedAtDescIdDesc(
-                        RECORD_ID,
-                        VaccinationCorrectionField.AUTHORIZED_NOTES
-                ))
-                .thenReturn(Optional.of(prior));
+        when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
+                .thenReturn(List.of(prior));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 

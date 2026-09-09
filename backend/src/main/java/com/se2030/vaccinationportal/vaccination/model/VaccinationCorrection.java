@@ -66,6 +66,11 @@ public class VaccinationCorrection {
     @Column(name = "corrected_at", nullable = false, updatable = false)
     private Instant correctedAt;
 
+    @NotNull(message = "Correction status is required")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, updatable = false, length = 16)
+    private VaccinationCorrectionStatus status;
+
     protected VaccinationCorrection() {
     }
 
@@ -97,6 +102,7 @@ public class VaccinationCorrection {
         this.reason = requireText(reason, "Correction reason", 1000);
         this.correctedBy = correctedBy;
         this.correctedAt = correctedAt;
+        this.status = VaccinationCorrectionStatus.APPLIED;
     }
 
     private static String requireText(String value, String name, int maxLength) {
@@ -143,5 +149,9 @@ public class VaccinationCorrection {
 
     public Instant getCorrectedAt() {
         return correctedAt;
+    }
+
+    public VaccinationCorrectionStatus getStatus() {
+        return status;
     }
 }

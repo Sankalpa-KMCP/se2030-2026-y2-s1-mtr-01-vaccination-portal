@@ -74,6 +74,7 @@ class VaccinationCorrectionControllerTests {
                 .andExpect(jsonPath("$.fieldName", is("doseNumber")))
                 .andExpect(jsonPath("$.oldValue", is("1")))
                 .andExpect(jsonPath("$.newValue", is("2")))
+                .andExpect(jsonPath("$.status", is("APPLIED")))
                 .andExpect(jsonPath("$.correctedBy", is(91)))
                 .andExpect(jsonPath("$.correctedAt", is(CORRECTED_AT.toString())));
     }

@@ -12,6 +12,7 @@ import com.se2030.vaccinationportal.vaccination.dto.DigitalCertificateResponse;
 import com.se2030.vaccinationportal.vaccination.dto.CertificateReissueResponse;
 import com.se2030.vaccinationportal.vaccination.dto.ReissueDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.dto.RevokeDigitalCertificateRequest;
+import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationCorrectionRequest;
 import com.se2030.vaccinationportal.vaccination.exception.DigitalCertificateNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateDigitalCertificateException;
 import com.se2030.vaccinationportal.vaccination.mapper.DigitalCertificateMapper;
@@ -50,6 +51,9 @@ class DigitalCertificateLifecycleIntegrationTests {
     private VaccinationRecordRepository vaccinationRecordRepository;
 
     @Autowired
+    private VaccinationCorrectionService correctionService;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Autowired
@@ -67,11 +71,44 @@ class DigitalCertificateLifecycleIntegrationTests {
         assertEquals(CertificateStatus.VALID, issued.getStatus());
         assertFalse(issued.getCertificateReference().isBlank());
         assertFalse(issued.getVerificationToken().isBlank());
+        assertEquals(5001L, issued.getIssuedVaccineBatchId());
+        assertEquals(1, issued.getIssuedDoseNumber());
+        assertEquals(ADMINISTERED_AT, issued.getIssuedAdministrationTime());
         assertEquals(recordCountBefore, vaccinationRecordRepository.count());
 
         DigitalCertificate persisted = certificateRepository.findById(issued.getId()).orElseThrow();
         assertEquals(issued.getCertificateReference(), persisted.getCertificateReference());
         assertEquals(issued.getVerificationToken(), persisted.getVerificationToken());
+    }
+
+    @Test
+    void initialIssuanceCapturesCurrentEffectiveDoseAndAdministrationTime() {
+        VaccinationRecord record = persistRecord(1016L);
+        correctionService.createCorrection(
+                record.getId(),
+                new CreateVaccinationCorrectionRequest("doseNumber", "2", "Correct dose", 7006L)
+        );
+        correctionService.createCorrection(
+                record.getId(),
+                new CreateVaccinationCorrectionRequest(
+                        "administrationTime",
+                        "2026-09-01T09:30:00Z",
+                        "Correct administration time",
+                        7006L
+                )
+        );
+
+        DigitalCertificate issued = certificateService.issueCertificateForVaccinationRecord(record.getId());
+        CertificateVerificationResponse verification = certificateService
+                .verifyCertificate(issued.getVerificationToken());
+
+        assertEquals(5001L, issued.getIssuedVaccineBatchId());
+        assertEquals(2, issued.getIssuedDoseNumber());
+        assertEquals(Instant.parse("2026-09-01T09:30:00Z"), issued.getIssuedAdministrationTime());
+        assertEquals(2, verification.doseNumber());
+        assertEquals(Instant.parse("2026-09-01T09:30:00Z"), verification.administrationTime());
+        assertEquals(1, record.getDoseNumber());
+        assertEquals(ADMINISTERED_AT, record.getAdministrationTime());
     }
 
     @Test
@@ -87,7 +124,7 @@ class DigitalCertificateLifecycleIntegrationTests {
     }
 
     @Test
-    void lifecycleAllowsRevokedHistoryAndOneCurrentValidCertificate() {
+    void lifecycleAllowsSupersededHistoryAndOneCurrentValidCertificate() {
         VaccinationRecord record = persistRecord(1003L);
         DigitalCertificate first = certificateRepository.saveAndFlush(
                 certificate(record.getId(), "CERT-RECORD-1", "token-record-1")
@@ -98,7 +135,8 @@ class DigitalCertificateLifecycleIntegrationTests {
                 new ReissueDigitalCertificateRequest("Corrected certificate", 7001L)
         );
 
-        assertEquals(first.getId(), reissue.revokedCertificate().id());
+        assertEquals(first.getId(), reissue.supersededCertificate().id());
+        assertEquals(CertificateStatus.SUPERSEDED, reissue.supersededCertificate().status());
         assertEquals(2, certificateRepository.count());
         assertEquals(1, certificateRepository.findByVaccinationRecordIdOrderByIssuedAtAscIdAsc(record.getId())
                 .stream()
@@ -240,9 +278,11 @@ class DigitalCertificateLifecycleIntegrationTests {
         );
         entityManager.clear();
 
-        DigitalCertificate oldPersisted = certificateRepository.findById(result.revokedCertificate().id()).orElseThrow();
+        DigitalCertificate oldPersisted = certificateRepository.findById(
+                result.supersededCertificate().id()
+        ).orElseThrow();
         DigitalCertificate newPersisted = certificateRepository.findById(result.issuedCertificate().id()).orElseThrow();
-        assertEquals(CertificateStatus.REVOKED, oldPersisted.getStatus());
+        assertEquals(CertificateStatus.SUPERSEDED, oldPersisted.getStatus());
         assertEquals(newPersisted.getId(), oldPersisted.getSupersededByCertificateId());
         assertEquals(CertificateStatus.VALID, newPersisted.getStatus());
         assertEquals(oldPersisted.getId(), newPersisted.getReissuedFromCertificateId());
@@ -252,7 +292,9 @@ class DigitalCertificateLifecycleIntegrationTests {
         assertFalse(oldPersisted.getVerificationToken().equals(newPersisted.getVerificationToken()));
         assertEquals(oldReference, oldPersisted.getCertificateReference());
         assertEquals(oldToken, oldPersisted.getVerificationToken());
-        assertFalse(certificateService.verifyCertificate(oldToken).valid());
+        CertificateVerificationResponse oldVerification = certificateService.verifyCertificate(oldToken);
+        assertFalse(oldVerification.valid());
+        assertEquals(CertificateStatus.SUPERSEDED, oldVerification.status());
         assertTrue(certificateService.verifyCertificate(newPersisted.getVerificationToken()).valid());
 
         List<DigitalCertificateResponse> history = certificateService.getCertificateHistory(record.getId());
@@ -260,6 +302,54 @@ class DigitalCertificateLifecycleIntegrationTests {
                 history.stream().map(DigitalCertificateResponse::id).toList());
         assertEquals(appointmentId,
                 vaccinationRecordRepository.findById(record.getId()).orElseThrow().getAppointmentId());
+    }
+
+    @Test
+    void reissueCapturesEffectiveCorrectionsWithoutRewritingHistoricalIssue() {
+        VaccinationRecord record = persistRecord(1015L);
+        DigitalCertificate original = certificateService.issueCertificateForVaccinationRecord(record.getId());
+
+        correctionService.createCorrection(
+                record.getId(),
+                new CreateVaccinationCorrectionRequest("doseNumber", "2", "Correct dose", 7005L)
+        );
+        correctionService.createCorrection(
+                record.getId(),
+                new CreateVaccinationCorrectionRequest(
+                        "administrationTime",
+                        "2026-09-01T09:30:00Z",
+                        "Correct administration time",
+                        7005L
+                )
+        );
+
+        CertificateReissueResponse result = certificateService.reissueCertificate(
+                record.getId(),
+                new ReissueDigitalCertificateRequest("Corrected certificate data", 7005L)
+        );
+
+        assertEquals(1, result.supersededCertificate().issuedDoseNumber());
+        assertEquals(ADMINISTERED_AT, result.supersededCertificate().issuedAdministrationTime());
+        assertEquals(2, result.issuedCertificate().issuedDoseNumber());
+        assertEquals(
+                Instant.parse("2026-09-01T09:30:00Z"),
+                result.issuedCertificate().issuedAdministrationTime()
+        );
+
+        correctionService.createCorrection(
+                record.getId(),
+                new CreateVaccinationCorrectionRequest("doseNumber", "3", "Later correction", 7005L)
+        );
+        entityManager.flush();
+        entityManager.clear();
+
+        DigitalCertificate originalReloaded = certificateRepository.findById(original.getId()).orElseThrow();
+        DigitalCertificate replacementReloaded = certificateRepository
+                .findById(result.issuedCertificate().id())
+                .orElseThrow();
+        assertEquals(1, originalReloaded.getIssuedDoseNumber());
+        assertEquals(2, replacementReloaded.getIssuedDoseNumber());
+        assertEquals(1, vaccinationRecordRepository.findById(record.getId()).orElseThrow().getDoseNumber());
     }
 
     @Test
@@ -302,9 +392,13 @@ class DigitalCertificateLifecycleIntegrationTests {
         assertFalse(normalJson.contains("verificationToken"));
         assertFalse(normalJson.contains("lockVersion"));
         assertFalse(normalJson.contains(issued.getVerificationToken()));
+        assertFalse(normalJson.contains("authorizedNotes"));
+        assertFalse(normalJson.contains("issuedVaccineBatchId"));
         assertFalse(verificationJson.contains("verificationToken"));
         assertFalse(verificationJson.contains("lockVersion"));
         assertFalse(verificationJson.contains(issued.getVerificationToken()));
+        assertFalse(verificationJson.contains("authorizedNotes"));
+        assertFalse(verificationJson.contains("vaccineBatchId"));
     }
 
     private VaccinationRecord persistRecord(Long appointmentId) {

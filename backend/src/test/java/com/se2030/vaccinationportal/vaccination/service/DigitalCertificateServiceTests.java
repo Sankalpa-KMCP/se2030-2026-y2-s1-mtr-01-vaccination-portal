@@ -19,6 +19,7 @@ import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateVeri
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.model.EffectiveVaccinationRecordSnapshot;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
@@ -46,6 +47,9 @@ class DigitalCertificateServiceTests {
     @Mock
     private DigitalCertificateRepository certificateRepository;
 
+    @Mock
+    private EffectiveVaccinationRecordService effectiveRecordService;
+
     private DigitalCertificateService service;
 
     @BeforeEach
@@ -53,6 +57,7 @@ class DigitalCertificateServiceTests {
         service = new DigitalCertificateService(
                 vaccinationRecordRepository,
                 certificateRepository,
+                effectiveRecordService,
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }
@@ -60,9 +65,9 @@ class DigitalCertificateServiceTests {
     @Test
     void validVaccinationRecordIssuesValidCertificateWithRandomIdentifiers() {
         VaccinationRecord record = org.mockito.Mockito.mock(VaccinationRecord.class);
-        when(record.getId()).thenReturn(RECORD_ID);
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
         when(certificateRepository.existsByVaccinationRecordId(RECORD_ID)).thenReturn(false);
+        when(effectiveRecordService.resolve(record)).thenReturn(effectiveRecord());
         when(certificateRepository.saveAndFlush(any(DigitalCertificate.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -73,6 +78,9 @@ class DigitalCertificateServiceTests {
         assertEquals(NOW, issued.getIssuedAt());
         assertFalse(issued.getCertificateReference().isBlank());
         assertFalse(issued.getVerificationToken().isBlank());
+        assertEquals(56L, issued.getIssuedVaccineBatchId());
+        assertEquals(2, issued.getIssuedDoseNumber());
+        assertEquals(NOW.minusSeconds(3600), issued.getIssuedAdministrationTime());
 
         ArgumentCaptor<DigitalCertificate> certificateCaptor = ArgumentCaptor.forClass(DigitalCertificate.class);
         verify(certificateRepository).saveAndFlush(certificateCaptor.capture());
@@ -156,6 +164,8 @@ class DigitalCertificateServiceTests {
         assertEquals(RECORD_ID, response.vaccinationRecordId());
         assertEquals(NOW, response.issuedAt());
         assertEquals(CertificateStatus.VALID, response.status());
+        assertEquals(2, response.doseNumber());
+        assertEquals(NOW.minusSeconds(3600), response.administrationTime());
         assertTrue(response.valid());
         assertEquals(CertificateStatus.VALID, certificate.getStatus());
         verify(certificateRepository, never()).save(any(DigitalCertificate.class));
@@ -174,6 +184,22 @@ class DigitalCertificateServiceTests {
         assertFalse(response.valid());
         assertEquals(CertificateStatus.REVOKED, response.status());
         assertEquals(CertificateStatus.REVOKED, certificate.getStatus());
+        verify(certificateRepository, never()).save(any(DigitalCertificate.class));
+        verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
+    }
+
+    @Test
+    void supersededCertificateTokenStillResolvesAsInvalidWithoutMutation() {
+        DigitalCertificate certificate = certificate();
+        certificate.supersede(NOW.plusSeconds(1), 501L, "Reissued after correction");
+        when(certificateRepository.findByVerificationToken("secure-token"))
+                .thenReturn(Optional.of(certificate));
+
+        CertificateVerificationResponse response = service.verifyCertificate("secure-token");
+
+        assertFalse(response.valid());
+        assertEquals(CertificateStatus.SUPERSEDED, response.status());
+        assertEquals(2, response.doseNumber());
         verify(certificateRepository, never()).save(any(DigitalCertificate.class));
         verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
     }
@@ -204,6 +230,22 @@ class DigitalCertificateServiceTests {
     }
 
     private DigitalCertificate certificate() {
-        return new DigitalCertificate(RECORD_ID, "CERT-EXISTING", "secure-token", NOW);
+        return new DigitalCertificate(
+                RECORD_ID,
+                "CERT-EXISTING",
+                "secure-token",
+                NOW,
+                null,
+                56L,
+                2,
+                NOW.minusSeconds(3600)
+        );
+    }
+
+    private EffectiveVaccinationRecordSnapshot effectiveRecord() {
+        return new EffectiveVaccinationRecordSnapshot(
+                RECORD_ID, 1L, 2L, 3L, 4L, 5L, 56L, 2,
+                NOW.minusSeconds(3600), null, null, NOW.minusSeconds(3500)
+        );
     }
 }

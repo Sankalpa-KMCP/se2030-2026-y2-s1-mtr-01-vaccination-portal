@@ -5,5 +5,6 @@ package com.se2030.vaccinationportal.vaccination.model;
  */
 public enum CertificateStatus {
     VALID,
-    REVOKED
+    REVOKED,
+    SUPERSEDED
 }

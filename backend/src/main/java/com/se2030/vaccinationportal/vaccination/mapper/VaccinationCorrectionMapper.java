@@ -43,7 +43,8 @@ public final class VaccinationCorrectionMapper {
                 correction.getNewValue(),
                 correction.getReason(),
                 correction.getCorrectedBy(),
-                correction.getCorrectedAt()
+                correction.getCorrectedAt(),
+                correction.getStatus()
         );
     }
 }
