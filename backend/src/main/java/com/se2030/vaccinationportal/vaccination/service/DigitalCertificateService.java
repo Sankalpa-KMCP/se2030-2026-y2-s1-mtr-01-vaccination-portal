@@ -16,6 +16,7 @@ import com.se2030.vaccinationportal.vaccination.exception.NoValidDigitalCertific
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.mapper.DigitalCertificateMapper;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.model.EffectiveVaccinationRecordSnapshot;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
@@ -39,15 +40,18 @@ public class DigitalCertificateService {
 
     private final VaccinationRecordRepository vaccinationRecordRepository;
     private final DigitalCertificateRepository certificateRepository;
+    private final EffectiveVaccinationRecordService effectiveRecordService;
     private final Clock clock;
 
     public DigitalCertificateService(
             VaccinationRecordRepository vaccinationRecordRepository,
             DigitalCertificateRepository certificateRepository,
+            EffectiveVaccinationRecordService effectiveRecordService,
             Clock clock
     ) {
         this.vaccinationRecordRepository = vaccinationRecordRepository;
         this.certificateRepository = certificateRepository;
+        this.effectiveRecordService = effectiveRecordService;
         this.clock = clock;
     }
 
@@ -61,7 +65,8 @@ public class DigitalCertificateService {
             throw duplicateForRecord(vaccinationRecordId, null);
         }
 
-        DigitalCertificate certificate = createCertificate(vaccinationRecord.getId(), null);
+        EffectiveVaccinationRecordSnapshot effectiveRecord = effectiveRecordService.resolve(vaccinationRecord);
+        DigitalCertificate certificate = createCertificate(effectiveRecord, null);
 
         try {
             return certificateRepository.saveAndFlush(certificate);
@@ -86,6 +91,11 @@ public class DigitalCertificateService {
         if (certificate.getStatus() == CertificateStatus.REVOKED) {
             throw new CertificateAlreadyRevokedException(
                     "Digital certificate is already revoked with ID: " + certificateId
+            );
+        }
+        if (certificate.getStatus() == CertificateStatus.SUPERSEDED) {
+            throw new CertificateLifecycleConflictException(
+                    "A superseded digital certificate cannot be revoked: " + certificateId
             );
         }
 
@@ -124,14 +134,15 @@ public class DigitalCertificateService {
         }
 
         DigitalCertificate previousCertificate = validCertificates.get(0);
-        previousCertificate.revoke(
+        EffectiveVaccinationRecordSnapshot effectiveRecord = effectiveRecordService.resolve(record);
+        previousCertificate.supersede(
                 clock.instant(),
                 lifecycleRequest.actorId(),
                 lifecycleRequest.reason()
         );
         certificateRepository.saveAndFlush(previousCertificate);
 
-        DigitalCertificate replacement = createCertificate(record.getId(), previousCertificate.getId());
+        DigitalCertificate replacement = createCertificate(effectiveRecord, previousCertificate.getId());
         try {
             replacement = certificateRepository.saveAndFlush(replacement);
             previousCertificate.markSupersededBy(replacement.getId());
@@ -212,13 +223,19 @@ public class DigitalCertificateService {
         throw new IllegalStateException("Unable to generate a unique certificate verification token");
     }
 
-    private DigitalCertificate createCertificate(Long vaccinationRecordId, Long reissuedFromCertificateId) {
+    private DigitalCertificate createCertificate(
+            EffectiveVaccinationRecordSnapshot effectiveRecord,
+            Long reissuedFromCertificateId
+    ) {
         return new DigitalCertificate(
-                vaccinationRecordId,
+                effectiveRecord.vaccinationRecordId(),
                 generateUniqueCertificateReference(),
                 generateUniqueVerificationToken(),
                 clock.instant(),
-                reissuedFromCertificateId
+                reissuedFromCertificateId,
+                effectiveRecord.vaccineBatchId(),
+                effectiveRecord.doseNumber(),
+                effectiveRecord.administrationTime()
         );
     }
 

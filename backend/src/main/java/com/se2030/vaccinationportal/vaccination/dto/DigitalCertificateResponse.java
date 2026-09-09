@@ -12,10 +12,15 @@ public record DigitalCertificateResponse(
         String certificateReference,
         Instant issuedAt,
         CertificateStatus status,
+        Integer issuedDoseNumber,
+        Instant issuedAdministrationTime,
         Instant revokedAt,
         Long revokedBy,
         String revocationReason,
         Long reissuedFromCertificateId,
-        Long supersededByCertificateId
+        Long supersededByCertificateId,
+        Instant supersededAt,
+        Long supersededBy,
+        String supersessionReason
 ) {
 }

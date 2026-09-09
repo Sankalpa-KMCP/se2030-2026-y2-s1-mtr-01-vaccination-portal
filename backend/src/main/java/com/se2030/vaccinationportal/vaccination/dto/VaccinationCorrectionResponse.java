@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.vaccination.dto;
 
+import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus;
 import java.time.Instant;
 
 /** Safe API representation of an append-only vaccination correction. */
@@ -11,6 +12,7 @@ public record VaccinationCorrectionResponse(
         String newValue,
         String reason,
         Long correctedBy,
-        Instant correctedAt
+        Instant correctedAt,
+        VaccinationCorrectionStatus status
 ) {
 }

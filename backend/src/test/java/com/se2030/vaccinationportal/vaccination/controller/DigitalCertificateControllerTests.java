@@ -64,6 +64,8 @@ class DigitalCertificateControllerTests {
                 .andExpect(jsonPath("$.certificateReference", is("CERT-EXISTING")))
                 .andExpect(jsonPath("$.vaccinationRecordId", is(101)))
                 .andExpect(jsonPath("$.status", is("VALID")))
+                .andExpect(jsonPath("$.doseNumber", is(2)))
+                .andExpect(jsonPath("$.administrationTime", is(ISSUED_AT.toString())))
                 .andExpect(jsonPath("$.valid", is(true)))
                 .andExpect(jsonPath("$.verificationToken").doesNotExist())
                 .andExpect(jsonPath("$.lockVersion").doesNotExist());
@@ -208,7 +210,7 @@ class DigitalCertificateControllerTests {
                 101L, "CERT-OLD", "old-token", ISSUED_AT
         );
         ReflectionTestUtils.setField(oldCertificate, "id", 201L);
-        oldCertificate.revoke(ISSUED_AT.plusSeconds(60), 501L, "Correction approved");
+        oldCertificate.supersede(ISSUED_AT.plusSeconds(60), 501L, "Correction approved");
         DigitalCertificate newCertificate = new DigitalCertificate(
                 101L, "CERT-NEW", "new-token", ISSUED_AT.plusSeconds(60), 201L
         );
@@ -229,9 +231,9 @@ class DigitalCertificateControllerTests {
                                 {"reason":"Correction approved","reissuedBy":501}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.revokedCertificate.id", is(201)))
-                .andExpect(jsonPath("$.revokedCertificate.status", is("REVOKED")))
-                .andExpect(jsonPath("$.revokedCertificate.supersededByCertificateId", is(202)))
+                .andExpect(jsonPath("$.supersededCertificate.id", is(201)))
+                .andExpect(jsonPath("$.supersededCertificate.status", is("SUPERSEDED")))
+                .andExpect(jsonPath("$.supersededCertificate.supersededByCertificateId", is(202)))
                 .andExpect(jsonPath("$.issuedCertificate.id", is(202)))
                 .andExpect(jsonPath("$.issuedCertificate.status", is("VALID")))
                 .andExpect(jsonPath("$.issuedCertificate.reissuedFromCertificateId", is(201)))
@@ -266,6 +268,8 @@ class DigitalCertificateControllerTests {
                 101L,
                 ISSUED_AT,
                 status,
+                2,
+                ISSUED_AT,
                 valid
         );
     }

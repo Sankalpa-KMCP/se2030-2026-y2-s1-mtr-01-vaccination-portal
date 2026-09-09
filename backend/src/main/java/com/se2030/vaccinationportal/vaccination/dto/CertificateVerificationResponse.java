@@ -11,6 +11,8 @@ public record CertificateVerificationResponse(
         Long vaccinationRecordId,
         Instant issuedAt,
         CertificateStatus status,
+        Integer doseNumber,
+        Instant administrationTime,
         boolean valid
 ) {
 }

@@ -15,11 +15,13 @@ import com.se2030.vaccinationportal.vaccination.dto.DigitalCertificateResponse;
 import com.se2030.vaccinationportal.vaccination.dto.ReissueDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.dto.RevokeDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.exception.CertificateAlreadyRevokedException;
+import com.se2030.vaccinationportal.vaccination.exception.CertificateLifecycleConflictException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateLifecycleException;
 import com.se2030.vaccinationportal.vaccination.exception.NoValidDigitalCertificateException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.model.EffectiveVaccinationRecordSnapshot;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
@@ -47,6 +49,9 @@ class DigitalCertificateLifecycleServiceTests {
     @Mock
     private DigitalCertificateRepository certificateRepository;
 
+    @Mock
+    private EffectiveVaccinationRecordService effectiveRecordService;
+
     private DigitalCertificateService service;
 
     @BeforeEach
@@ -54,6 +59,7 @@ class DigitalCertificateLifecycleServiceTests {
         service = new DigitalCertificateService(
                 vaccinationRecordRepository,
                 certificateRepository,
+                effectiveRecordService,
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }
@@ -97,6 +103,22 @@ class DigitalCertificateLifecycleServiceTests {
     }
 
     @Test
+    void supersededCertificateCannotBeRevokedAsAStandaloneAction() {
+        DigitalCertificate certificate = certificate(201L, "CERT-OLD", "old-token");
+        certificate.supersede(NOW.minusSeconds(60), 500L, "Earlier reissue");
+        when(certificateRepository.findByIdForUpdate(201L)).thenReturn(Optional.of(certificate));
+
+        assertThrows(
+                CertificateLifecycleConflictException.class,
+                () -> service.revokeCertificate(
+                        201L,
+                        new RevokeDigitalCertificateRequest("Standalone revocation", 501L)
+                )
+        );
+        verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
+    }
+
+    @Test
     void blankReasonAndInvalidActorAreRejectedBeforeLocking() {
         assertThrows(
                 InvalidCertificateLifecycleException.class,
@@ -110,7 +132,7 @@ class DigitalCertificateLifecycleServiceTests {
     }
 
     @Test
-    void reissueRevokesCurrentCertificateAndCreatesLinkedReplacement() {
+    void reissueSupersedesCurrentCertificateAndCreatesLinkedReplacement() {
         VaccinationRecord record = record();
         DigitalCertificate oldCertificate = certificate(201L, "CERT-OLD", "old-token");
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
@@ -118,6 +140,7 @@ class DigitalCertificateLifecycleServiceTests {
                 RECORD_ID,
                 CertificateStatus.VALID
         )).thenReturn(List.of(oldCertificate));
+        when(effectiveRecordService.resolve(record)).thenReturn(effectiveRecord(2, NOW.minusSeconds(1800)));
         when(certificateRepository.saveAndFlush(any(DigitalCertificate.class))).thenAnswer(invocation -> {
             DigitalCertificate saved = invocation.getArgument(0);
             if (saved.getId() == null) {
@@ -131,13 +154,19 @@ class DigitalCertificateLifecycleServiceTests {
                 new ReissueDigitalCertificateRequest("Corrected certificate data", 501L)
         );
 
-        assertEquals(201L, result.revokedCertificate().id());
-        assertEquals(CertificateStatus.REVOKED, result.revokedCertificate().status());
-        assertEquals(202L, result.revokedCertificate().supersededByCertificateId());
+        assertEquals(201L, result.supersededCertificate().id());
+        assertEquals(CertificateStatus.SUPERSEDED, result.supersededCertificate().status());
+        assertEquals(202L, result.supersededCertificate().supersededByCertificateId());
+        assertNull(result.supersededCertificate().revokedAt());
+        assertEquals(NOW, result.supersededCertificate().supersededAt());
+        assertEquals(501L, result.supersededCertificate().supersededBy());
+        assertEquals("Corrected certificate data", result.supersededCertificate().supersessionReason());
         assertEquals(202L, result.issuedCertificate().id());
         assertEquals(CertificateStatus.VALID, result.issuedCertificate().status());
         assertEquals(201L, result.issuedCertificate().reissuedFromCertificateId());
-        assertFalse(result.revokedCertificate().certificateReference()
+        assertEquals(2, result.issuedCertificate().issuedDoseNumber());
+        assertEquals(NOW.minusSeconds(1800), result.issuedCertificate().issuedAdministrationTime());
+        assertFalse(result.supersededCertificate().certificateReference()
                 .equals(result.issuedCertificate().certificateReference()));
         assertEquals(RECORD_ID, oldCertificate.getVaccinationRecordId());
     }
@@ -192,7 +221,7 @@ class DigitalCertificateLifecycleServiceTests {
     @Test
     void historyIsMappedInRepositoryOrderWithoutSensitiveFields() {
         DigitalCertificate first = certificate(201L, "CERT-OLD", "old-token");
-        first.revoke(NOW.minusSeconds(30), 501L, "Reissued");
+        first.supersede(NOW.minusSeconds(30), 501L, "Reissued");
         DigitalCertificate second = new DigitalCertificate(
                 RECORD_ID,
                 "CERT-NEW",
@@ -208,7 +237,7 @@ class DigitalCertificateLifecycleServiceTests {
         List<DigitalCertificateResponse> history = service.getCertificateHistory(RECORD_ID);
 
         assertEquals(List.of(201L, 202L), history.stream().map(DigitalCertificateResponse::id).toList());
-        assertEquals(CertificateStatus.REVOKED, history.get(0).status());
+        assertEquals(CertificateStatus.SUPERSEDED, history.get(0).status());
         assertEquals(CertificateStatus.VALID, history.get(1).status());
     }
 
@@ -224,5 +253,12 @@ class DigitalCertificateLifecycleServiceTests {
         );
         ReflectionTestUtils.setField(record, "id", RECORD_ID);
         return record;
+    }
+
+    private EffectiveVaccinationRecordSnapshot effectiveRecord(Integer dose, Instant administrationTime) {
+        return new EffectiveVaccinationRecordSnapshot(
+                RECORD_ID, 1L, 2L, 3L, 4L, 5L, 6L, dose,
+                administrationTime, null, null, NOW
+        );
     }
 }

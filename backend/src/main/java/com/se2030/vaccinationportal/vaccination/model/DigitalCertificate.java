@@ -67,6 +67,18 @@ public class DigitalCertificate {
     @Column(name = "verification_token", nullable = false, updatable = false, length = 128)
     private String verificationToken;
 
+    /** Batch identity captured at issue time; vaccine-name resolution awaits MF-04. */
+    @Positive(message = "Issued vaccine batch ID must be positive")
+    @Column(name = "issued_vaccine_batch_id", updatable = false)
+    private Long issuedVaccineBatchId;
+
+    @Positive(message = "Issued dose number must be positive")
+    @Column(name = "issued_dose_number", updatable = false)
+    private Integer issuedDoseNumber;
+
+    @Column(name = "issued_administration_time", updatable = false)
+    private Instant issuedAdministrationTime;
+
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
@@ -86,6 +98,17 @@ public class DigitalCertificate {
     @Column(name = "superseded_by_certificate_id")
     private Long supersededByCertificateId;
 
+    @Column(name = "superseded_at")
+    private Instant supersededAt;
+
+    @Positive(message = "Superseded-by actor ID must be positive")
+    @Column(name = "superseded_by")
+    private Long supersededBy;
+
+    @Size(max = 1000, message = "Supersession reason must not exceed 1000 characters")
+    @Column(name = "supersession_reason", length = 1000)
+    private String supersessionReason;
+
     @Version
     @Column(name = "lock_version", nullable = false)
     private Long lockVersion = 0L;
@@ -99,7 +122,7 @@ public class DigitalCertificate {
             String verificationToken,
             Instant issuedAt
     ) {
-        this(vaccinationRecordId, certificateReference, verificationToken, issuedAt, null);
+        this(vaccinationRecordId, certificateReference, verificationToken, issuedAt, null, null, null, null);
     }
 
     public DigitalCertificate(
@@ -108,6 +131,28 @@ public class DigitalCertificate {
             String verificationToken,
             Instant issuedAt,
             Long reissuedFromCertificateId
+    ) {
+        this(
+                vaccinationRecordId,
+                certificateReference,
+                verificationToken,
+                issuedAt,
+                reissuedFromCertificateId,
+                null,
+                null,
+                null
+        );
+    }
+
+    public DigitalCertificate(
+            Long vaccinationRecordId,
+            String certificateReference,
+            String verificationToken,
+            Instant issuedAt,
+            Long reissuedFromCertificateId,
+            Long issuedVaccineBatchId,
+            Integer issuedDoseNumber,
+            Instant issuedAdministrationTime
     ) {
         if (vaccinationRecordId == null) {
             throw new IllegalArgumentException("Vaccination record ID is required");
@@ -121,6 +166,15 @@ public class DigitalCertificate {
             throw new IllegalArgumentException("Reissued-from certificate ID must be positive");
         }
         this.reissuedFromCertificateId = reissuedFromCertificateId;
+        if (issuedVaccineBatchId != null && issuedVaccineBatchId <= 0) {
+            throw new IllegalArgumentException("Issued vaccine batch ID must be positive");
+        }
+        if (issuedDoseNumber != null && issuedDoseNumber <= 0) {
+            throw new IllegalArgumentException("Issued dose number must be positive");
+        }
+        this.issuedVaccineBatchId = issuedVaccineBatchId;
+        this.issuedDoseNumber = issuedDoseNumber;
+        this.issuedAdministrationTime = issuedAdministrationTime;
     }
 
     @PrePersist
@@ -160,9 +214,25 @@ public class DigitalCertificate {
         this.revocationReason = requireText(revocationReason, "Revocation reason", 1000);
     }
 
+    public void supersede(Instant supersededAt, Long supersededBy, String reason) {
+        if (status != CertificateStatus.VALID) {
+            throw new IllegalStateException("Only a valid certificate can be superseded");
+        }
+        if (supersededAt == null) {
+            throw new IllegalArgumentException("Supersession timestamp is required");
+        }
+        if (supersededBy == null || supersededBy <= 0) {
+            throw new IllegalArgumentException("Superseded-by actor ID must be positive");
+        }
+        this.status = CertificateStatus.SUPERSEDED;
+        this.supersededAt = supersededAt;
+        this.supersededBy = supersededBy;
+        this.supersessionReason = requireText(reason, "Supersession reason", 1000);
+    }
+
     public void markSupersededBy(Long certificateId) {
-        if (status != CertificateStatus.REVOKED) {
-            throw new IllegalStateException("Only a revoked certificate can be superseded");
+        if (status != CertificateStatus.SUPERSEDED) {
+            throw new IllegalStateException("Only a superseded certificate can link its replacement");
         }
         if (certificateId == null || certificateId <= 0) {
             throw new IllegalArgumentException("Superseding certificate ID must be positive");
@@ -200,6 +270,18 @@ public class DigitalCertificate {
         return verificationToken;
     }
 
+    public Long getIssuedVaccineBatchId() {
+        return issuedVaccineBatchId;
+    }
+
+    public Integer getIssuedDoseNumber() {
+        return issuedDoseNumber;
+    }
+
+    public Instant getIssuedAdministrationTime() {
+        return issuedAdministrationTime;
+    }
+
     public Instant getRevokedAt() {
         return revokedAt;
     }
@@ -218,6 +300,18 @@ public class DigitalCertificate {
 
     public Long getSupersededByCertificateId() {
         return supersededByCertificateId;
+    }
+
+    public Instant getSupersededAt() {
+        return supersededAt;
+    }
+
+    public Long getSupersededBy() {
+        return supersededBy;
+    }
+
+    public String getSupersessionReason() {
+        return supersessionReason;
     }
 
     public Long getLockVersion() {

@@ -23,11 +23,16 @@ public final class DigitalCertificateMapper {
                 certificate.getCertificateReference(),
                 certificate.getIssuedAt(),
                 certificate.getStatus(),
+                certificate.getIssuedDoseNumber(),
+                certificate.getIssuedAdministrationTime(),
                 certificate.getRevokedAt(),
                 certificate.getRevokedBy(),
                 certificate.getRevocationReason(),
                 certificate.getReissuedFromCertificateId(),
-                certificate.getSupersededByCertificateId()
+                certificate.getSupersededByCertificateId(),
+                certificate.getSupersededAt(),
+                certificate.getSupersededBy(),
+                certificate.getSupersessionReason()
         );
     }
 
@@ -40,6 +45,8 @@ public final class DigitalCertificateMapper {
                 certificate.getVaccinationRecordId(),
                 certificate.getIssuedAt(),
                 certificate.getStatus(),
+                certificate.getIssuedDoseNumber(),
+                certificate.getIssuedAdministrationTime(),
                 certificate.getStatus() == CertificateStatus.VALID
         );
     }
