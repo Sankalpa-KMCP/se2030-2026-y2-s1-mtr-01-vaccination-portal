@@ -75,6 +75,14 @@ public class DigitalCertificateService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasCurrentValidCertificate(Long vaccinationRecordId) {
+        return certificateRepository.existsByVaccinationRecordIdAndStatus(
+                vaccinationRecordId,
+                CertificateStatus.VALID
+        );
+    }
+
     public DigitalCertificate revokeCertificate(
             Long certificateId,
             RevokeDigitalCertificateRequest request
