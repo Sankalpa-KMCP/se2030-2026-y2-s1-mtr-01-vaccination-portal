@@ -4,17 +4,25 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.se2030.vaccinationportal.vaccination.dto.CertificateVerificationResponse;
+import com.se2030.vaccinationportal.vaccination.dto.CertificateReissueResponse;
+import com.se2030.vaccinationportal.vaccination.dto.DigitalCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.dto.ReissueDigitalCertificateRequest;
+import com.se2030.vaccinationportal.vaccination.dto.RevokeDigitalCertificateRequest;
+import com.se2030.vaccinationportal.vaccination.exception.CertificateAlreadyRevokedException;
 import com.se2030.vaccinationportal.vaccination.exception.CertificateVerificationNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.DigitalCertificateNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateVerificationTokenException;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.mapper.DigitalCertificateMapper;
 import com.se2030.vaccinationportal.vaccination.service.DigitalCertificateService;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.http.MediaType;
 
 @ExtendWith(MockitoExtension.class)
 class DigitalCertificateControllerTests {
@@ -142,6 +151,110 @@ class DigitalCertificateControllerTests {
         mockMvc.perform(get("/api/v1/vaccination/certificates/reference/CERT-UNKNOWN"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)));
+    }
+
+    @Test
+    void revokeCertificateReturnsSafeLifecycleResponse() throws Exception {
+        certificate.revoke(ISSUED_AT.plusSeconds(60), 501L, "Incorrect certificate details");
+        when(certificateService.revokeCertificate(
+                201L,
+                new RevokeDigitalCertificateRequest("Incorrect certificate details", 501L)
+        )).thenReturn(certificate);
+
+        mockMvc.perform(post("/api/v1/vaccination/certificates/201/revoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"reason":"Incorrect certificate details","revokedBy":501}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("REVOKED")))
+                .andExpect(jsonPath("$.revokedBy", is(501)))
+                .andExpect(jsonPath("$.revocationReason", is("Incorrect certificate details")))
+                .andExpect(jsonPath("$.verificationToken").doesNotExist())
+                .andExpect(jsonPath("$.lockVersion").doesNotExist());
+    }
+
+    @Test
+    void alreadyRevokedCertificateReturnsConflict() throws Exception {
+        when(certificateService.revokeCertificate(
+                201L,
+                new RevokeDigitalCertificateRequest("Again", 501L)
+        )).thenThrow(new CertificateAlreadyRevokedException("Digital certificate is already revoked"));
+
+        mockMvc.perform(post("/api/v1/vaccination/certificates/201/revoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"reason":"Again","revokedBy":501}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)));
+    }
+
+    @Test
+    void blankRevokeReasonReturnsValidationError() throws Exception {
+        mockMvc.perform(post("/api/v1/vaccination/certificates/201/revoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"reason":" ","revokedBy":501}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.fieldErrors[0].field", is("reason")));
+    }
+
+    @Test
+    void reissueReturnsBothSafeLinkedCertificates() throws Exception {
+        DigitalCertificate oldCertificate = new DigitalCertificate(
+                101L, "CERT-OLD", "old-token", ISSUED_AT
+        );
+        ReflectionTestUtils.setField(oldCertificate, "id", 201L);
+        oldCertificate.revoke(ISSUED_AT.plusSeconds(60), 501L, "Correction approved");
+        DigitalCertificate newCertificate = new DigitalCertificate(
+                101L, "CERT-NEW", "new-token", ISSUED_AT.plusSeconds(60), 201L
+        );
+        ReflectionTestUtils.setField(newCertificate, "id", 202L);
+        oldCertificate.markSupersededBy(202L);
+        CertificateReissueResponse response = new CertificateReissueResponse(
+                DigitalCertificateMapper.toResponse(oldCertificate),
+                DigitalCertificateMapper.toResponse(newCertificate)
+        );
+        when(certificateService.reissueCertificate(
+                101L,
+                new ReissueDigitalCertificateRequest("Correction approved", 501L)
+        )).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/vaccination/records/101/certificates/reissue")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"reason":"Correction approved","reissuedBy":501}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.revokedCertificate.id", is(201)))
+                .andExpect(jsonPath("$.revokedCertificate.status", is("REVOKED")))
+                .andExpect(jsonPath("$.revokedCertificate.supersededByCertificateId", is(202)))
+                .andExpect(jsonPath("$.issuedCertificate.id", is(202)))
+                .andExpect(jsonPath("$.issuedCertificate.status", is("VALID")))
+                .andExpect(jsonPath("$.issuedCertificate.reissuedFromCertificateId", is(201)))
+                .andExpect(jsonPath("$..verificationToken").doesNotExist())
+                .andExpect(jsonPath("$..lockVersion").doesNotExist());
+    }
+
+    @Test
+    void historyReturnsDeterministicSafeResponses() throws Exception {
+        DigitalCertificateResponse first = DigitalCertificateMapper.toResponse(certificate);
+        DigitalCertificate secondEntity = new DigitalCertificate(
+                101L, "CERT-SECOND", "second-token", ISSUED_AT.plusSeconds(60), 201L
+        );
+        ReflectionTestUtils.setField(secondEntity, "id", 202L);
+        DigitalCertificateResponse second = DigitalCertificateMapper.toResponse(secondEntity);
+        when(certificateService.getCertificateHistory(101L)).thenReturn(List.of(first, second));
+
+        mockMvc.perform(get("/api/v1/vaccination/records/101/certificates"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id", is(201)))
+                .andExpect(jsonPath("$[1].id", is(202)))
+                .andExpect(jsonPath("$..verificationToken").doesNotExist())
+                .andExpect(jsonPath("$..lockVersion").doesNotExist());
     }
 
     private CertificateVerificationResponse verificationResponse(

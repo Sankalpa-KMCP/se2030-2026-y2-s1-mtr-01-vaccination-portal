@@ -3,13 +3,17 @@ package com.se2030.vaccinationportal.vaccination.controller;
 import com.se2030.vaccinationportal.vaccination.dto.VaccinationApiErrorResponse;
 import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
 import com.se2030.vaccinationportal.vaccination.exception.CertificateVerificationNotFoundException;
+import com.se2030.vaccinationportal.vaccination.exception.CertificateAlreadyRevokedException;
+import com.se2030.vaccinationportal.vaccination.exception.CertificateLifecycleConflictException;
 import com.se2030.vaccinationportal.vaccination.exception.DigitalCertificateNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateDigitalCertificateException;
 import com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateVerificationTokenException;
+import com.se2030.vaccinationportal.vaccination.exception.InvalidCertificateLifecycleException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationCorrectionException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException;
+import com.se2030.vaccinationportal.vaccination.exception.NoValidDigitalCertificateException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
@@ -152,6 +156,26 @@ public class VaccinationExceptionHandler {
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidCertificateLifecycleException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleInvalidCertificateLifecycle(
+            InvalidCertificateLifecycleException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler({
+            CertificateAlreadyRevokedException.class,
+            NoValidDigitalCertificateException.class,
+            CertificateLifecycleConflictException.class
+    })
+    public ResponseEntity<VaccinationApiErrorResponse> handleCertificateLifecycleConflict(
+            RuntimeException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler(InvalidVaccinationCorrectionException.class)
