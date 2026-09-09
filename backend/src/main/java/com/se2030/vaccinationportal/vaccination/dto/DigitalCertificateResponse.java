@@ -11,6 +11,11 @@ public record DigitalCertificateResponse(
         Long vaccinationRecordId,
         String certificateReference,
         Instant issuedAt,
-        CertificateStatus status
+        CertificateStatus status,
+        Instant revokedAt,
+        Long revokedBy,
+        String revocationReason,
+        Long reissuedFromCertificateId,
+        Long supersededByCertificateId
 ) {
 }

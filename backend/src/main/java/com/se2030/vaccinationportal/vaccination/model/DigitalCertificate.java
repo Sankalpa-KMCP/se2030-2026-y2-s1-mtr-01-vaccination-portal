@@ -7,12 +7,14 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
@@ -22,11 +24,11 @@ import java.time.Instant;
 @Entity
 @Table(
         name = "digital_certificates",
+        indexes = @Index(
+                name = "idx_digital_certificate_record_issued",
+                columnList = "vaccination_record_id, issued_at, id"
+        ),
         uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_digital_certificate_record",
-                        columnNames = "vaccination_record_id"
-                ),
                 @UniqueConstraint(
                         name = "uk_digital_certificate_reference",
                         columnNames = "certificate_reference"
@@ -65,6 +67,25 @@ public class DigitalCertificate {
     @Column(name = "verification_token", nullable = false, updatable = false, length = 128)
     private String verificationToken;
 
+    @Column(name = "revoked_at")
+    private Instant revokedAt;
+
+    @Positive(message = "Revoked-by ID must be positive")
+    @Column(name = "revoked_by")
+    private Long revokedBy;
+
+    @Size(max = 1000, message = "Revocation reason must not exceed 1000 characters")
+    @Column(name = "revocation_reason", length = 1000)
+    private String revocationReason;
+
+    @Positive(message = "Reissued-from certificate ID must be positive")
+    @Column(name = "reissued_from_certificate_id", updatable = false)
+    private Long reissuedFromCertificateId;
+
+    @Positive(message = "Superseded-by certificate ID must be positive")
+    @Column(name = "superseded_by_certificate_id")
+    private Long supersededByCertificateId;
+
     @Version
     @Column(name = "lock_version", nullable = false)
     private Long lockVersion = 0L;
@@ -78,6 +99,16 @@ public class DigitalCertificate {
             String verificationToken,
             Instant issuedAt
     ) {
+        this(vaccinationRecordId, certificateReference, verificationToken, issuedAt, null);
+    }
+
+    public DigitalCertificate(
+            Long vaccinationRecordId,
+            String certificateReference,
+            String verificationToken,
+            Instant issuedAt,
+            Long reissuedFromCertificateId
+    ) {
         if (vaccinationRecordId == null) {
             throw new IllegalArgumentException("Vaccination record ID is required");
         }
@@ -86,6 +117,10 @@ public class DigitalCertificate {
         this.verificationToken = requireText(verificationToken, "Verification token", 128);
         this.issuedAt = issuedAt;
         this.status = CertificateStatus.VALID;
+        if (reissuedFromCertificateId != null && reissuedFromCertificateId <= 0) {
+            throw new IllegalArgumentException("Reissued-from certificate ID must be positive");
+        }
+        this.reissuedFromCertificateId = reissuedFromCertificateId;
     }
 
     @PrePersist
@@ -107,6 +142,38 @@ public class DigitalCertificate {
             throw new IllegalArgumentException(name + " must not exceed " + maxLength + " characters");
         }
         return normalized;
+    }
+
+    public void revoke(Instant revokedAt, Long revokedBy, String revocationReason) {
+        if (status != CertificateStatus.VALID) {
+            throw new IllegalStateException("Only a valid certificate can be revoked");
+        }
+        if (revokedAt == null) {
+            throw new IllegalArgumentException("Revocation timestamp is required");
+        }
+        if (revokedBy == null || revokedBy <= 0) {
+            throw new IllegalArgumentException("Revoked-by ID must be positive");
+        }
+        this.status = CertificateStatus.REVOKED;
+        this.revokedAt = revokedAt;
+        this.revokedBy = revokedBy;
+        this.revocationReason = requireText(revocationReason, "Revocation reason", 1000);
+    }
+
+    public void markSupersededBy(Long certificateId) {
+        if (status != CertificateStatus.REVOKED) {
+            throw new IllegalStateException("Only a revoked certificate can be superseded");
+        }
+        if (certificateId == null || certificateId <= 0) {
+            throw new IllegalArgumentException("Superseding certificate ID must be positive");
+        }
+        if (supersededByCertificateId != null) {
+            throw new IllegalStateException("Certificate has already been superseded");
+        }
+        if (id != null && id.equals(certificateId)) {
+            throw new IllegalArgumentException("Certificate cannot supersede itself");
+        }
+        supersededByCertificateId = certificateId;
     }
 
     public Long getId() {
@@ -131,6 +198,26 @@ public class DigitalCertificate {
 
     public String getVerificationToken() {
         return verificationToken;
+    }
+
+    public Instant getRevokedAt() {
+        return revokedAt;
+    }
+
+    public Long getRevokedBy() {
+        return revokedBy;
+    }
+
+    public String getRevocationReason() {
+        return revocationReason;
+    }
+
+    public Long getReissuedFromCertificateId() {
+        return reissuedFromCertificateId;
+    }
+
+    public Long getSupersededByCertificateId() {
+        return supersededByCertificateId;
     }
 
     public Long getLockVersion() {

@@ -22,7 +22,12 @@ public final class DigitalCertificateMapper {
                 certificate.getVaccinationRecordId(),
                 certificate.getCertificateReference(),
                 certificate.getIssuedAt(),
-                certificate.getStatus()
+                certificate.getStatus(),
+                certificate.getRevokedAt(),
+                certificate.getRevokedBy(),
+                certificate.getRevocationReason(),
+                certificate.getReissuedFromCertificateId(),
+                certificate.getSupersededByCertificateId()
         );
     }
 
