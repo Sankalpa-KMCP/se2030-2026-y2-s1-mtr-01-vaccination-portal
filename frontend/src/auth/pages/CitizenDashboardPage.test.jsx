@@ -65,6 +65,7 @@ describe('CitizenDashboardPage', () => {
     expected.forEach(([name, path]) => {
       expect(within(shortcuts).getByRole('link', { name: new RegExp(name, 'i') }).getAttribute('href')).toBe(path);
     });
+    expect(within(shortcuts).getAllByRole('link')).toHaveLength(6);
     expect(screen.queryByText(/coming soon/i)).toBeNull();
     expect(screen.queryByRole('link', { name: /vaccination history|certificate|notification|edit profile/i })).toBeNull();
   });

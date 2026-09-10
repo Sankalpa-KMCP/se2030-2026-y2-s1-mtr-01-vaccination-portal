@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import AppointmentCard from '../components/AppointmentCard';
 import RescheduleDialog from '../components/RescheduleDialog';
 import { getMyAppointments, cancelAppointment } from '../api/appointmentApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
 
 /**
  * Citizen My Appointments Page (US-03).
@@ -84,27 +89,49 @@ export default function MyAppointmentsPage() {
 
   if (!citizenId) {
     return (
-      <div className="alert alert-warning border-0 shadow-sm" role="alert">
-        <h4 className="h6 alert-heading fw-bold mb-1">Authentication Required</h4>
-        <p className="mb-0">Unable to load appointments. Please sign in again.</p>
+      <div className="my-appointments-page citizen-page citizen-appointments-page">
+        <CitizenPageHeader
+          eyebrow="Appointment Services"
+          title="My Appointments"
+          subtitle="View and manage your recorded vaccination appointments."
+          backTo="/app/citizen"
+          backLabel="Back to Dashboard"
+          actions={<Link to="/app/appointments/book">Book Appointment</Link>}
+        />
+        <CitizenStatePanel title="Authentication required" tone="warning">
+          <p>Unable to load appointments. Please sign in again.</p>
+        </CitizenStatePanel>
       </div>
     );
   }
 
   return (
-    <div className="my-appointments-page">
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h1 className="h3 fw-bold text-primary mb-1">My Appointments</h1>
-          <p className="text-muted mb-0">View, track, reschedule, or cancel your vaccination appointments.</p>
-        </div>
-      </div>
+    <div className="my-appointments-page citizen-page citizen-appointments-page">
+      <CitizenPageHeader
+        eyebrow="Appointment Services"
+        title="My Appointments"
+        subtitle="View and manage your recorded vaccination appointments."
+        backTo="/app/citizen"
+        backLabel="Back to Dashboard"
+        actions={appointments?.length > 0 ? <Link to="/app/appointments/book">Book Appointment</Link> : undefined}
+      />
 
-      {feedback && (
-        <div
-          className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm mb-4`}
-          role="alert"
-        >
+      {feedback?.type === 'danger' ? (
+        <CitizenErrorState
+          error={feedback.message}
+          title={feedback.title}
+          actions={(
+            <button className="citizen-action citizen-action--secondary" type="button" onClick={() => setFeedback(null)}>
+              Dismiss
+            </button>
+          )}
+        />
+      ) : feedback ? (
+        <div className="citizen-page__notice">
+          <div
+            className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
+            role="alert"
+          >
           <h4 className="h6 alert-heading fw-bold mb-1">{feedback.title}</h4>
           <p className="mb-0">{feedback.message}</p>
           <button
@@ -113,34 +140,36 @@ export default function MyAppointmentsPage() {
             aria-label="Close"
             onClick={() => setFeedback(null)}
           ></button>
+          </div>
         </div>
-      )}
+      ) : null}
 
       {loading && (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="text-muted mt-2 fw-semibold">Fetching your appointments...</p>
-        </div>
+        <CitizenStatePanel title="Fetching your appointments..." tone="loading" status>
+          <p>Checking your recorded bookings and their current statuses.</p>
+        </CitizenStatePanel>
       )}
 
-      {!loading && appointments !== null && (
+      {!loading && appointments !== null && feedback?.type !== 'danger' && (
         <div className="appointments-list-section">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h3 className="h5 fw-bold mb-0">Your Appointment History</h3>
-            <span className="badge bg-secondary">{appointments.length} Total</span>
-          </div>
+          <header className="citizen-section__header mb-3">
+            <div>
+              <p className="citizen-ui-eyebrow">Recorded bookings</p>
+              <h2>Your Appointment History</h2>
+              <p className="citizen-section__description">Active and completed records remain together, with their recorded status shown on each appointment.</p>
+            </div>
+            <CitizenStatusBadge tone="info">{appointments.length} total</CitizenStatusBadge>
+          </header>
 
           {appointments.length === 0 ? (
-            <div className="alert alert-info border-0 shadow-sm p-4 text-center">
-              <h4 className="h6 alert-heading fw-bold mb-1">No Appointments Found</h4>
-              <p className="mb-0 text-muted small">
-                You do not have any recorded vaccination appointments.
-              </p>
-            </div>
+            <CitizenStatePanel
+              title="No Appointments Found"
+              actions={<Link className="citizen-action citizen-action--primary" to="/app/appointments/book">Book Appointment</Link>}
+            >
+              <p>You do not have any recorded vaccination appointments. Search available sessions when you are ready to book.</p>
+            </CitizenStatePanel>
           ) : (
-            <div className="appointments-list">
+            <div className="appointments-list citizen-appointments-list">
               {appointments.map((appt) => (
                 <AppointmentCard
                   key={appt.id}

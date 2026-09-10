@@ -26,6 +26,13 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('citizen eligibility', () => {
+  it('renders the page heading and citizen navigation while records load', () => {
+    mocks.listCitizenScreeningSubmissions.mockReturnValue(new Promise(() => {}));
+    render(page());
+    expect(screen.getByRole('heading', { level: 1, name: 'My Eligibility' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Back to Dashboard' }).getAttribute('href')).toBe('/app/citizen');
+    expect(screen.getByRole('link', { name: 'View Screening History' }).getAttribute('href')).toBe('/app/screening/history');
+  });
   it.each([
     ['PENDING_REVIEW', 'PRELIMINARY_PASS'],
     ['PENDING_REVIEW', 'PRELIMINARY_REVIEW_REQUIRED'],
@@ -41,7 +48,7 @@ describe('citizen eligibility', () => {
   it('shows loading until the shared base load completes', () => {
     mocks.listCitizenScreeningSubmissions.mockReturnValue(new Promise(() => {}));
     render(page());
-    expect(screen.getByRole('status').textContent).toBe('Loading your eligibility records...');
+    expect(screen.getByRole('status').textContent).toContain('Loading your eligibility records...');
   });
   it.each(['listCitizenScreeningSubmissions', 'listCitizenEligibilityAssessments'])('reports a base %s error without inventing an empty record set', async (method) => {
     mocks[method].mockRejectedValue(new Error('Records unavailable'));

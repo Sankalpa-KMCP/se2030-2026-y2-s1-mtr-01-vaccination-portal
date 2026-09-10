@@ -19,10 +19,19 @@ export default function CitizenDashboardPage() {
     <section className="citizen-dashboard" aria-labelledby="citizen-dashboard-title">
       <CitizenWelcome user={user} />
       <NextActionPanel action={nextAction} />
-      <div className="citizen-dashboard__status-grid">
-        <AppointmentOverview resource={dashboardData.appointments} />
-        <ScreeningOverview resource={dashboardData.screening} />
-      </div>
+      <section className="citizen-dashboard__overview" aria-labelledby="citizen-overview-title">
+        <header className="citizen-section-heading">
+          <div>
+            <p className="citizen-dashboard__eyebrow">At a glance</p>
+            <h2 id="citizen-overview-title">Your service records</h2>
+          </div>
+          <p>Current information from your screening and appointment records.</p>
+        </header>
+        <div className="citizen-dashboard__status-grid">
+          <AppointmentOverview resource={dashboardData.appointments} />
+          <ScreeningOverview resource={dashboardData.screening} />
+        </div>
+      </section>
       <QuickActions />
       <AccountSummary user={user} />
     </section>

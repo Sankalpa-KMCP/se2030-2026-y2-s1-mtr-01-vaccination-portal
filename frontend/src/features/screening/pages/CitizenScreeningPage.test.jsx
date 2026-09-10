@@ -53,7 +53,7 @@ function renderPage() {
 }
 
 async function waitForForm() {
-  return screen.findByRole('heading', { name: 'Pre-Vaccination Screening' });
+  return screen.findByRole('heading', { level: 1, name: 'Screening Questionnaire' });
 }
 
 function answerRequiredQuestions() {
@@ -87,7 +87,7 @@ describe('CitizenScreeningPage', () => {
   });
 
   it('displays all six question types and backend-provided consent without its hash', async () => {
-    renderPage();
+    const { container } = renderPage();
     await waitForForm();
 
     expect(screen.getByRole('radio', { name: 'Yes' })).toBeTruthy();
@@ -98,6 +98,8 @@ describe('CitizenScreeningPage', () => {
     expect(screen.getByRole('textbox', { name: /additional details/i })).toBeTruthy();
     expect(screen.getByText('Development screening consent')).toBeTruthy();
     expect(screen.getByText('Backend-provided consent wording.')).toBeTruthy();
+    expect(screen.getByText('How it works')).toBeTruthy();
+    expect(container.querySelector('[aria-current], [data-completed]')).toBeNull();
     expect(screen.queryByText(/contentHash/i)).toBeNull();
   });
 
@@ -139,6 +141,7 @@ describe('CitizenScreeningPage', () => {
       },
     }));
     expect(await screen.findByText('Preliminary screening passed')).toBeTruthy();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByText(/Final eligibility may depend/i)).toBeTruthy();
     expect(screen.queryByText(/^Eligible$/i)).toBeNull();
   });
@@ -170,6 +173,7 @@ describe('CitizenScreeningPage', () => {
     renderPage();
 
     expect(await screen.findByText('Your screening has already been submitted and is awaiting review.')).toBeTruthy();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screeningApiMocks.getCitizenScreeningForm).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Submit screening' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Correct Screening' })).toBeNull();
@@ -212,6 +216,7 @@ describe('CitizenScreeningPage', () => {
     screeningApiMocks.getCitizenScreeningForm.mockRejectedValue(new Error('No screening form is configured'));
     renderPage();
     expect(await screen.findByText('No screening form is configured')).toBeTruthy();
+    expect(screen.getByRole('alert').className).toContain('citizen-state--error');
   });
 
   it('displays submission errors and offers reload for a stale consent conflict', async () => {
