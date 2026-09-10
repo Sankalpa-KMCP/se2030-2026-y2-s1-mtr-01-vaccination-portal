@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.campaign.mapper;
 import com.se2030.vaccinationportal.campaign.dto.response.CampaignLifecycleEventResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.CampaignResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.CampaignSummaryResponse;
+import com.se2030.vaccinationportal.campaign.dto.response.CitizenCampaignDiscoveryResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.TargetGroupSummaryResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.VaccineTypeSummaryResponse;
 import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleEvent;
@@ -96,6 +97,28 @@ public final class CampaignDtoMapper {
                 event.getReason(),
                 event.getActorId(),
                 event.getCreatedAt()
+        );
+    }
+
+    public static CitizenCampaignDiscoveryResponse toCitizenDiscoveryResponse(
+            VaccinationCampaign campaign,
+            boolean currentlyAcceptingScreening
+    ) {
+        if (campaign == null) {
+            return null;
+        }
+        String vaccineTypeCode = campaign.getVaccineType() != null ? campaign.getVaccineType().getCode() : null;
+        String targetGroupCode = campaign.getTargetGroup() != null ? campaign.getTargetGroup().getCode() : null;
+        return new CitizenCampaignDiscoveryResponse(
+                campaign.getId(),
+                campaign.getCode(),
+                campaign.getName(),
+                vaccineTypeCode,
+                targetGroupCode,
+                campaign.getServiceStartDate(),
+                campaign.getServiceEndDate(),
+                campaign.getStatus(),
+                currentlyAcceptingScreening
         );
     }
 }

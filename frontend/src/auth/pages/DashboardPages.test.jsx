@@ -41,6 +41,7 @@ describe('role dashboards', () => {
     expect(within(shortcuts).getAllByRole('link')).toHaveLength(6);
     expect(screen.queryByText('Coming soon')).toBeNull();
     expect(screen.queryByRole('link', { name: /vaccination history/i })).toBeNull();
+    expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
   it('shows staff profile, role, and genuinely available routes', () => {
@@ -54,6 +55,23 @@ describe('role dashboards', () => {
     expect(screen.getByRole('heading', { name: 'Welcome, Center Manager' })).toBeTruthy();
     expect(screen.getByText('Center Manager', { selector: '.badge' })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: 'Open', exact: true }).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Screening Review')).toBeNull();
+  });
+
+  it('adds screening review to the healthcare officer dashboard without removing existing cards', () => {
+    authState.current = { user: {
+      fullName: 'Healthcare Officer',
+      email: 'hco@example.com',
+      roles: ['ROLE_HEALTHCARE_OFFICER'],
+    } };
+    renderPage(<StaffDashboardPage />);
+
+    const screeningCard = screen.getByRole('heading', { name: 'Screening Review' }).closest('.card');
+    expect(within(screeningCard).getByRole('link', { name: 'Open' }).getAttribute('href'))
+      .toBe('/app/staff/screening/reviews');
+    expect(screen.getByRole('heading', { name: 'Campaigns' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Center Operations' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Sessions' })).toBeTruthy();
   });
 
   it('shows the administrator profile and staff request entry', () => {

@@ -5,7 +5,7 @@ import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenSection from '../../citizen-ui/components/CitizenSection';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
 import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
-import { listCampaigns } from '../../campaign-management/api/campaignApi';
+import { listCitizenCampaigns } from '../../campaign-management/api/campaignApi';
 
 const CITIZEN_INTAKE_STATUSES = new Set(['PUBLISHED', 'ACTIVE']);
 
@@ -24,7 +24,7 @@ export default function CitizenScreeningCampaignsPage() {
 
   useEffect(() => {
     let active = true;
-    listCampaigns()
+    listCitizenCampaigns()
       .then((data) => {
         if (active) {
           setCampaigns((Array.isArray(data) ? data : []).filter(
@@ -101,9 +101,22 @@ export default function CitizenScreeningCampaignsPage() {
                     <div><dt>Service dates</dt><dd>{formatDate(campaign.serviceStartDate)} – {formatDate(campaign.serviceEndDate)}</dd></div>
                   </dl>
                   <footer className="citizen-campaign-card__footer">
-                    <Link className="citizen-action citizen-action--primary" to={`/app/screening/campaigns/${campaign.id}`}>
-                      Start screening <span aria-hidden="true">→</span>
-                    </Link>
+                    {campaign.currentlyAcceptingScreening ? (
+                      <Link
+                        className="citizen-action citizen-action--primary"
+                        to={`/app/screening/campaigns/${campaign.id}`}
+                      >
+                        Start screening <span aria-hidden="true">→</span>
+                      </Link>
+                    ) : (
+                      <button
+                        className="citizen-action citizen-action--secondary"
+                        type="button"
+                        disabled
+                      >
+                        Start screening
+                      </button>
+                    )}
                   </footer>
                 </article>
               </li>

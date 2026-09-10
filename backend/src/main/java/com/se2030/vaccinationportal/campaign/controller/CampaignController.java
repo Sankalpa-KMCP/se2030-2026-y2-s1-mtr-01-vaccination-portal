@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.campaign.dto.request.CompleteCampaignRequest
 import com.se2030.vaccinationportal.campaign.dto.request.CreateCampaignRequest;
 import com.se2030.vaccinationportal.campaign.dto.request.ResumeCampaignRequest;
 import com.se2030.vaccinationportal.campaign.dto.request.SuspendCampaignRequest;
+import com.se2030.vaccinationportal.campaign.dto.request.UpdateCampaignRequest;
 import com.se2030.vaccinationportal.campaign.dto.response.CampaignLifecycleEventResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.CampaignResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.CampaignSummaryResponse;
@@ -24,6 +25,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,12 +64,32 @@ public class CampaignController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<CampaignResponse> getCampaignById(@PathVariable Long id) {
         VaccinationCampaign campaign = campaignService.getRequiredCampaignById(id);
         return ResponseEntity.ok(CampaignDtoMapper.toResponse(campaign));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
+    public ResponseEntity<CampaignResponse> updateCampaign(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateCampaignRequest request
+    ) {
+        VaccinationCampaign updated = campaignService.updateCampaign(
+                id,
+                request.name(),
+                request.description(),
+                request.serviceStartDate(),
+                request.serviceEndDate(),
+                request.bookingOpenAt(),
+                request.bookingCloseAt()
+        );
+        return ResponseEntity.ok(CampaignDtoMapper.toResponse(updated));
+    }
+
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignSummaryResponse>> getCampaigns(
             @RequestParam(required = false) CampaignStatus status
     ) {
@@ -158,7 +180,7 @@ public class CampaignController {
     }
 
     @PostMapping("/{id}/archive")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CampaignResponse> archiveCampaign(
             @PathVariable Long id,
             @Valid @RequestBody ArchiveCampaignRequest request,

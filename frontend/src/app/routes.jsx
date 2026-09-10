@@ -36,12 +36,15 @@ import CitizenEligibilityPage from '../features/screening/pages/CitizenEligibili
 import CitizenScreeningHistoryPage from '../features/screening/pages/CitizenScreeningHistoryPage';
 import CitizenScreeningHistoryDetailsPage from '../features/screening/pages/CitizenScreeningHistoryDetailsPage';
 import CitizenScreeningCorrectionPage from '../features/screening/pages/CitizenScreeningCorrectionPage';
+import HealthcareOfficerScreeningReviewQueuePage from '../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage';
+import HealthcareOfficerScreeningReviewDetailsPage from '../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import NotAuthorizedPage from './pages/NotAuthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -74,7 +77,8 @@ const CHECK_IN_STAFF_ROLES = [
   'ROLE_CENTER_MANAGER',
 ];
 
-const SCREENING_ADMIN_ROLES = ['ROLE_ADMIN'];
+const SCREENING_ADMIN_ROLES = ['ROLE_ADMIN', 'ROLE_SYSTEM_ADMINISTRATOR'];
+const SCREENING_REVIEW_ROLES = ['ROLE_HEALTHCARE_OFFICER'];
 
 function RoleHomeRedirect({ user }) {
   return <Navigate to={getRoleHomePath(user)} replace />;
@@ -83,12 +87,7 @@ function RoleHomeRedirect({ user }) {
 function InitializingPage() {
   return (
     <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-      <div className="text-center p-4">
-        <div className="spinner-border text-primary mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
-          <span className="visually-hidden">Loading authentication state...</span>
-        </div>
-        <p className="text-muted small mb-0">Initializing application session...</p>
-      </div>
+      <LoadingSpinner message="Initializing application session..." />
     </div>
   );
 }
@@ -101,7 +100,7 @@ function InitializationErrorPage({ error, onRetry, onLogout }) {
           <div className="card border-0 shadow-sm">
             <div className="card-body p-4 text-center">
               <div className="text-danger mb-3">
-                <span className="display-6">⚠️</span>
+                <i className="bi bi-exclamation-triangle display-6" aria-hidden="true"></i>
               </div>
               <h1 className="h4 text-danger mb-2">Service Temporarily Unavailable</h1>
               <p className="text-muted small mb-4">{error}</p>
@@ -224,6 +223,11 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={STAFF_DASHBOARD_ROLES} />}>
             <Route path="staff" element={<StaffDashboardPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={SCREENING_REVIEW_ROLES} />}>
+            <Route path="staff/screening/reviews" element={<HealthcareOfficerScreeningReviewQueuePage />} />
+            <Route path="staff/screening/reviews/:submissionId" element={<HealthcareOfficerScreeningReviewDetailsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={[ADMIN_ROLE]} />}>

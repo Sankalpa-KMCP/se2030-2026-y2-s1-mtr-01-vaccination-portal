@@ -70,7 +70,7 @@ class SessionLifecycleHardeningIntegrationTests {
                 today.minusDays(10), today.plusDays(60),
                 today.minusDays(10).atStartOfDay(ZoneId.of("UTC")).toInstant(),
                 today.plusDays(60).atStartOfDay(ZoneId.of("UTC")).toInstant(),
-                CampaignStatus.DRAFT
+                CampaignStatus.ACTIVE
         ));
 
         center = centerRepository.saveAndFlush(new VaccinationCenter(

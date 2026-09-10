@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,26 +103,87 @@ public class CampaignSecurityAuthorizationIntegrationTests {
     }
 
     // =========================================================================
-    // 1. PUBLIC DISCOVERY READS
+    // 1. ADMINISTRATIVE CAMPAIGN READS REQUIRE AUTHORIZED STAFF ROLES (MF02-R-001)
     // =========================================================================
 
     @Nested
-    @DisplayName("Public Campaign Discovery")
-    class PublicCampaignDiscovery {
+    @DisplayName("Administrative Campaign Reads")
+    class AdministrativeCampaignReads {
 
         @Test
-        @DisplayName("Anonymous GET /api/v1/campaigns succeeds with 200 OK")
-        void anonymousListCampaignsSucceeds() throws Exception {
+        @DisplayName("Anonymous GET /api/v1/campaigns is denied 403")
+        void anonymousListCampaignsDenied() throws Exception {
             mockMvc.perform(get("/api/v1/campaigns"))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isForbidden());
         }
 
         @Test
-        @DisplayName("Anonymous GET /api/v1/campaigns/{id} succeeds with 200 OK")
-        void anonymousGetCampaignByIdSucceeds() throws Exception {
+        @DisplayName("Anonymous GET /api/v1/campaigns/{id} is denied 403")
+        void anonymousGetCampaignByIdDenied() throws Exception {
             mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id", is(draftCampaign.getId().intValue())));
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN GET /api/v1/campaigns is denied 403")
+        void citizenListCampaignsDenied() throws Exception {
+            String auth = token(501L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+            mockMvc.perform(get("/api/v1/campaigns")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN GET /api/v1/campaigns/{id} is denied 403")
+        void citizenGetCampaignByIdDenied() throws Exception {
+            String auth = token(501L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_INVENTORY_OFFICER GET /api/v1/campaigns is denied 403")
+        void inventoryOfficerListCampaignsDenied() throws Exception {
+            String auth = token(601L, "inventory@portal.gov", List.of("ROLE_INVENTORY_OFFICER"));
+            mockMvc.perform(get("/api/v1/campaigns")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_INVENTORY_OFFICER GET /api/v1/campaigns/{id} is denied 403")
+        void inventoryOfficerGetCampaignByIdDenied() throws Exception {
+            String auth = token(601L, "inventory@portal.gov", List.of("ROLE_INVENTORY_OFFICER"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Authorized staff roles succeed on GET /api/v1/campaigns and GET /api/v1/campaigns/{id} with 200 OK")
+        void authorizedStaffRolesSucceed() throws Exception {
+            List<String> authorizedRoles = List.of(
+                    "ROLE_ADMIN",
+                    "ROLE_CAMPAIGN_OFFICER",
+                    "ROLE_CENTER_MANAGER",
+                    "ROLE_HEALTHCARE_OFFICER",
+                    "ROLE_MANAGEMENT_USER"
+            );
+
+            long userId = 101L;
+            for (String role : authorizedRoles) {
+                String auth = token(userId++, role.toLowerCase() + "@portal.gov", List.of(role));
+
+                mockMvc.perform(get("/api/v1/campaigns")
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId())
+                                .header(HttpHeaders.AUTHORIZATION, auth))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.id", is(draftCampaign.getId().intValue())));
+            }
         }
     }
 
@@ -415,6 +477,100 @@ public class CampaignSecurityAuthorizationIntegrationTests {
         }
 
         @Test
+        @DisplayName("Only ROLE_ADMIN can archive a COMPLETED campaign; all other roles and anonymous are denied 403")
+        void onlyAdminCanArchiveCompletedCampaign() throws Exception {
+            VaccinationCampaign completedCampaign = campaignRepository.save(CampaignTestFixtures.campaign(
+                    "CMP-ARCH-CMP", "Completed Campaign", "Desc",
+                    vaccine, targetGroup, START_DATE, END_DATE, REG_START, REG_END,
+                    CampaignStatus.COMPLETED
+            ));
+
+            String payload = """
+                    {
+                        "reason": "Archived after regulatory retention period"
+                    }
+                    """;
+
+            // Anonymous -> 403
+            mockMvc.perform(post("/api/v1/campaigns/" + completedCampaign.getId() + "/archive")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+
+            // Non-admin roles -> 403
+            List<String> unauthorizedRoles = List.of(
+                    "ROLE_CAMPAIGN_OFFICER",
+                    "ROLE_CENTER_MANAGER",
+                    "ROLE_HEALTHCARE_OFFICER",
+                    "ROLE_MANAGEMENT_USER",
+                    "ROLE_INVENTORY_OFFICER",
+                    "ROLE_CITIZEN"
+            );
+
+            long userId = 200L;
+            for (String role : unauthorizedRoles) {
+                String auth = token(userId++, role.toLowerCase() + "@portal.gov", List.of(role));
+                mockMvc.perform(post("/api/v1/campaigns/" + completedCampaign.getId() + "/archive")
+                                .header(HttpHeaders.AUTHORIZATION, auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                        .andExpect(status().isForbidden());
+            }
+
+            // Verify status remains COMPLETED before admin executes
+            assertEquals(CampaignStatus.COMPLETED, campaignRepository.findById(completedCampaign.getId()).orElseThrow().getStatus());
+
+            // ROLE_ADMIN -> 200 OK
+            String adminAuth = token(100L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+            mockMvc.perform(post("/api/v1/campaigns/" + completedCampaign.getId() + "/archive")
+                            .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status", is("ARCHIVED")));
+
+            assertEquals(CampaignStatus.ARCHIVED, campaignRepository.findById(completedCampaign.getId()).orElseThrow().getStatus());
+        }
+
+        @Test
+        @DisplayName("Only ROLE_ADMIN can archive a CANCELLED campaign; CAMPAIGN_OFFICER is denied 403")
+        void campaignOfficerCannotArchiveCancelledCampaign() throws Exception {
+            VaccinationCampaign cancelledCampaign = campaignRepository.save(CampaignTestFixtures.campaign(
+                    "CMP-ARCH-CAN", "Cancelled Campaign", "Desc",
+                    vaccine, targetGroup, START_DATE, END_DATE, REG_START, REG_END,
+                    CampaignStatus.CANCELLED
+            ));
+
+            String payload = """
+                    {
+                        "reason": "Administrative archival"
+                    }
+                    """;
+
+            // CAMPAIGN_OFFICER on CANCELLED fixture is denied 403 (explicit MF02-R-005 check)
+            String officerAuth = token(250L, "officer@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+            mockMvc.perform(post("/api/v1/campaigns/" + cancelledCampaign.getId() + "/archive")
+                            .header(HttpHeaders.AUTHORIZATION, officerAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+
+            // Still CANCELLED
+            assertEquals(CampaignStatus.CANCELLED, campaignRepository.findById(cancelledCampaign.getId()).orElseThrow().getStatus());
+
+            // ROLE_ADMIN succeeds 200 OK
+            String adminAuth = token(100L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+            mockMvc.perform(post("/api/v1/campaigns/" + cancelledCampaign.getId() + "/archive")
+                            .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status", is("ARCHIVED")));
+
+            assertEquals(CampaignStatus.ARCHIVED, campaignRepository.findById(cancelledCampaign.getId()).orElseThrow().getStatus());
+        }
+
+        @Test
         @DisplayName("Anonymous access to Complete, Cancel, Archive is denied 403")
         void anonymousTerminalActionsDenied() throws Exception {
             String payload = """
@@ -534,6 +690,124 @@ public class CampaignSecurityAuthorizationIntegrationTests {
                             .content(payload))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.centerId", is(center.getId().intValue())));
+        }
+    }
+
+    @Nested
+    @DisplayName("Campaign Update Authorization")
+    class CampaignUpdateAuthorization {
+
+        private String validUpdatePayload() {
+            return String.format("""
+                    {
+                        "name": "Authorized Update Name",
+                        "description": "Authorized Description",
+                        "serviceStartDate": "%s",
+                        "serviceEndDate": "%s",
+                        "bookingOpenAt": "%s",
+                        "bookingCloseAt": "%s"
+                    }
+                    """,
+                    START_DATE,
+                    END_DATE,
+                    REG_START,
+                    REG_END
+            );
+        }
+
+        @Test
+        @DisplayName("ROLE_ADMIN PUT update is authorized 200")
+        void adminUpdateAuthorized() throws Exception {
+            String auth = token(101L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name", is("Authorized Update Name")));
+        }
+
+        @Test
+        @DisplayName("ROLE_CAMPAIGN_OFFICER PUT update is authorized 200")
+        void campaignOfficerUpdateAuthorized() throws Exception {
+            String auth = token(102L, "officer@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name", is("Authorized Update Name")));
+        }
+
+        @Test
+        @DisplayName("ROLE_CENTER_MANAGER PUT update is denied 403")
+        void centerManagerUpdateDenied() throws Exception {
+            String auth = token(103L, "center_mgr@portal.gov", List.of("ROLE_CENTER_MANAGER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_HEALTHCARE_OFFICER PUT update is denied 403")
+        void healthcareOfficerUpdateDenied() throws Exception {
+            String auth = token(104L, "health_officer@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_MANAGEMENT_USER PUT update is denied 403")
+        void managementUserUpdateDenied() throws Exception {
+            String auth = token(105L, "mgmt@portal.gov", List.of("ROLE_MANAGEMENT_USER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_INVENTORY_OFFICER PUT update is denied 403")
+        void inventoryOfficerUpdateDenied() throws Exception {
+            String auth = token(106L, "inventory@portal.gov", List.of("ROLE_INVENTORY_OFFICER"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN PUT update is denied 403")
+        void citizenUpdateDenied() throws Exception {
+            String auth = token(107L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Anonymous PUT update is denied 403")
+        void anonymousUpdateDenied() throws Exception {
+            mockMvc.perform(put("/api/v1/campaigns/" + draftCampaign.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(validUpdatePayload()))
+                    .andExpect(status().isForbidden());
         }
     }
 }

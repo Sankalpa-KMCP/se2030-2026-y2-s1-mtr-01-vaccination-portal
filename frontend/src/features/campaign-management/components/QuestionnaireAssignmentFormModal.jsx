@@ -149,13 +149,13 @@ export default function QuestionnaireAssignmentFormModal({
       <div className="modal-dialog modal-dialog-centered" role="document">
         <div className="modal-content shadow">
           <form onSubmit={handleSubmit}>
-            <div className="modal-header bg-primary text-white">
+            <div className="modal-header bg-light">
               <h5 className="modal-title fw-bold">
                 {isReassignment ? 'Update Questionnaire Assignment' : 'Assign Screening Questionnaire'}
               </h5>
               <button
                 type="button"
-                className="btn-close btn-close-white"
+                className="btn-close"
                 aria-label="Close"
                 onClick={onCancel}
                 disabled={loading}

@@ -11,6 +11,10 @@ import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRe
 import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -57,6 +61,45 @@ class EligibilityReviewServiceLifecycleTests {
 
     @InjectMocks
     private EligibilityReviewService service;
+
+    @ParameterizedTest
+    @EnumSource(value = EligibilityAssessmentStatus.class, names = {"EXPIRED", "REVOKED"})
+    void recordDecisionRejectsUnsupportedInitialStatus(EligibilityAssessmentStatus status) {
+        assertThatThrownBy(() -> service.recordDecision(
+                SUBMISSION_ID,
+                REVIEWER_ID,
+                status,
+                "Unsupported initial decision",
+                null,
+                null
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ELIGIBLE or INELIGIBLE");
+
+        verify(submissionRepository, never()).findById(any());
+        verify(submissionRepository, never()).save(any(ScreeningSubmission.class));
+        verify(assessmentRepository, never()).save(any(EligibilityAssessment.class));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    void recordDecisionRejectsBlankReason(String reason) {
+        assertThatThrownBy(() -> service.recordDecision(
+                SUBMISSION_ID,
+                REVIEWER_ID,
+                EligibilityAssessmentStatus.INELIGIBLE,
+                reason,
+                null,
+                null
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("reason");
+
+        verify(submissionRepository, never()).findById(any());
+        verify(submissionRepository, never()).save(any(ScreeningSubmission.class));
+        verify(assessmentRepository, never()).save(any(EligibilityAssessment.class));
+    }
 
     @Test
     void recordDecisionRejectsCorrectionsRequiredSubmission() {

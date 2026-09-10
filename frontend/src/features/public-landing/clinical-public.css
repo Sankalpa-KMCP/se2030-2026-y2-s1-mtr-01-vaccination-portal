@@ -7,11 +7,14 @@
    ======================================================================== */
 
 .lp-page {
-  --clinical-blue-700: #0b4f7d;
-  --clinical-blue-600: #1269a5;
-  --clinical-blue-500: #187bb8;
-  --clinical-blue-100: #e7f3fa;
-  --clinical-blue-50: #f2f8fc;
+  /* Brand hues re-pointed to the application teal family (global.css) so the
+     public site and the signed-in product read as one service. Neutral ink,
+     border, and surface values are unchanged. */
+  --clinical-blue-700: #155e75;
+  --clinical-blue-600: #0e7490;
+  --clinical-blue-500: #0891b2;
+  --clinical-blue-100: #d3edf3;
+  --clinical-blue-50: #ebf7fa;
   --clinical-cyan: #13879a;
   --clinical-green: #237a57;
   --clinical-text: #183243;

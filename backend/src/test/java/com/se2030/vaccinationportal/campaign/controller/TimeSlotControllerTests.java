@@ -264,6 +264,29 @@ class TimeSlotControllerTests {
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message", is("Total slot capacity (120) cannot exceed approved session capacity (50)")));
         }
+
+        @Test
+        @DisplayName("Returns 409 Conflict when session is in non-configurable lifecycle status")
+        void createSlot_sessionInNonConfigurableStatus_returns409() throws Exception {
+            String payload = """
+                    {
+                        "startTime": "2026-09-01T08:00:00Z",
+                        "endTime": "2026-09-01T09:00:00Z",
+                        "capacity": 20
+                    }
+                    """;
+
+            when(timeSlotService.createSlot(eq(300L), any(Instant.class), any(Instant.class), eq(20)))
+                    .thenThrow(new IllegalStateException("Cannot configure time slots for session in IN_PROGRESS lifecycle status"));
+
+            mockMvc.perform(post("/api/v1/sessions/300/time-slots")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.status", is(409)))
+                    .andExpect(jsonPath("$.error", is("Conflict")))
+                    .andExpect(jsonPath("$.message", is("Cannot configure time slots for session in IN_PROGRESS lifecycle status")));
+        }
     }
 
     // =========================================================================
@@ -377,6 +400,27 @@ class TimeSlotControllerTests {
                             .content(payload))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message", is("TimeSlot not found with ID: 9999")));
+        }
+
+        @Test
+        @DisplayName("Returns 409 Conflict when session is in non-configurable lifecycle status during capacity update")
+        void updateCapacity_sessionInNonConfigurableStatus_returns409() throws Exception {
+            String payload = """
+                    {
+                        "capacity": 30
+                    }
+                    """;
+
+            when(timeSlotService.updateSlotCapacity(300L, 1001L, 30))
+                    .thenThrow(new IllegalStateException("Cannot configure time slots for session in COMPLETED lifecycle status"));
+
+            mockMvc.perform(put("/api/v1/sessions/300/time-slots/1001/capacity")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.status", is(409)))
+                    .andExpect(jsonPath("$.error", is("Conflict")))
+                    .andExpect(jsonPath("$.message", is("Cannot configure time slots for session in COMPLETED lifecycle status")));
         }
     }
 }

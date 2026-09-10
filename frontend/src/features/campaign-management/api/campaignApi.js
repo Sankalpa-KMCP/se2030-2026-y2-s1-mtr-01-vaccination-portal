@@ -39,6 +39,16 @@ export async function listCampaigns(status = null) {
 }
 
 /**
+ * Fetch list of visible campaigns for authenticated citizens (MF02-R-001).
+ *
+ * @returns {Promise<Array>} List of CitizenCampaignDiscoveryResponse objects
+ */
+export async function listCitizenCampaigns() {
+  const response = await apiRequest('/v1/citizen/campaigns', { method: 'GET' });
+  return handleResponse(response);
+}
+
+/**
  * Fetch detailed campaign record by identifier.
  *
  * @param {number|string} id - Campaign identifier
@@ -58,6 +68,21 @@ export async function getCampaignById(id) {
 export async function createCampaign(payload) {
   const response = await apiRequest('/v1/campaigns', {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Update an existing campaign.
+ *
+ * @param {number|string} id - Campaign identifier
+ * @param {Object} payload - UpdateCampaignRequest payload
+ * @returns {Promise<Object>} Updated CampaignResponse object
+ */
+export async function updateCampaign(id, payload) {
+  const response = await apiRequest(`/v1/campaigns/${id}`, {
+    method: 'PUT',
     body: JSON.stringify(payload),
   });
   return handleResponse(response);

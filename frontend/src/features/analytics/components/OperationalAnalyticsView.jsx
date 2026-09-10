@@ -2,6 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getOperationalAnalytics } from '../api/analyticsApi';
 import { listCenters } from '../../center-operations/api/centerOperationsApi';
 import { listCampaigns } from '../../campaign-management/api/campaignApi';
+import PageHeader from '../../../components/common/PageHeader';
+import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import EmptyState from '../../../components/common/EmptyState';
+import StatusBadge from '../../../components/common/StatusBadge';
+import {
+  sessionStatusVariants,
+  campaignStatusVariants,
+} from '../../../components/common/statusVariants';
 
 export default function OperationalAnalyticsView() {
   const [analytics, setAnalytics] = useState(null);
@@ -59,29 +68,26 @@ export default function OperationalAnalyticsView() {
   };
 
   return (
-    <div className="container-fluid py-4">
-      {/* Title & Scope Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <div>
-          <h2 className="h4 mb-1 fw-bold text-dark">Operational Analytics</h2>
-          <p className="text-muted small mb-0">
-            Reconciled descriptive capacity, slot utilization, and resource allocation
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
-          onClick={fetchAnalytics}
-          disabled={loading}
-        >
-          {loading ? (
-            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
-          ) : (
-            <i className="bi bi-arrow-clockwise" />
-          )}
-          Refresh
-        </button>
-      </div>
+    <div>
+      <PageHeader
+        title="Operational Analytics"
+        subtitle="Reconciled descriptive capacity, slot utilization, and resource allocation"
+        actions={(
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+            onClick={fetchAnalytics}
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+            ) : (
+              <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+            )}
+            Refresh
+          </button>
+        )}
+      />
 
       {/* Filter Control Bar */}
       <div className="card border-0 shadow-sm mb-4">
@@ -139,20 +145,12 @@ export default function OperationalAnalyticsView() {
 
       {/* Error Alert */}
       {error && (
-        <div className="alert alert-danger alert-dismissible fade show" role="alert">
-          <strong>Error:</strong> {error}
-          <button type="button" className="btn-close" onClick={() => setError(null)} aria-label="Close" />
-        </div>
+        <ApiErrorAlert error={error} onDismiss={() => setError(null)} />
       )}
 
       {/* Loading Skeleton / State */}
       {loading && !analytics && (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading operational analytics...</span>
-          </div>
-          <p className="text-muted small mt-2">Computing reconciled operational metrics...</p>
-        </div>
+        <LoadingSpinner message="Computing reconciled operational metrics..." />
       )}
 
       {/* Main KPI Grid */}
@@ -266,10 +264,12 @@ export default function OperationalAnalyticsView() {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(analytics.sessionCountByLifecycleStatus || {}).map(([status, count]) => (
+                        {Object.entries(analytics.sessionCountByLifecycleStatus || {}).length === 0 ? (
+                          <tr><td colSpan="2"><EmptyState compact icon="bi-graph-up" title="No session data for the selected scope" /></td></tr>
+                        ) : Object.entries(analytics.sessionCountByLifecycleStatus || {}).map(([status, count]) => (
                           <tr key={status}>
                             <td className="ps-3 fw-medium">
-                              <span className={`badge ${getStatusBadgeClass(status)} me-2`}>{status}</span>
+                              <StatusBadge status={status} variants={sessionStatusVariants} className="me-2" />
                             </td>
                             <td className="text-end pe-3 fw-bold">{count}</td>
                           </tr>
@@ -297,10 +297,12 @@ export default function OperationalAnalyticsView() {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(analytics.campaignCountByStatus || {}).map(([status, count]) => (
+                        {Object.entries(analytics.campaignCountByStatus || {}).length === 0 ? (
+                          <tr><td colSpan="2"><EmptyState compact icon="bi-clipboard-data" title="No campaign data for the selected scope" /></td></tr>
+                        ) : Object.entries(analytics.campaignCountByStatus || {}).map(([status, count]) => (
                           <tr key={status}>
                             <td className="ps-3 fw-medium">
-                              <span className={`badge ${getCampaignBadgeClass(status)} me-2`}>{status}</span>
+                              <StatusBadge status={status} variants={campaignStatusVariants} className="me-2" />
                             </td>
                             <td className="text-end pe-3 fw-bold">{count}</td>
                           </tr>
@@ -328,7 +330,9 @@ export default function OperationalAnalyticsView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(analytics.assignedResourceCountsByType || {}).map(([type, count]) => (
+                    {Object.entries(analytics.assignedResourceCountsByType || {}).length === 0 ? (
+                      <tr><td colSpan="2"><EmptyState compact icon="bi-box-seam" title="No active resource assignments for the selected scope" /></td></tr>
+                    ) : Object.entries(analytics.assignedResourceCountsByType || {}).map(([type, count]) => (
                       <tr key={type}>
                         <td className="ps-3 fw-medium">{formatResourceType(type)}</td>
                         <td className="text-end pe-3 fw-bold">{count}</td>
@@ -348,44 +352,6 @@ export default function OperationalAnalyticsView() {
       )}
     </div>
   );
-}
-
-function getStatusBadgeClass(status) {
-  switch (status) {
-    case 'SCHEDULED':
-      return 'bg-info text-dark';
-    case 'IN_PROGRESS':
-      return 'bg-primary';
-    case 'COMPLETED':
-      return 'bg-success';
-    case 'CANCELLED':
-      return 'bg-danger';
-    case 'DRAFT':
-    default:
-      return 'bg-secondary';
-  }
-}
-
-function getCampaignBadgeClass(status) {
-  switch (status) {
-    case 'ACTIVE':
-      return 'bg-success';
-    case 'PUBLISHED':
-      return 'bg-primary';
-    case 'SCHEDULED':
-      return 'bg-info text-dark';
-    case 'SUSPENDED':
-      return 'bg-warning text-dark';
-    case 'CANCELLED':
-      return 'bg-danger';
-    case 'COMPLETED':
-      return 'bg-secondary';
-    case 'ARCHIVED':
-      return 'bg-dark';
-    case 'DRAFT':
-    default:
-      return 'bg-light text-dark border';
-  }
 }
 
 function formatResourceType(type) {

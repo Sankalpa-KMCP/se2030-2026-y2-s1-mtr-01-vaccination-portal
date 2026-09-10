@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export default function NotAuthorizedPage() {
   return (
-    <section className="row justify-content-center py-5">
+    <section className="row justify-content-center py-4">
       <div className="col-12 col-md-8 col-lg-6">
         <div className="card border-0 shadow-sm">
           <div className="card-body p-4 p-md-5 text-center">

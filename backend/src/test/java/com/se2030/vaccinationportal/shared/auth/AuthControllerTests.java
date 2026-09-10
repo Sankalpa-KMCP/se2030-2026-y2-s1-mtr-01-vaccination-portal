@@ -132,10 +132,9 @@ class AuthControllerTests {
     }
 
     @Test
-    @DisplayName("Existing business endpoint remains accessible without token during non-breaking AUTH-1 rollout")
-    void existingBusinessEndpoint_remainsAccessibleWithoutToken() throws Exception {
-        // Calling public campaigns listing or centers search without token returns 200, proving no regression
+    @DisplayName("Secured business endpoint denies anonymous access with 403 Forbidden")
+    void securedBusinessEndpoint_deniesAnonymousAccess() throws Exception {
         mockMvc.perform(get("/api/v1/campaigns"))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 }

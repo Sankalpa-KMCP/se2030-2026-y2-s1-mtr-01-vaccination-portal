@@ -65,8 +65,8 @@ export default function StaffRequestReviewModal({ mode, request, isProcessing, o
       }}
     >
       <div className="modal-dialog modal-dialog-centered modal-lg">
-        <div className="modal-content">
-          <div className="modal-header">
+        <div className="modal-content shadow border-0">
+          <div className="modal-header bg-light">
             <h2 className="modal-title fs-5" id="staff-request-modal-title">{title}</h2>
             <button
               ref={closeButtonRef}
@@ -127,7 +127,7 @@ export default function StaffRequestReviewModal({ mode, request, isProcessing, o
                 </div>
               )}
             </div>
-            <div className="modal-footer">
+            <div className="modal-footer bg-light">
               <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={isProcessing}>Close</button>
               {mode === 'approve' && (
                 <button type="submit" className="btn btn-success" disabled={isProcessing}>

@@ -15,6 +15,7 @@ import {
   getCitizenCampaignEligibility,
   getScreeningHistoryDetails,
   getScreeningCorrectionForm,
+  getScreeningReviewDetails,
   createAnswerOption,
   createEligibilityRule,
   createQuestion,
@@ -34,11 +35,14 @@ import {
   listAnswerOptions,
   listEligibilityRules,
   listQuestions,
+  listScreeningReviewQueue,
   listQuestionnaires,
   listQuestionnaireVersions,
   publishQuestionnaireVersion,
   retireQuestionnaireVersion,
   resubmitScreening,
+  requestScreeningCorrections,
+  recordEligibilityDecision,
   submitScreening,
   updateAnswerOption,
   updateEligibilityRule,
@@ -226,7 +230,7 @@ describe('screeningApi', () => {
     const payload = {
       ruleCode: 'AGE_REVIEW',
       ruleName: 'Age review',
-      conditionExpression: 'AGE < 18',
+      conditionExpression: 'AGE == 18',
       preliminaryResult: 'PRELIMINARY_REVIEW_REQUIRED',
       priority: 1,
       message: 'Clinical review required',
@@ -301,5 +305,79 @@ describe('screeningApi', () => {
     );
     expect(JSON.parse(clientMocks.apiRequest.mock.calls[0][1].body)).toEqual({ answers });
     expect(clientMocks.parseApiResponse).toHaveBeenCalledExactlyOnceWith(rawResponse);
+  });
+
+  it('loads the review queue without an unnecessary empty query string', async () => {
+    await listScreeningReviewQueue();
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith(
+      '/v1/screening/assessments/queue',
+      { method: 'GET' },
+    );
+  });
+
+  it('loads the review queue with an encoded campaign filter', async () => {
+    await listScreeningReviewQueue({ campaignId: 22 });
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith(
+      '/v1/screening/assessments/queue?campaignId=22',
+      { method: 'GET' },
+    );
+  });
+
+  it('loads staff review details through the exact backend route', async () => {
+    await getScreeningReviewDetails(42);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith(
+      '/v1/screening/submissions/42/review-details',
+      { method: 'GET' },
+    );
+  });
+
+  it('posts trimmed correction instructions through the correction route payload', async () => {
+    await requestScreeningCorrections(42, 'Review the vaccination date.');
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith(
+      '/v1/screening/assessments/submissions/42/corrections',
+      {
+        method: 'POST',
+        body: JSON.stringify({ instructions: 'Review the vaccination date.' }),
+      },
+    );
+  });
+
+  it('posts only the supported eligible decision fields', async () => {
+    await recordEligibilityDecision(42, {
+      status: 'ELIGIBLE',
+      reason: 'Eligible after clinical review',
+      validUntil: '2027-01-01T00:00:00.000Z',
+      reviewerId: 999,
+      clinicalNotes: 'must not be sent',
+    });
+
+    const [, options] = clientMocks.apiRequest.mock.calls[0];
+    expect(clientMocks.apiRequest.mock.calls[0][0])
+      .toBe('/v1/screening/assessments/submissions/42/decision');
+    expect(options.method).toBe('POST');
+    expect(JSON.parse(options.body)).toEqual({
+      status: 'ELIGIBLE',
+      reason: 'Eligible after clinical review',
+      validUntil: '2027-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('omits validUntil, reviewerId, and clinicalNotes from an ineligible decision', async () => {
+    await recordEligibilityDecision(42, {
+      status: 'INELIGIBLE',
+      reason: 'Contraindication requires deferral',
+      validUntil: '2027-01-01T00:00:00.000Z',
+      reviewerId: 999,
+      clinicalNotes: 'must not be sent',
+    });
+
+    expect(JSON.parse(clientMocks.apiRequest.mock.calls[0][1].body)).toEqual({
+      status: 'INELIGIBLE',
+      reason: 'Contraindication requires deferral',
+    });
   });
 });

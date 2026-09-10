@@ -12,6 +12,11 @@
   --portal-primary: #0e7490;
   --portal-bg-subtle: #f4f6f8;
 
+  /* Typography -- Public Sans is loaded in index.html and shared by the
+     public marketing pages, auth shell, and application interior. */
+  --font-sans: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
   /* Application surfaces */
   --app-bg: #f4f6f8;
   --surface: #ffffff;
@@ -88,7 +93,7 @@ body {
   flex-direction: column;
   background-color: var(--app-bg);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -106,6 +111,41 @@ h1, h2, h3 {
 hr {
   border-color: var(--border-subtle);
   opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   3b. Application navigation bar -- semantic nav links, clear active pill
+   -------------------------------------------------------------------------- */
+.app-nav .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.app-nav .nav-link:hover,
+.app-nav .nav-link:focus {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.app-nav .nav-link.active {
+  color: var(--primary-hover);
+  background-color: #ffffff;
+}
+
+.app-nav .nav-link:focus-visible,
+.navbar .navbar-toggler:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Application footer band */
+.app-footer {
+  background-color: #1e293b;
+  color: rgba(248, 250, 252, 0.75);
 }
 
 /* --------------------------------------------------------------------------
@@ -169,6 +209,13 @@ hr {
 .badge {
   --bs-badge-font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   6b. Typography utilities (Bootstrap ships fs-1..fs-6; dense UI needs one step smaller)
+   -------------------------------------------------------------------------- */
+.fs-7 {
+  font-size: 0.75rem !important;
 }
 
 /* --------------------------------------------------------------------------
