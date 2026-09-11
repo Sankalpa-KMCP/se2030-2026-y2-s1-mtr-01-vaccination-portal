@@ -42,9 +42,13 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterReposit
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.SessionCapacityPlanService;
+import com.se2030.vaccinationportal.campaign.dto.request.AuthenticatedActor;
+import com.se2030.vaccinationportal.campaign.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -75,6 +79,7 @@ class SessionCapacityPlanServiceIntegrationTests {
     @Autowired private OperationalResourceRepository resourceRepository;
     @Autowired private StaffAssignmentRepository staffAssignmentRepository;
     @Autowired private SessionResourceAssignmentRepository resourceAssignmentRepository;
+    @Autowired private TimeSlotRepository timeSlotRepository;
 
     private VaccinationCenter center;
     private VaccinationCampaign campaign;
@@ -515,5 +520,234 @@ class SessionCapacityPlanServiceIntegrationTests {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> capacityPlanService.createCapacityPlan(session.getId(), invalidEquipped));
         assertTrue(ex.getMessage().contains("cannot exceed available station count (1)"));
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan succeeds when existing slots are within safe concurrent occupancy")
+    void createCapacityPlan_whenExistingSlotsWithinSafeOccupancy_succeeds() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        timeSlotRepository.save(new TimeSlot(session, sessionStart, sessionStart.plusSeconds(1800), 20));
+
+        CreateSessionCapacityPlanRequest request = new CreateSessionCapacityPlanRequest(
+                1, 24, 60, 15, 0.0, null, "admin");
+        SessionCapacityPlan plan = capacityPlanService.createCapacityPlan(session.getId(), request);
+
+        assertNotNull(plan);
+        assertEquals(1, plan.getRevision());
+        assertEquals(24, plan.getApprovedCapacity());
+        assertEquals(60, plan.getSafeConcurrentOccupancy());
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan succeeds when slot peak exactly equals safe concurrent occupancy boundary")
+    void createCapacityPlan_whenSlotPeakEqualsSafeOccupancy_succeeds() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        timeSlotRepository.save(new TimeSlot(session, sessionStart, sessionStart.plusSeconds(1800), 60));
+
+        CreateSessionCapacityPlanRequest request = new CreateSessionCapacityPlanRequest(
+                1, 60, 60, 15, 0.0, "Capacity override to limit", "admin");
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+        SessionCapacityPlan plan = capacityPlanService.createCapacityPlan(session.getId(), request, manager);
+
+        assertNotNull(plan);
+        assertEquals(60, plan.getSafeConcurrentOccupancy());
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan rejects when a single slot exceeds safe concurrent occupancy")
+    void createCapacityPlan_whenSingleSlotExceedsSafeOccupancy_throwsIllegalStateException() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        timeSlotRepository.save(new TimeSlot(session, sessionStart, sessionStart.plusSeconds(1800), 70));
+
+        CreateSessionCapacityPlanRequest request = new CreateSessionCapacityPlanRequest(
+                1, 70, 60, 15, 0.0, "Capacity override", "admin");
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), request, manager));
+        assertTrue(ex.getMessage().contains("Session time slots exceed safe concurrent occupancy (peak: 70.0, limit: 60"));
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan rejects when overlapping dwell windows produce peak above limit (TC-37)")
+    void createCapacityPlan_whenOverlappingDwellWindowsExceedLimit_throwsIllegalStateException() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        Instant slot1Start = sessionStart;
+        Instant slot1End = sessionStart.plusSeconds(1800); // 08:00 - 08:30
+        Instant slot2Start = slot1End;
+        Instant slot2End = slot1End.plusSeconds(1800);     // 08:30 - 09:00
+
+        timeSlotRepository.save(new TimeSlot(session, slot1Start, slot1End, 40));
+        timeSlotRepository.save(new TimeSlot(session, slot2Start, slot2End, 40));
+
+        // Dwell of 45 minutes extends slot 1 to 08:45, causing overlap with slot 2 at 08:30 -> peak 80 > safe limit 60
+        CreateSessionCapacityPlanRequest request = new CreateSessionCapacityPlanRequest(
+                1, 80, 60, 45, 0.0, "Dwell override test", "admin");
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), request, manager));
+        assertTrue(ex.getMessage().contains("Session time slots exceed safe concurrent occupancy (peak: 80.0, limit: 60"));
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan succeeds when adjacent slots do not overlap dwell window")
+    void createCapacityPlan_whenAdjacentSlotsDoNotOverlapDwell_succeeds() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        Instant slot1Start = sessionStart;
+        Instant slot1End = sessionStart.plusSeconds(1800); // 08:00 - 08:30
+        Instant slot2Start = slot1End;
+        Instant slot2End = slot1End.plusSeconds(1800);     // 08:30 - 09:00
+
+        timeSlotRepository.save(new TimeSlot(session, slot1Start, slot1End, 40));
+        timeSlotRepository.save(new TimeSlot(session, slot2Start, slot2End, 40));
+
+        // Dwell 15 minutes: slot 1 effective dwell end is 08:30. Half-open [08:00, 08:30) does not overlap [08:30, 09:00) -> peak 40 <= 60
+        CreateSessionCapacityPlanRequest request = new CreateSessionCapacityPlanRequest(
+                1, 80, 60, 15, 0.0, "Adjacent slots non-overlap", "admin");
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+
+        SessionCapacityPlan plan = capacityPlanService.createCapacityPlan(session.getId(), request, manager);
+        assertNotNull(plan);
+        assertEquals(80, plan.getApprovedCapacity());
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan rejects when accompanying ratio pushes peak occupancy over limit")
+    void createCapacityPlan_whenAccompanyingRatioPushesPeakOverLimit_throwsIllegalStateException() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        timeSlotRepository.save(new TimeSlot(session, sessionStart, sessionStart.plusSeconds(1800), 40));
+
+        // Slot capacity 40 <= 50, but accompanying ratio 0.5 -> 40 * 1.5 = 60.0 > 50 safe occupancy
+        CreateSessionCapacityPlanRequest request = new CreateSessionCapacityPlanRequest(
+                1, 40, 50, 15, 0.5, "Accompanying ratio test", "admin");
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), request, manager));
+        assertTrue(ex.getMessage().contains("Session time slots exceed safe concurrent occupancy (peak: 60.0, limit: 50"));
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan rejects when lowering safe occupancy below existing slot peak")
+    void createCapacityPlan_whenLoweringSafeOccupancyBelowExistingSlotPeak_throwsIllegalStateException() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        timeSlotRepository.save(new TimeSlot(session, sessionStart, sessionStart.plusSeconds(1800), 40));
+
+        // Revision 1 with safe limit 60 succeeds
+        CreateSessionCapacityPlanRequest rev1Req = new CreateSessionCapacityPlanRequest(
+                1, 40, 60, 15, 0.0, "Rev 1", "admin");
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+        SessionCapacityPlan plan1 = capacityPlanService.createCapacityPlan(session.getId(), rev1Req, manager);
+        assertEquals(1, plan1.getRevision());
+
+        // Revision 2 attempts to reduce safe occupancy to 35, but existing slot has 40 -> rejected
+        CreateSessionCapacityPlanRequest rev2Req = new CreateSessionCapacityPlanRequest(
+                1, 40, 35, 15, 0.0, "Rev 2 lower limit", "admin");
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), rev2Req, manager));
+        assertTrue(ex.getMessage().contains("Session time slots exceed safe concurrent occupancy (peak: 40.0, limit: 35"));
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan rejects when increasing dwell time creates unsafe overlap")
+    void createCapacityPlan_whenIncreasingDwellCausesOverlapExceedingLimit_throwsIllegalStateException() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        Instant slot1Start = sessionStart;
+        Instant slot1End = sessionStart.plusSeconds(1800);
+        Instant slot2Start = slot1End;
+        Instant slot2End = slot1End.plusSeconds(1800);
+
+        timeSlotRepository.save(new TimeSlot(session, slot1Start, slot1End, 35));
+        timeSlotRepository.save(new TimeSlot(session, slot2Start, slot2End, 35));
+
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+
+        // Rev 1 with dwell 15 succeeds (no overlap: 35 <= 60)
+        CreateSessionCapacityPlanRequest rev1Req = new CreateSessionCapacityPlanRequest(
+                1, 70, 60, 15, 0.0, "Rev 1 short dwell", "admin");
+        SessionCapacityPlan plan1 = capacityPlanService.createCapacityPlan(session.getId(), rev1Req, manager);
+        assertEquals(1, plan1.getRevision());
+
+        // Rev 2 with dwell 45 min creates overlap (peak 70 > 60) -> rejected
+        CreateSessionCapacityPlanRequest rev2Req = new CreateSessionCapacityPlanRequest(
+                1, 70, 60, 45, 0.0, "Rev 2 long dwell", "admin");
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), rev2Req, manager));
+        assertTrue(ex.getMessage().contains("Session time slots exceed safe concurrent occupancy (peak: 70.0, limit: 60"));
+    }
+
+    @Test
+    @DisplayName("CENTER_MANAGER override cannot bypass concurrent occupancy safety limit")
+    void createCapacityPlan_managerOverrideExceedingOccupancy_stillThrowsIllegalStateException() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        timeSlotRepository.save(new TimeSlot(session, sessionStart, sessionStart.plusSeconds(1800), 80));
+
+        // Overriding throughput is allowed with manager role, but occupancy (80 > 60) must still be rejected
+        CreateSessionCapacityPlanRequest overrideReq = new CreateSessionCapacityPlanRequest(
+                1, 80, 60, 15, 0.0, "Authorized emergency surge override", "admin");
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), overrideReq, manager));
+        assertTrue(ex.getMessage().contains("Session time slots exceed safe concurrent occupancy (peak: 80.0, limit: 60"));
+    }
+
+    @Test
+    @DisplayName("previewCapacityPlan rejects when existing slots exceed safe concurrent occupancy")
+    void previewCapacityPlan_whenSlotsExceedSafeOccupancy_throwsIllegalStateException() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        timeSlotRepository.save(new TimeSlot(session, sessionStart, sessionStart.plusSeconds(1800), 75));
+
+        PreviewCapacityPlanRequest previewReq = new PreviewCapacityPlanRequest(
+                1, 60, 15, 0.0, 75, "Override reason");
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> capacityPlanService.previewCapacityPlan(session.getId(), previewReq));
+        assertTrue(ex.getMessage().contains("Session time slots exceed safe concurrent occupancy (peak: 75.0, limit: 60"));
+    }
+
+    @Test
+    @DisplayName("createCapacityPlan recalculates occupancy under lock and rejects even if preview occurred before slot was added")
+    void createCapacityPlan_recalculatesOccupancyUnderLock_rejectsEvenIfPreviewWasValid() {
+        staffAssignmentRepository.save(new StaffAssignment(session, roster1, StaffRole.VACCINATOR, sessionStart, sessionEnd));
+        resourceAssignmentRepository.save(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
+
+        // Step 1: Preview occurs when session has 0 slots -> preview succeeds
+        PreviewCapacityPlanRequest previewReq = new PreviewCapacityPlanRequest(
+                1, 60, 15, 0.0, 70, "Surge capacity override");
+        CapacityPlanPreviewResponse preview = capacityPlanService.previewCapacityPlan(session.getId(), previewReq);
+        assertNotNull(preview);
+
+        // Step 2: An unsafe slot is concurrently added
+        timeSlotRepository.save(new TimeSlot(session, sessionStart, sessionStart.plusSeconds(1800), 70));
+
+        // Step 3: Create is called with previously previewed parameters -> create independently detects slot and rejects
+        CreateSessionCapacityPlanRequest createReq = new CreateSessionCapacityPlanRequest(
+                1, 70, 60, 15, 0.0, "Surge capacity override", "admin");
+        AuthenticatedActor manager = new AuthenticatedActor(1L, Set.of("ROLE_CENTER_MANAGER"));
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> capacityPlanService.createCapacityPlan(session.getId(), createReq, manager));
+        assertTrue(ex.getMessage().contains("Session time slots exceed safe concurrent occupancy (peak: 70.0, limit: 60"));
     }
 }
