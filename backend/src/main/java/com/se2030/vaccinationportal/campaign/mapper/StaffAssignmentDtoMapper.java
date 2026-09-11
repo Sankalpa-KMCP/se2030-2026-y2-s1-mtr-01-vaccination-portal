@@ -4,6 +4,10 @@ import com.se2030.vaccinationportal.campaign.dto.response.StaffAssignmentRespons
 import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * Pure DTO mapper for session staff assignment entities.
  */
 public final class StaffAssignmentDtoMapper {
