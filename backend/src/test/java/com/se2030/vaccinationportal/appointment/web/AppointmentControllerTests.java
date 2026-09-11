@@ -63,6 +63,7 @@ class AppointmentControllerTests {
         }
 
         @Bean
+        @org.springframework.context.annotation.Primary
         public TestSlotAvailabilityPortDouble slotAvailabilityPort() {
             return new TestSlotAvailabilityPortDouble();
         }
@@ -154,7 +155,7 @@ class AppointmentControllerTests {
         Instant now = Instant.now();
 
         AvailableSessionSummary s1 = new AvailableSessionSummary(
-                6001L, campaignId, centerId, "Center A", "123 Main St",
+                6001L, 7001L, campaignId, centerId, "Center A", "123 Main St",
                 now.plusSeconds(3600), now.plusSeconds(7200), now.plusSeconds(1800), 5
         );
         availabilityPortDouble.addSession(s1);
@@ -168,6 +169,7 @@ class AppointmentControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].sessionId", is(6001)))
+                .andExpect(jsonPath("$[0].slotId", is(7001)))
                 .andExpect(jsonPath("$[0].centerName", is("Center A")));
     }
 

@@ -168,10 +168,10 @@ export default function AvailabilitySearch({ onBookSession, bookingSessionId, ci
             <div className="session-list">
               {sessions.map((session) => (
                 <SessionAvailabilityCard
-                  key={session.sessionId || session.slotId}
+                  key={session.slotId}
                   session={session}
                   onBook={onBookSession}
-                  isBooking={bookingSessionId === (session.sessionId || session.slotId)}
+                  isBooking={bookingSessionId === session.slotId}
                 />
               ))}
             </div>

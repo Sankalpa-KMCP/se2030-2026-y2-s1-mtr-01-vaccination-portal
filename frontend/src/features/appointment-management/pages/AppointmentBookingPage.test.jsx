@@ -58,6 +58,8 @@ describe('AppointmentBookingPage slot-full error detection', () => {
       expect(screen.getByText(/Slot Exhausted: This time slot has no remaining capacity/i)).toBeTruthy();
     });
 
+    expect(bookAppointment).toHaveBeenCalledWith({ citizenId: 2, campaignId: 1, slotId: 1 });
+
     const waitlistButton = screen.getByRole('button', { name: 'Join Waitlist for This Session' });
     expect(waitlistButton).toBeTruthy();
 

@@ -25,9 +25,9 @@ export default function AppointmentBookingPage() {
   const [feedback, setFeedback] = useState(null);
 
   const handleBookSession = async (session) => {
-    const slotId = session.sessionId || session.slotId;
+    const slotId = session.slotId;
     const campaignId = session.campaignId;
-    const sessionId = session.sessionId || session.slotId;
+    const sessionId = session.sessionId;
 
     if (!citizenId) {
       setFeedback({
