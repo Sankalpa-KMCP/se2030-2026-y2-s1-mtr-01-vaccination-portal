@@ -210,4 +210,26 @@ class WaitlistControllerTests {
                         .param("campaignId", "999999"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void getWaitlistStatus_promoted_returns200OkWithNullPosition() throws Exception {
+        Long citizenId = 1006L;
+        Long campaignId = 2001L;
+        Long sessionId = 3001L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setSessionFull(sessionId, true);
+
+        WaitlistEntry entry = joinService.joinWaitlist(citizenId, campaignId, sessionId, Instant.now());
+        entry.markPromoted();
+        waitlistRepository.save(entry);
+
+        mockMvc.perform(get("/api/v1/waitlist/status")
+                        .param("citizenId", citizenId.toString())
+                        .param("campaignId", campaignId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.citizenId", is(citizenId.intValue())))
+                .andExpect(jsonPath("$.status", is("PROMOTED")))
+                .andExpect(jsonPath("$.position").doesNotExist());
+    }
 }

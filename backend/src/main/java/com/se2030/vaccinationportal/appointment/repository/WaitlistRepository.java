@@ -26,6 +26,17 @@ public interface WaitlistRepository extends JpaRepository<WaitlistEntry, Long> {
     Optional<WaitlistEntry> findByCitizenIdAndCampaignIdAndStatus(Long citizenId, Long campaignId, WaitlistStatus status);
 
     /**
+     * Finds the most recent waitlist entry for a citizen, campaign, and specific status, ordered by joined timestamp descending.
+     *
+     * @param citizenId  Identifier of the citizen
+     * @param campaignId Identifier of the campaign
+     * @param status     Target {@link WaitlistStatus}
+     * @return {@link Optional} containing matching {@link WaitlistEntry} if present
+     */
+    Optional<WaitlistEntry> findFirstByCitizenIdAndCampaignIdAndStatusOrderByJoinedAtDesc(
+            Long citizenId, Long campaignId, WaitlistStatus status);
+
+    /**
      * Finds all waitlist entries for a session with a specific status, ordered by joined timestamp ascending (FIFO).
      * Used by promotion logic to process waitlist entries in deterministic arrival order (MF03-BR-06).
      *
