@@ -1,3 +1,9 @@
+/**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ */
+
 import React, { useState, useEffect } from 'react';
 import { listStaffRoster } from '../../center-operations/api/centerOperationsApi';
 import { createStaffAssignment } from '../api/sessionAssignmentsApi';

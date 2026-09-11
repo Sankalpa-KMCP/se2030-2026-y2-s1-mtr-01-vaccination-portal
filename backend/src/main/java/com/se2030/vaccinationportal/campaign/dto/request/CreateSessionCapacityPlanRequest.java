@@ -6,6 +6,11 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ */
 public record CreateSessionCapacityPlanRequest(
         @Min(value = 0, message = "Fully equipped station count must be non-negative")
         int fullyEquippedStationCount,

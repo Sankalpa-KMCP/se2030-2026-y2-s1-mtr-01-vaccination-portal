@@ -7,6 +7,10 @@ import java.util.TreeSet;
 import org.springframework.stereotype.Service;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * Pure calculation engine for session throughput, effective station bundles, and concurrent occupancy.
  * Stateless with zero database or repository dependencies.
  * Canonical Section 6.4, MF02-BR-10, MF02-BR-21, MF02-BR-22.

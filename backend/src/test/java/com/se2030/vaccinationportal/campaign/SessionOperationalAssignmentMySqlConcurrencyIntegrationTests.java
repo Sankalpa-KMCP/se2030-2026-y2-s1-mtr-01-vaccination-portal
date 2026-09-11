@@ -61,6 +61,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * Production-equivalent MySQL Testcontainers concurrency tests verifying deterministic serialization
  * for session operational resource assignments and cross-center staff assignments.
  */

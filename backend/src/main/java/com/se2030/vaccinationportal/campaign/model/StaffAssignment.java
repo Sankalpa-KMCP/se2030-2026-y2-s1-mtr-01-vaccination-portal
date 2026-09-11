@@ -19,6 +19,10 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * Assignment of a staff member to a vaccination session interval.
  * Uses half-open {@code [startAt, endAt)} interval semantics.
  * Canonical Section 6.1, 6.4 and Table 12.1.
