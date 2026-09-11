@@ -134,3 +134,90 @@ export function updateEligibilityRule(ruleId, payload) {
 export function deleteEligibilityRule(ruleId) {
   return screeningRequest(`/rules/${ruleId}`, { method: 'DELETE' });
 }
+
+// Citizen screening workflow
+export function getCitizenScreeningForm(campaignId) {
+  return screeningRequest(`/campaigns/${campaignId}/form`, { method: 'GET' });
+}
+
+export function getActiveScreeningSubmission(citizenId, campaignId) {
+  return screeningRequest(
+    `/citizens/${citizenId}/campaigns/${campaignId}/active-submission`,
+    { method: 'GET' },
+  );
+}
+
+export function submitScreening(payload) {
+  return screeningRequest('/submissions', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getScreeningCorrectionForm(submissionId) {
+  return screeningRequest(`/submissions/${submissionId}/correction-form`, { method: 'GET' });
+}
+
+export function resubmitScreening(submissionId, answers) {
+  return screeningRequest(`/submissions/${submissionId}/resubmit`, {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  });
+}
+
+// Citizen eligibility and historical display (read-only)
+export function listCitizenScreeningSubmissions(citizenId) {
+  return screeningRequest(`/citizens/${citizenId}/submissions`, { method: 'GET' });
+}
+
+export function listCitizenEligibilityAssessments(citizenId) {
+  return screeningRequest(`/citizens/${citizenId}/assessments`, { method: 'GET' });
+}
+
+export function getEligibilityAssessmentBySubmission(submissionId) {
+  return screeningRequest(`/assessments/submissions/${submissionId}`, { method: 'GET' });
+}
+
+export function getCitizenCampaignEligibility(citizenId, campaignId) {
+  return screeningRequest(`/citizens/${citizenId}/campaigns/${campaignId}/eligibility`, { method: 'GET' });
+}
+
+export function getScreeningHistoryDetails(submissionId) {
+  return screeningRequest(`/submissions/${submissionId}/history-details`, { method: 'GET' });
+}
+
+// Healthcare-officer screening review workflow
+export function listScreeningReviewQueue({ campaignId } = {}) {
+  const query = new URLSearchParams();
+  if (campaignId !== undefined && campaignId !== null && campaignId !== '') {
+    query.set('campaignId', String(campaignId));
+  }
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+  return screeningRequest(`/assessments/queue${suffix}`, { method: 'GET' });
+}
+
+export function getScreeningReviewDetails(submissionId) {
+  return screeningRequest(`/submissions/${submissionId}/review-details`, { method: 'GET' });
+}
+
+export function requestScreeningCorrections(submissionId, instructions) {
+  return screeningRequest(`/assessments/submissions/${submissionId}/corrections`, {
+    method: 'POST',
+    body: JSON.stringify({ instructions }),
+  });
+}
+
+export function recordEligibilityDecision(submissionId, payload) {
+  const decision = {
+    status: payload.status,
+    reason: payload.reason,
+  };
+  if (payload.status === 'ELIGIBLE' && payload.validUntil) {
+    decision.validUntil = payload.validUntil;
+  }
+
+  return screeningRequest(`/assessments/submissions/${submissionId}/decision`, {
+    method: 'POST',
+    body: JSON.stringify(decision),
+  });
+}

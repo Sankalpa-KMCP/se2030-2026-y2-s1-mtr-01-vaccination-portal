@@ -80,7 +80,7 @@ export default function CenterAssignmentsTab({
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div>
           {/* Active Center Assignments Section */}
           <div className="mb-4">
             <h6 className="small fw-bold text-uppercase text-secondary mb-2">

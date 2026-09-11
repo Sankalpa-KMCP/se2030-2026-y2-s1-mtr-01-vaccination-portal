@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import CheckInPanel from '../components/CheckInPanel';
+import PageHeader from '../../../components/common/PageHeader';
 import {
   getVaccinatorQueue,
   checkIn,
@@ -158,15 +159,11 @@ export default function CheckInManagementPage() {
   };
 
   return (
-    <div className="checkin-management-page">
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h1 className="h3 fw-bold text-primary mb-1">Vaccinator Queue &amp; Check-In</h1>
-          <p className="text-muted mb-0">
-            Monitor the on-site clinic queue, process arrival check-ins, apply authorized overrides, or record no-shows.
-          </p>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Vaccinator Queue & Check-In"
+        subtitle="Monitor the on-site clinic queue, process arrival check-ins, apply authorized overrides, or record no-shows."
+      />
 
       {/* Primary Slot Selector Card */}
       <div className="card shadow-sm border-0 mb-4">
@@ -204,7 +201,8 @@ export default function CheckInManagementPage() {
           <div className="mt-3 pt-3 border-top">
             <details>
               <summary className="text-secondary small fw-semibold cursor-pointer">
-                🔍 Don't know the Time Slot ID? Find slots by Session ID
+                <i className="bi bi-search me-1" aria-hidden="true"></i>
+                Don't know the Time Slot ID? Find slots by Session ID
               </summary>
               <div className="row g-2 align-items-center mt-2">
                 <div className="col-auto">

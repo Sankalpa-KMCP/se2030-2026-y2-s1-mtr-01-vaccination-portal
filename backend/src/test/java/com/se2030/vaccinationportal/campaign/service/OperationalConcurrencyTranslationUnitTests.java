@@ -14,7 +14,12 @@ import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +38,8 @@ class OperationalConcurrencyTranslationUnitTests {
     @Mock private OperationalStaffRosterRepository rosterRepository;
     @Mock private VaccinationCenterRepository centerRepository;
     @Mock private OperationalStaffIdentityLockService identityLockService;
+    @Mock private SessionResourceAssignmentRepository resourceAssignmentRepository;
+    @Mock private StaffAssignmentRepository staffAssignmentRepository;
 
     private OperationalResourceService resourceService;
     private OperationalStaffRosterService rosterService;
@@ -40,8 +47,13 @@ class OperationalConcurrencyTranslationUnitTests {
 
     @BeforeEach
     void setUp() {
-        resourceService = new OperationalResourceService(resourceRepository, centerRepository);
-        rosterService = new OperationalStaffRosterService(rosterRepository, centerRepository, identityLockService);
+        Clock clock = Clock.fixed(Instant.parse("2026-08-09T00:00:00Z"), ZoneOffset.UTC);
+        resourceService = new OperationalResourceService(
+                resourceRepository, centerRepository, resourceAssignmentRepository, clock
+        );
+        rosterService = new OperationalStaffRosterService(
+                rosterRepository, centerRepository, identityLockService, staffAssignmentRepository, clock
+        );
 
         sampleCenter = new VaccinationCenter(
                 "CTR-01",

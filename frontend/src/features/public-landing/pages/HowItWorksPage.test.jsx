@@ -16,7 +16,7 @@ describe('HowItWorksPage', () => {
   afterEach(cleanup);
 
   it('renders the page hero and section headings', () => {
-    renderPage();
+    const { container } = renderPage();
 
     expect(
       screen.getByRole('heading', { level: 1, name: /one system, two journeys/i }),
@@ -31,8 +31,10 @@ describe('HowItWorksPage', () => {
       screen.getByRole('heading', { level: 2, name: /frequently asked/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /ready to begin your journey/i }),
+      screen.getByRole('heading', { level: 2, name: /see what keeps the service trustworthy/i }),
     ).toBeTruthy();
+    expect(container.querySelector('.premium-visual--journey')).toBeTruthy();
+    expect(container.querySelectorAll('.premium-journey-map__node')).toHaveLength(5);
   });
 
   it('renders the citizen journey by default with all five steps', () => {
@@ -111,12 +113,11 @@ describe('HowItWorksPage', () => {
     expect(region.getAttribute('role')).toBe('region');
   });
 
-  it('fires onLoginClick from the closing call-to-action', () => {
-    const onLoginClick = vi.fn();
-    renderPage(onLoginClick);
+  it('continues to the system overview without repeating the login action', () => {
+    renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /sign in to the portal/i }));
-    expect(onLoginClick).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('link', { name: /explore system safeguards/i }).getAttribute('href')).toBe('/about');
+    expect(screen.queryByRole('button', { name: /sign in to the portal/i })).toBeNull();
   });
 
   it('provides a skip link targeting main content', () => {

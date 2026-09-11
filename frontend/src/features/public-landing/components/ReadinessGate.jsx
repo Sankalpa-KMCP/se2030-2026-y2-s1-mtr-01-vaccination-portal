@@ -93,7 +93,7 @@ function GateCheckRow({ check, index }) {
 
 export default function ReadinessGate() {
   return (
-    <div className="lp-gate" data-reveal>
+    <div className="lp-gate" data-reveal data-tilt data-tilt-strength="2">
       <div className="lp-gate__checks">
         <div className="lp-gate__checks-head">
           <span className="lp-gate__head-label">Pre-open validation</span>

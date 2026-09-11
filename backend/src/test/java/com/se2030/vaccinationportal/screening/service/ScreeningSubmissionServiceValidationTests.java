@@ -13,8 +13,8 @@ import com.se2030.vaccinationportal.screening.model.ScreeningAnswer;
 import com.se2030.vaccinationportal.screening.model.ScreeningQuestion;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.model.ScreeningTriggeredRuleEvidence;
+import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
-import com.se2030.vaccinationportal.screening.repository.ConsentNoticeVersionRepository;
 import com.se2030.vaccinationportal.screening.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireVersionRepository;
@@ -64,7 +64,7 @@ class ScreeningSubmissionServiceValidationTests {
     @Mock
     private QuestionnaireItemRepository itemRepository;
     @Mock
-    private ConsentNoticeVersionRepository consentRepository;
+    private ScreeningConsentNoticeService consentNoticeService;
     @Mock
     private AnswerOptionRepository optionRepository;
     @Mock
@@ -92,7 +92,7 @@ class ScreeningSubmissionServiceValidationTests {
                 answerRepository,
                 versionRepository,
                 itemRepository,
-                consentRepository,
+                consentNoticeService,
                 answerValidator,
                 preliminaryScreeningService,
                 eligibilityRuleRepository,
@@ -300,6 +300,63 @@ class ScreeningSubmissionServiceValidationTests {
     }
 
     @Test
+    void submitScreeningRejectsUnrelatedActiveConsentNoticeId() {
+        stubSubmissionPrerequisites(List.of(new QuestionnaireItem(version, question, 1, null)));
+        stubEffectiveAssignment(20L);
+
+        assertThatThrownBy(() ->
+                service.submitScreening(1L, 2L, 20L, 901L, Map.of(40L, "valid details")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("current PRE_VACCINATION_SCREENING notice");
+
+        verify(submissionRepository, never()).save(any());
+    }
+
+    @Test
+    void submitScreeningRejectsOlderNonRetiredCanonicalConsentWhenNewerVersionIsCurrent() {
+        consent.setVersionNumber(2);
+        stubSubmissionPrerequisites(List.of(new QuestionnaireItem(version, question, 1, null)));
+        stubEffectiveAssignment(20L);
+
+        assertThatThrownBy(() ->
+                service.submitScreening(1L, 2L, 20L, 29L, Map.of(40L, "valid details")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("reload the screening form");
+
+        verify(submissionRepository, never()).save(any());
+    }
+
+    @Test
+    void submitScreeningRejectsRetiredCanonicalConsentId() {
+        stubSubmissionPrerequisites(List.of(new QuestionnaireItem(version, question, 1, null)));
+        stubEffectiveAssignment(20L);
+
+        assertThatThrownBy(() ->
+                service.submitScreening(1L, 2L, 20L, 28L, Map.of(40L, "valid details")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("current PRE_VACCINATION_SCREENING notice");
+
+        verify(submissionRepository, never()).save(any());
+    }
+
+    @Test
+    void submitScreeningReportsMissingCurrentCanonicalConsent() {
+        stubPublishedVersionPrerequisites();
+        stubEffectiveAssignment(20L);
+        when(consentNoticeService.getCurrentScreeningConsentNotice())
+                .thenThrow(new ResourceNotFoundException(
+                        "No current consent notice exists for screening notice code PRE_VACCINATION_SCREENING"
+                ));
+
+        assertThatThrownBy(() ->
+                service.submitScreening(1L, 2L, 20L, 30L, Map.of(40L, "valid details")))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("PRE_VACCINATION_SCREENING");
+
+        verify(submissionRepository, never()).save(any());
+    }
+
+    @Test
     void submitScreeningRejectsExistingActiveSubmissionBeforeDownstreamWorkOrPersistence() {
         ScreeningSubmission activeSubmission = new ScreeningSubmission();
         activeSubmission.setId(50L);
@@ -314,7 +371,7 @@ class ScreeningSubmissionServiceValidationTests {
         verify(eligibilityReviewService, never()).validateScreeningAllowed(any(), any());
         verify(versionRepository, never()).findById(any());
         verify(assignmentService, never()).getEffectiveAssignmentAt(any(), any());
-        verify(consentRepository, never()).findById(any());
+        verify(consentNoticeService, never()).getCurrentScreeningConsentNotice();
         verify(itemRepository, never()).findByQuestionnaireVersionIdOrderByDisplayOrderAsc(any());
         verify(answerValidator, never()).validateAndNormalize(any(), anyList(), anyMap());
         verify(preliminaryScreeningService, never()).evaluateAnswers(any(), any());
@@ -325,8 +382,8 @@ class ScreeningSubmissionServiceValidationTests {
 
     private void stubSubmissionPrerequisites(List<QuestionnaireItem> items) {
         stubPublishedVersionPrerequisites();
-        when(consentRepository.findById(30L)).thenReturn(Optional.of(consent));
-        when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(20L)).thenReturn(items);
+        when(consentNoticeService.getCurrentScreeningConsentNotice()).thenReturn(consent);
+        lenient().when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(20L)).thenReturn(items);
     }
 
     private void stubPublishedVersionPrerequisites() {

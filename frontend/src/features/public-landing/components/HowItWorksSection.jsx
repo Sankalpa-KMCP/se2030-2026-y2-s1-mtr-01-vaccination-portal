@@ -1,85 +1,41 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const STAGES = [
-  {
-    node: '1',
-    phase: 'For citizens',
-    title: 'Create your account',
-    desc: 'Register with your details once — your account is ready immediately.',
-    points: ['Register in minutes', 'Secure and private'],
-  },
-  {
-    node: '2',
-    phase: 'For everyone',
-    title: 'Book or schedule',
-    desc: 'Citizens book a session at a nearby clinic. Staff plan one-off or repeating clinic schedules.',
-    points: ['Choose clinic & time', 'Repeating schedules'],
-  },
-  {
-    node: '3',
-    phase: 'For everyone',
-    title: 'Attend and get your record',
-    desc: 'Visit the clinic for your vaccination — records update automatically for citizens and campaigns alike.',
-    points: ['Automatic records', 'Campaign progress'],
-  },
+  { moment: 'Programme', phase: 'Before you book', citizen: 'Find a campaign and complete its screening.', staff: 'Publish programme rules and review eligibility.', icon: 'M6 3h12v18H6zM9 8h6M9 12h6M9 16h4' },
+  { moment: 'Appointment', phase: 'Choose your time', citizen: 'Choose from valid sessions and reserve a place.', staff: 'Plan the session around center resources and capacity.', icon: 'M4 6h16v15H4zM4 11h16M8 3v5M16 3v5M8 15h3' },
+  { moment: 'Clinic', phase: 'On the day', citizen: 'Attend the booked center and check in.', staff: 'Confirm arrival and record the administered dose.', icon: 'M3 21V9l9-6 9 6v12M9 21v-6h6v6M12 7v5M9.5 9.5h5' },
+  { moment: 'Record', phase: 'After your visit', citizen: 'Return to your personal vaccination history.', staff: 'Finalise dose information and issue a certificate.', icon: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13l2 2 5-5' },
 ];
-
-function PointIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 12.5l4.2 4.2L19 7.2" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export default function HowItWorksSection() {
   return (
-    <section
-      className="lp-section lp-section--subtle lp-workflow"
-      id="how-it-works"
-      aria-labelledby="lp-workflow-title"
-    >
+    <section className="home-workflow" id="how-it-works" aria-labelledby="lp-workflow-title">
       <div className="lp-container">
-        <div className="lp-workflow-layout">
-          {/* Sticky aside */}
-          <aside className="lp-workflow-aside">
-            <div data-reveal>
-              <div className="lp-kicker">
-                <span className="lp-kicker__index">03</span>
-                <span className="lp-kicker__label">How it works</span>
-                <span className="lp-kicker__rule" aria-hidden="true" />
+        <div className="home-section-heading home-section-heading--workflow" data-reveal="section">
+          <div>
+            <span className="home-section-mark">The connected care journey</span>
+            <h2 id="lp-workflow-title">Citizen steps and staff operations move together.</h2>
+          </div>
+          <p>One continuous journey, with a clear next step for you and a coordinated response from the clinic.</p>
+        </div>
+        <ol className="home-journey" data-reveal="sequence" aria-label="Citizen and staff vaccination journey">
+          {STAGES.map((stage, index) => (
+            <li className="home-journey__stage" key={stage.moment}>
+              <div className="home-journey__station" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false"><path d={stage.icon} /></svg>
+                <span>0{index + 1}</span>
               </div>
-              <h2 className="lp-section__title" id="lp-workflow-title">
-                How programme operations work
-              </h2>
-              <p className="lp-section__lead">
-                Getting vaccinated &mdash; or running a programme &mdash; takes
-                three simple steps.
-              </p>
-            </div>
-          </aside>
-
-          {/* Steps with drawing spine */}
-          <ol className="lp-workflow__steps" data-reveal>
-            {STAGES.map((stage) => (
-              <li key={stage.node} className="lp-workflow-col">
-                <span className="lp-workflow-col__node" aria-hidden="true">{stage.node}</span>
-                <div className="lp-workflow-col__body">
-                  <span className="lp-workflow-col__phase">{stage.phase}</span>
-                  <h3 className="lp-workflow-col__title">{stage.title}</h3>
-                  <p className="lp-workflow-col__desc">{stage.desc}</p>
-                  <ul className="lp-workflow-col__points" aria-label={`Points for ${stage.title}`}>
-                    {stage.points.map((pt) => (
-                      <li key={pt} className="lp-workflow-col__point">
-                        <PointIcon />
-                        <span>{pt}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </li>
-            ))}
-          </ol>
+              <span className="home-journey__phase">{stage.phase}</span>
+              <h3>{stage.moment}</h3>
+              <p>{stage.citizen}</p>
+              <div className="home-journey__staff"><span>Behind the scenes</span><p>{stage.staff}</p></div>
+            </li>
+          ))}
+        </ol>
+        <div className="home-journey__foot">
+          <p>New to the portal? Your journey begins with a Citizen account.</p>
+          <Link to="/how-it-works">Walk through the full process <span aria-hidden="true">→</span></Link>
         </div>
       </div>
     </section>

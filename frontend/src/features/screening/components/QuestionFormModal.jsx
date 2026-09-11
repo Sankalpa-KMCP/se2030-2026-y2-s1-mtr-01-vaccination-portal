@@ -105,13 +105,13 @@ export default function QuestionFormModal({
     >
       <div className="modal-dialog modal-dialog-centered modal-lg">
         <div className="modal-content shadow-lg border-0">
-          <div className="modal-header bg-primary text-white">
+          <div className="modal-header bg-light">
             <h2 className="modal-title h5" id="questionFormTitle">
               {isEditing ? 'Edit Screening Question' : 'Create Screening Question'}
             </h2>
             <button
               type="button"
-              className="btn-close btn-close-white"
+              className="btn-close"
               aria-label="Close"
               onClick={onClose}
               disabled={processing}

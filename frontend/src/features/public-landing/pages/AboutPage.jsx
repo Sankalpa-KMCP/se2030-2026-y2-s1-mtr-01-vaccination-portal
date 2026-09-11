@@ -1,9 +1,16 @@
 import React, { useRef } from 'react';
+import { Link } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
 import PublicFooter from '../components/PublicFooter';
 import PageHero from '../components/PageHero';
 import useLandingReveal from '../hooks/useLandingReveal';
+import usePremiumMotion from '../hooks/usePremiumMotion';
+import usePublicPageTop from '../hooks/usePublicPageTop';
+import PremiumBackdrop from '../components/PremiumBackdrop';
+import PublicServiceGuide from '../components/PublicServiceGuide';
 import '../public-landing.css';
+import '../premium-public.css';
+import '../clinical-public.css';
 
 const ROLES = [
   {
@@ -47,7 +54,7 @@ const ROLES = [
     num: '04',
     role: 'Campaign Officer',
     scope: 'Programme design',
-    desc: 'Defines campaigns &mdash; target groups, dose programmes, and locations &mdash; and guides their lifecycle.',
+    desc: 'Defines campaigns — target groups, dose programmes, and locations — and guides their lifecycle.',
     icon: (
       <>
         <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6" />
@@ -86,7 +93,7 @@ const LEDGER = [
   {
     num: '01',
     title: 'Campaign lifecycle',
-    desc: 'Campaigns move through controlled stages &mdash; draft, configured, active, suspended, completed &mdash; each transition recorded with who made it and why.',
+    desc: 'Campaigns move through controlled stages — draft, configured, active, suspended, completed — each transition recorded with who made it and why.',
   },
   {
     num: '02',
@@ -106,7 +113,7 @@ const LEDGER = [
   {
     num: '05',
     title: 'Records & certificates',
-    desc: 'Vaccination records and digital certificates are created when clinics administer doses &mdash; tied to citizens, campaigns, and sessions.',
+    desc: 'Vaccination records and digital certificates are created when clinics administer doses — tied to citizens, campaigns, and sessions.',
   },
 ];
 
@@ -114,7 +121,7 @@ const COMMITMENTS = [
   {
     num: '01',
     title: 'Controlled access',
-    desc: 'Every account sees exactly what its role permits &mdash; nothing more.',
+    desc: 'Every account sees exactly what its role permits — nothing more.',
   },
   {
     num: '02',
@@ -129,7 +136,7 @@ const COMMITMENTS = [
   {
     num: '04',
     title: 'Operational safety',
-    desc: 'Capacity follows real stations and rosters &mdash; never guesswork.',
+    desc: 'Capacity follows real stations and rosters — never guesswork.',
   },
 ];
 
@@ -149,7 +156,7 @@ const DATA_STATEMENTS = [
   {
     title: 'Traceability',
     statement: 'Every change leaves a mark.',
-    detail: 'Campaign decisions, staffing revisions, and session changes are recorded with administrative metadata &mdash; reviewable at any time.',
+    detail: 'Campaign decisions, staffing revisions, and session changes are recorded with administrative metadata — reviewable at any time.',
     icon: (
       <>
         <path d="M5 19.5h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -174,21 +181,26 @@ const DATA_STATEMENTS = [
 export default function AboutPage({ onLoginClick }) {
   const rootRef = useRef(null);
   useLandingReveal(rootRef);
+  usePremiumMotion(rootRef);
+  usePublicPageTop();
 
   return (
-    <div className="lp-page" ref={rootRef}>
+    <div className="lp-page lp-page--about" ref={rootRef}>
+      <PremiumBackdrop />
       <a className="lp-skip-link" href="#lp-main">
         Skip to main content
       </a>
       <PublicHeader onLoginClick={onLoginClick} />
       <main id="lp-main" tabIndex={-1}>
         <PageHero
+          variant="about"
           index="01"
           label="About the portal"
           title="A system built on"
           accent="responsibility."
           lead="Six roles, five operational domains, one auditable record of every decision. This is the structure that keeps a vaccination programme trustworthy."
         />
+        <PublicServiceGuide />
 
         {/* Roles registry */}
         <section className="lp-section lp-section--subtle lp-roles" aria-labelledby="lp-roles-title">
@@ -217,6 +229,8 @@ export default function AboutPage({ onLoginClick }) {
                   key={entry.num}
                   className="lp-role"
                   data-reveal
+                  data-tilt
+                  data-tilt-strength="1.5"
                   style={{ '--reveal-delay': `${(index % 3) * 90}ms` }}
                 >
                   <div className="lp-role__num-row">
@@ -322,6 +336,8 @@ export default function AboutPage({ onLoginClick }) {
                   key={item.title}
                   className="lp-statement"
                   data-reveal
+                  data-tilt
+                  data-tilt-strength="1.5"
                   style={{ '--reveal-delay': `${index * 110}ms` }}
                 >
                   <span className="lp-statement__icon" aria-hidden="true">
@@ -341,29 +357,26 @@ export default function AboutPage({ onLoginClick }) {
           <div className="lp-container lp-cta-inner">
             <div className="lp-cta-panel__content">
               <div className="lp-cta-kicker">
-                <span className="lp-cta-kicker__label">Portal access</span>
+                <span className="lp-cta-kicker__label">Next: care journey</span>
                 <span className="lp-cta-kicker__rule" aria-hidden="true" />
               </div>
               <h2 className="lp-cta-panel__title" id="lp-cta-title">
-                Trusted by design. Ready when you are.
+                See the service from start to record.
               </h2>
               <p className="lp-cta-panel__text">
-                Sign in to the portal, or see how the system works from
+                Follow the connected steps for citizens and health teams, from
                 registration to a recorded vaccination.
               </p>
             </div>
             <div className="lp-cta-panel__actions">
-              <button type="button" className="lp-btn lp-btn--inverted" onClick={onLoginClick}>
-                Sign in to the portal
-              </button>
-              <a href="/" className="lp-cta-panel__link">
-                Return to the home page
-              </a>
+              <Link to="/how-it-works" className="lp-cta-panel__link">
+                Explore how it works
+              </Link>
             </div>
           </div>
         </section>
       </main>
-      <PublicFooter onLoginClick={onLoginClick} />
+      <PublicFooter />
     </div>
   );
 }

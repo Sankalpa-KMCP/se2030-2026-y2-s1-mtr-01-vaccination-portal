@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * Request payload for assigning a rostered staff member to a vaccination session.
  */
 public record CreateStaffAssignmentRequest(

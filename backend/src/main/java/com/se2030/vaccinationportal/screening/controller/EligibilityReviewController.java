@@ -12,10 +12,14 @@ import com.se2030.vaccinationportal.screening.mapper.ScreeningSubmissionMapper;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
+import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
 import com.se2030.vaccinationportal.screening.validation.RequireRoles;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,15 +41,18 @@ public class EligibilityReviewController {
     private final EligibilityReviewService reviewService;
     private final EligibilityAssessmentMapper assessmentMapper;
     private final ScreeningSubmissionMapper submissionMapper;
+    private final CitizenScreeningAccessService accessService;
 
     public EligibilityReviewController(
             EligibilityReviewService reviewService,
             EligibilityAssessmentMapper assessmentMapper,
-            ScreeningSubmissionMapper submissionMapper
+            ScreeningSubmissionMapper submissionMapper,
+            CitizenScreeningAccessService accessService
     ) {
         this.reviewService = reviewService;
         this.assessmentMapper = assessmentMapper;
         this.submissionMapper = submissionMapper;
+        this.accessService = accessService;
     }
 
     @GetMapping("/assessments/queue")
@@ -69,6 +76,12 @@ public class EligibilityReviewController {
     public ResponseEntity<EligibilityAssessmentResponse> getAssessmentBySubmissionId(
             @PathVariable("submissionId") Long submissionId
     ) {
+        accessService.requireSubmissionAccess(
+                submissionId,
+                "ROLE_HEALTHCARE_OFFICER",
+                "ROLE_ADMIN",
+                "ROLE_SYSTEM_ADMINISTRATOR"
+        );
         return reviewService.getAssessmentBySubmissionId(submissionId)
                 .map(assessmentMapper::toResponse)
                 .map(ResponseEntity::ok)
@@ -80,6 +93,12 @@ public class EligibilityReviewController {
     public ResponseEntity<List<EligibilityAssessmentResponse>> getAssessmentsForCitizen(
             @PathVariable("citizenId") Long citizenId
     ) {
+        accessService.requireCitizenIdAccess(
+                citizenId,
+                "ROLE_HEALTHCARE_OFFICER",
+                "ROLE_ADMIN",
+                "ROLE_SYSTEM_ADMINISTRATOR"
+        );
         return ResponseEntity.ok(assessmentMapper.toResponses(reviewService.getAssessmentsForCitizen(citizenId)));
     }
 
@@ -89,6 +108,14 @@ public class EligibilityReviewController {
             @PathVariable("citizenId") Long citizenId,
             @PathVariable("campaignId") Long campaignId
     ) {
+        accessService.requireCitizenIdAccess(
+                citizenId,
+                "ROLE_HEALTHCARE_OFFICER",
+                "ROLE_ADMIN",
+                "ROLE_SYSTEM_ADMINISTRATOR",
+                "ROLE_CAMPAIGN_OFFICER",
+                "ROLE_RECEPTION_STAFF"
+        );
         boolean eligible = reviewService.isCitizenCurrentlyEligible(citizenId, campaignId);
         return ResponseEntity.ok(Map.of(
                 "citizenId", citizenId,
@@ -101,11 +128,15 @@ public class EligibilityReviewController {
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
     public ResponseEntity<EligibilityAssessmentResponse> recordDecision(
             @PathVariable("submissionId") Long submissionId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody EligibilityDecisionRequest request
     ) {
+        if (principal == null) {
+            throw new AccessDeniedException("Authenticated reviewer identity is unavailable");
+        }
         EligibilityAssessment assessment = reviewService.recordDecision(
                 submissionId,
-                request.reviewerId(),
+                principal.getUserId(),
                 request.status(),
                 request.reason(),
                 request.clinicalNotes(),

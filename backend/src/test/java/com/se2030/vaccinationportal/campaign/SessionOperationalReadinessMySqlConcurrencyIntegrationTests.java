@@ -40,6 +40,7 @@ import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRep
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
@@ -90,6 +91,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
     @Autowired private SessionResourceAssignmentRepository resourceAssignmentRepository;
     @Autowired private StaffAssignmentRepository staffAssignmentRepository;
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
+    @Autowired private TimeSlotRepository timeSlotRepository;
     @Autowired private OperationalResourceRepository resourceRepository;
     @Autowired private OperationalStaffRosterRepository staffRosterRepository;
     @Autowired private OperationalStaffIdentityRepository identityRepository;
@@ -206,6 +208,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
 
     private void cleanupDatabase() {
         transactionTemplate.executeWithoutResult(status -> {
+            timeSlotRepository.deleteAllInBatch();
             resourceAssignmentRepository.deleteAllInBatch();
             staffAssignmentRepository.deleteAllInBatch();
             capacityPlanRepository.deleteAllInBatch();
@@ -502,7 +505,7 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
 
     @Test
     @Timeout(30)
-    @DisplayName("Scenario E: Concurrent scheduleSession vs resource status change serializes deterministically")
+    @DisplayName("Scenario E: Concurrent scheduling cannot race assigned resource deactivation")
     void concurrentScheduleVsResourceStatusChange() throws Exception {
         Long sessionId = session.getId();
         Long centerId = centerA.getId();
@@ -532,8 +535,10 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
             readyLatch.countDown();
             try {
                 assertTrue(startLatch.await(10, TimeUnit.SECONDS));
-                resourceService.updateResource(centerId, resourceId, "Station 1", OperationalResourceStatus.MAINTENANCE);
+                resourceService.updateResource(centerId, resourceId, "Station 1", OperationalResourceStatus.INACTIVE);
                 resourceUpdateSucceeded.set(true);
+            } catch (IllegalStateException e) {
+                // Expected: the DRAFT or SCHEDULED session remains a blocking dependency.
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -547,22 +552,19 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
         executor.shutdown();
         assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
 
-        assertTrue(resourceUpdateSucceeded.get(), "Resource update should succeed");
+        assertTrue(scheduleSucceeded.get(), "Scheduling should remain valid with the assigned ACTIVE resource");
+        assertFalse(resourceUpdateSucceeded.get(), "Assigned resource deactivation must be rejected");
 
         OperationalResource reloadedResource = resourceRepository.findById(resourceId).orElseThrow();
-        assertEquals(OperationalResourceStatus.MAINTENANCE, reloadedResource.getStatus());
+        assertEquals(OperationalResourceStatus.ACTIVE, reloadedResource.getStatus());
 
         VaccinationSession reloadedSession = sessionRepository.findById(sessionId).orElseThrow();
-        if (scheduleSucceeded.get()) {
-            assertEquals(SessionLifecycleStatus.SCHEDULED, reloadedSession.getLifecycleStatus());
-        } else {
-            assertEquals(SessionLifecycleStatus.DRAFT, reloadedSession.getLifecycleStatus());
-        }
+        assertEquals(SessionLifecycleStatus.SCHEDULED, reloadedSession.getLifecycleStatus());
     }
 
     @Test
     @Timeout(30)
-    @DisplayName("Scenario F: Concurrent scheduleSession vs staff roster status change serializes deterministically")
+    @DisplayName("Scenario F: Concurrent scheduling cannot race assigned staff deactivation")
     void concurrentScheduleVsStaffRosterStatusChange() throws Exception {
         Long sessionId = session.getId();
         Long centerId = centerA.getId();
@@ -594,6 +596,8 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
                 assertTrue(startLatch.await(10, TimeUnit.SECONDS));
                 rosterService.updateStaffRoster(centerId, rosterId, StaffRole.VACCINATOR, OperationalStaffStatus.INACTIVE);
                 rosterUpdateSucceeded.set(true);
+            } catch (IllegalStateException e) {
+                // Expected: the DRAFT or SCHEDULED session remains a blocking dependency.
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -607,17 +611,14 @@ class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends Abstra
         executor.shutdown();
         assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
 
-        assertTrue(rosterUpdateSucceeded.get(), "Roster update should succeed");
+        assertTrue(scheduleSucceeded.get(), "Scheduling should remain valid with the assigned ACTIVE staff member");
+        assertFalse(rosterUpdateSucceeded.get(), "Assigned staff deactivation must be rejected");
 
         OperationalStaffRoster reloadedRoster = staffRosterRepository.findById(rosterId).orElseThrow();
-        assertEquals(OperationalStaffStatus.INACTIVE, reloadedRoster.getStatus());
+        assertEquals(OperationalStaffStatus.ACTIVE, reloadedRoster.getStatus());
 
         VaccinationSession reloadedSession = sessionRepository.findById(sessionId).orElseThrow();
-        if (scheduleSucceeded.get()) {
-            assertEquals(SessionLifecycleStatus.SCHEDULED, reloadedSession.getLifecycleStatus());
-        } else {
-            assertEquals(SessionLifecycleStatus.DRAFT, reloadedSession.getLifecycleStatus());
-        }
+        assertEquals(SessionLifecycleStatus.SCHEDULED, reloadedSession.getLifecycleStatus());
     }
 
     @Test

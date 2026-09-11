@@ -18,9 +18,13 @@ import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterReposit
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -54,6 +58,7 @@ class CampaignReverseImpactIntegrationTests {
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
     @Autowired private Clock clock;
+    @PersistenceContext private EntityManager entityManager;
 
     private VaccineType vaccineType;
     private TargetGroup targetGroup;
@@ -359,5 +364,69 @@ class CampaignReverseImpactIntegrationTests {
                 () -> campaignService.updateServiceDates(campaign.getId(), equalDate, equalDate)
         );
         assertTrue(ex.getMessage().contains("must be after service start date"));
+    }
+
+    @ParameterizedTest(name = "{0} campaign service dates are immutable")
+    @EnumSource(value = CampaignStatus.class, names = {"COMPLETED", "CANCELLED", "ARCHIVED"})
+    @DisplayName("Operationally closed campaign service dates cannot be changed")
+    void operationallyClosedCampaignServiceDatesCannotBeChanged(CampaignStatus status) {
+        LocalDate today = LocalDate.now(clock);
+        LocalDate originalStart = today.minusDays(10);
+        LocalDate originalEnd = today.plusDays(60);
+        VaccinationCampaign campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                "CMP-REV-TERM-" + status,
+                "Terminal campaign " + status,
+                "Desc",
+                vaccineType,
+                targetGroup,
+                originalStart,
+                originalEnd,
+                clock.instant().minusSeconds(3600),
+                clock.instant().plusSeconds(86400 * 180),
+                status
+        ));
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                campaignService.updateServiceDates(
+                        campaign.getId(),
+                        originalStart.minusDays(1),
+                        originalEnd.plusDays(1)
+                )
+        );
+
+        assertTrue(exception.getMessage().contains(status.name()));
+        assertEquals(originalStart, campaign.getServiceStartDate());
+        assertEquals(originalEnd, campaign.getServiceEndDate());
+    }
+
+    @Test
+    @DisplayName("Existing invalid booking window prevents service date mutation")
+    void invalidBookingWindowPreventsServiceDateMutation() {
+        LocalDate today = LocalDate.now(clock);
+        LocalDate originalStart = today.minusDays(10);
+        LocalDate originalEnd = today.plusDays(60);
+        VaccinationCampaign campaign = createCampaign("CMP-REV-BOOKING", originalStart, originalEnd);
+
+        entityManager.createNativeQuery("""
+                        UPDATE vaccination_campaigns
+                        SET booking_close_at = booking_open_at
+                        WHERE id = :campaignId
+                        """)
+                .setParameter("campaignId", campaign.getId())
+                .executeUpdate();
+        entityManager.clear();
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                campaignService.updateServiceDates(
+                        campaign.getId(),
+                        originalStart.minusDays(1),
+                        originalEnd.plusDays(1)
+                )
+        );
+
+        assertTrue(exception.getMessage().contains("booking close time"));
+        VaccinationCampaign unchanged = campaignRepository.findById(campaign.getId()).orElseThrow();
+        assertEquals(originalStart, unchanged.getServiceStartDate());
+        assertEquals(originalEnd, unchanged.getServiceEndDate());
     }
 }

@@ -179,13 +179,13 @@ export default function CreateSessionModal({
     >
       <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div className="modal-content border-0 shadow">
-          <div className="modal-header bg-primary text-white">
+          <div className="modal-header bg-light">
             <h5 className="modal-title h5 mb-0" id="createSessionModalTitle">
               Create Draft Vaccination Session
             </h5>
             <button
               type="button"
-              className="btn-close btn-close-white"
+              className="btn-close"
               aria-label="Close"
               disabled={isSubmitting}
               onClick={onClose}

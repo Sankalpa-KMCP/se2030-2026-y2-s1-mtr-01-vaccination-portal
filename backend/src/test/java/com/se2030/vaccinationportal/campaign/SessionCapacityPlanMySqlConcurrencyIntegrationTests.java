@@ -39,6 +39,7 @@ import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRep
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
@@ -56,6 +57,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -65,6 +67,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * Production-equivalent MySQL Testcontainers concurrency tests verifying deterministic serialization
  * for session capacity plan revision creation against real MySQL/InnoDB.
  */
@@ -75,6 +81,7 @@ class SessionCapacityPlanMySqlConcurrencyIntegrationTests extends AbstractMySqlT
     @Autowired private SessionResourceAssignmentRepository resourceAssignmentRepository;
     @Autowired private StaffAssignmentRepository staffAssignmentRepository;
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
+    @Autowired private TimeSlotRepository timeSlotRepository;
     @Autowired private OperationalResourceRepository resourceRepository;
     @Autowired private OperationalStaffRosterRepository staffRosterRepository;
     @Autowired private OperationalStaffIdentityRepository identityRepository;
@@ -104,26 +111,9 @@ class SessionCapacityPlanMySqlConcurrencyIntegrationTests extends AbstractMySqlT
         assertConnectedToRealMySql();
 
         transactionTemplate = new TransactionTemplate(transactionManager);
-        transactionTemplate.executeWithoutResult(status -> {
-            resourceAssignmentRepository.deleteAllInBatch();
-            staffAssignmentRepository.deleteAllInBatch();
-            capacityPlanRepository.deleteAllInBatch();
-            sessionChangeEventRepository.deleteAllInBatch();
-            sessionRepository.deleteAllInBatch();
-            ruleRepository.deleteAllInBatch();
-            resourceRepository.deleteAllInBatch();
-            staffRosterRepository.deleteAllInBatch();
-            identityRepository.deleteAllInBatch();
-            campaignCenterAssignmentRepository.deleteAllInBatch();
-            closureRepository.deleteAllInBatch();
-            operatingHoursRepository.deleteAllInBatch();
-            doseProgrammeRepository.deleteAllInBatch();
-            lifecycleEventRepository.deleteAllInBatch();
-            campaignRepository.deleteAllInBatch();
-            centerRepository.deleteAllInBatch();
-            targetGroupRepository.deleteAllInBatch();
-            vaccineTypeRepository.deleteAllInBatch();
+        cleanupDatabase();
 
+        transactionTemplate.executeWithoutResult(status -> {
             VaccineType vaccineType = vaccineTypeRepository.saveAndFlush(
                     new VaccineType("VAX-CONCUR-01", "Concurrency Vaccine", "dose", true)
             );
@@ -179,6 +169,37 @@ class SessionCapacityPlanMySqlConcurrencyIntegrationTests extends AbstractMySqlT
             );
             resourceAssignmentRepository.saveAndFlush(new SessionResourceAssignment(session, station1, sessionStart, sessionEnd));
             resourceAssignmentRepository.saveAndFlush(new SessionResourceAssignment(session, station2, sessionStart, sessionEnd));
+        });
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (transactionTemplate != null) {
+            cleanupDatabase();
+        }
+    }
+
+    private void cleanupDatabase() {
+        transactionTemplate.executeWithoutResult(status -> {
+            timeSlotRepository.deleteAllInBatch();
+            resourceAssignmentRepository.deleteAllInBatch();
+            staffAssignmentRepository.deleteAllInBatch();
+            capacityPlanRepository.deleteAllInBatch();
+            sessionChangeEventRepository.deleteAllInBatch();
+            sessionRepository.deleteAllInBatch();
+            ruleRepository.deleteAllInBatch();
+            resourceRepository.deleteAllInBatch();
+            staffRosterRepository.deleteAllInBatch();
+            identityRepository.deleteAllInBatch();
+            campaignCenterAssignmentRepository.deleteAllInBatch();
+            closureRepository.deleteAllInBatch();
+            operatingHoursRepository.deleteAllInBatch();
+            doseProgrammeRepository.deleteAllInBatch();
+            lifecycleEventRepository.deleteAllInBatch();
+            campaignRepository.deleteAllInBatch();
+            centerRepository.deleteAllInBatch();
+            targetGroupRepository.deleteAllInBatch();
+            vaccineTypeRepository.deleteAllInBatch();
         });
     }
 

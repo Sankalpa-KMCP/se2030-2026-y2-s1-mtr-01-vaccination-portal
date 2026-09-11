@@ -2,6 +2,13 @@ import React, { useMemo } from 'react';
 import { formatDateInTimezone, formatTimeInTimezone } from '../api/sessionApi';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import StatusBadge from '../../../components/common/StatusBadge';
+import EmptyState from '../../../components/common/EmptyState';
+import {
+  sessionStatusVariants,
+  sessionBookingStatusVariants,
+  sessionBookingStatusTitles as BOOKING_STATUS_TITLES,
+} from '../../../components/common/statusVariants';
 
 export default function SessionListPanel({
   sessions = [],
@@ -56,38 +63,17 @@ export default function SessionListPanel({
     return summary;
   }, [sessions]);
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'DRAFT':
-        return <span className="badge bg-secondary text-white">DRAFT</span>;
-      case 'SCHEDULED':
-        return <span className="badge bg-primary text-white">SCHEDULED</span>;
-      case 'IN_PROGRESS':
-        return <span className="badge bg-success text-white">IN_PROGRESS</span>;
-      case 'COMPLETED':
-        return <span className="badge bg-dark text-white">COMPLETED</span>;
-      case 'CANCELLED':
-        return <span className="badge bg-danger text-white">CANCELLED</span>;
-      default:
-        return <span className="badge bg-light text-dark border">{status || 'UNKNOWN'}</span>;
-    }
-  };
+  const getStatusBadge = (status) => (
+    <StatusBadge status={status || 'UNKNOWN'} variants={sessionStatusVariants} />
+  );
 
-  const getBookingStatusBadge = (bookingStatus) => {
-    switch (bookingStatus) {
-      case 'OPEN':
-        return <span className="badge bg-success text-white" title="Booking Intake Open">OPEN</span>;
-      case 'FULL':
-        return <span className="badge bg-warning text-dark" title="Fully Booked (Waitlist Available)">FULL</span>;
-      case 'SUSPENDED':
-        return <span className="badge bg-danger text-white" title="Booking Intake Suspended">SUSPENDED</span>;
-      case 'NOT_OPEN':
-        return <span className="badge bg-info text-dark" title="Booking Window Not Open Yet">NOT_OPEN</span>;
-      case 'CLOSED':
-      default:
-        return <span className="badge bg-secondary text-white" title="Booking Closed">CLOSED</span>;
-    }
-  };
+  const getBookingStatusBadge = (bookingStatus) => (
+    <StatusBadge
+      status={bookingStatus || 'CLOSED'}
+      variants={sessionBookingStatusVariants}
+      title={BOOKING_STATUS_TITLES[bookingStatus]}
+    />
+  );
 
 
   return (
@@ -230,25 +216,24 @@ export default function SessionListPanel({
               <tbody>
                 {filteredSessions.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-5 text-muted">
-                      <div className="d-flex flex-column align-items-center gap-2">
-                        <span className="fs-4 text-secondary">📅</span>
-                        <p className="mb-0 fw-semibold">No vaccination sessions found</p>
-                        <p className="small text-muted mb-2">
-                          {sessions.length === 0
-                            ? 'No sessions have been scheduled yet.'
-                            : 'No sessions match your filter criteria.'}
-                        </p>
-                        {sessions.length === 0 && onOpenCreateModal && (
+                    <td colSpan="7">
+                      <EmptyState
+                        icon="bi-calendar-week"
+                        title="No vaccination sessions found"
+                        action={sessions.length === 0 && onOpenCreateModal && (
                           <button
                             type="button"
-                            className="btn btn-sm btn-primary mt-1"
+                            className="btn btn-sm btn-primary"
                             onClick={onOpenCreateModal}
                           >
                             Create First Session
                           </button>
                         )}
-                      </div>
+                      >
+                        {sessions.length === 0
+                          ? 'No sessions have been scheduled yet.'
+                          : 'No sessions match your filter criteria.'}
+                      </EmptyState>
                     </td>
                   </tr>
                 ) : (

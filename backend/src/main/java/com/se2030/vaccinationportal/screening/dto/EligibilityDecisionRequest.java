@@ -6,9 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 
 public record EligibilityDecisionRequest(
-        @NotNull(message = "Reviewer ID is required")
-        Long reviewerId,
-
         @NotNull(message = "Decision status is required")
         EligibilityAssessmentStatus status,
 

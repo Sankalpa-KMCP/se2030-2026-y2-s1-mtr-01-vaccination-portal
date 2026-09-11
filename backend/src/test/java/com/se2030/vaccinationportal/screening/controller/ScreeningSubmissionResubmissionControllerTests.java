@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmissionStatus;
 import com.se2030.vaccinationportal.screening.service.ScreeningSubmissionService;
+import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
 import com.se2030.vaccinationportal.screening.validation.RoleAuthorizationInterceptor;
 import com.se2030.vaccinationportal.screening.validation.ScreeningExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,12 +49,15 @@ class ScreeningSubmissionResubmissionControllerTests {
     @Mock
     private ScreeningSubmissionMapper submissionMapper;
 
+    @Mock
+    private CitizenScreeningAccessService accessService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         ScreeningSubmissionController controller =
-                new ScreeningSubmissionController(submissionService, submissionMapper);
+                new ScreeningSubmissionController(submissionService, submissionMapper, accessService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ScreeningExceptionHandler())
                 .addInterceptors(new RoleAuthorizationInterceptor())

@@ -6,6 +6,8 @@
 *.pem
 *.key
 *.keystore
+application-local.properties
+!application-local.properties.example
 
 # Dependencies
 node_modules/

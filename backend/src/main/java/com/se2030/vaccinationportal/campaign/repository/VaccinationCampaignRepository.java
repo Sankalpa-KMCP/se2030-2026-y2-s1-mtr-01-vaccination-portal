@@ -57,6 +57,14 @@ public interface VaccinationCampaignRepository extends JpaRepository<Vaccination
     List<VaccinationCampaign> findByStatus(CampaignStatus status);
 
     /**
+     * List campaigns matching any of the given lifecycle statuses ordered deterministically by id ascending (MF02-R-001).
+     *
+     * @param statuses Collection of permitted CampaignStatus values
+     * @return List of matching campaigns ordered by id ascending
+     */
+    List<VaccinationCampaign> findByStatusInOrderByIdAsc(Collection<CampaignStatus> statuses);
+
+    /**
      * List all campaigns configured with a specific vaccine type.
      *
      * @param vaccineTypeId VaccineType entity ID

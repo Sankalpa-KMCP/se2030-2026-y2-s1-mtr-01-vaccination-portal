@@ -81,9 +81,9 @@ export default function RescheduleDialog({ appointment, citizenId, onClose, onSu
     <div className="modal fade show d-block bg-dark bg-opacity-50" tabIndex="-1" role="dialog" aria-modal="true">
       <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div className="modal-content border-0 shadow">
-          <div className="modal-header bg-primary text-white">
+          <div className="modal-header bg-light">
             <h5 className="modal-title fw-bold">Reschedule Appointment #{appointment.id}</h5>
-            <button type="button" className="btn-close btn-close-white" aria-label="Close" onClick={onClose}></button>
+            <button type="button" className="btn-close" aria-label="Close" onClick={onClose}></button>
           </div>
 
           <div className="modal-body p-4">

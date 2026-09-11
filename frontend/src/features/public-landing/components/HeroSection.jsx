@@ -2,97 +2,71 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import HeroArtwork from './HeroArtwork';
 
-const HERO_ASSURANCES = [
-  { label: 'Official service', icon: 'shield' },
-  { label: 'Secure and private', icon: 'lock' },
-  { label: 'Free to use', icon: 'check' },
-];
-
-const HERO_STEPS = [
-  { num: '01', label: 'Create your account' },
-  { num: '02', label: 'Book a session near you' },
-  { num: '03', label: 'Attend and get your record' },
-];
-
-function AssuricIcon({ name }) {
-  if (name === 'shield') {
-    return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 3 5.5 5.5v4.8c0 4.2 2.7 8 6.5 9.2 3.8-1.2 6.5-5 6.5-9.2V5.5L12 3Z" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  if (name === 'lock') {
-    return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="5.5" y="10.5" width="13" height="9.5" rx="2" stroke="currentColor" strokeWidth="1.9" />
-        <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
-      </svg>
-    );
-  }
+export default function HeroSection() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 12.5l4.2 4.2L19 7.2" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export default function HeroSection({ onLoginClick }) {
-  return (
-    <section className="lp-hero" aria-labelledby="lp-hero-title">
-      <div className="lp-container">
-        <div className="lp-hero__grid">
-          <div className="lp-hero__content">
-            <div className="lp-hero__eyebrow-row">
-              <span className="lp-hero__eyebrow">
-                Public Health Service
-              </span>
-            </div>
-
-            <h1 className="lp-hero__title" id="lp-hero-title">
-              Vaccination care, <span className="lp-hero__accent">coordinated</span>{' '}
-              for your community.
-            </h1>
-
-            <p className="lp-hero__lead">
-              Citizens, clinics, and health teams in one secure place &mdash;
-              book sessions, run campaigns, and keep immunisation records.
-            </p>
-
-            <div className="lp-hero__actions">
-              <button type="button" className="lp-btn lp-btn--primary" onClick={onLoginClick}>
-                Sign in
-                <span className="lp-btn__arrow" aria-hidden="true">&rarr;</span>
-              </button>
-              <Link to="/how-it-works" className="lp-btn lp-btn--secondary">
-                How it works
-              </Link>
-            </div>
-
-            <div className="lp-hero__meta">
-              {HERO_ASSURANCES.map((item) => (
-                <span key={item.label} className="lp-hero__meta-item">
-                  <AssuricIcon name={item.icon} />
-                  {item.label}
-                </span>
-              ))}
-            </div>
+    <section className="home-hero" aria-labelledby="home-hero-title">
+      <div className="lp-container home-hero__frame">
+        <div className="home-hero__copy">
+          <p className="home-hero__overline">
+            <span className="home-hero__badge">
+              <span className="home-hero__badge-text--desktop">Secure Access &amp; Verification Gateway</span>
+              <span className="home-hero__badge-text--mobile">Secure Verification Gateway</span>
+            </span>
+          </p>
+          <h1 id="home-hero-title">
+            A clear path from <em>campaign</em> to vaccination record.
+          </h1>
+          <p className="home-hero__lead">
+            Find eligible programmes, reserve a clinic appointment, and keep your
+            vaccination history connected to the care you receive.
+          </p>
+          <div className="home-hero__actions">
+            <Link to="/register/citizen" className="home-action home-action--primary">
+              Create citizen account
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
+            <Link to="/login/citizen" className="home-text-link">
+              Sign in as a Citizen
+            </Link>
           </div>
+          <p className="home-hero__note">
+            Citizen accounts can be created immediately. Eligibility is assessed
+            separately for each campaign.
+          </p>
+        </div>
 
-          <div className="lp-hero__art" aria-hidden="true">
+        <div className="home-hero__visual" aria-hidden="true">
+          <div className="home-hero__visual-head">
+            <span>Vaccination pathway</span>
+            <span className="home-hero__visual-context">Citizen services</span>
+          </div>
+          <div className="home-hero__visual-title">
+            <span>Every step, connected.</span>
+            <p>From your first screening to a lasting record.</p>
+          </div>
+          <div className="home-hero__visual-screen">
             <HeroArtwork />
           </div>
+          <div className="home-hero__visual-foot">
+            <p>Clinical review and session readiness support each appointment.</p>
+          </div>
         </div>
 
-        {/* Numbered micro-steps strip — replaces the old steps card. */}
-        <div className="lp-hero__strip">
-          {HERO_STEPS.map((step) => (
-            <div key={step.num} className="lp-hero__strip-item">
-              <span className="lp-hero__strip-num">{step.num}</span>
-              <span className="lp-hero__strip-label">{step.label}</span>
-            </div>
-          ))}
-        </div>
+        <aside className="home-hero__rail" aria-label="Portal overview">
+          <div>
+            <span className="home-hero__rail-index">01</span>
+            <strong>For Citizens</strong>
+            <span>Screening, appointments, and personal records.</span>
+          </div>
+          <div>
+            <span className="home-hero__rail-index">02</span>
+            <strong>For health teams</strong>
+            <span>Campaigns, centers, sessions, and readiness.</span>
+          </div>
+          <Link to="/login/staff" className="home-hero__staff-link">
+            Enter staff portal <span aria-hidden="true">&rarr;</span>
+          </Link>
+        </aside>
       </div>
     </section>
   );

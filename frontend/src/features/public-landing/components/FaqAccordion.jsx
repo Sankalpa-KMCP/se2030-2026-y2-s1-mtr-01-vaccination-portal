@@ -5,7 +5,7 @@ function FaqItem({ question, answer, index, open, onToggle }) {
   const regionId = useId();
 
   return (
-    <div className="lp-faq__item">
+    <div className="lp-faq__item" data-tilt data-tilt-strength="1">
       <h3 className="lp-faq__heading">
         <button
           type="button"
@@ -30,6 +30,7 @@ function FaqItem({ question, answer, index, open, onToggle }) {
         id={regionId}
         role="region"
         aria-labelledby={buttonId}
+        hidden={!open}
         className={`lp-faq__panel${open ? ' lp-is-open' : ''}`}
       >
         <div className="lp-faq__answer">

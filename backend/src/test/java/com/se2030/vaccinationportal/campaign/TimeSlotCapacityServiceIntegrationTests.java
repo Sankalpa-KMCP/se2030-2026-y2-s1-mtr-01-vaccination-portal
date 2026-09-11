@@ -25,10 +25,13 @@ import com.se2030.vaccinationportal.campaign.service.VaccinationCenterService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -311,13 +314,39 @@ class TimeSlotCapacityServiceIntegrationTests {
     }
 
     @Test
-    @DisplayName("isSessionFull returns true when slot occupancy exceeds capacity")
-    void isSessionFull_trueWhenOccupancyExceedsCapacity() {
+    @DisplayName("TimeSlot rejects occupancy that exceeds capacity")
+    void reservedCountAboveCapacityIsRejected() {
         TimeSlot slot = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
-        slot.setReservedCount(5);
-        timeSlotRepository.save(slot);
 
-        assertTrue(slotCapacityService.isSessionFull(scheduledSession.getId()));
+        assertThrows(IllegalArgumentException.class, () -> slot.setReservedCount(5));
+        assertEquals(0, slot.getReservedCount());
+    }
+
+    @Test
+    @DisplayName("Valid TimeSlot entity persists")
+    void validTimeSlotEntityPersists() {
+        TimeSlot slot = timeSlotRepository.saveAndFlush(
+                new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4)
+        );
+
+        assertNotNull(slot.getId());
+        assertEquals(4, slot.getCapacity());
+        assertEquals(0, slot.getReservedCount());
+    }
+
+    @Test
+    @DisplayName("JPA lifecycle rejects an invalid mutated TimeSlot during flush")
+    void invalidMutatedTimeSlotCannotFlush() {
+        TimeSlot slot = timeSlotRepository.saveAndFlush(
+                new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4)
+        );
+        ReflectionTestUtils.setField(slot, "reservedCount", 5);
+
+        InvalidDataAccessApiUsageException exception = assertThrows(
+                InvalidDataAccessApiUsageException.class,
+                () -> timeSlotRepository.saveAndFlush(slot)
+        );
+        assertTrue(exception.getMostSpecificCause() instanceof IllegalArgumentException);
     }
 
     @Test
@@ -776,5 +805,152 @@ class TimeSlotCapacityServiceIntegrationTests {
                 safeConcurrentOccupancy,
                 testCenter.getSessionServiceCeiling()
         );
+    }
+
+    @Nested
+    @DisplayName("TimeSlot lifecycle guard matrix")
+    class TimeSlotLifecycleGuardMatrixTests {
+
+        @Test
+        @DisplayName("createSlot: allowed in DRAFT status")
+        void createSlot_allowedInDraft() {
+            TimeSlot slot = timeSlotService.createSlot(draftSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+            assertNotNull(slot);
+            assertEquals(10, slot.getCapacity());
+            assertEquals(SessionLifecycleStatus.DRAFT, draftSession.getLifecycleStatus());
+        }
+
+        @Test
+        @DisplayName("createSlot: allowed in SCHEDULED status")
+        void createSlot_allowedInScheduled() {
+            TimeSlot slot = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+            assertNotNull(slot);
+            assertEquals(10, slot.getCapacity());
+            assertEquals(SessionLifecycleStatus.SCHEDULED, scheduledSession.getLifecycleStatus());
+        }
+
+        @Test
+        @DisplayName("createSlot: rejected in IN_PROGRESS status")
+        void createSlot_rejectedInInProgress() {
+            VaccinationSession session = createSessionInStatus(SessionLifecycleStatus.IN_PROGRESS);
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10));
+            assertTrue(ex.getMessage().contains("Cannot configure time slots for session in IN_PROGRESS lifecycle status"));
+        }
+
+        @Test
+        @DisplayName("createSlot: rejected in COMPLETED status")
+        void createSlot_rejectedInCompleted() {
+            VaccinationSession session = createSessionInStatus(SessionLifecycleStatus.COMPLETED);
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10));
+            assertTrue(ex.getMessage().contains("Cannot configure time slots for session in COMPLETED lifecycle status"));
+        }
+
+        @Test
+        @DisplayName("createSlot: rejected in CANCELLED status")
+        void createSlot_rejectedInCancelled() {
+            VaccinationSession session = createSessionInStatus(SessionLifecycleStatus.CANCELLED);
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10));
+            assertTrue(ex.getMessage().contains("Cannot configure time slots for session in CANCELLED lifecycle status"));
+        }
+
+        @Test
+        @DisplayName("updateSlotCapacity: allowed in DRAFT status")
+        void updateSlotCapacity_allowedInDraft() {
+            TimeSlot slot = timeSlotService.createSlot(draftSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+            TimeSlot updated = timeSlotService.updateSlotCapacity(slot.getId(), 15);
+            assertNotNull(updated);
+            assertEquals(15, updated.getCapacity());
+
+            TimeSlot updatedWithSession = timeSlotService.updateSlotCapacity(draftSession.getId(), slot.getId(), 18);
+            assertEquals(18, updatedWithSession.getCapacity());
+        }
+
+        @Test
+        @DisplayName("updateSlotCapacity: allowed in SCHEDULED status")
+        void updateSlotCapacity_allowedInScheduled() {
+            TimeSlot slot = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+            TimeSlot updated = timeSlotService.updateSlotCapacity(slot.getId(), 15);
+            assertNotNull(updated);
+            assertEquals(15, updated.getCapacity());
+
+            TimeSlot updatedWithSession = timeSlotService.updateSlotCapacity(scheduledSession.getId(), slot.getId(), 18);
+            assertEquals(18, updatedWithSession.getCapacity());
+        }
+
+        @Test
+        @DisplayName("updateSlotCapacity: rejected in IN_PROGRESS status")
+        void updateSlotCapacity_rejectedInInProgress() {
+            TimeSlot slot = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+            scheduledSession.start();
+            sessionRepository.saveAndFlush(scheduledSession);
+
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.updateSlotCapacity(slot.getId(), 15));
+            assertTrue(ex.getMessage().contains("Cannot configure time slots for session in IN_PROGRESS lifecycle status"));
+
+            IllegalStateException ex2 = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.updateSlotCapacity(scheduledSession.getId(), slot.getId(), 15));
+            assertTrue(ex2.getMessage().contains("Cannot configure time slots for session in IN_PROGRESS lifecycle status"));
+        }
+
+        @Test
+        @DisplayName("updateSlotCapacity: rejected in COMPLETED status")
+        void updateSlotCapacity_rejectedInCompleted() {
+            TimeSlot slot = timeSlotService.createSlot(scheduledSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+            scheduledSession.start();
+            scheduledSession.complete();
+            sessionRepository.saveAndFlush(scheduledSession);
+
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.updateSlotCapacity(slot.getId(), 15));
+            assertTrue(ex.getMessage().contains("Cannot configure time slots for session in COMPLETED lifecycle status"));
+
+            IllegalStateException ex2 = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.updateSlotCapacity(scheduledSession.getId(), slot.getId(), 15));
+            assertTrue(ex2.getMessage().contains("Cannot configure time slots for session in COMPLETED lifecycle status"));
+        }
+
+        @Test
+        @DisplayName("updateSlotCapacity: rejected in CANCELLED status")
+        void updateSlotCapacity_rejectedInCancelled() {
+            TimeSlot slot = timeSlotService.createSlot(draftSession.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 10);
+            draftSession.cancel();
+            sessionRepository.saveAndFlush(draftSession);
+
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.updateSlotCapacity(slot.getId(), 15));
+            assertTrue(ex.getMessage().contains("Cannot configure time slots for session in CANCELLED lifecycle status"));
+
+            IllegalStateException ex2 = assertThrows(IllegalStateException.class, () ->
+                    timeSlotService.updateSlotCapacity(draftSession.getId(), slot.getId(), 15));
+            assertTrue(ex2.getMessage().contains("Cannot configure time slots for session in CANCELLED lifecycle status"));
+        }
+
+        private VaccinationSession createSessionInStatus(SessionLifecycleStatus targetStatus) {
+            VaccinationSession session = new VaccinationSession(
+                    testCampaign,
+                    testCenter,
+                    baseStart,
+                    baseEnd,
+                    baseStart.minus(2, ChronoUnit.HOURS),
+                    "UTC"
+            );
+            if (targetStatus == SessionLifecycleStatus.SCHEDULED) {
+                session.schedule();
+            } else if (targetStatus == SessionLifecycleStatus.IN_PROGRESS) {
+                session.schedule();
+                session.start();
+            } else if (targetStatus == SessionLifecycleStatus.COMPLETED) {
+                session.schedule();
+                session.start();
+                session.complete();
+            } else if (targetStatus == SessionLifecycleStatus.CANCELLED) {
+                session.cancel();
+            }
+            return sessionRepository.saveAndFlush(session);
+        }
     }
 }

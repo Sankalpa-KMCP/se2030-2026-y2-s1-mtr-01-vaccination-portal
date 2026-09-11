@@ -84,17 +84,17 @@ public class CampaignQuestionnaireAssignmentService {
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
+        LocalDate today = LocalDate.now(clock);
+        if (effectiveStartDate.isBefore(today)) {
+            throw new IllegalArgumentException(
+                    "Questionnaire assignment effective date cannot be in the past [MF02-BR-17]: " + effectiveStartDate
+            );
+        }
+
         Optional<CampaignQuestionnaireAssignment> currentOpenEndedOpt = assignmentRepository.findOpenEndedAssignment(campaignId);
 
         if (currentOpenEndedOpt.isPresent()) {
             CampaignQuestionnaireAssignment current = currentOpenEndedOpt.get();
-
-            LocalDate today = LocalDate.now(clock);
-            if (effectiveStartDate.isBefore(today)) {
-                throw new IllegalArgumentException(
-                        "Questionnaire assignment effective date cannot be in the past [MF02-BR-17]: " + effectiveStartDate
-                );
-            }
 
             if (!effectiveStartDate.isAfter(current.getActiveFrom())) {
                 throw new IllegalArgumentException(

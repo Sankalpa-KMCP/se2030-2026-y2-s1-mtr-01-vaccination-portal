@@ -123,14 +123,14 @@ export default function CreateCenterModal({
     <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div className="modal-dialog modal-dialog-centered modal-lg">
         <div className="modal-content shadow-lg border-0">
-          <div className="modal-header bg-primary text-white">
+          <div className="modal-header bg-light">
             <h5 className="modal-title">
               <i className="bi bi-hospital me-2"></i>
               Register New Vaccination Center
             </h5>
             <button
               type="button"
-              className="btn-close btn-close-white"
+              className="btn-close"
               aria-label="Close"
               onClick={onClose}
               disabled={loading}

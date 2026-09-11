@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AvailabilitySearch from '../components/AvailabilitySearch';
 import { bookAppointment } from '../api/appointmentApi';
 import { joinWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
 
 /**
  * Appointment Booking Page (US-03).
@@ -104,62 +108,85 @@ export default function AppointmentBookingPage() {
 
   if (!citizenId) {
     return (
-      <div className="alert alert-warning border-0 shadow-sm" role="alert">
-        <h4 className="h6 alert-heading fw-bold mb-1">Authentication Required</h4>
-        <p className="mb-0">Unable to load this page. Please sign in again.</p>
+      <div className="appointment-booking-page citizen-page citizen-appointment-flow">
+        <CitizenPageHeader
+          eyebrow="Appointment Services"
+          title="Book a Vaccination Appointment"
+          subtitle="Search available vaccination sessions and confirm a booking."
+          backTo="/app/citizen"
+          backLabel="Back to Dashboard"
+          actions={<Link to="/app/appointments/mine">View My Appointments</Link>}
+        />
+        <CitizenStatePanel title="Authentication required" tone="warning">
+          <p>Unable to load this page. Please sign in again.</p>
+        </CitizenStatePanel>
       </div>
     );
   }
 
   return (
-    <div className="appointment-booking-page">
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h1 className="h3 fw-bold text-primary mb-1">Book a Vaccination Appointment</h1>
-          <p className="text-muted mb-0">Search available slots at nearby centers and confirm your booking.</p>
-        </div>
-      </div>
+    <div className="appointment-booking-page citizen-page citizen-appointment-flow">
+      <CitizenPageHeader
+        eyebrow="Appointment Services"
+        title="Book a Vaccination Appointment"
+        subtitle="Search available vaccination sessions and confirm a booking."
+        backTo="/app/citizen"
+        backLabel="Back to Dashboard"
+        actions={<Link to="/app/appointments/mine">View My Appointments</Link>}
+      />
 
-      {feedback && (
-        <div
-          className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm mb-4`}
-          role="alert"
-        >
+      <CitizenWorkflowGuide
+        titleId="appointment-workflow-guide"
+        steps={['Search sessions', 'Choose availability', 'Confirm booking']}
+      />
+
+      {feedback?.type === 'danger' ? (
+        <CitizenErrorState
+          error={feedback.message}
+          title={feedback.title}
+          actions={(
+            <>
+              {feedback.isSlotFull && feedback.sessionToWaitlist && (
+                <button
+                  type="button"
+                  className="citizen-action citizen-action--secondary"
+                  disabled={joiningWaitlist}
+                  onClick={() => handleJoinWaitlist(feedback.sessionToWaitlist)}
+                >
+                  {joiningWaitlist ? 'Joining Waitlist...' : 'Join Waitlist for This Session'}
+                </button>
+              )}
+              <button className="citizen-action citizen-action--secondary" type="button" onClick={() => setFeedback(null)}>
+                Dismiss
+              </button>
+            </>
+          )}
+        />
+      ) : feedback ? (
+        <div className="citizen-page__notice">
+          <div
+            className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
+            role="alert"
+          >
           <h4 className="h6 alert-heading fw-bold mb-1">{feedback.title}</h4>
           <p className="mb-0">{feedback.message}</p>
-          {feedback.isSlotFull && feedback.sessionToWaitlist && (
-            <div className="mt-3 pt-2 border-top">
-              <button
-                type="button"
-                className="btn btn-warning btn-sm fw-bold shadow-sm"
-                disabled={joiningWaitlist}
-                onClick={() => handleJoinWaitlist(feedback.sessionToWaitlist)}
-              >
-                {joiningWaitlist ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Joining Waitlist...
-                  </>
-                ) : (
-                  'Join Waitlist for This Session'
-                )}
-              </button>
-            </div>
-          )}
           <button
             type="button"
             className="btn-close"
             aria-label="Close"
             onClick={() => setFeedback(null)}
           ></button>
+          </div>
         </div>
-      )}
+      ) : null}
 
-      <AvailabilitySearch
-        citizenId={citizenId}
-        onBookSession={handleBookSession}
-        bookingSessionId={bookingSessionId}
-      />
+      <section aria-label="Appointment availability search">
+        <AvailabilitySearch
+          citizenId={citizenId}
+          onBookSession={handleBookSession}
+          bookingSessionId={bookingSessionId}
+        />
+      </section>
     </div>
   );
 }

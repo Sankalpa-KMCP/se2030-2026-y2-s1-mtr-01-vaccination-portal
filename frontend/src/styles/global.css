@@ -1,22 +1,370 @@
-/* Global Application Custom Styles */
+/* ==========================================================================
+   Global Application Styles -- Shared Visual Foundation
+   Restrained healthcare/government aesthetic layered on Bootstrap 5.3.
+   Visual-only: no behavior, API, or logic changes live in this file.
+   ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   1. Design tokens
+   -------------------------------------------------------------------------- */
 :root {
-  --portal-primary: #0d6efd;
-  --portal-bg-subtle: #f8f9fa;
+  /* Backwards compatibility with previous baseline */
+  --portal-primary: #0e7490;
+  --portal-bg-subtle: #f4f6f8;
+
+  /* Typography -- Public Sans is loaded in index.html and shared by the
+     public marketing pages, auth shell, and application interior. */
+  --font-sans: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Application surfaces */
+  --app-bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+
+  /* Text */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+
+  /* Borders */
+  --border-subtle: #e2e8f0;
+  --border-input: #cbd5e1;
+
+  /* Brand -- restrained medical teal */
+  --primary: #0e7490;
+  --primary-hover: #155e75;
+  --primary-active: #164e63;
+  --primary-soft-bg: #ebf7fa;
+  --primary-soft-border: #bfe5ee;
+  --accent: #0891b2;
+
+  /* Semantic soft tints (documentation of intent; semantic hues untouched) */
+  --success-soft: #e6f4ea;
+  --warning-soft: #fdf6dc;
+  --danger-soft: #fbeaea;
+  --info-soft: #e3f5fb;
+
+  /* Radii */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  /* Shadows -- quiet, slate-tinted */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 14px -3px rgba(15, 23, 42, 0.12);
+
+  /* Layout */
+  --content-max-width: 1320px;
 }
 
+/* --------------------------------------------------------------------------
+   2. Bootstrap variable remapping (reduce stock blue; semantics untouched)
+   -------------------------------------------------------------------------- */
+:root {
+  /* Primary family -> medical teal (drives bg-primary/text-primary utilities,
+     subtle badges, links). Success/warning/danger/info remain Bootstrap. */
+  --bs-primary: #0e7490;
+  --bs-primary-rgb: 14, 116, 144;
+  --bs-primary-text-emphasis: #155e75;
+  --bs-primary-bg-subtle: var(--primary-soft-bg);
+  --bs-primary-border-subtle: var(--primary-soft-border);
+  --bs-link-color-rgb: 14, 116, 144;
+  --bs-link-hover-color-rgb: 21, 94, 117;
+
+  /* Consistent radius scale across all Bootstrap components */
+  --bs-border-radius: 0.5rem;
+  --bs-border-radius-sm: 0.375rem;
+  --bs-border-radius-lg: 0.75rem;
+
+  /* Cohesion of muted text with slate palette */
+  --bs-secondary-color: rgba(51, 65, 85, 0.78);
+  --bs-tertiary-color: rgba(71, 85, 105, 0.62);
+}
+
+/* --------------------------------------------------------------------------
+   3. Base / application shell
+   -------------------------------------------------------------------------- */
 body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--portal-bg-subtle);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--app-bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.01em;
+}
+
+hr {
+  border-color: var(--border-subtle);
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   3b. Application navigation bar -- semantic nav links, clear active pill
+   -------------------------------------------------------------------------- */
+.app-nav .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.app-nav .nav-link:hover,
+.app-nav .nav-link:focus {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.app-nav .nav-link.active {
+  color: var(--primary-hover);
+  background-color: #ffffff;
+}
+
+.app-nav .nav-link:focus-visible,
+.navbar .navbar-toggler:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Application footer band */
+.app-footer {
+  background-color: #1e293b;
+  color: rgba(248, 250, 252, 0.75);
+}
+
+/* --------------------------------------------------------------------------
+   4. Cards -- subtle borders, restrained elevation
+   -------------------------------------------------------------------------- */
+.card {
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-xs);
+}
+
+.card-header {
+  border-bottom-color: var(--border-subtle);
+  font-weight: 600;
+}
+
+.card-footer {
+  background-color: var(--surface-muted);
+  border-top-color: var(--border-subtle);
+}
+
+/* --------------------------------------------------------------------------
+   5. Button hierarchy & focus
+   -------------------------------------------------------------------------- */
+.btn {
+  font-weight: 600;
+}
+
+/* PRIMARY -- create/save/confirm (medical teal) */
+.btn-primary {
+  --bs-btn-bg: var(--primary);
+  --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary-hover);
+  --bs-btn-hover-border-color: var(--primary-hover);
+  --bs-btn-active-bg: var(--primary-active);
+  --bs-btn-active-border-color: var(--primary-active);
+  --bs-btn-disabled-bg: var(--primary);
+  --bs-btn-disabled-border-color: var(--primary);
+  --bs-btn-focus-shadow-rgb: 14, 116, 144;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--primary);
+  --bs-btn-border-color: var(--primary-soft-border);
+  --bs-btn-hover-bg: var(--primary);
+  --bs-btn-hover-border-color: var(--primary);
+  --bs-btn-active-bg: var(--primary);
+  --bs-btn-active-border-color: var(--primary);
+  --bs-btn-disabled-color: var(--primary);
+  --bs-btn-disabled-border-color: var(--primary-soft-border);
+  --bs-btn-focus-shadow-rgb: 14, 116, 144;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   6. Badges / pills
+   -------------------------------------------------------------------------- */
+.badge {
+  --bs-badge-font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   6b. Typography utilities (Bootstrap ships fs-1..fs-6; dense UI needs one step smaller)
+   -------------------------------------------------------------------------- */
+.fs-7 {
+  font-size: 0.75rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Table foundation
+   -------------------------------------------------------------------------- */
+.table {
+  --bs-table-border-color: var(--border-subtle);
+  margin-bottom: 0;
+}
+
+.table > thead > tr > th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  background-color: var(--surface-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-accent-bg: var(--surface-muted);
+}
+
+/* --------------------------------------------------------------------------
+   8. Form foundation
+   -------------------------------------------------------------------------- */
+.form-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.form-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.form-control,
+.form-select {
+  border-color: var(--border-input);
+}
+
+.form-control::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #67e8f9;
+  box-shadow: 0 0 0 0.22rem rgba(14, 116, 144, 0.18);
+}
+
+.form-check-input:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.form-check-input:focus {
+  border-color: #67e8f9;
+  box-shadow: 0 0 0 0.22rem rgba(14, 116, 144, 0.18);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.invalid-feedback,
+.valid-feedback {
+  font-size: 0.82rem;
+}
+
+.input-group-text {
+  background-color: var(--surface-muted);
+  border-color: var(--border-input);
+  color: var(--text-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   9. Modal foundation -- viewport-safe scrolling, stable chrome
+   -------------------------------------------------------------------------- */
+.modal-content {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.modal-header {
+  padding: 1rem 1.25rem;
+  border-bottom-color: var(--border-subtle);
+}
+
+.modal-title {
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+/* Safety net: long bodies scroll internally so headers/footers stay visible,
+   even when dialogs do not opt into modal-dialog-scrollable. The scrollable
+   variant remains fully functional alongside this rule. */
+.modal:not(.modal-static) .modal-body {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-height: 700px) {
+  .modal:not(.modal-static) .modal-body {
+    max-height: calc(100vh - 180px);
+  }
+}
+
+.modal-footer {
+  padding: 0.85rem 1.25rem;
+  background-color: var(--surface-muted);
+  border-top-color: var(--border-subtle);
+  border-bottom-right-radius: calc(var(--radius-lg) - 1px);
+  border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+}
+
+/* --------------------------------------------------------------------------
+   10. Interactive elements focus indicators
+   -------------------------------------------------------------------------- */
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --------------------------------------------------------------------------
+   11. Accessibility -- reduced motion compatibility
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -77,13 +77,13 @@ export default function UpdateTimeSlotCapacityModal({
     >
       <div className="modal-dialog modal-dialog-centered" role="document">
         <div className="modal-content shadow">
-          <div className="modal-header bg-primary text-white">
+          <div className="modal-header bg-light">
             <h5 className="modal-title" id="updateCapacityModalTitle">
               Edit Time Slot Capacity
             </h5>
             <button
               type="button"
-              className="btn-close btn-close-white"
+              className="btn-close"
               aria-label="Close"
               onClick={onClose}
               disabled={submitting}

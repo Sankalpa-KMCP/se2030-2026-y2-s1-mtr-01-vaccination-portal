@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import EmptyState from '../../../components/common/EmptyState';
 
 const DAY_ORDER = {
   MONDAY: 1,
@@ -117,7 +118,7 @@ export default function OperatingHoursPanel({
         <div className="d-flex flex-wrap gap-1 mb-3">
           <button
             type="button"
-            className={`btn btn-sm ${dayFilter === 'ALL' ? 'btn-secondary text-white' : 'btn-outline-secondary'}`}
+            className={`btn btn-sm ${dayFilter === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'}`}
             onClick={() => setDayFilter('ALL')}
           >
             All Days ({operatingHours.length})
@@ -142,13 +143,10 @@ export default function OperatingHoursPanel({
             <LoadingSpinner message="Loading center operating hours schedule..." />
           </div>
         ) : operatingHours.length === 0 ? (
-          <div className="text-center py-5 text-secondary border rounded bg-light">
-            <div className="display-6 text-muted mb-3">🕒</div>
-            <h5 className="h6 text-muted mb-2">No Operating Hours Defined</h5>
-            <p className="small text-muted mb-3">
-              This vaccination center currently has no configured operating hours schedule shifts.
-            </p>
-            {canMutate && (
+          <EmptyState
+            icon="bi-clock-history"
+            title="No Operating Hours Defined"
+            action={canMutate && (
               <button
                 type="button"
                 className="btn btn-primary btn-sm fw-semibold"
@@ -158,7 +156,9 @@ export default function OperatingHoursPanel({
                 Define First Operating Hours Shift
               </button>
             )}
-          </div>
+          >
+            This vaccination center currently has no configured operating hours schedule shifts.
+          </EmptyState>
         ) : filteredHours.length === 0 ? (
           <div className="alert alert-light border text-center py-4">
             <p className="text-muted mb-0 small">

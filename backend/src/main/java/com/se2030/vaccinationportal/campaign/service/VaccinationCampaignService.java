@@ -14,7 +14,9 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.dto.response.CitizenCampaignDiscoveryResponse;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
+import com.se2030.vaccinationportal.campaign.mapper.CampaignDtoMapper;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
@@ -720,10 +722,84 @@ public class VaccinationCampaignService {
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
         entityManager.refresh(campaign);
 
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalStateException(
+                    "Cannot update service dates for campaign in " + campaign.getStatus() + " status"
+            );
+        }
+
+        campaign.validateDateConsistency();
         validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
 
         campaign.setServiceStartDate(serviceStartDate);
         campaign.setServiceEndDate(serviceEndDate);
+
+        return campaignRepository.save(campaign);
+    }
+
+    /**
+     * Updates editable configuration attributes of an existing campaign.
+     * Enforces date consistency, reverse-impact session containment, and closed-state guard.
+     */
+    public VaccinationCampaign updateCampaign(
+            Long campaignId,
+            String name,
+            String description,
+            LocalDate serviceStartDate,
+            LocalDate serviceEndDate,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt
+    ) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Campaign name is required");
+        }
+        if (serviceStartDate == null) {
+            throw new IllegalArgumentException("Service start date is required");
+        }
+        if (serviceEndDate == null) {
+            throw new IllegalArgumentException("Service end date is required");
+        }
+        if (bookingOpenAt == null) {
+            throw new IllegalArgumentException("Booking open timestamp is required");
+        }
+        if (bookingCloseAt == null) {
+            throw new IllegalArgumentException("Booking close timestamp is required");
+        }
+
+        if (!serviceEndDate.isAfter(serviceStartDate)) {
+            throw new IllegalArgumentException("Campaign service end date (" + serviceEndDate +
+                    ") must be after service start date (" + serviceStartDate + ")");
+        }
+        if (!bookingCloseAt.isAfter(bookingOpenAt)) {
+            throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
+                    ") must be after booking open time (" + bookingOpenAt + ")");
+        }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalStateException(
+                    "Cannot update campaign in " + campaign.getStatus() + " status"
+            );
+        }
+
+        validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
+
+        campaign.setName(name.trim());
+        campaign.setDescription(description);
+        campaign.setServiceStartDate(serviceStartDate);
+        campaign.setServiceEndDate(serviceEndDate);
+        campaign.setBookingOpenAt(bookingOpenAt);
+        campaign.setBookingCloseAt(bookingCloseAt);
+        campaign.validateDateConsistency();
 
         return campaignRepository.save(campaign);
     }
@@ -795,5 +871,26 @@ public class VaccinationCampaignService {
                 );
             }
         }
+    }
+
+    /**
+     * Retrieve campaigns visible for authenticated citizen discovery (MF02-R-001).
+     * Returns only PUBLISHED and ACTIVE campaigns ordered by ID ascending.
+     * Derives currentlyAcceptingScreening from canonical booking window and lifecycle openness.
+     *
+     * @return List of minimal citizen campaign projections
+     */
+    @Transactional(readOnly = true)
+    public List<CitizenCampaignDiscoveryResponse> getCitizenDiscoveryCampaigns() {
+        List<VaccinationCampaign> campaigns = campaignRepository.findByStatusInOrderByIdAsc(
+                List.of(CampaignStatus.PUBLISHED, CampaignStatus.ACTIVE)
+        );
+        Instant now = clock.instant();
+        return campaigns.stream()
+                .map(campaign -> CampaignDtoMapper.toCitizenDiscoveryResponse(
+                        campaign,
+                        campaign.isBookingWindowOpenAt(now)
+                ))
+                .toList();
     }
 }
