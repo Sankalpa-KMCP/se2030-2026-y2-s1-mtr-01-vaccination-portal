@@ -41,6 +41,7 @@ class AppointmentSearchServiceTests {
         }
 
         @Bean
+        @org.springframework.context.annotation.Primary
         public TestSlotAvailabilityPortDouble slotAvailabilityPort() {
             return new TestSlotAvailabilityPortDouble();
         }
@@ -102,11 +103,11 @@ class AppointmentSearchServiceTests {
     void searchAvailableSessions_returnsAvailableSessions() {
         Instant now = Instant.now();
         AvailableSessionSummary s1 = new AvailableSessionSummary(
-                SESSION_1_ID, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
+                SESSION_1_ID, 7001L, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
                 now.plusSeconds(3600), now.plusSeconds(7200), now.plusSeconds(1800), 5
         );
         AvailableSessionSummary s2 = new AvailableSessionSummary(
-                SESSION_2_ID, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
+                SESSION_2_ID, 7002L, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
                 now.plusSeconds(14400), now.plusSeconds(18000), now.plusSeconds(10000), 3
         );
         availabilityPortDouble.addSession(s1);
@@ -128,18 +129,18 @@ class AppointmentSearchServiceTests {
     void searchAvailableSessions_excludesSession_whenCitizenHasActiveAppointment() {
         Instant now = Instant.now();
         AvailableSessionSummary s1 = new AvailableSessionSummary(
-                SESSION_1_ID, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
+                SESSION_1_ID, 7001L, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
                 now.plusSeconds(3600), now.plusSeconds(7200), now.plusSeconds(1800), 5
         );
         AvailableSessionSummary s2 = new AvailableSessionSummary(
-                SESSION_2_ID, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
+                SESSION_2_ID, 7002L, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
                 now.plusSeconds(14400), now.plusSeconds(18000), now.plusSeconds(10000), 3
         );
         availabilityPortDouble.addSession(s1);
         availabilityPortDouble.addSession(s2);
 
-        slotCapacityPortDouble.setAvailableCapacity(SESSION_1_ID, 5);
-        Appointment appt = bookingService.bookAppointment(CITIZEN_ID, CAMPAIGN_ID, SESSION_1_ID);
+        slotCapacityPortDouble.setAvailableCapacity(7001L, 5);
+        Appointment appt = bookingService.bookAppointment(CITIZEN_ID, CAMPAIGN_ID, 7001L);
 
         LocalDate fromDate = LocalDate.now();
         LocalDate toDate = fromDate.plusDays(7);
@@ -156,11 +157,11 @@ class AppointmentSearchServiceTests {
     void searchAvailableSessions_excludesSession_whenCitizenHasWaitingWaitlistEntry() {
         Instant now = Instant.now();
         AvailableSessionSummary s1 = new AvailableSessionSummary(
-                SESSION_1_ID, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
+                SESSION_1_ID, 7001L, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
                 now.plusSeconds(3600), now.plusSeconds(7200), now.plusSeconds(1800), 5
         );
         AvailableSessionSummary s2 = new AvailableSessionSummary(
-                SESSION_2_ID, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
+                SESSION_2_ID, 7002L, CAMPAIGN_ID, CENTER_ID, "Center A", "123 Main St",
                 now.plusSeconds(14400), now.plusSeconds(18000), now.plusSeconds(10000), 3
         );
         availabilityPortDouble.addSession(s1);

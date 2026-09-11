@@ -24,7 +24,7 @@ public record AvailableSessionResponse(
         }
         return new AvailableSessionResponse(
                 summary.sessionId(),
-                summary.sessionId(),
+                summary.slotId(),
                 summary.campaignId(),
                 summary.centerId(),
                 summary.centerName(),

@@ -8,9 +8,7 @@ import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import java.time.LocalDate;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,10 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Queries bookable sessions from MF-02 via {@link SlotAvailabilityPort}, then applies
  * citizen-specific filtering:
  * <ul>
- *   <li>Excludes sessions where the citizen already has a CONFIRMED or CHECKED_IN appointment
+ *   <li>Excludes slots where the citizen already has a CONFIRMED or CHECKED_IN appointment
  *       for the same campaign (MF03-BR-02 — one active appointment per citizen per campaign).
- *       Although this would be enforced at booking time, surfacing it here prevents the citizen
- *       from seeing sessions they cannot actually book.</li>
+ *       Other slots remain discoverable for rescheduling; booking enforces campaign uniqueness.</li>
  *   <li>Excludes sessions where the citizen already has a WAITING waitlist entry for the same
  *       campaign (MF03-BR-14). Again, prevented at join time, but filtered here for UX clarity.</li>
  * </ul>
@@ -49,7 +46,7 @@ public class AppointmentSearchService {
 
     @Autowired
     public AppointmentSearchService(
-            @Autowired(required = false) SlotAvailabilityPort slotAvailabilityPort,
+            SlotAvailabilityPort slotAvailabilityPort,
             AppointmentRepository appointmentRepository,
             WaitlistRepository waitlistRepository
     ) {
@@ -71,7 +68,7 @@ public class AppointmentSearchService {
      * @param fromDate   Inclusive start of the search date window
      * @param toDate     Inclusive end of the search date window
      * @return Ordered list of {@link AvailableSessionSummary} visible and bookable by this citizen;
-     *         empty list if no sessions are available or if the availability port is not yet wired
+     *         empty list if no sessions are available
      */
     public List<AvailableSessionSummary> searchAvailableSessions(
             Long citizenId,
@@ -93,12 +90,6 @@ public class AppointmentSearchService {
             throw new IllegalArgumentException("From date must not be after to date");
         }
 
-        // If MF-02 has not yet wired the port, return an empty list rather than throwing.
-        // This allows MF-03 tests and controller to function independently of MF-02's deployment state.
-        if (slotAvailabilityPort == null) {
-            return Collections.emptyList();
-        }
-
         List<AvailableSessionSummary> candidates =
                 slotAvailabilityPort.findAvailableSessions(campaignId, centerId, fromDate, toDate);
 
@@ -106,50 +97,24 @@ public class AppointmentSearchService {
             return Collections.emptyList();
         }
 
-        // Build exclusion sets — sessions this citizen cannot book for this campaign.
-        // MF03-BR-02: citizen already has an active (CONFIRMED/CHECKED_IN) appointment for this campaign.
-        // MF03-BR-14: citizen already has a WAITING waitlist entry for this campaign.
-        Set<Long> blockedSessionIds = buildBlockedSessionIds(citizenId, campaignId);
+        // Hide already-held time slots, but keep alternatives available for rescheduling.
+        // The booking service enforces the campaign-wide active-appointment invariant.
+        var bookedSlotIds = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
+                        citizenId, campaignId,
+                        List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN)).stream()
+                .map(appointment -> appointment.getSlotId())
+                .collect(Collectors.toSet());
+        candidates = candidates.stream()
+                .filter(candidate -> !bookedSlotIds.contains(candidate.slotId()))
+                .toList();
+        final var availableSlots = candidates;
 
-        if (blockedSessionIds.isEmpty()) {
-            return candidates;
-        }
-
-        return candidates.stream()
-                .filter(s -> !blockedSessionIds.contains(s.sessionId()))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Builds the set of session IDs that this citizen cannot book for the given campaign.
-     *
-     * <p>A session is blocked when the citizen already has:
-     * <ul>
-     *   <li>a CONFIRMED or CHECKED_IN appointment targeting that session (MF03-BR-02 —
-     *       note: appointment.slotId maps to session.id in the current MF-02 data model); or</li>
-     *   <li>a WAITING waitlist entry targeting that session (MF03-BR-14).</li>
-     * </ul>
-     *
-     * <p>MF03-BR-14 enforces at most one WAITING entry per citizen per campaign, so
-     * {@code findByCitizenIdAndCampaignIdAndStatus} returning {@code Optional} is sufficient.
-     */
-    private Set<Long> buildBlockedSessionIds(Long citizenId, Long campaignId) {
-        Set<Long> blockedSlots = new HashSet<>(
-                appointmentRepository
-                        .findByCitizenIdAndCampaignIdAndStatusIn(
-                                citizenId,
-                                campaignId,
-                                List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN)
-                        )
-                        .stream()
-                        .map(appt -> appt.getSlotId())
-                        .collect(Collectors.toSet())
-        );
-
-        waitlistRepository
-                .findByCitizenIdAndCampaignIdAndStatus(citizenId, campaignId, WaitlistStatus.WAITING)
-                .ifPresent(entry -> blockedSlots.add(entry.getSessionId()));
-
-        return blockedSlots;
+        // Waitlists refer to sessions, while appointments refer to concrete time slots.
+        return waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
+                        citizenId, campaignId, WaitlistStatus.WAITING)
+                .map(entry -> availableSlots.stream()
+                        .filter(candidate -> !entry.getSessionId().equals(candidate.sessionId()))
+                        .collect(Collectors.toList()))
+                .orElse(availableSlots);
     }
 }
