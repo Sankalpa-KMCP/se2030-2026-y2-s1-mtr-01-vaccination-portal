@@ -61,9 +61,10 @@ export default function AppointmentBookingPage() {
       if (err.status === 403 || err.error === 'FORBIDDEN') {
         userMessage = 'Ineligible Citizen: You do not have a valid ELIGIBLE screening assessment for this campaign (MF03-BR-01).';
       } else if (err.status === 409 || err.error === 'CONFLICT') {
-        if (err.message && err.message.includes('already has an active appointment')) {
+        const errorMsg = (err.message || '').toLowerCase();
+        if (errorMsg.includes('already has an active appointment')) {
           userMessage = 'Duplicate Booking: You already hold an active appointment for this campaign (MF03-BR-02).';
-        } else if (err.message && err.message.includes('full')) {
+        } else if (errorMsg.includes('slot_full') || errorMsg.includes('full')) {
           userMessage = 'Slot Exhausted: This time slot has no remaining capacity (MF03-BR-03). Consider joining the waitlist.';
           isSlotFull = true;
         } else {

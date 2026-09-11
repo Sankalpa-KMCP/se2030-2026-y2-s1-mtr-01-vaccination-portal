@@ -32,12 +32,17 @@ export default function WaitlistPage() {
       const data = await getWaitlistStatus({ citizenId: cId, campaignId: campId });
       setWaitlistEntry(data);
     } catch (err) {
-      setFeedback({
-        type: 'danger',
-        title: 'Error Loading Waitlist Status',
-        message: err.message || 'Failed to retrieve waitlist status.',
-      });
-      setWaitlistEntry(null);
+      if (err.status === 404) {
+        setWaitlistEntry(null);
+        setFeedback(null);
+      } else {
+        setFeedback({
+          type: 'danger',
+          title: 'Error Loading Waitlist Status',
+          message: err.message || 'Failed to retrieve waitlist status.',
+        });
+        setWaitlistEntry(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -173,6 +178,22 @@ export default function WaitlistPage() {
 
       {!loading && waitlistEntry && (
         <section className="waitlist-content citizen-waitlist-content" aria-label="Current waitlist entry">
+          {waitlistEntry.status === 'PROMOTED' && (
+            <div
+              className="alert alert-success border-0 shadow-sm mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2"
+              role="alert"
+            >
+              <div>
+                <h4 className="h6 alert-heading fw-bold mb-1">🎉 You've been promoted!</h4>
+                <p className="mb-0">
+                  A slot opened up and your appointment has been automatically confirmed. Check My Appointments for your confirmed slot.
+                </p>
+              </div>
+              <Link to="/app/appointments/mine" className="btn btn-success btn-sm fw-bold shadow-sm">
+                View My Appointments
+              </Link>
+            </div>
+          )}
           <WaitlistPosition position={waitlistEntry.position} />
           <WaitlistCard
             entry={waitlistEntry}

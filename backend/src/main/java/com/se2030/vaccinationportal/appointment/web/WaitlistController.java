@@ -83,6 +83,8 @@ public class WaitlistController {
                     .orElseGet(() -> ResponseEntity.notFound().build());
         }
         return waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(citizenId, campaignId, WaitlistStatus.WAITING)
+                .or(() -> waitlistRepository.findFirstByCitizenIdAndCampaignIdAndStatusOrderByJoinedAtDesc(
+                        citizenId, campaignId, WaitlistStatus.PROMOTED))
                 .map(entry -> ResponseEntity.ok(WaitlistEntryResponse.fromEntity(entry)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
