@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Deterministic Fresh Database Bootstrap and Schema Migration Integration Test.
  *
  * <p>Verifies X3 / VP-002: A completely empty, clean MySQL database instance
- * bootstraps successfully through Flyway (V0-V13), seeds canonical static data,
+ * bootstraps successfully through Flyway (V0-V14), seeds canonical static data,
  * satisfies Hibernate schema validation ({@code ddl-auto=validate}), and proves
  * idempotent migration execution.</p>
  */
@@ -73,7 +73,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     @Autowired
     private Flyway flyway;
 
-    private static final List<String> EXPECTED_43_TABLES = Arrays.asList(
+    private static final List<String> EXPECTED_44_TABLES = Arrays.asList(
             "answer_option",
             "appointment",
             "campaign_center_assignments",
@@ -83,6 +83,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             "campaign_questionnaire_assignments",
             "center_closures",
             "citizen_campaign_booking_guard",
+            "citizen_profiles",
             "consent_notice_version",
             "digital_certificates",
             "eligibility_assessment",
@@ -144,13 +145,13 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should apply all migration versions V0 through V13 with SUCCESS status")
+    @DisplayName("Should apply all migration versions V0 through V14 with SUCCESS status")
     void shouldApplyAllMigrationsSuccessfully() {
         assertNotNull(flyway, "Flyway bean must be configured and injected");
         MigrationInfo[] appliedMigrations = flyway.info().all();
-        assertEquals(14, appliedMigrations.length, "Expected exactly 14 migrations (V0-V13)");
+        assertEquals(15, appliedMigrations.length, "Expected exactly 15 migrations (V0-V14)");
 
-        for (int i = 0; i <= 13; i++) {
+        for (int i = 0; i <= 14; i++) {
             String expectedVersion = String.valueOf(i);
             MigrationInfo info = appliedMigrations[i];
             assertEquals(expectedVersion, info.getVersion().getVersion(), "Migration version mismatch at index " + i);
@@ -159,8 +160,8 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should verify presence of all 43 physical tables plus flyway schema history")
-    void shouldVerifyAll43RequiredTablesExist() throws Exception {
+    @DisplayName("Should verify presence of all 44 physical tables plus flyway schema history")
+    void shouldVerifyAll44RequiredTablesExist() throws Exception {
         Set<String> actualTables = new HashSet<>();
         try (Connection connection = dataSource.getConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();
@@ -173,7 +174,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
 
         assertTrue(actualTables.contains("flyway_schema_history"), "flyway_schema_history table must exist");
 
-        for (String expectedTable : EXPECTED_43_TABLES) {
+        for (String expectedTable : EXPECTED_44_TABLES) {
             assertTrue(
                     actualTables.contains(expectedTable.toLowerCase()),
                     "Required application table missing from migrated database: " + expectedTable
@@ -184,7 +185,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
         long appTableCount = actualTables.stream()
                 .filter(t -> !t.equals("flyway_schema_history"))
                 .count();
-        assertEquals(43, appTableCount, "Database must contain exactly 43 application/runtime tables");
+        assertEquals(44, appTableCount, "Database must contain exactly 44 application/runtime tables");
     }
 
     @Test

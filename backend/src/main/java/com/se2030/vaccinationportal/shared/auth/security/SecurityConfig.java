@@ -68,6 +68,9 @@ public class SecurityConfig {
                         // Protected Current User Profile Endpoint
                         .requestMatchers("/api/v1/auth/me").authenticated()
 
+                        // Citizen-only self-service profile endpoints (method security enforces ROLE_CITIZEN)
+                        .requestMatchers("/api/v1/profile/**").authenticated()
+
                         // Administrator-only staff account review endpoints
                         .requestMatchers("/api/v1/admin/staff-requests/**").hasRole("ADMIN")
 

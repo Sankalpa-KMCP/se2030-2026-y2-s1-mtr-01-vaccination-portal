@@ -30,6 +30,7 @@ class SharedAuthRegistrationMigrationMySqlIntegrationTests extends AbstractMySql
 
             statement.execute("DROP TABLE IF EXISTS refresh_token_sessions");
             statement.execute("DROP TABLE IF EXISTS user_roles");
+            statement.execute("DROP TABLE IF EXISTS citizen_profiles");
             statement.execute("DROP TABLE IF EXISTS user_accounts");
             statement.execute("DROP TABLE IF EXISTS roles");
 
