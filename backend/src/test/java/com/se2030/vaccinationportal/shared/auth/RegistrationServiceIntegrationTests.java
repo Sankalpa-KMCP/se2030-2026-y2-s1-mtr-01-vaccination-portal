@@ -9,8 +9,10 @@ import com.se2030.vaccinationportal.shared.auth.exception.AccountRejectedExcepti
 import com.se2030.vaccinationportal.shared.auth.exception.DuplicateEmailException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidRequestedRoleException;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
+import com.se2030.vaccinationportal.shared.auth.model.CitizenProfile;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.CitizenProfileRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
@@ -44,6 +46,9 @@ class RegistrationServiceIntegrationTests {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private CitizenProfileRepository citizenProfileRepository;
+
+    @Autowired
     private RoleRepository roleRepository;
 
     @Autowired
@@ -51,6 +56,7 @@ class RegistrationServiceIntegrationTests {
 
     @BeforeEach
     void setUpCanonicalRoles() {
+        citizenProfileRepository.deleteAll();
         userAccountRepository.deleteAll();
         roleRepository.deleteAll();
         roleRepository.saveAll(List.of(
@@ -88,6 +94,11 @@ class RegistrationServiceIntegrationTests {
         assertEquals(AccountStatus.ACTIVE, response.accountStatus());
         assertEquals(List.of("ROLE_CITIZEN"), response.roles());
         assertNull(response.requestedRoleCode());
+
+        CitizenProfile profile = citizenProfileRepository.findByUser_Id(persisted.getId()).orElseThrow();
+        assertNull(profile.getDateOfBirth());
+        assertNull(profile.getGender());
+        assertNull(profile.getAddress());
     }
 
     @Test
@@ -129,6 +140,8 @@ class RegistrationServiceIntegrationTests {
         assertEquals(AccountStatus.PENDING_APPROVAL, response.accountStatus());
         assertEquals(requestedRoleCode, response.requestedRoleCode());
         assertTrue(response.roles().isEmpty());
+        assertTrue(citizenProfileRepository.findByUser_Id(persisted.getId()).isEmpty(),
+                "Staff registration must not create a citizen profile");
     }
 
     @ParameterizedTest(name = "staff role {0} is not publicly requestable")

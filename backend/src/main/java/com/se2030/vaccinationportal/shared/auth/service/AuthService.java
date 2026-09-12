@@ -11,8 +11,10 @@ import com.se2030.vaccinationportal.shared.auth.exception.AccountRejectedExcepti
 import com.se2030.vaccinationportal.shared.auth.exception.DuplicateEmailException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidRequestedRoleException;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
+import com.se2030.vaccinationportal.shared.auth.model.CitizenProfile;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.CitizenProfileRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
@@ -46,17 +48,20 @@ public class AuthService {
 
     private final UserAccountRepository userAccountRepository;
     private final RoleRepository roleRepository;
+    private final CitizenProfileRepository citizenProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
 
     public AuthService(
             UserAccountRepository userAccountRepository,
             RoleRepository roleRepository,
+            CitizenProfileRepository citizenProfileRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenService jwtTokenService
     ) {
         this.userAccountRepository = userAccountRepository;
         this.roleRepository = roleRepository;
+        this.citizenProfileRepository = citizenProfileRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenService = jwtTokenService;
     }
@@ -130,7 +135,9 @@ public class AuthService {
         account.setPhoneNumber(request.phoneNumber());
         account.addRole(citizenRole);
 
-        return toRegistrationResponse(saveRegistration(account));
+        UserAccount savedAccount = saveRegistration(account);
+        citizenProfileRepository.saveAndFlush(new CitizenProfile(savedAccount));
+        return toRegistrationResponse(savedAccount);
     }
 
     @Transactional
