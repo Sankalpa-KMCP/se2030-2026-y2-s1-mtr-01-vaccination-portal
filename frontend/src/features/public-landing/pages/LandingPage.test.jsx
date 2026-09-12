@@ -19,7 +19,7 @@ describe('LandingPage', () => {
     renderLanding();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /a clear path from campaign to vaccination record/i }),
+      screen.getByRole('heading', { level: 1, name: /a clear path from campaign to clinic appointment/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: /one service. two ways in/i }),
@@ -51,7 +51,7 @@ describe('LandingPage', () => {
     renderLanding();
     const choices = screen.getByRole('group', { name: /explore portal capabilities/i });
     const time = within(choices).getByRole('button', { name: /time sessions and capacity/i });
-    const record = within(choices).getByRole('button', { name: /record vaccination history and certificates/i });
+    const record = within(choices).getByRole('button', { name: /documentation vaccination draft documentation/i });
     expect(time.getAttribute('aria-pressed')).toBe('true');
     const detail = document.getElementById(time.getAttribute('aria-controls'));
     expect(within(detail).getByRole('heading', { name: /sessions and capacity/i })).toBeTruthy();
@@ -59,8 +59,8 @@ describe('LandingPage', () => {
     fireEvent.click(record);
     expect(record.getAttribute('aria-pressed')).toBe('true');
     expect(time.getAttribute('aria-pressed')).toBe('false');
-    expect(within(detail).getByRole('heading', { name: /vaccination history and certificates/i })).toBeTruthy();
-    expect(within(detail).getByText('History & certificate')).toBeTruthy();
+    expect(within(detail).getByRole('heading', { name: /vaccination draft documentation/i })).toBeTruthy();
+    expect(within(detail).getByText('Protected draft')).toBeTruthy();
     expect(within(detail).queryByText('Bookable time slots')).toBeNull();
     expect(detail.getAttribute('aria-live')).toBe('polite');
   });

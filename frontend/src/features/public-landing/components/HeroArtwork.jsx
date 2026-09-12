@@ -2,10 +2,10 @@ import React from 'react';
 
 const STAGES = [
   { label: 'Account', detail: 'Create your account', icon: 'M0-12a6 6 0 1 0 0 12 6 6 0 0 0 0-12ZM-12 14c2-8 7-12 12-12s10 4 12 12' },
-  { label: 'Eligibility', detail: 'Complete campaign screening', icon: 'm-12 0 8 8 17-19' },
+  { label: 'Screening', detail: 'Complete the campaign questionnaire', icon: 'm-12 0 8 8 17-19' },
   { label: 'Appointment', detail: 'Reserve an available time slot', icon: 'M-12-9h24v21h-24zM-12-2h24M-6-14v9M6-14v9' },
-  { label: 'Vaccination', detail: 'Attend your clinic appointment', icon: 'M-5-14h10M-4-14v7h8v-7M-6-7H6v22a6 6 0 0 1-12 0zM-6 3H6' },
-  { label: 'Record', detail: 'Return to your vaccination history', icon: 'M-10-14H5l7 7v22h-22zM5-14v8h7M-4 1H6M-4 7H6' },
+  { label: 'Clinic arrival', detail: 'Attend your clinic appointment', icon: 'M-5-14h10M-4-14v7h8v-7M-6-7H6v22a6 6 0 0 1-12 0zM-6 3H6' },
+  { label: 'Check-in', detail: 'Clinic staff confirm your arrival', icon: 'M-10-14H5l7 7v22h-22zM5-14v8h7M-4 1H6M-4 7H6' },
 ];
 
 /** Decorative service diagrams; the full citizen/staff journey is also in HTML. */

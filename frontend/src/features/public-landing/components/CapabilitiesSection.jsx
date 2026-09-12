@@ -27,10 +27,10 @@ const CAPABILITIES = [
     detail: 'Booking and attendance remain connected so the clinic can follow the appointment through the visit.',
   },
   {
-    id: 'record', domain: 'Record', title: 'Vaccination history and certificates',
-    desc: 'Healthcare officers record administered doses. Finalised vaccination information supports personal history and digital certificate issuance.',
-    inputs: ['Dose information', 'Finalised record'], outcome: 'History & certificate',
-    detail: 'Certificates have a reference and verification token, connecting issued evidence to the vaccination record.',
+    id: 'record', domain: 'Documentation', title: 'Vaccination draft documentation',
+    desc: 'Authorized Healthcare Officers and Administrators can prepare protected vaccination drafts for checked-in appointments.',
+    inputs: ['Dose details', 'Checked-in appointment'], outcome: 'Protected draft',
+    detail: 'Authorized staff can review and update vaccination drafts for checked-in appointments.',
   },
 ];
 
@@ -46,7 +46,7 @@ export default function CapabilitiesSection() {
             <span className="home-section-mark">System coordination</span>
             <h2 id="lp-capabilities-title">The work behind every appointment.</h2>
           </div>
-          <p>A booking is one part of a connected service. Explore how the programme, place, time, attendance, and record fit together.</p>
+          <p>A booking is one part of a connected service. Explore how the programme, place, time, attendance, and documentation fit together.</p>
         </div>
         <div className="home-operations" data-reveal="section">
           <div className="home-operations__choices" role="group" aria-label="Explore portal capabilities">

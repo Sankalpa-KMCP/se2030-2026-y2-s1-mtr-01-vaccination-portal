@@ -15,7 +15,7 @@ const GUIDE_ITEMS = [
     to: '/how-it-works',
     label: 'Process',
     title: 'Follow the care journey',
-    description: 'Understand each step from registration to a recorded dose.',
+    description: 'Understand the journey from registration to clinic check-in.',
     end: false,
   },
   {
@@ -23,7 +23,7 @@ const GUIDE_ITEMS = [
     to: '/about',
     label: 'Governance',
     title: 'Review roles and safeguards',
-    description: 'Learn how access, readiness, and records are controlled.',
+    description: 'Learn how roles, readiness, and selected lifecycle changes are managed.',
     end: false,
   },
 ];
@@ -37,7 +37,7 @@ export default function PublicServiceGuide() {
     <section className="lp-guide" aria-labelledby="lp-guide-title">
       <div className="lp-container lp-guide__layout">
         <div className="lp-guide__intro">
-          <span className="lp-guide__eyebrow">Public service guide</span>
+          <span className="lp-guide__eyebrow">Portal guide</span>
           <h2 id="lp-guide-title">Explore the portal with confidence.</h2>
           <p>Three short pages explain the service, the process, and the safeguards behind it.</p>
         </div>

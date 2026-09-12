@@ -9,16 +9,16 @@ export default function HeroSection() {
         <div className="home-hero__copy">
           <p className="home-hero__overline">
             <span className="home-hero__badge">
-              <span className="home-hero__badge-text--desktop">Secure Access &amp; Verification Gateway</span>
-              <span className="home-hero__badge-text--mobile">Secure Verification Gateway</span>
+              <span className="home-hero__badge-text--desktop">Citizen &amp; Staff Portal Access</span>
+              <span className="home-hero__badge-text--mobile">Portal Access</span>
             </span>
           </p>
           <h1 id="home-hero-title">
-            A clear path from <em>campaign</em> to vaccination record.
+            A clear path from <em>campaign</em> to clinic appointment.
           </h1>
           <p className="home-hero__lead">
-            Find eligible programmes, reserve a clinic appointment, and keep your
-            vaccination history connected to the care you receive.
+            Explore available campaigns, complete campaign-specific screening, and
+            reserve an eligible clinic appointment.
           </p>
           <div className="home-hero__actions">
             <Link to="/register/citizen" className="home-action home-action--primary">
@@ -42,7 +42,7 @@ export default function HeroSection() {
           </div>
           <div className="home-hero__visual-title">
             <span>Every step, connected.</span>
-            <p>From your first screening to a lasting record.</p>
+            <p>From campaign screening to a booked clinic visit.</p>
           </div>
           <div className="home-hero__visual-screen">
             <HeroArtwork />
@@ -56,7 +56,7 @@ export default function HeroSection() {
           <div>
             <span className="home-hero__rail-index">01</span>
             <strong>For Citizens</strong>
-            <span>Screening, appointments, and personal records.</span>
+            <span>Profile details, screening, and appointments.</span>
           </div>
           <div>
             <span className="home-hero__rail-index">02</span>

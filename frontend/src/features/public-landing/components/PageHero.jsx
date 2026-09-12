@@ -27,9 +27,9 @@ export default function PageHero({ index, label, title, accent, lead, variant = 
             </h1>
             {lead ? <p className="lp-page-hero__lead">{lead}</p> : null}
             <div className="lp-page-hero__proof" aria-label="Service qualities">
-              <span><i /> Public service</span>
-              <span><i /> Role controlled</span>
-              <span><i /> Auditable by design</span>
+              <span><i /> Citizen &amp; staff access</span>
+              <span><i /> Role-specific areas</span>
+              <span><i /> Selected lifecycle changes recorded</span>
             </div>
             {children}
           </div>

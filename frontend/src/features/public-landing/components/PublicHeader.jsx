@@ -54,7 +54,7 @@ export default function PublicHeader({ onLoginClick }) {
           <Link to="/" className="lp-header__brand-group" aria-label="Vaccination Portal — home">
             <BrandGlyph />
             <span className="lp-header__brand">Vaccination Portal</span>
-            <span className="lp-header__badge">Public Health Service</span>
+            <span className="lp-header__badge">Citizen &amp; Staff Portal</span>
           </Link>
 
           <nav className="lp-header__nav" aria-label="Main navigation">

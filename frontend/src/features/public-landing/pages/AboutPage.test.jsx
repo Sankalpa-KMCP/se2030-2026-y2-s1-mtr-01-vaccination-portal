@@ -22,7 +22,7 @@ describe('AboutPage', () => {
       screen.getByRole('heading', { level: 1, name: /a system built on responsibility/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /six roles, one registry/i }),
+      screen.getByRole('heading', { level: 2, name: /seven roles, one registry/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: /what the system governs/i }),
@@ -34,19 +34,19 @@ describe('AboutPage', () => {
       screen.getByRole('heading', { level: 2, name: /three commitments we hold/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /see the service from start to record/i }),
+      screen.getByRole('heading', { level: 2, name: /see the service from account to clinic/i }),
     ).toBeTruthy();
     expect(container.querySelector('.premium-visual--registry')).toBeTruthy();
-    expect(container.querySelectorAll('.premium-registry-card')).toHaveLength(6);
+    expect(container.querySelectorAll('.premium-registry-card')).toHaveLength(7);
   });
 
-  it('lists all six system roles with scope tags', () => {
+  it('lists all seven system roles with scope tags', () => {
     renderPage();
 
-    ['Citizen', 'Healthcare Officer', 'Center Manager', 'Campaign Officer', 'Management User', 'Admin'].forEach((role) => {
+    ['Citizen', 'Healthcare Officer', 'Center Manager', 'Campaign Officer', 'Inventory Officer', 'Management User', 'Administrator'].forEach((role) => {
       expect(screen.getByRole('heading', { level: 3, name: role })).toBeTruthy();
     });
-    ['Self-service', 'Clinical operations', 'Center readiness', 'Programme design', 'Oversight', 'System authority'].forEach((scope) => {
+    ['Self-service', 'Clinical operations', 'Center readiness', 'Programme design', 'Inventory responsibilities', 'Oversight', 'System authority'].forEach((scope) => {
       expect(screen.getByText(scope)).toBeTruthy();
     });
   });
@@ -54,7 +54,7 @@ describe('AboutPage', () => {
   it('lists the five operational ledger domains', () => {
     renderPage();
 
-    ['Campaign lifecycle', 'Center operations', 'Session scheduling', 'Readiness validation', 'Records & certificates'].forEach((title) => {
+    ['Campaign lifecycle', 'Center operations', 'Session scheduling', 'Readiness validation', 'Vaccination draft documentation'].forEach((title) => {
       expect(screen.getByRole('heading', { level: 3, name: title })).toBeTruthy();
     });
   });
@@ -70,8 +70,8 @@ describe('AboutPage', () => {
   it('renders the three data statement headlines', () => {
     renderPage();
 
-    expect(screen.getByText('Your record is yours.')).toBeTruthy();
-    expect(screen.getByText('Every change leaves a mark.')).toBeTruthy();
+    expect(screen.getByText('Your profile follows your account.')).toBeTruthy();
+    expect(screen.getByText('Key lifecycle changes are recorded.')).toBeTruthy();
     expect(screen.getByText('Clinics open prepared.')).toBeTruthy();
   });
 
