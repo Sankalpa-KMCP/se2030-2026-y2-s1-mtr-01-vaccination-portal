@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 
 const STAGES = [
   { moment: 'Programme', phase: 'Before you book', citizen: 'Find a campaign and complete its screening.', staff: 'Publish programme rules and review eligibility.', icon: 'M6 3h12v18H6zM9 8h6M9 12h6M9 16h4' },
-  { moment: 'Appointment', phase: 'Choose your time', citizen: 'Choose from valid sessions and reserve a place.', staff: 'Plan the session around center resources and capacity.', icon: 'M4 6h16v15H4zM4 11h16M8 3v5M16 3v5M8 15h3' },
-  { moment: 'Clinic', phase: 'On the day', citizen: 'Attend the booked center and check in.', staff: 'Confirm arrival and record the administered dose.', icon: 'M3 21V9l9-6 9 6v12M9 21v-6h6v6M12 7v5M9.5 9.5h5' },
-  { moment: 'Record', phase: 'After your visit', citizen: 'Return to your personal vaccination history.', staff: 'Finalise dose information and issue a certificate.', icon: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13l2 2 5-5' },
+  { moment: 'Appointment', phase: 'Choose your time', citizen: 'Search future sessions by campaign, date, and optional center, then reserve an eligible slot.', staff: 'Plan the session around center resources and capacity.', icon: 'M4 6h16v15H4zM4 11h16M8 3v5M16 3v5M8 15h3' },
+  { moment: 'Clinic', phase: 'On the day', citizen: 'Attend the booked center; clinic staff record check-in.', staff: 'Authorized staff confirm arrival and prepare the protected vaccination draft.', icon: 'M3 21V9l9-6 9 6v12M9 21v-6h6v6M12 7v5M9.5 9.5h5' },
+  { moment: 'Follow-up', phase: 'As needed', citizen: 'Review your appointment status and screening history.', staff: 'Appointment and waitlist rules keep slot capacity aligned with current reservations.', icon: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13l2 2 5-5' },
 ];
 
 export default function HowItWorksSection() {

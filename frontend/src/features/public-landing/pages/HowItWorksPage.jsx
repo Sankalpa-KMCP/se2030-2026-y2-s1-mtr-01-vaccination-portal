@@ -24,37 +24,37 @@ const JOURNEYS = [
       {
         num: '01',
         phase: 'Minutes',
-        title: 'Create your account',
+        title: 'Create your account and sign in',
         icon: 'account',
-        desc: 'Register once with your details. Citizen accounts are active immediately — no approval step.',
+        desc: 'Register with your full name, email, phone number, and password. Your account is active immediately, and the portal attempts to sign you in.',
       },
       {
         num: '02',
         phase: 'Before booking',
-        title: 'Complete pre-vaccination screening',
+        title: 'Choose a campaign and complete screening',
         icon: 'screening',
-        desc: 'Answer a short eligibility questionnaire for your campaign. Your answers determine which appointments you can book.',
+        desc: 'Complete the campaign questionnaire and review its preliminary result. A Healthcare Officer records the final campaign-specific eligibility decision.',
       },
       {
         num: '03',
         phase: 'Your choice',
-        title: 'Book an appointment',
+        title: 'Search and book an appointment',
         icon: 'booking',
-        desc: 'Pick a vaccination session at a center near you, from the campaigns your screening qualifies you for.',
+        desc: 'After final eligibility is recorded, search future sessions by campaign, date, and optional center, then book an available slot.',
       },
       {
         num: '04',
-        phase: 'On the day',
-        title: 'Attend the clinic',
+        phase: 'Before your visit',
+        title: 'Manage appointments or waitlists',
         icon: 'clinic',
-        desc: 'Arrive at your time slot. Clinic staff check you in and administer your vaccination.',
+        desc: 'View appointments, cancel or reschedule under the 24-hour rule, or join and manage a full session’s waitlist.',
       },
       {
         num: '05',
-        phase: 'Afterwards',
-        title: 'Your record updates',
+        phase: 'At the clinic',
+        title: 'Attend and check in',
         icon: 'record',
-        desc: 'Your immunisation history and certificate are recorded automatically — visible only to you.',
+        desc: 'Attend the booked clinic, where authorized staff record your arrival and check-in.',
       },
     ],
   },
@@ -67,21 +67,21 @@ const JOURNEYS = [
         phase: 'Request',
         title: 'Request staff access',
         icon: 'request',
-        desc: 'Health staff submit a registration request describing their intended role.',
+        desc: 'Staff submit a registration request describing their intended role.',
       },
       {
         num: '02',
         phase: 'Review',
         title: 'Administrator review',
         icon: 'review',
-        desc: 'An administrator reviews and approves the request before the account is activated.',
+        desc: 'An Administrator reviews and approves the request before the account is activated.',
       },
       {
         num: '03',
         phase: 'Planning',
         title: 'Plan campaign and center',
         icon: 'planning',
-        desc: 'Campaign officers define target groups, dose programmes, and locations; center managers maintain rosters, hours, rooms, and equipment.',
+        desc: 'Campaign Officers define target groups, dose programmes, and locations; Center Managers maintain rosters, hours, rooms, and equipment.',
       },
       {
         num: '04',
@@ -95,7 +95,7 @@ const JOURNEYS = [
         phase: 'Gate',
         title: 'Verify readiness and open',
         icon: 'readiness',
-        desc: 'The readiness gate validates hours, stations, staff, and conflicts. Only then does the session open for bookings.',
+        desc: 'The readiness gate validates hours, stations, staff, capacity, and conflicts. Only then does the session open for bookings.',
       },
     ],
   },
@@ -103,24 +103,24 @@ const JOURNEYS = [
 
 const FAQ_ITEMS = [
   {
-    question: 'Who can see my vaccination record?',
+    question: 'Which profile details can I update?',
     answer:
-      'Only you. Citizens see their own record only; health staff see operational session data, not personal histories, unless your care requires it.',
+      'Signed-in citizens can update their full name, phone number, date of birth, gender, and address. Email and password changes are not available on the profile page.',
   },
   {
     question: 'How long does staff access take to approve?',
     answer:
-      'Staff accounts are activated after an administrator reviews the request — usually within one working day.',
+      'Staff accounts remain pending until an Administrator approves or rejects the request. The portal does not provide a guaranteed approval time.',
   },
   {
     question: 'Can I reschedule or cancel my appointment?',
     answer:
-      'Yes. Citizens can reschedule or cancel a booked appointment from their dashboard, subject to the session\u2019s booking rules.',
+      'Yes. Citizens can cancel or reschedule from their dashboard at least 24 hours before the session. Authorized staff can override the 24-hour restriction with a recorded reason.',
   },
   {
     question: 'What happens if my screening answers change?',
     answer:
-      'If your situation changes before your appointment, you can resubmit your screening — a health officer reviews any updates that affect eligibility.',
+      'Citizens can resubmit answers when corrections are requested. A Healthcare Officer reviews submissions and records the final campaign-specific eligibility decision.',
   },
   {
     question: 'How does the portal decide a session is ready?',
@@ -128,9 +128,9 @@ const FAQ_ITEMS = [
       'A readiness gate checks operating hours, active stations, planned capacity, qualified staff, and schedule conflicts. Every condition must pass before bookings open.',
   },
   {
-    question: 'Does the service cost anything?',
+    question: 'What happens when a session is full?',
     answer:
-      'No. The Vaccination Portal is a public health service — registration, booking, and records are free.',
+      'An eligible citizen can join the session waitlist, see its status and position, and leave it. When capacity becomes available, the portal promotes the next eligible entry in FIFO order and shows the promoted state in the citizen portal.',
   },
 ];
 
@@ -156,7 +156,7 @@ export default function HowItWorksPage({ onLoginClick }) {
           label="How it works"
           title="One system,"
           accent="two journeys."
-          lead="Citizens move from registration to a recorded vaccination. Health teams move from planning to an opened, ready clinic. Both share the same secure spine."
+          lead="Citizens move from account creation and screening to appointment booking and clinic check-in. Health teams move from planning to an opened, ready clinic."
         />
         <PublicServiceGuide />
 
@@ -169,7 +169,7 @@ export default function HowItWorksPage({ onLoginClick }) {
               <span className="lp-kicker__rule" aria-hidden="true" />
             </div>
             <h2 className="lp-section__title" id="lp-journey-title" data-reveal>
-              Follow a journey from start to finish
+              Follow each journey step by step
             </h2>
 
             <div className="lp-journey__tabs" data-reveal>

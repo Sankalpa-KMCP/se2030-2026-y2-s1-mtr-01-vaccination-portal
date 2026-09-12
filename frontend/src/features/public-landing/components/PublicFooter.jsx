@@ -25,10 +25,10 @@ export default function PublicFooter() {
 
         <div className="lp-footer__bottom">
           <span className="lp-footer__copyright">
-            &copy; {currentYear} Vaccination Portal &mdash; SE2030 project.
+            &copy; {currentYear} Vaccination Portal.
           </span>
           <span className="lp-footer__status">
-            Public Health Service
+            Citizen &amp; Staff Portal
           </span>
         </div>
       </div>
