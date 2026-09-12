@@ -1,0 +1,102 @@
+.citizen-profile {
+  --citizen-profile-ink: #102f3a;
+  --citizen-profile-muted: #52676c;
+  --citizen-profile-line: #d7e2dd;
+  display: grid;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  color: var(--citizen-profile-ink);
+  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.citizen-profile__sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.citizen-profile__sections > :first-child {
+  grid-column: 1 / -1;
+}
+
+.citizen-profile__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+  margin: 0;
+}
+
+.citizen-profile__details > div {
+  min-width: 0;
+  padding-left: 0.8rem;
+  border-left: 2px solid var(--citizen-profile-line);
+}
+
+.citizen-profile__details dt {
+  margin-bottom: 0.25rem;
+  color: var(--citizen-profile-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.citizen-profile__details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--citizen-profile-ink);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.citizen-profile__edit-layout,
+.citizen-profile__form,
+.citizen-profile__form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.citizen-profile__form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.citizen-profile__full-width {
+  grid-column: 1 / -1;
+}
+
+.citizen-profile__form .form-label {
+  color: var(--citizen-profile-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.citizen-profile__form :is(.form-control, .form-select):focus {
+  border-color: #2f855f;
+  box-shadow: 0 0 0 0.2rem rgba(32, 98, 69, 0.13);
+}
+
+.citizen-profile__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.citizen-profile__actions .btn {
+  min-height: 44px;
+}
+
+.citizen-profile__load-error {
+  max-width: 760px;
+}
+
+@media (max-width: 760px) {
+  .citizen-profile__sections,
+  .citizen-profile__form-grid,
+  .citizen-profile__details {
+    grid-template-columns: 1fr;
+  }
+
+  .citizen-profile__sections > :first-child,
+  .citizen-profile__full-width {
+    grid-column: auto;
+  }
+}

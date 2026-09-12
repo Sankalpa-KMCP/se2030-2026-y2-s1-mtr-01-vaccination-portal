@@ -45,6 +45,7 @@ vi.mock('../features/screening/pages/CitizenEligibilityPage', () => ({ default: 
 vi.mock('../features/screening/pages/CitizenScreeningHistoryPage', () => ({ default: () => 'Citizen History Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningHistoryDetailsPage', () => ({ default: () => 'Citizen History Details Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningCorrectionPage', () => ({ default: () => 'Citizen Correction Test Page' }));
+vi.mock('../features/citizen-profile/pages/CitizenProfilePage', () => ({ default: () => 'Citizen Profile Test Page' }));
 vi.mock('../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage', () => ({ default: () => 'HCO Screening Review Queue Test Page' }));
 vi.mock('../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage', () => ({ default: () => 'HCO Screening Review Details Test Page' }));
 
@@ -123,6 +124,34 @@ describe('shared routing and role guards', () => {
       render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
       expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
       expect(screen.queryByText(page)).toBeNull();
+    });
+  });
+
+  describe('citizen profile route', () => {
+    it('allows a citizen', () => {
+      setAuth({ roles: ['ROLE_CITIZEN'] });
+      render(<MemoryRouter initialEntries={['/app/citizen/profile']}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByText('Citizen Profile Test Page')).toBeTruthy();
+    });
+
+    it('redirects an unauthenticated visitor to login', () => {
+      render(<MemoryRouter initialEntries={['/app/citizen/profile']}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
+      expect(screen.queryByText('Citizen Profile Test Page')).toBeNull();
+    });
+
+    it.each([
+      'ROLE_ADMIN',
+      'ROLE_HEALTHCARE_OFFICER',
+      'ROLE_SYSTEM_ADMINISTRATOR',
+      'ROLE_CAMPAIGN_OFFICER',
+      'ROLE_CENTER_MANAGER',
+      'ROLE_MANAGEMENT_USER',
+    ])('denies %s', (role) => {
+      setAuth({ roles: [role] });
+      render(<MemoryRouter initialEntries={['/app/citizen/profile']}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+      expect(screen.queryByText('Citizen Profile Test Page')).toBeNull();
     });
   });
 
