@@ -130,6 +130,20 @@ export function AuthProvider({ children }) {
     setLoginError(null);
   }, []);
 
+  const updateCurrentUserProfile = useCallback((profile) => {
+    setUser((currentUser) => {
+      if (!currentUser || !profile) return currentUser;
+      if (profile.id != null && currentUser.id != null && String(profile.id) !== String(currentUser.id)) {
+        return currentUser;
+      }
+      return {
+        ...currentUser,
+        fullName: profile.fullName,
+        phoneNumber: profile.phoneNumber,
+      };
+    });
+  }, []);
+
   const value = {
     user,
     isAuthenticated,
@@ -140,6 +154,7 @@ export function AuthProvider({ children }) {
     logout,
     retryBootstrap,
     clearLoginError,
+    updateCurrentUserProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

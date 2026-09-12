@@ -36,6 +36,7 @@ import CitizenEligibilityPage from '../features/screening/pages/CitizenEligibili
 import CitizenScreeningHistoryPage from '../features/screening/pages/CitizenScreeningHistoryPage';
 import CitizenScreeningHistoryDetailsPage from '../features/screening/pages/CitizenScreeningHistoryDetailsPage';
 import CitizenScreeningCorrectionPage from '../features/screening/pages/CitizenScreeningCorrectionPage';
+import CitizenProfilePage from '../features/citizen-profile/pages/CitizenProfilePage';
 import HealthcareOfficerScreeningReviewQueuePage from '../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage';
 import HealthcareOfficerScreeningReviewDetailsPage from '../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
@@ -210,6 +211,7 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={[CITIZEN_ROLE]} />}>
             <Route path="citizen" element={<CitizenDashboardPage />} />
+            <Route path="citizen/profile" element={<CitizenProfilePage />} />
             <Route path="screening" element={<CitizenScreeningCampaignsPage />} />
             <Route path="screening/campaigns/:campaignId" element={<CitizenScreeningPage />} />
             <Route path="screening/eligibility" element={<CitizenEligibilityPage />} />

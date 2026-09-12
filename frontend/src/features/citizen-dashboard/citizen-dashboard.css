@@ -527,7 +527,7 @@
 
 .citizen-account dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.7rem;
   margin: 0;
 }
@@ -538,11 +538,11 @@
   border-left: 1px solid var(--citizen-line-strong);
 }
 
-.citizen-account > p {
+.citizen-account > .citizen-panel__links {
   grid-column: 2;
   margin: -0.5rem 0 0;
-  color: var(--citizen-muted);
-  font-size: 0.72rem;
+  padding: 0;
+  border-top: 0;
 }
 
 .citizen-dashboard :is(a, button):focus-visible {
@@ -561,7 +561,7 @@
     grid-template-columns: 1fr;
   }
 
-  .citizen-account > p {
+  .citizen-account > .citizen-panel__links {
     grid-column: 1;
     margin-top: 0;
   }

@@ -25,13 +25,16 @@ function response({ body = '', status = 200, statusText = 'OK' } = {}) {
 }
 
 function AuthStateProbe() {
-  const { isAuthenticated, login, user } = useAuth();
+  const { isAuthenticated, login, updateCurrentUserProfile, user } = useAuth();
   return (
     <div>
       <span>{isAuthenticated ? 'authenticated' : 'signed-out'}</span>
       <span>{user?.email || 'no-user'}</span>
       <span>{user?.fullName || 'no-name'}</span>
+      <span>{user?.phoneNumber || 'no-phone'}</span>
+      <span>{user?.roles?.join(',') || 'no-roles'}</span>
       <button type="button" onClick={() => login('citizen@example.com', 'Secret123!')}>Test Login</button>
+      <button type="button" onClick={() => updateCurrentUserProfile({ id: user?.id, fullName: 'Updated Name', phoneNumber: '+94 11 222 3333', roles: ['ROLE_ADMIN'] })}>Update Profile</button>
     </div>
   );
 }
@@ -107,5 +110,10 @@ describe('AuthProvider unauthorized handling', () => {
     await screen.findByText('authenticated');
     expect(screen.getByText('Citizen User')).toBeTruthy();
     expect(getToken()).toBe('citizen-token');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update Profile' }));
+    expect(screen.getByText('Updated Name')).toBeTruthy();
+    expect(screen.getByText('+94 11 222 3333')).toBeTruthy();
+    expect(screen.getByText('ROLE_CITIZEN')).toBeTruthy();
   });
 });
