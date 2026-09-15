@@ -6,7 +6,7 @@
    only enhance the experience when the supporting browser APIs succeed.
    ======================================================================== */
 
-.lp-page--home {
+.lp-page {
   --home-motion-fast: 160ms;
   --home-motion-medium: 420ms;
   --home-motion-slow: 680ms;
@@ -16,27 +16,196 @@
 
 /* Header response ------------------------------------------------------- */
 
-.lp-page--home .lp-header {
+.lp-page .lp-header {
   transition:
     background-color var(--home-motion-fast) ease,
     border-color var(--home-motion-fast) ease,
     box-shadow var(--home-motion-fast) ease;
 }
 
-.lp-page--home.is-public-header-scrolled .lp-header {
+.lp-page.is-public-header-scrolled .lp-header {
   background-color: rgba(255, 255, 255, 0.99);
   border-bottom-color: #c6d8e3;
   box-shadow: 0 5px 18px rgba(18, 70, 102, 0.09);
 }
 
-.lp-page--home .lp-header__link::after {
-  transform-origin: center;
-  transition: transform var(--home-motion-fast) var(--home-motion-ease);
+.lp-page .lp-header__nav {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 20px rgba(21, 78, 111, 0.06);
+  transition:
+    background-color 320ms var(--home-motion-ease),
+    border-color 320ms var(--home-motion-ease),
+    box-shadow 320ms var(--home-motion-ease);
 }
 
-.lp-page--home .lp-header__link:hover::after,
-.lp-page--home .lp-header__link.lp-is-active::after {
-  transform: scaleX(1);
+.lp-page .lp-header__nav::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 28%,
+    rgba(255, 255, 255, 0.68) 48%,
+    transparent 68%
+  );
+  transform: translate3d(-120%, 0, 0);
+}
+
+.lp-page .lp-header__link {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: none;
+  transform: translate3d(0, 0, 0);
+  transition:
+    color 280ms var(--home-motion-ease),
+    transform 300ms var(--home-motion-ease),
+    box-shadow 320ms var(--home-motion-ease);
+}
+
+.lp-page .lp-header__link::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
+  width: auto;
+  height: auto;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f4faf5, #e7f3ec);
+  opacity: 0;
+  transform: scale(0.88);
+  transition:
+    opacity 260ms var(--home-motion-ease),
+    transform 360ms var(--home-motion-ease),
+    border-color 320ms var(--home-motion-ease),
+    box-shadow 360ms var(--home-motion-ease);
+}
+
+.lp-page .lp-header__link:hover,
+.lp-page .lp-header__link.lp-is-active {
+  background: transparent;
+  box-shadow: none;
+}
+
+.lp-page .lp-header__link:hover:not(.lp-is-active) {
+  color: var(--public-nav-green, #206245);
+  transform: translate3d(0, -1px, 0);
+}
+
+.lp-page .lp-header__link:hover:not(.lp-is-active)::before {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(191, 229, 238, 0.72);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.lp-page .lp-header__link.lp-is-active::before {
+  border-color: rgba(188, 213, 196, 0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 5px 13px rgba(32, 98, 69, 0.08);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.lp-page .lp-header__link::after {
+  display: block;
+  left: 50%;
+  bottom: 6px;
+  width: 14px;
+  height: 2px;
+  background: var(--public-nav-green, #206245);
+  opacity: 0;
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: center;
+  transition:
+    opacity 220ms ease,
+    transform 360ms var(--home-motion-ease);
+}
+
+.lp-page .lp-header__link:hover::after,
+.lp-page .lp-header__link.lp-is-active::after {
+  opacity: 0.72;
+  transform: translateX(-50%) scaleX(1);
+}
+
+.lp-page .lp-btn--header {
+  transition:
+    color 240ms ease,
+    background-color 280ms ease,
+    border-color 280ms ease,
+    box-shadow 360ms var(--home-motion-ease),
+    transform 320ms var(--home-motion-ease);
+}
+
+.lp-page .lp-btn--header:hover {
+  box-shadow: 0 13px 27px rgba(11, 79, 125, 0.23);
+  transform: translate3d(0, -2px, 0) scale(1.01);
+}
+
+.lp-page .lp-btn--header:active {
+  box-shadow: 0 6px 14px rgba(11, 79, 125, 0.18);
+  transform: translate3d(0, 0, 0) scale(0.985);
+}
+
+@keyframes home-nav-enter {
+  from {
+    opacity: 0.72;
+    transform: translate3d(0, -6px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes home-nav-item-enter {
+  from {
+    filter: blur(2px);
+    opacity: 0;
+  }
+  to {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+@keyframes home-nav-sheen {
+  from { transform: translate3d(-120%, 0, 0); }
+  to { transform: translate3d(120%, 0, 0); }
+}
+
+.lp-page .lp-header__nav {
+  animation: home-nav-enter 520ms var(--home-motion-ease) 80ms both;
+}
+
+.lp-page .lp-header__nav::after {
+  animation: home-nav-sheen 820ms var(--home-motion-ease-in-out) 260ms both;
+}
+
+.lp-page .lp-header__nav > :is(.lp-header__link, .lp-btn--header) {
+  animation: home-nav-item-enter 420ms var(--home-motion-ease) both;
+}
+
+.lp-page .lp-header__nav > :nth-child(1) { animation-delay: 120ms; }
+.lp-page .lp-header__nav > :nth-child(2) { animation-delay: 165ms; }
+.lp-page .lp-header__nav > :nth-child(3) { animation-delay: 210ms; }
+.lp-page .lp-header__nav > :nth-child(4) { animation-delay: 255ms; }
+
+@media (hover: none), (pointer: coarse) {
+  .lp-page .lp-header__link:hover:not(.lp-is-active) {
+    transform: none;
+  }
 }
 
 /* Hero choreography ----------------------------------------------------- */
@@ -78,10 +247,67 @@
     opacity: 0;
     stroke-dashoffset: 0;
   }
-  10%, 84% { opacity: 0.9; }
+  6%, 88% { opacity: 0.92; }
   100% {
     opacity: 0;
     stroke-dashoffset: -1;
+  }
+}
+
+@keyframes home-support-travel {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+  4% { opacity: 0.95; }
+  20% {
+    opacity: 0.8;
+    stroke-dashoffset: -1;
+  }
+  24%, 100% {
+    opacity: 0;
+    stroke-dashoffset: -1;
+  }
+}
+
+@keyframes home-pathway-stage-pulse {
+  0%, 18%, 100% {
+    filter: none;
+    stroke-width: 1.5;
+    transform: scale(1);
+  }
+  7% {
+    filter: drop-shadow(0 0 7px rgba(139, 219, 232, 0.3));
+    stroke-width: 2.25;
+    transform: scale(1.07);
+  }
+  12% { transform: scale(1.025); }
+}
+
+@keyframes home-pathway-symbol-pulse {
+  0%, 18%, 100% {
+    opacity: 0.84;
+    transform: scale(1);
+  }
+  7% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes home-pathway-label-pulse {
+  0%, 18%, 100% { opacity: 0.8; }
+  7% { opacity: 1; }
+}
+
+@keyframes home-pathway-support-pulse {
+  0%, 24%, 100% {
+    filter: none;
+    stroke: var(--health-rule-dark);
+  }
+  8% {
+    filter: drop-shadow(0 0 5px rgba(139, 219, 232, 0.22));
+    stroke: var(--health-green-light);
   }
 }
 
@@ -141,10 +367,10 @@
 }
 
 .lp-page--home.lp-motion-ready .home-pathway__route-progress {
-  stroke-dasharray: 0.055 0.945;
+  stroke-dasharray: 0.075 0.925;
   stroke-dashoffset: 0;
   opacity: 0;
-  animation: home-route-travel 3.2s linear 1750ms 1;
+  animation: home-route-travel 6s linear 1750ms infinite;
 }
 
 .lp-page--home.lp-motion-ready .home-pathway__node-core {
@@ -159,6 +385,41 @@
 .lp-page--home.lp-motion-ready .home-pathway__journey-node--4 .home-pathway__node-core { animation-delay: 1210ms; }
 .lp-page--home.lp-motion-ready .home-pathway__journey-node--5 .home-pathway__node-core { animation-delay: 1480ms; }
 
+.lp-page--home .home-pathway__journey-node--1 { --pathway-stage-delay: 0ms; }
+.lp-page--home .home-pathway__journey-node--2 { --pathway-stage-delay: 1200ms; }
+.lp-page--home .home-pathway__journey-node--3 { --pathway-stage-delay: 2400ms; }
+.lp-page--home .home-pathway__journey-node--4 { --pathway-stage-delay: 3600ms; }
+.lp-page--home .home-pathway__journey-node--5 { --pathway-stage-delay: 4800ms; }
+
+.lp-page--home.lp-motion-ready .home-pathway__node-face,
+.lp-page--home.lp-motion-ready .home-pathway__node-core > path,
+.lp-page--home.lp-motion-ready .home-pathway__node-label,
+.lp-page--home.lp-motion-ready .home-pathway__node-number {
+  animation-duration: 6s;
+  animation-delay: calc(1750ms + var(--pathway-stage-delay));
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__node-face {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-name: home-pathway-stage-pulse;
+  animation-timing-function: var(--home-motion-ease-in-out);
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__node-core > path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-name: home-pathway-symbol-pulse;
+  animation-timing-function: var(--home-motion-ease);
+}
+
+.lp-page--home.lp-motion-ready :is(.home-pathway__node-label, .home-pathway__node-number) {
+  animation-name: home-pathway-label-pulse;
+  animation-timing-function: var(--home-motion-ease);
+}
+
 .lp-page--home.lp-motion-ready .home-pathway__staff-pill {
   transform-box: fill-box;
   transform-origin: center;
@@ -170,11 +431,36 @@
 .lp-page--home.lp-motion-ready .home-pathway__staff-connector--campaign { animation-delay: 650ms; }
 .lp-page--home.lp-motion-ready .home-pathway__staff-connector--ready { animation-delay: 880ms; }
 
+.lp-page--home.lp-motion-ready .home-pathway__support-progress {
+  stroke-dasharray: 0.16 0.84;
+  stroke-dashoffset: 0;
+  animation: home-support-travel 6s linear infinite;
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__support-progress--campaign,
+.lp-page--home.lp-motion-ready .home-pathway__staff-pill--campaign rect {
+  animation-delay: 2550ms;
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__support-progress--ready,
+.lp-page--home.lp-motion-ready .home-pathway__staff-pill--ready rect {
+  animation-delay: 3750ms;
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__staff-pill rect {
+  animation-name: home-pathway-support-pulse;
+  animation-duration: 6s;
+  animation-timing-function: var(--home-motion-ease-in-out);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+
 
 /* Controls and text links ---------------------------------------------- */
 
 .lp-page--home .home-action,
-.lp-page--home .home-text-button {
+.lp-page--home .home-text-button,
+.lp-page--home .home-hero__staff-link {
   transition-property: color, background-color, border-color, transform, box-shadow;
   transition-duration: var(--home-motion-fast);
   transition-timing-function: var(--home-motion-ease);
@@ -189,11 +475,11 @@
 
 .lp-page--home :is(.home-action, .home-hero__staff-link, .home-index__link):hover > span:last-child,
 .lp-page--home .home-index__link:hover .home-index__arrow {
-  transform: translate3d(3px, 0, 0);
+  transform: translate3d(4px, 0, 0);
 }
 
-.lp-page--home :is(.home-action, .home-text-button):active {
-  transform: translate3d(0, 1px, 0);
+.lp-page--home :is(.home-action, .home-text-button, .home-hero__staff-link):active {
+  transform: translate3d(0, 1px, 0) scale(0.985);
 }
 
 .lp-page--home .home-text-link::after,
@@ -396,6 +682,27 @@
     scroll-behavior: auto !important;
   }
 
+  .lp-page :is(.lp-header__nav, .lp-header__link, .lp-btn--header),
+  .lp-page .lp-header__link::before,
+  .lp-page .lp-header__link::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .lp-page .lp-header__nav::after {
+    display: none;
+    animation: none !important;
+  }
+
+  .lp-page .lp-header__link:hover:not(.lp-is-active),
+  .lp-page .lp-btn--header:hover,
+  .lp-page .lp-btn--header:active,
+  .lp-page--home :is(.home-action, .home-text-button, .home-hero__staff-link):hover,
+  .lp-page--home :is(.home-action, .home-text-button, .home-hero__staff-link):active,
+  .lp-page--home :is(.home-action, .home-hero__staff-link, .home-index__link) > span {
+    transform: none !important;
+  }
+
   .lp-page--home.lp-motion-ready :is(
     .home-hero__overline,
     .home-hero h1,
@@ -406,7 +713,12 @@
     .home-hero__visual,
     .home-hero__visual-screen,
     .home-pathway__node-core,
-    .home-pathway__staff-pill
+    .home-pathway__node-face,
+    .home-pathway__node-core > path,
+    .home-pathway__node-label,
+    .home-pathway__node-number,
+    .home-pathway__staff-pill,
+    .home-pathway__staff-pill rect
   ) {
     animation: none !important;
     opacity: 1 !important;
@@ -419,7 +731,7 @@
     stroke-dashoffset: 0 !important;
   }
 
-  .lp-page--home .home-pathway__route-progress {
+  .lp-page--home :is(.home-pathway__route-progress, .home-pathway__support-progress) {
     display: none;
     animation: none !important;
   }
