@@ -230,7 +230,7 @@ describe('screeningApi', () => {
     const payload = {
       ruleCode: 'AGE_REVIEW',
       ruleName: 'Age review',
-      conditionExpression: 'AGE < 18',
+      conditionExpression: 'AGE == 18',
       preliminaryResult: 'PRELIMINARY_REVIEW_REQUIRED',
       priority: 1,
       message: 'Clinical review required',

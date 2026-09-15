@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
-import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
 import { getCampaignById } from '../../campaign-management/api/campaignApi';
 import { getEligibilityAssessmentBySubmission, getScreeningHistoryDetails } from '../api/screeningApi';
 import RecordedEligibilityAssessment from '../components/RecordedEligibilityAssessment';
@@ -13,6 +15,13 @@ import {
   SCREENING_SUBMISSION_STATUS_LABELS,
 } from '../constants/screeningConstants';
 import { campaignName, formatScreeningTimestamp } from '../utils/screeningHistory';
+
+function screeningTone(status) {
+  if (status === 'CORRECTIONS_REQUIRED') return 'attention';
+  if (status === 'REVIEWED') return 'positive';
+  if (status === 'PENDING_REVIEW') return 'pending';
+  return 'neutral';
+}
 
 function HistoryDetails({ submissionId }) {
   const [state, setState] = useState({ loading: true, details: null, error: null });
@@ -43,50 +52,78 @@ function HistoryDetails({ submissionId }) {
     return () => { active = false; };
   }, [submissionId]);
 
-  if (state.loading) return <LoadingSpinner message="Loading screening details..." />;
   const { details } = state;
   return (
-    <section aria-labelledby="screening-history-details-title">
-      <Link className="btn btn-link px-0 mb-3" to="/app/screening/history">← Back to Screening History</Link>
-      <h1 className="display-6 fw-semibold mb-4" id="screening-history-details-title">Screening Details</h1>
-      <ApiErrorAlert error={state.error} />
-      {details && <>
-        {supplement.errors.campaign && <p className="alert alert-warning">Campaign information is unavailable. Your screening details remain available.</p>}
-        <div className="card border-0 shadow-sm mb-4"><div className="card-body p-4">
-          <h2 className="h4">{campaignName(supplement.campaign, details.campaignId)}</h2>
-          {supplement.campaign?.code && <p className="small text-muted">Campaign code: {supplement.campaign.code}</p>}
-          <dl className="row mb-0">
-            <dt className="col-sm-4">Submitted</dt><dd className="col-sm-8">{formatScreeningTimestamp(details.submittedAt)}</dd>
-            <dt className="col-sm-4">Screening status</dt><dd className="col-sm-8">{SCREENING_SUBMISSION_STATUS_LABELS[details.status] || 'Unavailable'}</dd>
-            <dt className="col-sm-4">Preliminary result</dt><dd className="col-sm-8">{CITIZEN_PRELIMINARY_RESULT_LABELS[details.preliminaryResult] || 'Not available'}</dd>
-            <dt className="col-sm-4">Questionnaire version</dt><dd className="col-sm-8">{details.questionnaireVersionNumber ?? 'Not available'}</dd>
+    <section className="citizen-page" aria-labelledby="screening-history-details-title">
+      <CitizenPageHeader
+        eyebrow="Screening Record"
+        title="Screening Details"
+        titleId="screening-history-details-title"
+        subtitle="Detailed view of your submitted questionnaire responses and evaluation status."
+        backTo="/app/screening/history"
+        backLabel="Back to Screening History"
+        meta={details?.id ? `Submission reference ${details.id}` : undefined}
+      />
+      {state.loading && <CitizenStatePanel title="Loading screening details..." tone="loading" status><p>Retrieving the selected questionnaire record and its assessment.</p></CitizenStatePanel>}
+      {!state.loading && state.error && <CitizenErrorState error={state.error} />}
+      {!state.loading && details && <>
+        {supplement.errors.campaign && <CitizenStatePanel title="Campaign information is unavailable" tone="warning"><p>Your screening details remain available.</p></CitizenStatePanel>}
+        <section className="citizen-detail-panel" aria-labelledby="record-summary-title">
+          <header className="citizen-detail-panel__header citizen-campaign-card__heading">
+            <div>
+              <p className="citizen-ui-eyebrow">Record summary</p>
+              <h2 id="record-summary-title">{campaignName(supplement.campaign, details.campaignId)}</h2>
+              {supplement.campaign?.code && <p>Campaign code: {supplement.campaign.code}</p>}
+            </div>
+            <CitizenStatusBadge tone={screeningTone(details.status)}>
+              {SCREENING_SUBMISSION_STATUS_LABELS[details.status] || 'Unavailable'}
+            </CitizenStatusBadge>
+          </header>
+          <div className="citizen-detail-panel__body">
+          <dl className="citizen-detail-grid">
+            <div><dt>Submitted</dt><dd>{formatScreeningTimestamp(details.submittedAt)}</dd></div>
+            <div><dt>Screening status</dt><dd>{SCREENING_SUBMISSION_STATUS_LABELS[details.status] || 'Unavailable'}</dd></div>
+            <div><dt>Preliminary result</dt><dd>{CITIZEN_PRELIMINARY_RESULT_LABELS[details.preliminaryResult] || 'Not available'}</dd></div>
+            <div><dt>Questionnaire version</dt><dd>{details.questionnaireVersionNumber ?? 'Not available'}</dd></div>
           </dl>
-          <p className="small text-muted mt-2 mb-0">A preliminary result is not a final eligibility decision.</p>
+          <p className="small text-muted mt-3 mb-0">A preliminary result is not a final eligibility decision.</p>
           <ScreeningCorrectionNotice submission={details} />
           {details.status === SCREENING_SUBMISSION_STATUS.CORRECTIONS_REQUIRED && (
             <Link
-              className="btn btn-primary mt-3"
+              className="btn btn-primary mt-3 citizen-action citizen-action--primary"
               to={`/app/screening/history/${details.id ?? submissionId}/correct`}
             >
               Correct Screening
             </Link>
           )}
-        </div></div>
-        <div className="card border-0 shadow-sm mb-4"><div className="card-body p-4">
-          <h2 className="h4 mb-3">Submitted answers</h2>
+          </div>
+        </section>
+        <section className="citizen-detail-panel" aria-labelledby="submitted-answers-title">
+          <header className="citizen-detail-panel__header">
+            <p className="citizen-ui-eyebrow">Questionnaire record</p>
+            <h2 id="submitted-answers-title">Submitted answers</h2>
+            <p>Responses appear in their recorded questionnaire order.</p>
+          </header>
+          <div className="citizen-detail-panel__body">
           {details.answers.length === 0 && <p>No answers are available for this screening.</p>}
-          <ol className="list-unstyled mb-0">{details.answers.map((answer) => <li className="border-top py-3 text-break" key={answer.id ?? answer.questionId}>
-            <h3 className="h6">{answer.questionText || 'Question text unavailable'}</h3>
-            <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{answer.displayAnswer ?? 'Answer unavailable'}</p>
+          <ol className="citizen-answer-list">{details.answers.map((answer) => <li key={answer.id ?? answer.questionId}>
+            <h3>{answer.questionText || 'Question text unavailable'}</h3>
+            <p>{answer.displayAnswer ?? 'Answer unavailable'}</p>
           </li>)}</ol>
-        </div></div>
-        <div className="card border-0 shadow-sm"><div className="card-body p-4">
-          <h2 className="h4 mb-3">Final recorded assessment</h2>
-          {supplement.loading ? <LoadingSpinner message="Loading assessment information..." />
-            : supplement.errors.assessment ? <><p>Final assessment information is unavailable.</p><ApiErrorAlert error={supplement.errors.assessment} /></>
+          </div>
+        </section>
+        <section className="citizen-detail-panel" aria-labelledby="recorded-assessment-title">
+          <header className="citizen-detail-panel__header">
+            <p className="citizen-ui-eyebrow">Eligibility record</p>
+            <h2 id="recorded-assessment-title">Final recorded assessment</h2>
+          </header>
+          <div className="citizen-detail-panel__body">
+          {supplement.loading ? <CitizenStatePanel title="Loading assessment information..." tone="loading" status />
+            : supplement.errors.assessment ? <CitizenErrorState error={supplement.errors.assessment} title="Final assessment information is unavailable" />
               : supplement.assessment ? <RecordedEligibilityAssessment assessment={supplement.assessment} />
                 : <p>No final eligibility assessment has been recorded for this screening yet.</p>}
-        </div></div>
+          </div>
+        </section>
       </>}
     </section>
   );

@@ -22,7 +22,7 @@ export default function ScreeningSubmissionResult({ submission }) {
     <div className="card border-success shadow-sm" aria-live="polite">
       <div className="card-body p-4">
         <span className="badge text-bg-success mb-3">Submission successful</span>
-        <h1 className="h3 mb-3">Your screening was submitted</h1>
+        <h2 className="h3 mb-3">Your screening was submitted</h2>
         <dl className="row mb-3">
           <dt className="col-sm-4">Submitted</dt>
           <dd className="col-sm-8">{formatTimestamp(submission.submittedAt)}</dd>

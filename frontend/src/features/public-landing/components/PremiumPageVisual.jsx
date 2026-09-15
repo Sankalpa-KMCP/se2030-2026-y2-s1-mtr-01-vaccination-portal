@@ -4,17 +4,18 @@ const howNodes = [
   { code: '01', label: 'Register', x: 36, y: 50 },
   { code: '02', label: 'Screen', x: 126, y: 106 },
   { code: '03', label: 'Book', x: 220, y: 58 },
-  { code: '04', label: 'Attend', x: 310, y: 116 },
-  { code: '05', label: 'Record', x: 402, y: 66 },
+  { code: '04', label: 'Manage', x: 310, y: 116 },
+  { code: '05', label: 'Check-in', x: 402, y: 66 },
 ];
 
 const aboutRoles = [
   { code: 'C', label: 'Citizen', level: 0 },
-  { code: 'H', label: 'Health officer', level: 1 },
-  { code: 'M', label: 'Center manager', level: 2 },
-  { code: 'P', label: 'Campaign officer', level: 3 },
-  { code: 'O', label: 'Management', level: 4 },
-  { code: 'A', label: 'Administrator', level: 5 },
+  { code: 'H', label: 'Healthcare Officer', level: 1 },
+  { code: 'M', label: 'Center Manager', level: 2 },
+  { code: 'P', label: 'Campaign Officer', level: 3 },
+  { code: 'I', label: 'Inventory Officer', level: 4 },
+  { code: 'O', label: 'Management User', level: 5 },
+  { code: 'A', label: 'Administrator', level: 6 },
 ];
 
 function InstrumentCorners() {
@@ -59,7 +60,7 @@ function JourneyInstrument() {
         <div className="premium-visual__metrics">
           <span><b>05</b> connected moments</span>
           <span><b>02</b> coordinated journeys</span>
-          <span><b>01</b> secure record</span>
+          <span><b>01</b> clinic visit</span>
         </div>
       </div>
       <div className="premium-visual__edge"><span>CARE / 01—05</span></div>
@@ -77,7 +78,7 @@ function RegistryInstrument() {
         <InstrumentCorners />
         <div className="premium-visual__toolbar">
           <span>Responsibility matrix</span>
-          <span className="premium-visual__status"><i /> Role scoped</span>
+          <span className="premium-visual__status"><i /> Role-specific areas</span>
         </div>
         <div className="premium-registry-stack">
           {aboutRoles.map((role, index) => (
@@ -94,9 +95,9 @@ function RegistryInstrument() {
           <div className="premium-registry-stack__spine" />
         </div>
         <div className="premium-visual__metrics">
-          <span><b>06</b> defined roles</span>
+          <span><b>07</b> account roles</span>
           <span><b>05</b> domains</span>
-          <span><b>100%</b> traceable</span>
+          <span><b>Key</b> changes recorded</span>
         </div>
       </div>
       <div className="premium-visual__edge"><span>AUTHORITY / CONTROL</span></div>

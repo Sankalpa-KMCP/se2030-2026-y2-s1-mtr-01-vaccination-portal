@@ -4,7 +4,7 @@ const PRINCIPLES = [
   {
     num: '01',
     title: 'Access follows responsibility.',
-    desc: 'Citizens, health officers, center managers, campaign officers, management users, and administrators enter role-specific areas.',
+    desc: 'Citizens, Healthcare Officers, Center Managers, Campaign Officers, Inventory Officers, Management Users, and Administrators enter role-specific areas.',
   },
   {
     num: '02',
@@ -14,7 +14,7 @@ const PRINCIPLES = [
   {
     num: '03',
     title: 'Operational changes leave history.',
-    desc: 'Campaign, schedule, assignment, and certificate lifecycle changes are designed to remain traceable.',
+    desc: 'Key campaign and session lifecycle changes record actor, reason, timestamp, and transition details.',
   },
   {
     num: '04',
@@ -35,8 +35,8 @@ export default function TrustSection() {
           <span className="home-section-mark">Operational integrity</span>
           <h2 id="lp-trust-title">Trust is built into the work, not added as a claim.</h2>
           <p>
-            The portal makes responsibility visible at the points where access,
-            capacity, eligibility, and records are decided.
+            The portal makes responsibility visible where access, capacity,
+            eligibility, and session readiness are managed.
           </p>
         </div>
 

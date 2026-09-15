@@ -22,6 +22,10 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * Operational capacity plan and throughput snapshot for a vaccination session.
  * Preserves immutable historical revisions per session.
  * Canonical Section 6.4 and Table 12.1.

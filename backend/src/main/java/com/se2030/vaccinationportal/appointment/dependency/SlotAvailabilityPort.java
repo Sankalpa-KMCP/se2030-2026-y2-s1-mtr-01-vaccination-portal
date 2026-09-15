@@ -6,13 +6,12 @@ import java.util.List;
 /**
  * Cross-module read-only integration port for querying bookable MF-02 vaccination sessions (US-03).
  *
- * <p>MF-03 defines this contract; MF-02 (Campaign, Center &amp; Session Management) implements it.
+ * <p>MF-03 defines this contract; an MF-03 read adapter consumes existing MF-02 services to implement it.
  * This port is intentionally separate from {@link SlotCapacityPort}, which handles write operations
  * (reserve/release). Keeping read and write port boundaries distinct avoids coupling MF-03's search
  * path to the mutation path and makes each contract independently testable via a test double.
  *
- * <p>The implementation lives in the MF-02 module and must not be created here. MF-03 consumes
- * it through Spring dependency injection via {@code @Autowired(required = false)}.
+ * <p>The adapter only reads MF-02 state; capacity calculation and reservation remain owned by MF-02.
  */
 public interface SlotAvailabilityPort {
 
@@ -22,9 +21,10 @@ public interface SlotAvailabilityPort {
      *
      * <p>A session is considered bookable when:
      * <ul>
-     *   <li>its {@code lifecycleStatus} is {@code SCHEDULED} or {@code IN_PROGRESS}
-     *       (canonical bookable states for citizen appointments);</li>
-     *   <li>its {@code bookingCloseAt} has not yet passed at query time;</li>
+     *   <li>its {@code lifecycleStatus} is {@code SCHEDULED}
+     *       (the state accepted by the current MF-02 reservation service);</li>
+     *   <li>its campaign permits intake and booking is not suspended;</li>
+ *   <li>its {@code bookingCloseAt} has not yet passed at query time;</li>
      *   <li>its remaining capacity is greater than zero.</li>
      * </ul>
      *

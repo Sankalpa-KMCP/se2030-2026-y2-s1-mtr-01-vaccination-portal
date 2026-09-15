@@ -21,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -153,5 +154,20 @@ class WaitlistLeaveServiceTests {
     void getWaitlistStatus_returnsEmpty_whenNoWaitlistEntry() {
         Optional<WaitlistEntry> result = leaveService.getWaitlistStatus(999999L, CAMPAIGN_ID);
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getWaitlistStatus_returnsPromotedEntry_whenCitizenPromoted() {
+        slotCapacityPortDouble.setSessionFull(SESSION_ID, true);
+
+        WaitlistEntry entry = joinService.joinWaitlist(CITIZEN_A, CAMPAIGN_ID, SESSION_ID, Instant.now());
+        entry.markPromoted();
+        waitlistRepository.save(entry);
+
+        Optional<WaitlistEntry> found = leaveService.getWaitlistStatus(CITIZEN_A, CAMPAIGN_ID);
+        assertTrue(found.isPresent());
+        assertEquals(WaitlistStatus.PROMOTED, found.get().getStatus());
+        assertEquals(entry.getId(), found.get().getId());
+        assertNull(leaveService.getQueuePosition(found.get()));
     }
 }

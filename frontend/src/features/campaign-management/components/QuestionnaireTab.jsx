@@ -18,6 +18,7 @@ export default function QuestionnaireTab({
   versionsMap = {},
   loading = false,
   error = null,
+  canManageAssignment = false,
   onOpenAssignModal,
 }) {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -52,7 +53,7 @@ export default function QuestionnaireTab({
         </div>
 
         <div>
-          {!isTerminal && (
+          {canManageAssignment && !isTerminal && (
             <button
               type="button"
               className={`btn btn-sm fw-semibold ${assignments.length === 0 ? 'btn-primary' : 'btn-outline-primary'}`}
@@ -73,7 +74,7 @@ export default function QuestionnaireTab({
           <p className="small text-secondary mb-3">
             An active published questionnaire version is required before scheduling or publishing this campaign.
           </p>
-          {!isTerminal && (
+          {canManageAssignment && !isTerminal && (
             <button
               type="button"
               className="btn btn-primary btn-sm"

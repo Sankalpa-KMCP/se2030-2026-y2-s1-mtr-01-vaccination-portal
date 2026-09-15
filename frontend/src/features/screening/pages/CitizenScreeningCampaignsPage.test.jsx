@@ -20,6 +20,8 @@ describe('CitizenScreeningCampaignsPage', () => {
     campaignApiMocks.listCitizenCampaigns.mockReturnValue(new Promise(() => {}));
     renderPage();
     expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Choose a campaign' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Back to Dashboard' }).getAttribute('href')).toBe('/app/citizen');
   });
 
   it('shows a normal empty state when no intake campaigns are available', async () => {
@@ -33,6 +35,7 @@ describe('CitizenScreeningCampaignsPage', () => {
     campaignApiMocks.listCitizenCampaigns.mockRejectedValue(new Error('Campaign service unavailable'));
     renderPage();
     expect(await screen.findByText('Campaign service unavailable')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Back to Dashboard' })).toBeTruthy();
   });
 
   it('calls citizen discovery and renders published and active campaigns with screening navigation', async () => {
@@ -61,12 +64,15 @@ describe('CitizenScreeningCampaignsPage', () => {
     await waitFor(() => expect(screen.getByText('Published Campaign')).toBeTruthy());
     expect(screen.getByText('Active Campaign')).toBeTruthy();
     expect(campaignApiMocks.listCitizenCampaigns).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('heading', { level: 2, name: 'Campaign directory' })).toBeTruthy();
+    expect(screen.getByText('2 available')).toBeTruthy();
 
     const links = screen.getAllByRole('link', { name: 'Start screening' });
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/app/screening/campaigns/3',
       '/app/screening/campaigns/4',
     ]);
+    expect(links[0].className).toContain('citizen-action--primary');
   });
 
   it('disables start screening when currentlyAcceptingScreening is false', async () => {
@@ -97,10 +103,12 @@ describe('CitizenScreeningCampaignsPage', () => {
     // Disabled button for closed campaign
     const disabledButton = screen.getByRole('button', { name: 'Start screening' });
     expect(disabledButton.disabled).toBe(true);
+    expect(disabledButton.className).toContain('citizen-action--secondary');
 
     // Active link only for open campaign
     const activeLinks = screen.getAllByRole('link', { name: 'Start screening' });
     expect(activeLinks).toHaveLength(1);
     expect(activeLinks[0].getAttribute('href')).toBe('/app/screening/campaigns/6');
+    expect(activeLinks[0].className).toContain('citizen-action--primary');
   });
 });

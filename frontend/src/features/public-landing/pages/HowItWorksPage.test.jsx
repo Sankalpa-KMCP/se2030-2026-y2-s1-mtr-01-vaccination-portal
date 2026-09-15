@@ -22,7 +22,7 @@ describe('HowItWorksPage', () => {
       screen.getByRole('heading', { level: 1, name: /one system, two journeys/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole('heading', { level: 2, name: /follow a journey from start to finish/i }),
+      screen.getByRole('heading', { level: 2, name: /follow each journey step by step/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: /no session opens until every check passes/i }),
@@ -40,7 +40,7 @@ describe('HowItWorksPage', () => {
   it('renders the citizen journey by default with all five steps', () => {
     renderPage();
 
-    ['Create your account', 'Complete pre-vaccination screening', 'Book an appointment', 'Attend the clinic', 'Your record updates'].forEach((title) => {
+    ['Create your account and sign in', 'Choose a campaign and complete screening', 'Search and book an appointment', 'Manage appointments or waitlists', 'Attend and check in'].forEach((title) => {
       expect(screen.getByRole('heading', { level: 3, name: title })).toBeTruthy();
     });
   });
@@ -87,7 +87,7 @@ describe('HowItWorksPage', () => {
   it('toggles FAQ items accessibly', () => {
     renderPage();
 
-    const firstQuestion = 'Who can see my vaccination record?';
+    const firstQuestion = 'Which profile details can I update?';
     const secondQuestion = 'How long does staff access take to approve?';
 
     const firstTrigger = screen.getByRole('button', { name: firstQuestion });
@@ -105,7 +105,7 @@ describe('HowItWorksPage', () => {
   it('exposes FAQ regions wired to their buttons', () => {
     renderPage();
 
-    const trigger = screen.getByRole('button', { name: 'Who can see my vaccination record?' });
+    const trigger = screen.getByRole('button', { name: 'Which profile details can I update?' });
     const regionId = trigger.getAttribute('aria-controls');
     expect(regionId).toBeTruthy();
     const region = document.getElementById(regionId);

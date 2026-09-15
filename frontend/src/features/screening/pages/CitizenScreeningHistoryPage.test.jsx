@@ -21,10 +21,17 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe('citizen screening history', () => {
+  it('renders the page heading and citizen navigation while records load', () => {
+    mocks.listCitizenScreeningSubmissions.mockReturnValue(new Promise(() => {}));
+    show();
+    expect(screen.getByRole('heading', { level: 1, name: 'Screening History' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Back to Dashboard' }).getAttribute('href')).toBe('/app/citizen');
+    expect(screen.getByRole('link', { name: 'View My Eligibility' }).getAttribute('href')).toBe('/app/screening/eligibility');
+  });
   it('shows loading', () => {
     mocks.listCitizenScreeningSubmissions.mockReturnValue(new Promise(() => {}));
     show();
-    expect(screen.getByRole('status').textContent).toBe('Loading your screening history...');
+    expect(screen.getByRole('status').textContent).toContain('Loading your screening history...');
   });
   it('shows the empty state and start-screening link', async () => {
     mocks.listCitizenScreeningSubmissions.mockResolvedValue([]);
@@ -42,23 +49,19 @@ describe('citizen screening history', () => {
   });
   it('preserves backend order and joins by submission ID, never merely campaign ID', async () => {
     show();
-    const table = await screen.findByRole('table');
-    const rows = within(table).getAllByRole('row').slice(1);
-    expect(rows).toHaveLength(3);
-    expect(rows.map((row) => within(row).getByRole('link', { name: 'View Details' }).getAttribute('href'))).toEqual([
+    const records = within(await screen.findByRole('list', { name: 'Screening history records' })).getAllByRole('article');
+    expect(records).toHaveLength(3);
+    expect(records.map((record) => within(record).getByRole('link', { name: 'View Details' }).getAttribute('href'))).toEqual([
       '/app/screening/history/43', '/app/screening/history/42', '/app/screening/history/41',
     ]);
-    expect(within(rows[0]).getByText('2026-08-30')).toBeTruthy();
-    expect(within(rows[0]).getByText('Historical campaign')).toBeTruthy();
-    expect(within(rows[0]).getByText('Not yet recorded')).toBeTruthy();
-    expect(within(rows[0]).queryByText('Ineligible')).toBeNull();
-    expect(within(rows[1]).getByText('Ineligible')).toBeTruthy();
-    expect(within(rows[2]).getByText('Campaign #23')).toBeTruthy();
-    expect(within(rows[2]).getByText('Corrections required')).toBeTruthy();
-    expect(screen.getByRole('columnheader', { name: 'Preliminary result' })).toBeTruthy();
-    expect(screen.getByRole('columnheader', { name: 'Final recorded assessment' })).toBeTruthy();
-    expect(within(rows[0]).getByText('Preliminary screening passed')).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'Screening history table' }).getAttribute('tabindex')).toBe('0');
+    expect(within(records[0]).getByText(/2026-08-30/)).toBeTruthy();
+    expect(within(records[0]).getByRole('heading', { name: 'Historical campaign' })).toBeTruthy();
+    expect(within(records[0]).getByText('Not yet recorded')).toBeTruthy();
+    expect(within(records[0]).queryByText('Ineligible')).toBeNull();
+    expect(within(records[1]).getByText('Ineligible')).toBeTruthy();
+    expect(within(records[2]).getByRole('heading', { name: 'Campaign #23' })).toBeTruthy();
+    expect(within(records[2]).getByText('Corrections required')).toBeTruthy();
+    expect(within(records[0]).getByText('Preliminary screening passed')).toBeTruthy();
     expect(screen.queryByText('SECRET')).toBeNull();
     expect(mocks.listCitizenScreeningSubmissions).toHaveBeenCalledExactlyOnceWith(71);
     expect(mocks.listCitizenEligibilityAssessments).toHaveBeenCalledExactlyOnceWith(71);
@@ -73,8 +76,8 @@ describe('citizen screening history', () => {
   it('retains rows using campaign references if metadata fails', async () => {
     mocks.listCampaigns.mockRejectedValue(new Error('Campaign unavailable'));
     show();
-    expect(await screen.findByRole('table')).toBeTruthy();
-    expect(screen.getAllByText('Campaign #22')).toHaveLength(2);
-    expect(screen.getByText('Campaign #23')).toBeTruthy();
+    expect(await screen.findByRole('list', { name: 'Screening history records' })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: 'Campaign #22' })).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Campaign #23' })).toBeTruthy();
   });
 });

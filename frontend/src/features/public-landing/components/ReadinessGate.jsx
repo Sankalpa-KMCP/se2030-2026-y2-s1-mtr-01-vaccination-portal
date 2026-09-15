@@ -21,7 +21,7 @@ const CHECKS = [
   {
     id: 'stations',
     label: 'Active stations',
-    detail: 'Vaccination stations and rooms are assigned and operational.',
+    detail: 'Assigned vaccination stations and resources are active and available for the session.',
     icon: (
       <>
         <path d="M4.5 20.5v-10L12 4.5l7.5 6v10" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
@@ -32,7 +32,7 @@ const CHECKS = [
   {
     id: 'capacity',
     label: 'Planned capacity',
-    detail: 'Daily throughput is planned from the stations actually available.',
+    detail: 'Session throughput is planned from the stations and vaccinators actually available.',
     icon: (
       <>
         <rect x="4" y="5.5" width="16" height="15" rx="2.2" stroke="currentColor" strokeWidth="1.6" />

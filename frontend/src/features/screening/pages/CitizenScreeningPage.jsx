@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
-import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
+import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
+import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
 import {
   getActiveScreeningSubmission,
   getCitizenScreeningForm,
@@ -35,12 +38,14 @@ function ActiveSubmissionState({ submission }) {
       : 'Your screening has already been submitted and is awaiting review.';
 
   return (
-    <div className="card border-warning shadow-sm">
-      <div className="card-body p-4">
-        <span className="badge text-bg-warning mb-3">
+    <div className="citizen-detail-panel citizen-active-screening">
+      <div className="citizen-detail-panel__header">
+        <CitizenStatusBadge tone={isCorrectionsRequired ? 'attention' : 'pending'}>
           {SCREENING_SUBMISSION_STATUS_LABELS[submission.status] || submission.status}
-        </span>
-        <h1 className="h3">{heading}</h1>
+        </CitizenStatusBadge>
+        <h2 className="h3">{heading}</h2>
+      </div>
+      <div className="citizen-detail-panel__body">
         {submission.submittedAt && <p className="text-muted">Submitted {formatTimestamp(submission.submittedAt)}</p>}
         {submission.preliminaryResult && (
           <p><strong>Preliminary result:</strong>{' '}
@@ -48,13 +53,16 @@ function ActiveSubmissionState({ submission }) {
           </p>
         )}
         {isCorrectionsRequired && submission.correctionInstructions && (
-          <div className="alert alert-warning">
+          <div className="citizen-state citizen-state--warning">
+            <span className="citizen-state__marker" aria-hidden="true" />
+            <div className="citizen-state__copy">
             <strong>Correction instructions</strong>
             <p className="mb-0 mt-1">{submission.correctionInstructions}</p>
+            </div>
           </div>
         )}
         {isCorrectionsRequired && (
-          <Link className="btn btn-primary" to={`/app/screening/history/${submission.id}/correct`}>
+          <Link className="btn btn-primary citizen-action citizen-action--primary mt-3" to={`/app/screening/history/${submission.id}/correct`}>
             Correct Screening
           </Link>
         )}
@@ -157,40 +165,63 @@ export default function CitizenScreeningPage() {
     }
   };
 
-  if (loading) return <LoadingSpinner message="Loading your screening..." />;
-
   return (
-    <section aria-labelledby="citizen-screening-title">
-      <Link className="btn btn-link px-0 mb-3" to="/app/screening">← Back to campaigns</Link>
+    <section className="citizen-page" aria-labelledby="citizen-screening-title">
+      <CitizenPageHeader
+        eyebrow="Pre-Vaccination Screening"
+        title="Screening Questionnaire"
+        titleId="citizen-screening-title"
+        subtitle="Answer the campaign questionnaire and review the consent notice before submitting."
+        backTo="/app/screening"
+        backLabel="Back to campaigns"
+        meta={screeningForm?.questionnaireVersionNumber
+          ? `Questionnaire version ${screeningForm.questionnaireVersionNumber}`
+          : undefined}
+      />
 
-      {submissionResult && <ScreeningSubmissionResult submission={submissionResult} />}
-      {!submissionResult && activeSubmission && <ActiveSubmissionState submission={activeSubmission} />}
+      <CitizenWorkflowGuide
+        titleId="screening-workflow-guide"
+        steps={['Review questions', 'Confirm consent', 'Submit screening']}
+      />
 
-      {!submissionResult && !activeSubmission && (
+      {loading && (
+        <CitizenStatePanel eyebrow="Screening form" title="Loading your screening" tone="loading" status>
+          <p>Checking for an existing submission and loading the campaign questionnaire.</p>
+        </CitizenStatePanel>
+      )}
+
+      {!loading && submissionResult && <div className="citizen-screening-result"><ScreeningSubmissionResult submission={submissionResult} /></div>}
+      {!loading && !submissionResult && activeSubmission && <ActiveSubmissionState submission={activeSubmission} />}
+
+      {!loading && !submissionResult && !activeSubmission && (
         <>
-          <div className="mb-4">
-            <span className="badge text-bg-primary mb-2">Citizen Screening</span>
-            <h1 className="display-6 fw-semibold mb-2" id="citizen-screening-title">Pre-Vaccination Screening</h1>
-            <p className="text-muted mb-0">Answer the campaign questionnaire and review the consent notice before submitting.</p>
-          </div>
-
-          <ApiErrorAlert error={error} />
-          {error?.status === 409 && (
-            <button className="btn btn-outline-primary mb-4" type="button" onClick={loadScreening}>
-              Reload screening form
-            </button>
+          {error && (
+            <CitizenErrorState
+              error={error}
+              actions={error?.status === 409 ? (
+                <button className="citizen-action citizen-action--secondary" type="button" onClick={loadScreening}>
+                  Reload screening form
+                </button>
+              ) : undefined}
+            />
           )}
 
           {!error && screeningForm && sortedQuestions.length === 0 && (
-            <div className="alert alert-info">This campaign does not currently have screening questions available.</div>
+            <CitizenStatePanel title="No screening questions available">
+              <p>This campaign does not currently have screening questions available.</p>
+            </CitizenStatePanel>
           )}
 
           {!error && screeningForm && sortedQuestions.length > 0 && (
             <form onSubmit={handleSubmit} noValidate>
-              <div className="card border-0 shadow-sm mb-4">
-                <div className="card-body p-4">
-                  <h2 className="h4 mb-1">Screening questions</h2>
-                  <p className="text-muted small">Questionnaire version {screeningForm.questionnaireVersionNumber}</p>
+              <div className="citizen-page__stack">
+                <section className="citizen-form-panel" aria-labelledby="screening-questions-title">
+                  <header className="citizen-form-panel__header">
+                    <p className="citizen-ui-eyebrow">Step 1 of 3</p>
+                    <h2 id="screening-questions-title">Screening questions</h2>
+                    <p>Questionnaire version {screeningForm.questionnaireVersionNumber}. Required questions are marked with an asterisk.</p>
+                  </header>
+                  <div className="citizen-form-panel__body citizen-question-list">
                   {sortedQuestions.map((question) => (
                     <ScreeningQuestionField
                       key={question.id}
@@ -200,17 +231,20 @@ export default function CitizenScreeningPage() {
                       error={validationErrors[question.id]}
                     />
                   ))}
-                </div>
-              </div>
+                  </div>
+                </section>
 
-              <div className="card border-primary-subtle shadow-sm mb-4">
-                <div className="card-body p-4">
-                  <h2 className="h4">{screeningForm.consentNotice.title}</h2>
-                  <p className="text-muted small">Consent notice version {screeningForm.consentNotice.versionNumber}</p>
-                  <div className="bg-light border rounded p-3 mb-3" style={{ whiteSpace: 'pre-wrap' }}>
+                <section className="citizen-form-panel citizen-consent-panel" aria-labelledby="screening-consent-title">
+                  <header className="citizen-form-panel__header">
+                    <p className="citizen-ui-eyebrow">Step 2 of 3</p>
+                    <h2 id="screening-consent-title">{screeningForm.consentNotice.title}</h2>
+                    <p>Consent notice version {screeningForm.consentNotice.versionNumber}</p>
+                  </header>
+                  <div className="citizen-form-panel__body">
+                  <div className="citizen-consent-copy">
                     {screeningForm.consentNotice.content}
                   </div>
-                  <div className="form-check">
+                  <div className="form-check mt-3 p-3 ps-5 rounded bg-white">
                     <input
                       className="form-check-input"
                       id="screening-consent"
@@ -228,12 +262,19 @@ export default function CitizenScreeningPage() {
                     </label>
                   </div>
                   {consentError && <div className="invalid-feedback d-block" id="screening-consent-error">{consentError}</div>}
+                  </div>
+                </section>
+
+                <div className="citizen-submit-bar">
+                  <div>
+                    <p className="citizen-ui-eyebrow">Step 3 of 3</p>
+                    <p>Review your answers and consent before sending this screening.</p>
+                  </div>
+                  <button className="citizen-action citizen-action--primary" type="submit" disabled={submitting}>
+                    {submitting ? 'Submitting screening...' : 'Submit screening'}
+                  </button>
                 </div>
               </div>
-
-              <button className="btn btn-primary" type="submit" disabled={submitting}>
-                {submitting ? 'Submitting screening...' : 'Submit screening'}
-              </button>
             </form>
           )}
         </>

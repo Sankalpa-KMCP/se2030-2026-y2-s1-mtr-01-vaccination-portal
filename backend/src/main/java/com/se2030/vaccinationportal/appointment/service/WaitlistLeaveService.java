@@ -56,7 +56,7 @@ public class WaitlistLeaveService {
     }
 
     /**
-     * Retrieves the current WAITING waitlist entry for a citizen and campaign (US-05).
+     * Retrieves the active WAITING or most recent PROMOTED waitlist entry for a citizen and campaign (US-05).
      *
      * @param citizenId  Identifier of the citizen
      * @param campaignId Identifier of the campaign
@@ -67,7 +67,13 @@ public class WaitlistLeaveService {
         if (citizenId == null || campaignId == null) {
             return Optional.empty();
         }
-        return waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(citizenId, campaignId, WaitlistStatus.WAITING);
+        Optional<WaitlistEntry> waiting = waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
+                citizenId, campaignId, WaitlistStatus.WAITING);
+        if (waiting.isPresent()) {
+            return waiting;
+        }
+        return waitlistRepository.findFirstByCitizenIdAndCampaignIdAndStatusOrderByJoinedAtDesc(
+                citizenId, campaignId, WaitlistStatus.PROMOTED);
     }
 
     /**

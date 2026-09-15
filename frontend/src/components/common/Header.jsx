@@ -29,6 +29,11 @@ export default function Header({ onLogout }) {
   const showAnalytics = canViewAnalytics(user);
   const showCheckIn = hasRole(user, ADMIN_ROLE, 'ROLE_HEALTHCARE_OFFICER', 'ROLE_CENTER_MANAGER');
   const showAdminNavigation = hasRole(user, ADMIN_ROLE);
+  const showScreeningConfigurationNavigation = hasRole(
+    user,
+    ADMIN_ROLE,
+    'ROLE_SYSTEM_ADMINISTRATOR',
+  );
   const showCitizenNavigation = hasRole(user, CITIZEN_ROLE);
   const showScreeningReview = hasRole(user, 'ROLE_HEALTHCARE_OFFICER');
   const dashboardPath = getRoleHomePath(user);
@@ -134,12 +139,15 @@ export default function Header({ onLogout }) {
               )}
 
               {showAdminNavigation && (
+                <li className="nav-item">
+                  <NavLink className={navigationClassName} to="/app/admin/staff-requests" onClick={closeNav}>
+                    Staff Requests
+                  </NavLink>
+                </li>
+              )}
+
+              {showScreeningConfigurationNavigation && (
                 <>
-                  <li className="nav-item">
-                    <NavLink className={navigationClassName} to="/app/admin/staff-requests" onClick={closeNav}>
-                      Staff Requests
-                    </NavLink>
-                  </li>
                   <li className="nav-item">
                     <NavLink className={navigationClassName} to="/app/screening/questions" onClick={closeNav}>
                       Screening Questions

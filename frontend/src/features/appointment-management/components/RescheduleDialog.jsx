@@ -141,12 +141,12 @@ export default function RescheduleDialog({ appointment, citizenId, onClose, onSu
                   <div className="list-group max-vh-25 overflow-auto">
                     {availableSlots.map((s) => (
                       <button
-                        key={s.sessionId || s.slotId}
+                        key={s.slotId}
                         type="button"
                         className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${
-                          String(newSlotId) === String(s.sessionId || s.slotId) ? 'active' : ''
+                          String(newSlotId) === String(s.slotId) ? 'active' : ''
                         }`}
-                        onClick={() => setNewSlotId(s.sessionId || s.slotId)}
+                        onClick={() => setNewSlotId(s.slotId)}
                       >
                         <div>
                           <strong>{s.centerName || `Center #${s.centerId}`}</strong>
