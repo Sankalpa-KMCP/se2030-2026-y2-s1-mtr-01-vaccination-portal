@@ -23,8 +23,10 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
+import com.se2030.vaccinationportal.campaign.service.SessionBookingStatusService;
 import com.se2030.vaccinationportal.campaign.service.SessionOperationalReadinessService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -51,6 +53,9 @@ class SessionControllerChangeTests {
     @Mock
     private SessionOperationalReadinessService readinessService;
 
+    @Mock
+    private SessionBookingStatusService bookingStatusService;
+
     private VaccinationCampaign sampleCampaign;
     private VaccinationCenter sampleCenter;
     private VaccinationCenter targetCenter;
@@ -76,7 +81,7 @@ class SessionControllerChangeTests {
         samplePrincipal = com.se2030.vaccinationportal.shared.auth.security.UserPrincipal.fromClaims(
                 42L,
                 "officer-01@vaccination.gov",
-                List.of("ROLE_USER")
+                List.of("ROLE_CENTER_MANAGER")
         );
         sampleAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                 samplePrincipal,
@@ -84,10 +89,11 @@ class SessionControllerChangeTests {
                 samplePrincipal.getAuthorities()
         );
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new SessionController(sessionService, readinessService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new SessionController(sessionService, readinessService, bookingStatusService))
                 .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
                     @Override
                     public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+
                         return parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
                     }
 

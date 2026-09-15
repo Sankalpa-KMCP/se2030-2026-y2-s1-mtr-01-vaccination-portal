@@ -4,6 +4,10 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * Pure immutable value object representing a time interval for concurrent occupancy evaluation.
  * Half-open interval semantics {@code [startAt, max(endAt, startAt + expectedDwellMinutes))}.
  * Canonical Section 6.4 and BR-043.

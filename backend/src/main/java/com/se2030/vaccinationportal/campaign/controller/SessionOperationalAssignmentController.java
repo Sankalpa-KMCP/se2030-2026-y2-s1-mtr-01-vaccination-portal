@@ -15,6 +15,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +25,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
+ * Module: MF-02 — Vaccination Campaign, Center and Session Management
+ * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
+ * Responsibility: Session staff/resource assignment and capacity planning
+ *
  * REST Controller exposing operational resource and staff assignment endpoints for vaccination sessions.
  */
 @RestController
@@ -42,6 +47,7 @@ public class SessionOperationalAssignmentController {
     // --- Resource Assignments ---
 
     @PostMapping("/resource-assignments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<SessionResourceAssignmentResponse> createResourceAssignment(
             @PathVariable("sessionId") Long sessionId,
             @Valid @RequestBody CreateSessionResourceAssignmentRequest request
@@ -58,6 +64,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @GetMapping("/resource-assignments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<List<SessionResourceAssignmentResponse>> listResourceAssignments(
             @PathVariable("sessionId") Long sessionId
     ) {
@@ -69,6 +76,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @GetMapping("/resource-assignments/{assignmentId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<SessionResourceAssignmentResponse> getResourceAssignment(
             @PathVariable("sessionId") Long sessionId,
             @PathVariable("assignmentId") Long assignmentId
@@ -78,6 +86,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @DeleteMapping("/resource-assignments/{assignmentId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<Void> deleteResourceAssignment(
             @PathVariable("sessionId") Long sessionId,
             @PathVariable("assignmentId") Long assignmentId
@@ -89,6 +98,7 @@ public class SessionOperationalAssignmentController {
     // --- Staff Assignments ---
 
     @PostMapping("/staff-assignments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<StaffAssignmentResponse> createStaffAssignment(
             @PathVariable("sessionId") Long sessionId,
             @Valid @RequestBody CreateStaffAssignmentRequest request
@@ -106,6 +116,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @GetMapping("/staff-assignments")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<List<StaffAssignmentResponse>> listStaffAssignments(
             @PathVariable("sessionId") Long sessionId
     ) {
@@ -117,6 +128,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @GetMapping("/staff-assignments/{assignmentId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<StaffAssignmentResponse> getStaffAssignment(
             @PathVariable("sessionId") Long sessionId,
             @PathVariable("assignmentId") Long assignmentId
@@ -126,6 +138,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @DeleteMapping("/staff-assignments/{assignmentId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<Void> deleteStaffAssignment(
             @PathVariable("sessionId") Long sessionId,
             @PathVariable("assignmentId") Long assignmentId

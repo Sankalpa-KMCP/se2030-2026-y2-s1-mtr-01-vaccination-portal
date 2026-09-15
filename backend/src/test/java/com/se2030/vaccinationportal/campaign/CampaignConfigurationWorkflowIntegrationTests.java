@@ -31,6 +31,7 @@ import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -113,6 +114,11 @@ class CampaignConfigurationWorkflowIntegrationTests {
     @Test
     @DisplayName("End-to-end Campaign Configuration workflow: configure dose, questionnaire, center, location -> schedule campaign -> verify session operational guard")
     void fullCampaignConfigurationWorkflow() {
+        LocalDate startDate = LocalDate.now().plusDays(10);
+        LocalDate endDate = startDate.plusMonths(3);
+        Instant bookingOpen = startDate.minusDays(5).atStartOfDay(ZoneId.of("UTC")).toInstant();
+        Instant bookingClose = endDate.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant();
+
         // 1. Create Campaign in DRAFT status
         VaccinationCampaign campaign = campaignService.createCampaign(
                 "COV-NAT-2026",
@@ -120,10 +126,10 @@ class CampaignConfigurationWorkflowIntegrationTests {
                 "National rollout for adult population",
                 vaccineType.getId(),
                 targetGroup.getId(),
-                LocalDate.of(2026, 9, 1),
-                LocalDate.of(2026, 12, 31),
-                Instant.parse("2026-08-15T00:00:00Z"),
-                Instant.parse("2026-12-30T23:59:59Z")
+                startDate,
+                endDate,
+                bookingOpen,
+                bookingClose
         );
         Long campaignId = campaign.getId();
         assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.DRAFT);
@@ -141,7 +147,7 @@ class CampaignConfigurationWorkflowIntegrationTests {
                 28,
                 false,
                 15,
-                LocalDate.of(2026, 9, 1)
+                startDate
         );
         assertThat(doseProg.getVersionNumber()).isEqualTo(1);
 
@@ -149,7 +155,7 @@ class CampaignConfigurationWorkflowIntegrationTests {
         CampaignQuestionnaireAssignment questAssign = questionnaireAssignmentService.assignQuestionnaireVersion(
                 campaignId,
                 501L,
-                LocalDate.of(2026, 9, 1)
+                startDate
         );
         assertThat(questAssign.getQuestionnaireVersionId()).isEqualTo(501L);
 
@@ -157,8 +163,8 @@ class CampaignConfigurationWorkflowIntegrationTests {
         CampaignCenterAssignment centerAssign = centerAssignmentService.createAssignment(
                 campaignId,
                 center.getId(),
-                LocalDate.of(2026, 9, 1),
-                LocalDate.of(2026, 12, 31)
+                startDate,
+                endDate
         );
         assertThat(centerAssign.getCenter().getId()).isEqualTo(center.getId());
 
@@ -188,15 +194,19 @@ class CampaignConfigurationWorkflowIntegrationTests {
         assertThat(scheduledCampaign.getStatus()).isEqualTo(CampaignStatus.SCHEDULED);
 
         // 8. Create a DRAFT Session under this configured campaign
+        Instant sessionStart = startDate.plusDays(2).atTime(9, 0).atZone(ZoneId.of("Asia/Colombo")).toInstant();
+        Instant sessionEnd = startDate.plusDays(2).atTime(17, 0).atZone(ZoneId.of("Asia/Colombo")).toInstant();
+        Instant sessionBookingClose = sessionStart.minusSeconds(3600);
+
         VaccinationSession draftSession = new VaccinationSession(
                 scheduledCampaign,
                 center,
                 null,
                 null,
                 null,
-                Instant.parse("2026-09-05T09:00:00Z"),
-                Instant.parse("2026-09-05T17:00:00Z"),
-                Instant.parse("2026-09-05T08:00:00Z"),
+                sessionStart,
+                sessionEnd,
+                sessionBookingClose,
                 "Asia/Colombo"
         );
         draftSession = sessionRepository.save(draftSession);

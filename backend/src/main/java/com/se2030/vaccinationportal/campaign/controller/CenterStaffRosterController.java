@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +36,7 @@ public class CenterStaffRosterController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperationalStaffRosterResponse> registerStaff(
             @PathVariable("centerId") Long centerId,
             @Valid @RequestBody RegisterStaffRosterRequest request
@@ -51,6 +53,7 @@ public class CenterStaffRosterController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<List<OperationalStaffRosterResponse>> listStaffRoster(
             @PathVariable("centerId") Long centerId,
             @RequestParam(value = "role", required = false) StaffRole role,
@@ -64,6 +67,7 @@ public class CenterStaffRosterController {
     }
 
     @GetMapping("/{rosterId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<OperationalStaffRosterResponse> getRosterEntry(
             @PathVariable("centerId") Long centerId,
             @PathVariable("rosterId") Long rosterId
@@ -73,6 +77,7 @@ public class CenterStaffRosterController {
     }
 
     @PutMapping("/{rosterId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperationalStaffRosterResponse> updateStaffRoster(
             @PathVariable("centerId") Long centerId,
             @PathVariable("rosterId") Long rosterId,

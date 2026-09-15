@@ -217,15 +217,20 @@ public class VaccinationSessionService {
         requireId(sessionId, "Session ID is required");
         Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        Long centerId = sessionRepository.findCenterIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
+        VaccinationCenter center = centerRepository.findByIdForUpdate(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination center not found with ID: " + centerId));
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
 
-        if (!session.getCampaign().getId().equals(campaignId)) {
-            throw new IllegalStateException("Authoritative session parent campaign changed concurrently");
+        if (!session.getCampaign().getId().equals(campaignId) || !session.getCenter().getId().equals(center.getId())) {
+            throw new IllegalStateException("Authoritative session parent relationship changed concurrently");
         }
 
         operationalReadinessService.assertReadyForScheduling(campaign, session);
@@ -236,18 +241,38 @@ public class VaccinationSessionService {
 
     /**
      * Starts a SCHEDULED vaccination session (transitions to IN_PROGRESS).
+     * Enforces deterministic parent lock ordering (campaign -&gt; session) and parent campaign lifecycle integrity.
      * Lifecycle-only transition: does NOT create a SessionChangeEvent.
      *
      * @param sessionId ID of the target VaccinationSession
      * @return Saved VaccinationSession in IN_PROGRESS lifecycle status
+     * @throws ResourceNotFoundException if session or parent campaign is not found
+     * @throws IllegalStateException    if parent campaign lifecycle status is not PUBLISHED or ACTIVE,
+     *                                  if start time has not been reached, or if session lifecycle transition is invalid
      */
     public VaccinationSession startSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
+        Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
+
+        if (!session.getCampaign().getId().equals(campaignId)) {
+            throw new IllegalStateException("Authoritative session parent relationship changed concurrently");
+        }
+
+        requireCampaignAllowsSessionStart(campaign);
+
         Instant now = clock.instant();
         if (now.isBefore(session.getStartAt())) {
             throw new IllegalStateException(
@@ -259,20 +284,140 @@ public class VaccinationSessionService {
 
     /**
      * Completes an IN_PROGRESS vaccination session (transitions to COMPLETED).
+     * Enforces deterministic parent lock ordering (campaign -&gt; session) and parent campaign lifecycle integrity.
      * Lifecycle-only transition: does NOT create a SessionChangeEvent.
      *
      * @param sessionId ID of the target VaccinationSession
      * @return Saved VaccinationSession in COMPLETED lifecycle status
+     * @throws ResourceNotFoundException if session or parent campaign is not found
+     * @throws IllegalStateException    if parent campaign lifecycle status does not permit session completion,
+     *                                  or if session lifecycle transition is invalid
      */
     public VaccinationSession completeSession(Long sessionId) {
         requireId(sessionId, "Session ID is required");
+        Long campaignId = sessionRepository.findCampaignIdBySessionId(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
         VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
         if (entityManager != null) {
             entityManager.refresh(session);
         }
+
+        if (!session.getCampaign().getId().equals(campaignId)) {
+            throw new IllegalStateException("Authoritative session parent relationship changed concurrently");
+        }
+
+        requireCampaignAllowsSessionCompletion(campaign);
+
         session.complete();
         return sessionRepository.save(session);
+    }
+
+    private void requireCampaignAllowsSessionStart(VaccinationCampaign campaign) {
+        CampaignStatus status = campaign.getStatus();
+        if (status != CampaignStatus.PUBLISHED && status != CampaignStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "Cannot start vaccination session for campaign with ID " + campaign.getId()
+                            + " in " + status + " status. Only PUBLISHED or ACTIVE campaigns permit session start."
+            );
+        }
+    }
+
+    private void requireCampaignAllowsSessionCompletion(VaccinationCampaign campaign) {
+        CampaignStatus status = campaign.getStatus();
+        if (status != CampaignStatus.PUBLISHED
+                && status != CampaignStatus.ACTIVE
+                && status != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot complete vaccination session for campaign with ID " + campaign.getId()
+                            + " in " + status + " status. Campaign is not operational or is operationally closed."
+            );
+        }
+    }
+
+    /**
+     * Authoritatively suspends booking intake for a SCHEDULED vaccination session with pessimistic locking
+     * and append-only SessionChangeEvent audit logging.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @param reason    Non-blank reason for the suspension (max 500 characters)
+     * @param actorId   Authenticated principal actor ID
+     * @return Saved VaccinationSession in suspended booking state
+     */
+    public VaccinationSession suspendBooking(Long sessionId, String reason, String actorId) {
+        requireId(sessionId, "Session ID is required");
+        String validatedReason = SessionChangeEvent.validateReason(reason);
+        String validatedActorId = SessionChangeEvent.validateActorId(actorId);
+
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+
+        session.suspendBooking();
+        VaccinationSession saved = sessionRepository.save(session);
+
+        SessionScheduleSnapshot snapshot = SessionScheduleSnapshot.from(saved);
+        SessionChangeEvent event = new SessionChangeEvent(
+                saved,
+                SessionChangeType.BOOKING_SUSPENDED,
+                snapshot,
+                snapshot,
+                validatedReason,
+                0,
+                0,
+                validatedActorId
+        );
+        sessionChangeEventRepository.save(event);
+
+        return saved;
+    }
+
+    /**
+     * Authoritatively resumes booking intake for a previously suspended SCHEDULED vaccination session
+     * with pessimistic locking and append-only SessionChangeEvent audit logging.
+     *
+     * @param sessionId ID of the target VaccinationSession
+     * @param reason    Non-blank reason for resuming booking (max 500 characters)
+     * @param actorId   Authenticated principal actor ID
+     * @return Saved VaccinationSession with booking resumed
+     */
+    public VaccinationSession resumeBooking(Long sessionId, String reason, String actorId) {
+        requireId(sessionId, "Session ID is required");
+        String validatedReason = SessionChangeEvent.validateReason(reason);
+        String validatedActorId = SessionChangeEvent.validateActorId(actorId);
+
+        VaccinationSession session = sessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId));
+        if (entityManager != null) {
+            entityManager.refresh(session);
+        }
+
+        session.resumeBooking();
+        VaccinationSession saved = sessionRepository.save(session);
+
+        SessionScheduleSnapshot snapshot = SessionScheduleSnapshot.from(saved);
+        SessionChangeEvent event = new SessionChangeEvent(
+                saved,
+                SessionChangeType.BOOKING_RESUMED,
+                snapshot,
+                snapshot,
+                validatedReason,
+                0,
+                0,
+                validatedActorId
+        );
+        sessionChangeEventRepository.save(event);
+
+        return saved;
     }
 
     /**

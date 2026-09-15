@@ -6,6 +6,8 @@
 *.pem
 *.key
 *.keystore
+application-local.properties
+!application-local.properties.example
 
 # Dependencies
 node_modules/
@@ -95,6 +97,31 @@ mysql-data/
 *.sqlite3
 *.dump
 *.sql.dump
+*.sql.gz
+*.bak
+
+# Testing, Testcontainers & Coverage
+test-results/
+playwright-report/
+jacoco/
+*.exec
+surefire-reports/
+failsafe-reports/
+.nyc_output/
+.testcontainers.properties
+testcontainers.log
+
+# Temporary & Editor backup files
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+*.rej
+*~
+.cache/
+.npm/
+.pnpm-store/
 
 # Python
 __pycache__/
@@ -109,3 +136,4 @@ graphify-out/
 # AI and IDE configurations
 /ai/
 /.mcp.json
+

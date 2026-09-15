@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import StatusBadge from '../../../components/common/StatusBadge';
+import { campaignStatusVariants } from '../../../components/common/statusVariants';
+import { useAuth } from '../../../auth/context/AuthContext';
+import {
+  canManageCampaigns,
+  canManageQuestionnaireAssignments,
+  canViewQuestionnaireAssignments,
+} from '../../../auth/utils/roleUtils';
 import DoseProgrammeTab from './DoseProgrammeTab';
 import DoseProgrammeFormModal from './DoseProgrammeFormModal';
 import QuestionnaireTab from './QuestionnaireTab';
@@ -26,20 +34,6 @@ import {
   getLocationTargets,
   createLocationTarget,
 } from '../api/campaignConfigurationApi';
-
-function getStatusBadgeClass(status) {
-  switch (status) {
-    case 'DRAFT': return 'badge bg-secondary';
-    case 'SCHEDULED': return 'badge bg-info text-dark';
-    case 'PUBLISHED': return 'badge bg-primary';
-    case 'ACTIVE': return 'badge bg-success';
-    case 'SUSPENDED': return 'badge bg-warning text-dark';
-    case 'CANCELLED': return 'badge bg-danger';
-    case 'COMPLETED': return 'badge bg-dark';
-    case 'ARCHIVED': return 'badge bg-secondary opacity-75';
-    default: return 'badge bg-secondary';
-  }
-}
 
 function formatDate(dateStr) {
   if (!dateStr) return '—';
@@ -69,6 +63,11 @@ export default function CampaignDetailsModal({
   onClose,
   onInitiateAction,
 }) {
+  const { user } = useAuth();
+  const isManager = canManageCampaigns(user);
+  const canViewQuestionnaireAssignmentHistory = canViewQuestionnaireAssignments(user);
+  const canManageQuestionnaireAssignment = canManageQuestionnaireAssignments(user);
+
   const [activeTab, setActiveTab] = useState('overview');
 
   // Dose Programme State
@@ -219,14 +218,20 @@ export default function CampaignDetailsModal({
   useEffect(() => {
     if (campaign?.id) {
       fetchDoseProgrammes(campaign.id);
-      fetchQuestionnaireAssignments(campaign.id);
-      fetchQuestionnaireCatalogue();
+      if (canViewQuestionnaireAssignmentHistory) {
+        fetchQuestionnaireAssignments(campaign.id);
+      }
+      if (canManageQuestionnaireAssignment) {
+        fetchQuestionnaireCatalogue();
+      }
       fetchCenterAssignments(campaign.id);
       fetchActiveCentersList();
       fetchLocationTargets(campaign.id);
     }
   }, [
     campaign?.id,
+    canManageQuestionnaireAssignment,
+    canViewQuestionnaireAssignmentHistory,
     fetchDoseProgrammes,
     fetchQuestionnaireAssignments,
     fetchQuestionnaireCatalogue,
@@ -255,7 +260,7 @@ export default function CampaignDetailsModal({
   };
 
   const handleQuestionnaireSubmit = async (payload) => {
-    if (!campaign?.id) return;
+    if (!campaign?.id || !canManageQuestionnaireAssignment) return;
     setQuestionnaireModalLoading(true);
     setQuestionnaireModalError(null);
     try {
@@ -335,9 +340,7 @@ export default function CampaignDetailsModal({
                 {campaign ? `${campaign.name} (${campaign.code})` : 'Campaign Details'}
               </h5>
               {campaign?.status && (
-                <span className={`${getStatusBadgeClass(campaign.status)} fs-7`}>
-                  {campaign.status}
-                </span>
+                <StatusBadge status={campaign.status} variants={campaignStatusVariants} className="fs-7" />
               )}
             </div>
             <button
@@ -375,20 +378,22 @@ export default function CampaignDetailsModal({
                     )}
                   </button>
                 </li>
-                <li className="nav-item" role="presentation">
-                  <button
-                    type="button"
-                    className={`nav-link border-0 fw-semibold small ${activeTab === 'questionnaire' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
-                    onClick={() => setActiveTab('questionnaire')}
-                  >
-                    Questionnaire{' '}
-                    {activeQuestionnaireAssignment && (
-                      <span className="badge bg-success-subtle text-success border border-success-subtle ms-1" style={{ fontSize: '0.7rem' }}>
-                        Assigned
-                      </span>
-                    )}
-                  </button>
-                </li>
+                {canViewQuestionnaireAssignmentHistory && (
+                  <li className="nav-item" role="presentation">
+                    <button
+                      type="button"
+                      className={`nav-link border-0 fw-semibold small ${activeTab === 'questionnaire' ? 'active text-primary border-bottom border-primary border-2' : 'text-secondary'}`}
+                      onClick={() => setActiveTab('questionnaire')}
+                    >
+                      Questionnaire{' '}
+                      {activeQuestionnaireAssignment && (
+                        <span className="badge bg-success-subtle text-success border border-success-subtle ms-1" style={{ fontSize: '0.7rem' }}>
+                          Assigned
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )}
                 <li className="nav-item" role="presentation">
                   <button
                     type="button"
@@ -544,54 +549,56 @@ export default function CampaignDetailsModal({
                       </div>
                     </div>
 
-                    <div className="d-flex flex-wrap gap-2 pt-2 border-top">
-                      <span className="text-muted small align-self-center me-2">Lifecycle Actions:</span>
-                      {campaign.status === 'DRAFT' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-info text-dark"
-                          onClick={() => onInitiateAction('SCHEDULE', campaign)}
-                        >
-                          Schedule Campaign
-                        </button>
-                      )}
-                      {campaign.status === 'SCHEDULED' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-primary"
-                          onClick={() => onInitiateAction('PUBLISH', campaign)}
-                        >
-                          Publish Campaign
-                        </button>
-                      )}
-                      {campaign.status === 'PUBLISHED' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-success"
-                          onClick={() => onInitiateAction('ACTIVATE', campaign)}
-                        >
-                          Activate Campaign
-                        </button>
-                      )}
-                      {campaign.status === 'ACTIVE' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-warning text-dark"
-                          onClick={() => onInitiateAction('SUSPEND', campaign)}
-                        >
-                          Suspend Campaign
-                        </button>
-                      )}
-                      {campaign.status === 'SUSPENDED' && (
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-success"
-                          onClick={() => onInitiateAction('RESUME', campaign)}
-                        >
-                          Resume Campaign
-                        </button>
-                      )}
-                    </div>
+                    {isManager && (
+                      <div className="d-flex flex-wrap gap-2 pt-2 border-top">
+                        <span className="text-muted small align-self-center me-2">Lifecycle Actions:</span>
+                        {campaign.status === 'DRAFT' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-info text-dark"
+                            onClick={() => onInitiateAction('SCHEDULE', campaign)}
+                          >
+                            Schedule Campaign
+                          </button>
+                        )}
+                        {campaign.status === 'SCHEDULED' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            onClick={() => onInitiateAction('PUBLISH', campaign)}
+                          >
+                            Publish Campaign
+                          </button>
+                        )}
+                        {campaign.status === 'PUBLISHED' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-success"
+                            onClick={() => onInitiateAction('ACTIVATE', campaign)}
+                          >
+                            Activate Campaign
+                          </button>
+                        )}
+                        {campaign.status === 'ACTIVE' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-warning text-dark"
+                            onClick={() => onInitiateAction('SUSPEND', campaign)}
+                          >
+                            Suspend Campaign
+                          </button>
+                        )}
+                        {campaign.status === 'SUSPENDED' && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-success"
+                            onClick={() => onInitiateAction('RESUME', campaign)}
+                          >
+                            Resume Campaign
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -614,13 +621,14 @@ export default function CampaignDetailsModal({
                 )}
 
                 {/* Tab: Questionnaire Linkage */}
-                {activeTab === 'questionnaire' && (
+                {canViewQuestionnaireAssignmentHistory && activeTab === 'questionnaire' && (
                   <QuestionnaireTab
                     campaign={campaign}
                     assignments={questionnaireAssignments}
                     versionsMap={versionsMap}
                     loading={questionnaireLoading}
                     error={questionnaireError}
+                    canManageAssignment={canManageQuestionnaireAssignment}
                     onOpenAssignModal={() => {
                       setQuestionnaireModalError(null);
                       setShowQuestionnaireModal(true);
@@ -740,7 +748,7 @@ export default function CampaignDetailsModal({
       )}
 
       {/* Questionnaire Assignment Form Modal */}
-      {showQuestionnaireModal && (
+      {canManageQuestionnaireAssignment && showQuestionnaireModal && (
         <QuestionnaireAssignmentFormModal
           campaign={campaign}
           currentAssignment={activeQuestionnaireAssignment}

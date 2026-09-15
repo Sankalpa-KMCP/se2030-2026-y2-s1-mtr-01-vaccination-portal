@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.screening.controller;
 
 import com.se2030.vaccinationportal.screening.mapper.ScreeningSubmissionMapper;
 import com.se2030.vaccinationportal.screening.service.ScreeningSubmissionService;
+import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
 import com.se2030.vaccinationportal.screening.validation.ScreeningExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,12 +29,15 @@ class ScreeningSubmissionDuplicateAnswerTests {
     @Mock
     private ScreeningSubmissionMapper submissionMapper;
 
+    @Mock
+    private CitizenScreeningAccessService accessService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         ScreeningSubmissionController controller =
-                new ScreeningSubmissionController(submissionService, submissionMapper);
+                new ScreeningSubmissionController(submissionService, submissionMapper, accessService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ScreeningExceptionHandler())
                 .build();

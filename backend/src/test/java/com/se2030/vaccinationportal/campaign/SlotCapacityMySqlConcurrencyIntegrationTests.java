@@ -12,16 +12,6 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
-import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
-import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
-import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
-import com.se2030.vaccinationportal.campaign.service.TimeSlotCapacityService;
-import com.se2030.vaccinationportal.campaign.service.TimeSlotService;
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
@@ -30,10 +20,24 @@ import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository
 import com.se2030.vaccinationportal.campaign.repository.OperationalResourceRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffIdentityRepository;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.repository.SessionCapacityPlanRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.service.OccupancyEvaluationResult;
+import com.se2030.vaccinationportal.campaign.service.OccupancyInterval;
+import com.se2030.vaccinationportal.campaign.service.SessionCapacityCalculationService;
+import com.se2030.vaccinationportal.campaign.service.TimeSlotCapacityService;
+import com.se2030.vaccinationportal.campaign.service.TimeSlotService;
+import com.se2030.vaccinationportal.campaign.service.VaccinationCenterService;
+import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +47,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -56,6 +64,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -69,6 +79,12 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
 
     @Autowired
     private TimeSlotService timeSlotService;
+
+    @Autowired
+    private SessionCapacityCalculationService calculationService;
+
+    @Autowired
+    private VaccinationCenterService centerService;
 
     @Autowired
     private TimeSlotRepository timeSlotRepository;
@@ -122,10 +138,10 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
     private VaccinationCenterRepository centerRepository;
 
     @Autowired
-    private VaccineTypeRepository vaccineTypeRepository;
+    private TargetGroupRepository targetGroupRepository;
 
     @Autowired
-    private TargetGroupRepository targetGroupRepository;
+    private VaccineTypeRepository vaccineTypeRepository;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -520,6 +536,220 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
         assertTrue(total <= 10, "Total configured slot capacity (" + total + ") must not exceed approved capacity (10)");
     }
 
+    @Test
+    @Timeout(30)
+    @DisplayName("Task 34: Concurrent overlapping slot creation - Serialized by parent session lock preventing concurrent occupancy breach")
+    void concurrentOverlappingSlotCreation_enforcesConcurrentOccupancyUnderSessionLock() throws Exception {
+        // safeConcurrentOccupancy = 10, approvedCapacity = 48 (matching recommended throughput, no override required)
+        SessionCapacityPlan plan = new SessionCapacityPlan(
+                session, 1, 240, 10, 2, 2, 2, 2, 48, 48, 10, 15, 0.0, null, null, "admin"
+        );
+        capacityPlanRepository.save(plan);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        // T1: create slot 1 from baseStart to baseStart + 60m with capacity 8 (8 <= 10)
+        Future<Boolean> f1 = executor.submit(() -> {
+            readyLatch.countDown();
+            startLatch.await(10, TimeUnit.SECONDS);
+            try {
+                timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(60, ChronoUnit.MINUTES), 8);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+
+        // T2: create slot 2 from baseStart + 30m to baseStart + 90m with capacity 8 (8 <= 10, but overlap would be 16 > 10)
+        Future<Boolean> f2 = executor.submit(() -> {
+            readyLatch.countDown();
+            startLatch.await(10, TimeUnit.SECONDS);
+            try {
+                timeSlotService.createSlot(session.getId(), baseStart.plus(30, ChronoUnit.MINUTES), baseStart.plus(90, ChronoUnit.MINUTES), 8);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS));
+        startLatch.countDown();
+
+        boolean r1 = f1.get(10, TimeUnit.SECONDS);
+        boolean r2 = f2.get(10, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Exactly one should succeed and one should fail due to concurrent occupancy serialization
+        assertTrue((r1 && !r2) || (!r1 && r2), "Exactly one overlapping slot creation should succeed without exceeding safe concurrent occupancy");
+
+        List<TimeSlot> slots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(session.getId());
+        assertEquals(1, slots.size(), "Only one slot must be persisted");
+        assertEquals(8, slots.get(0).getCapacity());
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("Center safety: slot create then lowering serializes and rejects unsafe lowering")
+    void centerSafety_slotCreateCommitsBeforeLowering_rejectsLowering() throws Exception {
+        updateCenterSafeLimit(10);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch slotCreatedInTx = new CountDownLatch(1);
+        CountDownLatch releaseSlotTx = new CountDownLatch(1);
+
+        try {
+            Future<?> slotFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 8);
+                slotCreatedInTx.countDown();
+                awaitLatch(releaseSlotTx);
+            }));
+
+            assertTrue(slotCreatedInTx.await(10, TimeUnit.SECONDS));
+
+            Future<Throwable> loweringFuture = executor.submit(() -> {
+                try {
+                    updateCenterSafeLimit(5);
+                    return null;
+                } catch (Throwable t) {
+                    return t;
+                }
+            });
+
+            // Deterministically prove that the lowering transaction is blocked in MySQL on the center row lock
+            awaitCenterLockWait(10000);
+
+            // Now release the slot creation transaction to commit
+            releaseSlotTx.countDown();
+            slotFuture.get(10, TimeUnit.SECONDS);
+
+            // Lowering should unblock, execute its validation against the committed slot (peak 8.0), and reject lowering to 5
+            Throwable loweringError = loweringFuture.get(10, TimeUnit.SECONDS);
+            assertNotNull(loweringError, "Expected center lowering to be rejected");
+            assertTrue(loweringError instanceof IllegalArgumentException, "Expected IllegalArgumentException, got: " + loweringError);
+            assertTrue(loweringError.getMessage().contains("cannot be lowered to 5"), "Unexpected error: " + loweringError.getMessage());
+            assertTrue(loweringError.getMessage().contains("configured peak occupancy 8.0"), "Unexpected error: " + loweringError.getMessage());
+        } finally {
+            releaseSlotTx.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
+
+        assertEquals(10, centerRepository.findById(center.getId()).orElseThrow().getSafeConcurrentOccupancy());
+        List<TimeSlot> slots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(session.getId());
+        assertEquals(1, slots.size(), "Target created slot must be persisted");
+        assertEquals(8, slots.get(0).getCapacity(), "Target slot capacity must be 8");
+
+        SessionCapacityPlan plan = capacityPlanRepository.findTopBySessionIdOrderByRevisionDesc(session.getId()).orElse(null);
+        int expectedDwell = plan != null ? plan.getExpectedDwellMinutes() : SessionCapacityPlan.DEFAULT_EXPECTED_DWELL_MINUTES;
+        double accompanyingRatio = plan != null ? plan.getExpectedAccompanyingPersonsPerBooking() : SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO;
+        List<OccupancyInterval> intervals = calculationService.mapSlotsToOccupancyIntervals(slots, expectedDwell, accompanyingRatio);
+        OccupancyEvaluationResult occupancyResult = calculationService.evaluateConcurrentOccupancy(intervals, 10);
+        assertEquals(8.0, occupancyResult.peakOccupancyUnits(), 0.001, "Resulting configured peak occupancy must be 8.0");
+        assertTrue(occupancyResult.peakOccupancyUnits() <= 10, "Peak occupancy must remain <= center safeConcurrentOccupancy");
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("Center safety: lowering then slot create serializes and rejects unsafe slot")
+    void centerSafety_loweringCommitsBeforeSlotCreate_rejectsSlotCreate() throws Exception {
+        updateCenterSafeLimit(10);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch centerLoweredInTx = new CountDownLatch(1);
+        CountDownLatch releaseLoweringTx = new CountDownLatch(1);
+
+        try {
+            Future<?> loweringFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                updateCenterSafeLimit(5);
+                centerLoweredInTx.countDown();
+                awaitLatch(releaseLoweringTx);
+            }));
+
+            assertTrue(centerLoweredInTx.await(10, TimeUnit.SECONDS));
+
+            Future<Throwable> slotFuture = executor.submit(() -> {
+                try {
+                    timeSlotService.createSlot(session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 8);
+                    return null;
+                } catch (Throwable t) {
+                    return t;
+                }
+            });
+
+            // Deterministically prove that the slot creation transaction is blocked in MySQL on the center row lock
+            awaitCenterLockWait(10000);
+
+            // Now release the lowering transaction to commit
+            releaseLoweringTx.countDown();
+            loweringFuture.get(10, TimeUnit.SECONDS);
+
+            // Slot creation should unblock, read the committed center limit (5), and reject peak 8.0 > 5
+            Throwable slotError = slotFuture.get(10, TimeUnit.SECONDS);
+            assertNotNull(slotError, "Expected slot creation to be rejected");
+            assertTrue(slotError instanceof IllegalStateException, "Expected IllegalStateException, got: " + slotError);
+            assertTrue(slotError.getMessage().contains("exceeds safe concurrent occupancy limit (5)"), "Unexpected error: " + slotError.getMessage());
+        } finally {
+            releaseLoweringTx.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
+
+        assertEquals(5, centerRepository.findById(center.getId()).orElseThrow().getSafeConcurrentOccupancy());
+        assertTrue(timeSlotRepository.findBySessionIdOrderByStartTimeAsc(session.getId()).isEmpty());
+    }
+
+    @Test
+    @Timeout(30)
+    @DisplayName("Center safety: slot capacity update serializes before unsafe lowering")
+    void centerSafety_slotUpdateCommitsBeforeLowering_rejectsLowering() throws Exception {
+        updateCenterSafeLimit(10);
+        TimeSlot slot = timeSlotService.createSlot(
+                session.getId(), baseStart, baseStart.plus(1, ChronoUnit.HOURS), 4);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch slotUpdatedInTx = new CountDownLatch(1);
+        CountDownLatch releaseUpdateTx = new CountDownLatch(1);
+
+        try {
+            Future<?> updateFuture = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                timeSlotService.updateSlotCapacity(slot.getId(), 8);
+                slotUpdatedInTx.countDown();
+                awaitLatch(releaseUpdateTx);
+            }));
+
+            assertTrue(slotUpdatedInTx.await(10, TimeUnit.SECONDS));
+
+            Future<Throwable> loweringFuture = executor.submit(() -> {
+                try {
+                    updateCenterSafeLimit(5);
+                    return null;
+                } catch (Throwable t) {
+                    return t;
+                }
+            });
+
+            // Deterministically prove that the lowering transaction is blocked in MySQL on the center row lock
+            awaitCenterLockWait(10000);
+
+            // Now release the slot update transaction to commit
+            releaseUpdateTx.countDown();
+            updateFuture.get(10, TimeUnit.SECONDS);
+
+            // Lowering should unblock, check the committed updated slot capacity (peak 8.0), and reject lowering to 5
+            Throwable loweringError = loweringFuture.get(10, TimeUnit.SECONDS);
+            assertNotNull(loweringError, "Expected center lowering to be rejected");
+            assertTrue(loweringError instanceof IllegalArgumentException, "Expected IllegalArgumentException, got: " + loweringError);
+            assertTrue(loweringError.getMessage().contains("cannot be lowered to 5"), "Unexpected error: " + loweringError.getMessage());
+            assertTrue(loweringError.getMessage().contains("configured peak occupancy 8.0"), "Unexpected error: " + loweringError.getMessage());
+        } finally {
+            releaseUpdateTx.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
+
+        assertEquals(10, centerRepository.findById(center.getId()).orElseThrow().getSafeConcurrentOccupancy());
+        assertEquals(8, timeSlotRepository.findById(slot.getId()).orElseThrow().getCapacity());
+    }
+
     @AfterEach
     void tearDown() {
         if (transactionTemplate != null) {
@@ -549,5 +779,54 @@ class SlotCapacityMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCont
             targetGroupRepository.deleteAllInBatch();
             vaccineTypeRepository.deleteAllInBatch();
         });
+    }
+
+    private void updateCenterSafeLimit(int safeConcurrentOccupancy) {
+        center = centerService.updateCenter(
+                center.getId(),
+                center.getName(),
+                center.getAddress(),
+                center.getContact(),
+                safeConcurrentOccupancy,
+                center.getSessionServiceCeiling()
+        );
+    }
+
+    private void awaitLatch(CountDownLatch latch) {
+        try {
+            assertTrue(latch.await(10, TimeUnit.SECONDS));
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted while coordinating center-safety concurrency test", error);
+        }
+    }
+
+    private void awaitCenterLockWait(long timeoutMillis) {
+        Instant deadline = Instant.now().plusMillis(timeoutMillis);
+        String sql = """
+                SELECT count(*)
+                FROM performance_schema.data_lock_waits w
+                JOIN performance_schema.data_locks req ON req.ENGINE_LOCK_ID = w.REQUESTING_ENGINE_LOCK_ID
+                WHERE req.OBJECT_NAME = 'vaccination_centers'
+                  AND req.LOCK_STATUS = 'WAITING'
+                """;
+        while (Instant.now().isBefore(deadline)) {
+            try (Connection conn = createObserverConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    return;
+                }
+            } catch (SQLException e) {
+                throw new IllegalStateException("Failed to query MySQL performance_schema for lock waits", e);
+            }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Interrupted while polling for center lock wait", e);
+            }
+        }
+        throw new AssertionError("Contender did not reach database lock wait on vaccination_centers table within " + timeoutMillis + "ms");
     }
 }

@@ -3,22 +3,25 @@ package com.se2030.vaccinationportal.screening.validation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Middleware interceptor inspecting the user role headers (e.g. X-User-Role / X-Role)
- * and verifying against @RequireRoles annotations on the handler method or controller class.
+ * Middleware interceptor verifying authenticated Spring Security authorities against
+ * {@link RequireRoles} annotations on the handler method or controller class.
  */
 @Component
 public class RoleAuthorizationInterceptor implements HandlerInterceptor {
-
-    public static final String ROLE_HEADER = "X-User-Role";
-    public static final String ALT_ROLE_HEADER = "X-Role";
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -35,34 +38,44 @@ public class RoleAuthorizationInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String userRole = request.getHeader(ROLE_HEADER);
-        if (userRole == null || userRole.trim().isEmpty()) {
-            userRole = request.getHeader(ALT_ROLE_HEADER);
-        }
-
-        if (userRole == null || userRole.trim().isEmpty()) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"Missing authorization role header (X-User-Role)\"}");
+            response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"Authentication is required to access this resource.\"}");
             return false;
         }
 
-        String normalizedRole = userRole.trim().toUpperCase();
-        List<String> allowedRoles = Arrays.stream(targetAnnotation.value())
-                .map(String::toUpperCase)
-                .toList();
+        Set<String> authenticatedRoles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .map(RoleAuthorizationInterceptor::normalizeRole)
+                .filter(role -> !role.isEmpty())
+                .collect(Collectors.toSet());
+        Set<String> allowedRoles = Arrays.stream(targetAnnotation.value())
+                .map(RoleAuthorizationInterceptor::normalizeRole)
+                .collect(Collectors.toSet());
 
-        if (!allowedRoles.contains(normalizedRole)) {
+        if (authenticatedRoles.stream().noneMatch(allowedRoles::contains)) {
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType("application/json");
             response.getWriter().write(String.format(
-                    "{\"error\": \"Forbidden\", \"message\": \"User role '%s' is not authorized to access this resource. Required: %s\"}",
-                    normalizedRole,
+                    "{\"error\": \"Forbidden\", \"message\": \"Authenticated roles %s are not authorized to access this resource. Required: %s\"}",
+                    authenticatedRoles,
                     allowedRoles
             ));
             return false;
         }
 
         return true;
+    }
+
+    private static String normalizeRole(String role) {
+        if (role == null) {
+            return "";
+        }
+        String normalized = role.trim().toUpperCase(Locale.ROOT);
+        return normalized.startsWith("ROLE_") ? normalized.substring("ROLE_".length()) : normalized;
     }
 }

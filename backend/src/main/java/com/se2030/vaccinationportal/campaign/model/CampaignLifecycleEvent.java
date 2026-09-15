@@ -162,6 +162,33 @@ public class CampaignLifecycleEvent {
                     "RESUMED lifecycle events require SUSPENDED as the previous status and PUBLISHED or ACTIVE as the new status"
             );
         }
+        if (changeType == CampaignLifecycleChangeType.COMPLETED
+                && (newStatus != CampaignStatus.COMPLETED
+                || (previousStatus != CampaignStatus.ACTIVE
+                && previousStatus != CampaignStatus.PUBLISHED
+                && previousStatus != CampaignStatus.SUSPENDED))) {
+            throw new IllegalArgumentException(
+                    "COMPLETED lifecycle events require ACTIVE, PUBLISHED, or SUSPENDED as the previous status and COMPLETED as the new status"
+            );
+        }
+        if (changeType == CampaignLifecycleChangeType.CANCELLED
+                && (newStatus != CampaignStatus.CANCELLED
+                || (previousStatus != CampaignStatus.DRAFT
+                && previousStatus != CampaignStatus.SCHEDULED
+                && previousStatus != CampaignStatus.PUBLISHED
+                && previousStatus != CampaignStatus.ACTIVE
+                && previousStatus != CampaignStatus.SUSPENDED))) {
+            throw new IllegalArgumentException(
+                    "CANCELLED lifecycle events require DRAFT, SCHEDULED, PUBLISHED, ACTIVE, or SUSPENDED as the previous status and CANCELLED as the new status"
+            );
+        }
+        if (changeType == CampaignLifecycleChangeType.ARCHIVED
+                && (newStatus != CampaignStatus.ARCHIVED
+                || (previousStatus != CampaignStatus.COMPLETED && previousStatus != CampaignStatus.CANCELLED))) {
+            throw new IllegalArgumentException(
+                    "ARCHIVED lifecycle events require COMPLETED or CANCELLED as the previous status and ARCHIVED as the new status"
+            );
+        }
     }
 
     @PrePersist

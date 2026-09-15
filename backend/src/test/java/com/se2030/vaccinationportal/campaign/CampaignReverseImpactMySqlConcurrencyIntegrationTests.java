@@ -22,12 +22,14 @@ import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRep
 import com.se2030.vaccinationportal.campaign.repository.SessionResourceAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
 import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,6 +64,7 @@ class CampaignReverseImpactMySqlConcurrencyIntegrationTests extends AbstractMySq
     @Autowired private StaffAssignmentRepository staffAssignmentRepository;
     @Autowired private SessionCapacityPlanRepository capacityPlanRepository;
     @Autowired private SessionChangeEventRepository sessionChangeEventRepository;
+    @Autowired private TimeSlotRepository timeSlotRepository;
     @Autowired private OperationalResourceRepository resourceRepository;
     @Autowired private OperationalStaffRosterRepository staffRosterRepository;
     @Autowired private OperationalStaffIdentityRepository identityRepository;
@@ -88,26 +91,9 @@ class CampaignReverseImpactMySqlConcurrencyIntegrationTests extends AbstractMySq
         assertConnectedToRealMySql();
 
         transactionTemplate = new TransactionTemplate(transactionManager);
-        transactionTemplate.executeWithoutResult(status -> {
-            resourceAssignmentRepository.deleteAllInBatch();
-            staffAssignmentRepository.deleteAllInBatch();
-            capacityPlanRepository.deleteAllInBatch();
-            sessionChangeEventRepository.deleteAllInBatch();
-            sessionRepository.deleteAllInBatch();
-            ruleRepository.deleteAllInBatch();
-            resourceRepository.deleteAllInBatch();
-            staffRosterRepository.deleteAllInBatch();
-            identityRepository.deleteAllInBatch();
-            assignmentRepository.deleteAllInBatch();
-            closureRepository.deleteAllInBatch();
-            operatingHoursRepository.deleteAllInBatch();
-            doseProgrammeRepository.deleteAllInBatch();
-            lifecycleEventRepository.deleteAllInBatch();
-            campaignRepository.deleteAllInBatch();
-            centerRepository.deleteAllInBatch();
-            targetGroupRepository.deleteAllInBatch();
-            vaccineTypeRepository.deleteAllInBatch();
+        cleanupDatabase();
 
+        transactionTemplate.executeWithoutResult(status -> {
             vaccineType = vaccineTypeRepository.saveAndFlush(
                     new VaccineType("VAX-MYSQL-REV", "MySQL Rev Vaccine", "dose", true)
             );
@@ -139,6 +125,37 @@ class CampaignReverseImpactMySqlConcurrencyIntegrationTests extends AbstractMySq
                         )
                 );
             }
+        });
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (transactionTemplate != null) {
+            cleanupDatabase();
+        }
+    }
+
+    private void cleanupDatabase() {
+        transactionTemplate.executeWithoutResult(status -> {
+            timeSlotRepository.deleteAllInBatch();
+            resourceAssignmentRepository.deleteAllInBatch();
+            staffAssignmentRepository.deleteAllInBatch();
+            capacityPlanRepository.deleteAllInBatch();
+            sessionChangeEventRepository.deleteAllInBatch();
+            sessionRepository.deleteAllInBatch();
+            ruleRepository.deleteAllInBatch();
+            resourceRepository.deleteAllInBatch();
+            staffRosterRepository.deleteAllInBatch();
+            identityRepository.deleteAllInBatch();
+            assignmentRepository.deleteAllInBatch();
+            closureRepository.deleteAllInBatch();
+            operatingHoursRepository.deleteAllInBatch();
+            doseProgrammeRepository.deleteAllInBatch();
+            lifecycleEventRepository.deleteAllInBatch();
+            campaignRepository.deleteAllInBatch();
+            centerRepository.deleteAllInBatch();
+            targetGroupRepository.deleteAllInBatch();
+            vaccineTypeRepository.deleteAllInBatch();
         });
     }
 

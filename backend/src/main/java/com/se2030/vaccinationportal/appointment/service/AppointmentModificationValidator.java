@@ -1,0 +1,71 @@
+package com.se2030.vaccinationportal.appointment.service;
+
+import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
+import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
+import com.se2030.vaccinationportal.appointment.exception.RequiresStaffOverrideException;
+import com.se2030.vaccinationportal.appointment.model.Appointment;
+import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
+import java.time.Duration;
+import java.time.Instant;
+
+/**
+ * Shared validator enforcing common appointment modification rules across cancellation and rescheduling:
+ * completion immutability (MF03-BR-11) and 24-hour window staff-override requirements (MF03-BR-04).
+ */
+public class AppointmentModificationValidator {
+
+    /**
+     * Validates that an appointment can be modified (cancelled or rescheduled) by checking
+     * ownership, status non-completion, and the 24-hour notice window rule.
+     *
+     * @param appointment         Target {@link Appointment}
+     * @param requestingCitizenId Identifier of requesting citizen (null if staff override)
+     * @param isStaffOverride     {@code true} if action performed by authorized staff
+     * @param staffReason         Reason string if staff override inside 24h window
+     * @param effectiveNow        Timestamp of modification request
+     * @param slotCapacityPort    Port to retrieve slot schedule start time
+     */
+    public static void validateModificationWindow(
+            Appointment appointment,
+            Long requestingCitizenId,
+            boolean isStaffOverride,
+            String staffReason,
+            Instant effectiveNow,
+            SlotCapacityPort slotCapacityPort
+    ) {
+        if (!isStaffOverride && requestingCitizenId != null && !requestingCitizenId.equals(appointment.getCitizenId())) {
+            throw new IllegalArgumentException("Citizen ID " + requestingCitizenId + " is not authorized to modify appointment " + appointment.getId());
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("Appointment " + appointment.getId() + " is already cancelled");
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new AppointmentAlreadyCompletedException("A completed appointment cannot be modified (appointment ID: " + appointment.getId() + ")");
+        }
+
+        if (slotCapacityPort == null) {
+            throw new IllegalStateException("SlotCapacityPort implementation (MF-02) is unavailable");
+        }
+        Instant slotStart = slotCapacityPort.getSlotStartTime(appointment.getSlotId());
+        if (slotStart == null) {
+            throw new IllegalStateException("Slot start time not available for slot ID: " + appointment.getSlotId());
+        }
+
+        Duration durationUntilStart = Duration.between(effectiveNow, slotStart);
+        boolean isWithin24Hours = durationUntilStart.toHours() < 24;
+
+        if (isWithin24Hours) {
+            if (!isStaffOverride) {
+                throw new RequiresStaffOverrideException(
+                        "Modifications within 24 hours of session start require staff override (slot start: "
+                                + slotStart + ", request time: " + effectiveNow + ")"
+                );
+            }
+            if (staffReason == null || staffReason.trim().isEmpty()) {
+                throw new IllegalArgumentException("A staff reason is required when overriding modifications within the 24-hour window");
+            }
+        }
+    }
+}

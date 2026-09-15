@@ -14,7 +14,9 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.dto.response.CitizenCampaignDiscoveryResponse;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
+import com.se2030.vaccinationportal.campaign.mapper.CampaignDtoMapper;
 import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
 import com.se2030.vaccinationportal.campaign.repository.CampaignLifecycleEventRepository;
@@ -480,6 +482,146 @@ public class VaccinationCampaignService {
         return savedCampaign;
     }
 
+    /**
+     * Completes an ACTIVE, PUBLISHED, or SUSPENDED campaign and records the impact as an append-only lifecycle event.
+     * Fails if any unfinished sessions (in DRAFT, SCHEDULED, or IN_PROGRESS status) remain under the campaign.
+     * The campaign status and event are persisted atomically under the campaign pessimistic write lock.
+     *
+     * @param campaignId ID of the campaign to complete
+     * @param reason mandatory operational reason
+     * @param actorId mandatory identifier of the trusted actor
+     * @return managed campaign in COMPLETED status
+     */
+    public VaccinationCampaign completeCampaign(Long campaignId, String reason, String actorId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        String validatedReason = CampaignLifecycleEvent.validateReason(reason);
+        String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        List<VaccinationSession> sessions = sessionRepository.findByCampaignId(campaignId);
+        List<VaccinationSession> unfinishedSessions = sessions.stream()
+                .filter(s -> BLOCKING_SESSION_STATUSES.contains(s.getLifecycleStatus()))
+                .toList();
+        if (!unfinishedSessions.isEmpty()) {
+            throw new IllegalStateException(
+                    "Cannot complete campaign with ID " + campaignId + " because " + unfinishedSessions.size() +
+                            " unfinished session(s) remain in " +
+                            unfinishedSessions.stream().map(s -> s.getLifecycleStatus().name()).distinct().toList() + " status"
+            );
+        }
+
+        CampaignStatus previousStatus = campaign.getStatus();
+        campaign.complete();
+
+        VaccinationCampaign savedCampaign = campaignRepository.save(campaign);
+
+        CampaignLifecycleEvent event = new CampaignLifecycleEvent(
+                savedCampaign,
+                CampaignLifecycleChangeType.COMPLETED,
+                previousStatus,
+                savedCampaign.getStatus(),
+                validatedReason,
+                validatedActorId,
+                clock.instant()
+        );
+        campaignLifecycleEventRepository.save(event);
+
+        return savedCampaign;
+    }
+
+    /**
+     * Cancels a non-terminal campaign (in DRAFT, SCHEDULED, PUBLISHED, ACTIVE, or SUSPENDED status)
+     * and records the impact as an append-only lifecycle event.
+     * The campaign status and event are persisted atomically under the campaign pessimistic write lock.
+     *
+     * @param campaignId ID of the campaign to cancel
+     * @param reason mandatory operational reason
+     * @param actorId mandatory identifier of the trusted actor
+     * @return managed campaign in CANCELLED status
+     */
+    public VaccinationCampaign cancelCampaign(Long campaignId, String reason, String actorId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        String validatedReason = CampaignLifecycleEvent.validateReason(reason);
+        String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        CampaignStatus previousStatus = campaign.getStatus();
+        campaign.cancel();
+
+        VaccinationCampaign savedCampaign = campaignRepository.save(campaign);
+
+        CampaignLifecycleEvent event = new CampaignLifecycleEvent(
+                savedCampaign,
+                CampaignLifecycleChangeType.CANCELLED,
+                previousStatus,
+                savedCampaign.getStatus(),
+                validatedReason,
+                validatedActorId,
+                clock.instant()
+        );
+        campaignLifecycleEventRepository.save(event);
+
+        return savedCampaign;
+    }
+
+    /**
+     * Archives a COMPLETED or CANCELLED campaign and records the impact as an append-only lifecycle event.
+     * The campaign status and event are persisted atomically under the campaign pessimistic write lock.
+     *
+     * @param campaignId ID of the campaign to archive
+     * @param reason mandatory operational reason
+     * @param actorId mandatory identifier of the trusted actor
+     * @return managed campaign in ARCHIVED status
+     */
+    public VaccinationCampaign archiveCampaign(Long campaignId, String reason, String actorId) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        String validatedReason = CampaignLifecycleEvent.validateReason(reason);
+        String validatedActorId = CampaignLifecycleEvent.validateActorId(actorId);
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        CampaignStatus previousStatus = campaign.getStatus();
+        campaign.archive();
+
+        VaccinationCampaign savedCampaign = campaignRepository.save(campaign);
+
+        CampaignLifecycleEvent event = new CampaignLifecycleEvent(
+                savedCampaign,
+                CampaignLifecycleChangeType.ARCHIVED,
+                previousStatus,
+                savedCampaign.getStatus(),
+                validatedReason,
+                validatedActorId,
+                clock.instant()
+        );
+        campaignLifecycleEventRepository.save(event);
+
+        return savedCampaign;
+    }
+
     public VaccinationCampaign createCampaign(
             String code,
             String name,
@@ -491,6 +633,13 @@ public class VaccinationCampaignService {
             Instant bookingOpenAt,
             Instant bookingCloseAt
     ) {
+        if (vaccineType != null && !vaccineType.isActive()) {
+            throw new IllegalArgumentException("Cannot create campaign with inactive VaccineType: " + vaccineType.getCode());
+        }
+        if (targetGroup != null && !targetGroup.isActive()) {
+            throw new IllegalArgumentException("Cannot create campaign with inactive TargetGroup: " + targetGroup.getCode());
+        }
+
         String normalizedCode = code != null ? code.trim() : null;
         if (campaignRepository.existsByCode(normalizedCode)) {
             throw new IllegalArgumentException("Campaign already exists with code: " + normalizedCode);
@@ -573,10 +722,84 @@ public class VaccinationCampaignService {
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
         entityManager.refresh(campaign);
 
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalStateException(
+                    "Cannot update service dates for campaign in " + campaign.getStatus() + " status"
+            );
+        }
+
+        campaign.validateDateConsistency();
         validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
 
         campaign.setServiceStartDate(serviceStartDate);
         campaign.setServiceEndDate(serviceEndDate);
+
+        return campaignRepository.save(campaign);
+    }
+
+    /**
+     * Updates editable configuration attributes of an existing campaign.
+     * Enforces date consistency, reverse-impact session containment, and closed-state guard.
+     */
+    public VaccinationCampaign updateCampaign(
+            Long campaignId,
+            String name,
+            String description,
+            LocalDate serviceStartDate,
+            LocalDate serviceEndDate,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt
+    ) {
+        if (campaignId == null) {
+            throw new IllegalArgumentException("Campaign ID is required");
+        }
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Campaign name is required");
+        }
+        if (serviceStartDate == null) {
+            throw new IllegalArgumentException("Service start date is required");
+        }
+        if (serviceEndDate == null) {
+            throw new IllegalArgumentException("Service end date is required");
+        }
+        if (bookingOpenAt == null) {
+            throw new IllegalArgumentException("Booking open timestamp is required");
+        }
+        if (bookingCloseAt == null) {
+            throw new IllegalArgumentException("Booking close timestamp is required");
+        }
+
+        if (!serviceEndDate.isAfter(serviceStartDate)) {
+            throw new IllegalArgumentException("Campaign service end date (" + serviceEndDate +
+                    ") must be after service start date (" + serviceStartDate + ")");
+        }
+        if (!bookingCloseAt.isAfter(bookingOpenAt)) {
+            throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
+                    ") must be after booking open time (" + bookingOpenAt + ")");
+        }
+
+        VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
+
+        if (entityManager != null) {
+            entityManager.refresh(campaign);
+        }
+
+        if (campaign.getStatus().isOperationallyClosed()) {
+            throw new IllegalStateException(
+                    "Cannot update campaign in " + campaign.getStatus() + " status"
+            );
+        }
+
+        validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
+
+        campaign.setName(name.trim());
+        campaign.setDescription(description);
+        campaign.setServiceStartDate(serviceStartDate);
+        campaign.setServiceEndDate(serviceEndDate);
+        campaign.setBookingOpenAt(bookingOpenAt);
+        campaign.setBookingCloseAt(bookingCloseAt);
+        campaign.validateDateConsistency();
 
         return campaignRepository.save(campaign);
     }
@@ -648,5 +871,26 @@ public class VaccinationCampaignService {
                 );
             }
         }
+    }
+
+    /**
+     * Retrieve campaigns visible for authenticated citizen discovery (MF02-R-001).
+     * Returns only PUBLISHED and ACTIVE campaigns ordered by ID ascending.
+     * Derives currentlyAcceptingScreening from canonical booking window and lifecycle openness.
+     *
+     * @return List of minimal citizen campaign projections
+     */
+    @Transactional(readOnly = true)
+    public List<CitizenCampaignDiscoveryResponse> getCitizenDiscoveryCampaigns() {
+        List<VaccinationCampaign> campaigns = campaignRepository.findByStatusInOrderByIdAsc(
+                List.of(CampaignStatus.PUBLISHED, CampaignStatus.ACTIVE)
+        );
+        Instant now = clock.instant();
+        return campaigns.stream()
+                .map(campaign -> CampaignDtoMapper.toCitizenDiscoveryResponse(
+                        campaign,
+                        campaign.isBookingWindowOpenAt(now)
+                ))
+                .toList();
     }
 }

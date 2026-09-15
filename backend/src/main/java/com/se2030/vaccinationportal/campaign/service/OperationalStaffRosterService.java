@@ -3,10 +3,13 @@ package com.se2030.vaccinationportal.campaign.service;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.OperationalStaffRoster;
 import com.se2030.vaccinationportal.campaign.model.OperationalStaffStatus;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,13 +27,19 @@ public class OperationalStaffRosterService {
     private final OperationalStaffRosterRepository rosterRepository;
     private final VaccinationCenterRepository centerRepository;
     private final OperationalStaffIdentityLockService identityLockService;
+    private final StaffAssignmentRepository assignmentRepository;
+    private final Clock clock;
 
     public OperationalStaffRosterService(OperationalStaffRosterRepository rosterRepository,
                                           VaccinationCenterRepository centerRepository,
-                                          OperationalStaffIdentityLockService identityLockService) {
+                                          OperationalStaffIdentityLockService identityLockService,
+                                          StaffAssignmentRepository assignmentRepository,
+                                          Clock clock) {
         this.rosterRepository = Objects.requireNonNull(rosterRepository, "rosterRepository must not be null");
         this.centerRepository = Objects.requireNonNull(centerRepository, "centerRepository must not be null");
         this.identityLockService = Objects.requireNonNull(identityLockService, "identityLockService must not be null");
+        this.assignmentRepository = Objects.requireNonNull(assignmentRepository, "assignmentRepository must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     /**
@@ -117,6 +126,7 @@ public class OperationalStaffRosterService {
 
         rosterRepository.findByUserIdForUpdateOrderByIdAsc(roster.getUserId());
 
+        validateDeactivationImpact(roster, status);
         roster.setRole(role);
         roster.setStatus(status);
         return rosterRepository.saveAndFlush(roster);
@@ -140,6 +150,8 @@ public class OperationalStaffRosterService {
         OperationalStaffRoster roster = rosterRepository.findByIdForUpdate(rosterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Operational staff roster entry not found with ID: " + rosterId));
 
+        rosterRepository.findByUserIdForUpdateOrderByIdAsc(roster.getUserId());
+        validateDeactivationImpact(roster, newStatus);
         roster.setStatus(newStatus);
         return rosterRepository.saveAndFlush(roster);
     }
@@ -221,5 +233,22 @@ public class OperationalStaffRosterService {
             throw new IllegalArgumentException("User ID is required");
         }
         return rosterRepository.findByUserIdOrderByCenterIdAsc(userId);
+    }
+
+    private void validateDeactivationImpact(OperationalStaffRoster roster, OperationalStaffStatus newStatus) {
+        if (roster.getStatus() != OperationalStaffStatus.ACTIVE
+                || newStatus != OperationalStaffStatus.INACTIVE) {
+            return;
+        }
+        if (!assignmentRepository.findBlockingOperationalDependenciesForUpdate(
+                roster.getId(),
+                SessionLifecycleStatus.blockingOperationalDependencyStatuses(),
+                clock.instant()
+        ).isEmpty()) {
+            throw new IllegalStateException(
+                    "Cannot deactivate operational staff roster entry " + roster.getId()
+                            + " because a future or in-progress session depends on it"
+            );
+        }
     }
 }

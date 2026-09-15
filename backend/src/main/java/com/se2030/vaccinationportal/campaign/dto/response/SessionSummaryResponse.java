@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.dto.response;
 
+import com.se2030.vaccinationportal.campaign.model.SessionBookingStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import java.time.Instant;
 
@@ -15,6 +16,8 @@ public record SessionSummaryResponse(
         Instant bookingCloseAt,
         String scheduleTimezone,
         SessionLifecycleStatus lifecycleStatus,
-        boolean generated
+        boolean generated,
+        SessionBookingStatus bookingStatus,
+        boolean bookingSuspended
 ) {
 }

@@ -3,7 +3,18 @@
  * Interfaces with backend /api/v1/auth endpoints.
  */
 
-import { apiRequest, ApiError } from '../../services/apiClient';
+import { ApiError, apiRequestData } from '../../services/apiClient';
+
+const LOGIN_ERROR_MESSAGES = {
+  ACCOUNT_PENDING_APPROVAL: 'Your staff account is waiting for administrator approval.',
+  ACCOUNT_REJECTED: 'Your staff account request was rejected. Contact an administrator if you need assistance.',
+};
+
+function mapLoginError(error) {
+  const message = LOGIN_ERROR_MESSAGES[error?.data?.code];
+  if (!message) return error;
+  return new ApiError(message, error.status, error.data, error);
+}
 
 /**
  * Authenticates user credentials against POST /api/v1/auth/login.
@@ -18,23 +29,56 @@ export async function loginApi(email, password) {
     password: password || '',
   };
 
-  const response = await apiRequest('/v1/auth/login', {
+  try {
+    return await apiRequestData(
+      '/v1/auth/login',
+      {
+        method: 'POST',
+        auth: false,
+        handleUnauthorized: false,
+        body: JSON.stringify(payload),
+      },
+      {
+        defaultMessage: 'Authentication request failed',
+        statusMessages: { 401: 'Invalid email or password' },
+      },
+    );
+  } catch (error) {
+    throw mapLoginError(error);
+  }
+}
+
+export function registerCitizen({ fullName, email, phoneNumber, password }) {
+  return apiRequestData('/v1/auth/register/citizen', {
     method: 'POST',
     auth: false,
     handleUnauthorized: false,
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      fullName: fullName.trim(),
+      email: email.trim(),
+      phoneNumber: phoneNumber.trim(),
+      password,
+    }),
+  }, {
+    defaultMessage: 'Failed to create the citizen account',
   });
+}
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    const message =
-      response.status === 401
-        ? 'Invalid email or password'
-        : errorData?.message || 'Authentication request failed';
-    throw new ApiError(message, response.status, errorData);
-  }
-
-  return response.json();
+export function registerStaff({ fullName, email, phoneNumber, password, requestedRoleCode }) {
+  return apiRequestData('/v1/auth/register/staff', {
+    method: 'POST',
+    auth: false,
+    handleUnauthorized: false,
+    body: JSON.stringify({
+      fullName: fullName.trim(),
+      email: email.trim(),
+      phoneNumber: phoneNumber.trim(),
+      password,
+      requestedRoleCode,
+    }),
+  }, {
+    defaultMessage: 'Failed to submit the staff account request',
+  });
 }
 
 /**
@@ -43,20 +87,16 @@ export async function loginApi(email, password) {
  * @returns {Promise<{ id: number, email: string, roles: string[] }>}
  */
 export async function getCurrentUserApi() {
-  const response = await apiRequest('/v1/auth/me', {
-    method: 'GET',
-    auth: true,
-    handleUnauthorized: false,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    const message =
-      response.status === 401
-        ? 'Authentication session expired or invalid'
-        : errorData?.message || 'Failed to fetch current user profile';
-    throw new ApiError(message, response.status, errorData);
-  }
-
-  return response.json();
+  return apiRequestData(
+    '/v1/auth/me',
+    {
+      method: 'GET',
+      auth: true,
+      handleUnauthorized: false,
+    },
+    {
+      defaultMessage: 'Failed to fetch current user profile',
+      statusMessages: { 401: 'Authentication session expired or invalid' },
+    },
+  );
 }

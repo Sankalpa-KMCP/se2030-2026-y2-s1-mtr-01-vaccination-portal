@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +35,7 @@ public class CenterOperationalResourceController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperationalResourceResponse> createResource(
             @PathVariable("centerId") Long centerId,
             @Valid @RequestBody CreateOperationalResourceRequest request
@@ -51,6 +53,7 @@ public class CenterOperationalResourceController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<List<OperationalResourceResponse>> listResources(
             @PathVariable("centerId") Long centerId,
             @RequestParam(value = "resourceType", required = false) ResourceType resourceType
@@ -63,6 +66,7 @@ public class CenterOperationalResourceController {
     }
 
     @GetMapping("/{resourceId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
     public ResponseEntity<OperationalResourceResponse> getResource(
             @PathVariable("centerId") Long centerId,
             @PathVariable("resourceId") Long resourceId
@@ -72,6 +76,7 @@ public class CenterOperationalResourceController {
     }
 
     @PutMapping("/{resourceId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperationalResourceResponse> updateResource(
             @PathVariable("centerId") Long centerId,
             @PathVariable("resourceId") Long resourceId,

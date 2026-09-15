@@ -1,0 +1,433 @@
+/* ========================================================================
+   LANDING MOTION REFINEMENT
+   ------------------------------------------------------------------------
+   A finite, information-led motion layer for the public home page. Content
+   is visible without JavaScript; `.lp-motion-ready` and `.lp-reveal-ready`
+   only enhance the experience when the supporting browser APIs succeed.
+   ======================================================================== */
+
+.lp-page--home {
+  --home-motion-fast: 160ms;
+  --home-motion-medium: 420ms;
+  --home-motion-slow: 680ms;
+  --home-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --home-motion-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Header response ------------------------------------------------------- */
+
+.lp-page--home .lp-header {
+  transition:
+    background-color var(--home-motion-fast) ease,
+    border-color var(--home-motion-fast) ease,
+    box-shadow var(--home-motion-fast) ease;
+}
+
+.lp-page--home.is-public-header-scrolled .lp-header {
+  background-color: rgba(255, 255, 255, 0.99);
+  border-bottom-color: #c6d8e3;
+  box-shadow: 0 5px 18px rgba(18, 70, 102, 0.09);
+}
+
+.lp-page--home .lp-header__link::after {
+  transform-origin: center;
+  transition: transform var(--home-motion-fast) var(--home-motion-ease);
+}
+
+.lp-page--home .lp-header__link:hover::after,
+.lp-page--home .lp-header__link.lp-is-active::after {
+  transform: scaleX(1);
+}
+
+/* Hero choreography ----------------------------------------------------- */
+
+@keyframes home-copy-enter {
+  from {
+    opacity: 0.62;
+    transform: translate3d(0, 7px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes home-panel-enter {
+  from { opacity: 0.72; }
+  to { opacity: 1; }
+}
+
+@keyframes home-screen-settle {
+  from {
+    opacity: 0.55;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes home-route-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes home-route-travel {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+  10%, 84% { opacity: 0.9; }
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -1;
+  }
+}
+
+@keyframes home-node-confirm {
+  from {
+    opacity: 0;
+    transform: scale(0.78);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes home-status-confirm {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 7px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+
+.lp-page--home.lp-motion-ready .home-hero__overline,
+.lp-page--home.lp-motion-ready .home-hero h1,
+.lp-page--home.lp-motion-ready .home-hero__lead,
+.lp-page--home.lp-motion-ready .home-hero__actions,
+.lp-page--home.lp-motion-ready .home-hero__note,
+.lp-page--home.lp-motion-ready .home-hero__rail {
+  animation: home-copy-enter var(--home-motion-medium) var(--home-motion-ease) both;
+}
+
+.lp-page--home.lp-motion-ready .home-hero__overline { animation-delay: 20ms; }
+.lp-page--home.lp-motion-ready .home-hero h1 { animation-delay: 70ms; }
+.lp-page--home.lp-motion-ready .home-hero__lead { animation-delay: 125ms; }
+.lp-page--home.lp-motion-ready .home-hero__actions { animation-delay: 180ms; }
+.lp-page--home.lp-motion-ready .home-hero__note { animation-delay: 230ms; }
+.lp-page--home.lp-motion-ready .home-hero__rail { animation-delay: 300ms; }
+
+.lp-page--home.lp-motion-ready .home-hero__visual {
+  animation: home-panel-enter 520ms var(--home-motion-ease) 100ms both;
+}
+
+.lp-page--home.lp-motion-ready .home-hero__visual-screen {
+  animation: home-screen-settle 540ms var(--home-motion-ease) 120ms both;
+}
+
+
+.lp-page--home.lp-motion-ready .home-pathway__route,
+.lp-page--home.lp-motion-ready .home-pathway__staff-connector {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: home-route-draw 1350ms var(--home-motion-ease-in-out) 260ms both;
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__route-progress {
+  stroke-dasharray: 0.055 0.945;
+  stroke-dashoffset: 0;
+  opacity: 0;
+  animation: home-route-travel 3.2s linear 1750ms 1;
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__node-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: home-node-confirm 420ms var(--home-motion-ease) both;
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__journey-node--1 .home-pathway__node-core { animation-delay: 300ms; }
+.lp-page--home.lp-motion-ready .home-pathway__journey-node--2 .home-pathway__node-core { animation-delay: 585ms; }
+.lp-page--home.lp-motion-ready .home-pathway__journey-node--3 .home-pathway__node-core { animation-delay: 920ms; }
+.lp-page--home.lp-motion-ready .home-pathway__journey-node--4 .home-pathway__node-core { animation-delay: 1210ms; }
+.lp-page--home.lp-motion-ready .home-pathway__journey-node--5 .home-pathway__node-core { animation-delay: 1480ms; }
+
+.lp-page--home.lp-motion-ready .home-pathway__staff-pill {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: home-status-confirm 420ms var(--home-motion-ease) both;
+}
+
+.lp-page--home.lp-motion-ready .home-pathway__staff-pill--campaign { animation-delay: 520ms; }
+.lp-page--home.lp-motion-ready .home-pathway__staff-pill--ready { animation-delay: 790ms; }
+.lp-page--home.lp-motion-ready .home-pathway__staff-connector--campaign { animation-delay: 650ms; }
+.lp-page--home.lp-motion-ready .home-pathway__staff-connector--ready { animation-delay: 880ms; }
+
+
+/* Controls and text links ---------------------------------------------- */
+
+.lp-page--home .home-action,
+.lp-page--home .home-text-button {
+  transition-property: color, background-color, border-color, transform, box-shadow;
+  transition-duration: var(--home-motion-fast);
+  transition-timing-function: var(--home-motion-ease);
+}
+
+.lp-page--home .home-action > span,
+.lp-page--home .home-hero__staff-link > span,
+.lp-page--home .home-index__arrow {
+  display: inline-block;
+  transition: transform var(--home-motion-fast) var(--home-motion-ease);
+}
+
+.lp-page--home :is(.home-action, .home-hero__staff-link, .home-index__link):hover > span:last-child,
+.lp-page--home .home-index__link:hover .home-index__arrow {
+  transform: translate3d(3px, 0, 0);
+}
+
+.lp-page--home :is(.home-action, .home-text-button):active {
+  transform: translate3d(0, 1px, 0);
+}
+
+.lp-page--home .home-text-link::after,
+.lp-page--home .home-closing__staff::after {
+  transform-origin: left;
+  transition: transform var(--home-motion-fast) var(--home-motion-ease);
+}
+
+/* Section reveal language --------------------------------------------- */
+
+.lp-page--home.lp-reveal-ready [data-reveal="section"]:not(.is-revealed) {
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+}
+
+.lp-page--home.lp-reveal-ready [data-reveal="section"] {
+  transition:
+    opacity var(--home-motion-medium) var(--home-motion-ease),
+    transform var(--home-motion-medium) var(--home-motion-ease);
+}
+
+.lp-page--home [data-reveal="section"] .home-section-mark::after {
+  content: "";
+  display: inline-block;
+  width: 44px;
+  height: 1px;
+  margin-left: 0.65rem;
+  background: var(--clinical-border-strong);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--home-motion-medium) var(--home-motion-ease) 100ms;
+  vertical-align: middle;
+}
+
+.lp-page--home [data-reveal="section"].is-revealed .home-section-mark::after {
+  transform: scaleX(1);
+}
+
+/* The desktop care rail is intentionally hidden in the clinical theme; keep
+   its legacy active-state selector from stretching the section status dot. */
+.lp-page--home[data-active-care-step] .home-section-mark::before {
+  left: 0 !important;
+  width: 7px !important;
+}
+
+.lp-page--home.lp-reveal-ready :is(
+  [data-reveal="access"],
+  [data-reveal="sequence"],
+  [data-reveal="workflow"],
+  [data-reveal="assurance"],
+  [data-reveal="links"],
+  [data-reveal="cta"]
+) {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+.lp-page--home.lp-reveal-ready [data-reveal="access"]:not(.is-revealed) > article,
+.lp-page--home.lp-reveal-ready [data-reveal="sequence"]:not(.is-revealed) > li,
+.lp-page--home.lp-reveal-ready [data-reveal="workflow"]:not(.is-revealed) > *,
+.lp-page--home.lp-reveal-ready [data-reveal="assurance"]:not(.is-revealed) > li,
+.lp-page--home.lp-reveal-ready [data-reveal="links"]:not(.is-revealed) > *,
+.lp-page--home.lp-reveal-ready [data-reveal="cta"]:not(.is-revealed) > * {
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+}
+
+.lp-page--home.lp-reveal-ready [data-reveal="access"] > article,
+.lp-page--home.lp-reveal-ready [data-reveal="sequence"] > li,
+.lp-page--home.lp-reveal-ready [data-reveal="workflow"] > *,
+.lp-page--home.lp-reveal-ready [data-reveal="assurance"] > li,
+.lp-page--home.lp-reveal-ready [data-reveal="links"] > *,
+.lp-page--home.lp-reveal-ready [data-reveal="cta"] > * {
+  transition:
+    opacity var(--home-motion-medium) var(--home-motion-ease),
+    transform var(--home-motion-medium) var(--home-motion-ease);
+}
+
+.lp-page--home.lp-reveal-ready [data-reveal="access"] > article:nth-child(2),
+.lp-page--home.lp-reveal-ready [data-reveal="links"] > *:nth-child(2),
+.lp-page--home.lp-reveal-ready [data-reveal="cta"] > *:nth-child(2) {
+  transition-delay: 90ms;
+}
+
+.lp-page--home.lp-reveal-ready [data-reveal="sequence"] > li:nth-child(2),
+.lp-page--home.lp-reveal-ready [data-reveal="workflow"] > *:nth-child(2),
+.lp-page--home.lp-reveal-ready [data-reveal="assurance"] > li:nth-child(2) {
+  transition-delay: 55ms;
+}
+
+.lp-page--home.lp-reveal-ready [data-reveal="sequence"] > li:nth-child(3),
+.lp-page--home.lp-reveal-ready [data-reveal="workflow"] > *:nth-child(3),
+.lp-page--home.lp-reveal-ready [data-reveal="assurance"] > li:nth-child(3) {
+  transition-delay: 110ms;
+}
+
+.lp-page--home.lp-reveal-ready [data-reveal="sequence"] > li:nth-child(4),
+.lp-page--home.lp-reveal-ready [data-reveal="workflow"] > *:nth-child(4),
+.lp-page--home.lp-reveal-ready [data-reveal="assurance"] > li:nth-child(4) {
+  transition-delay: 165ms;
+}
+
+.lp-page--home.lp-reveal-ready [data-reveal="sequence"] > li:nth-child(5),
+.lp-page--home.lp-reveal-ready [data-reveal="workflow"] > *:nth-child(5) {
+  transition-delay: 220ms;
+}
+
+/* Information-led interaction polish ---------------------------------- */
+
+.lp-page--home .home-access__citizen,
+.lp-page--home .home-access__staff {
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color var(--home-motion-fast) ease,
+    box-shadow var(--home-motion-fast) ease;
+}
+
+.lp-page--home .home-access__citizen::after,
+.lp-page--home .home-access__staff::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--clinical-blue-500);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--home-motion-medium) var(--home-motion-ease);
+}
+
+.lp-page--home .home-access__staff::after {
+  background: #70c5d6;
+}
+
+.lp-page--home .home-access__citizen:hover::after,
+.lp-page--home .home-access__staff:hover::after,
+.lp-page--home .home-access__citizen:focus-within::after,
+.lp-page--home .home-access__staff:focus-within::after {
+  transform: scaleX(1);
+}
+
+.lp-page--home .home-closing {
+  box-shadow: inset 0 3px 0 #55b8cf;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+  .lp-page--home .home-assurance__register li:hover {
+    padding-left: 0;
+    transform: translate3d(2px, 0, 0);
+  }
+}
+
+/* Responsive simplification ------------------------------------------- */
+
+@media (max-width: 760px) {
+  .lp-page--home {
+    --home-motion-medium: 340ms;
+    --home-motion-slow: 520ms;
+  }
+
+  .lp-page--home.lp-motion-ready .home-hero__rail {
+    animation-delay: 180ms;
+  }
+
+  .lp-page--home.lp-motion-ready .home-pathway__route {
+    animation-duration: 1080ms;
+  }
+
+  .lp-page--home.lp-motion-ready .home-pathway__journey-node--1 .home-pathway__node-core { animation-delay: 220ms; }
+  .lp-page--home.lp-motion-ready .home-pathway__journey-node--2 .home-pathway__node-core { animation-delay: 410ms; }
+  .lp-page--home.lp-motion-ready .home-pathway__journey-node--3 .home-pathway__node-core { animation-delay: 640ms; }
+  .lp-page--home.lp-motion-ready .home-pathway__journey-node--4 .home-pathway__node-core { animation-delay: 850ms; }
+  .lp-page--home.lp-motion-ready .home-pathway__journey-node--5 .home-pathway__node-core { animation-delay: 1050ms; }
+
+  .lp-page--home.lp-motion-ready .home-pathway__staff-pill--campaign { animation-delay: 350ms; }
+  .lp-page--home.lp-motion-ready .home-pathway__staff-pill--ready { animation-delay: 550ms; }
+  .lp-page--home.lp-motion-ready .home-pathway__staff-connector--campaign { animation-delay: 450ms; }
+  .lp-page--home.lp-motion-ready .home-pathway__staff-connector--ready { animation-delay: 620ms; }
+
+  .lp-page--home.lp-motion-ready .home-pathway__route-progress {
+    animation-delay: 1280ms;
+  }
+
+  .lp-page--home.lp-reveal-ready [data-reveal] > * {
+    transition-delay: 0ms !important;
+  }
+
+  .lp-page--home .home-access__citizen::after,
+.lp-page--home .home-access__staff::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-page--home *,
+  .lp-page--home *::before,
+  .lp-page--home *::after {
+    scroll-behavior: auto !important;
+  }
+
+  .lp-page--home.lp-motion-ready :is(
+    .home-hero__overline,
+    .home-hero h1,
+    .home-hero__lead,
+    .home-hero__actions,
+    .home-hero__note,
+    .home-hero__rail,
+    .home-hero__visual,
+    .home-hero__visual-screen,
+    .home-pathway__node-core,
+    .home-pathway__staff-pill
+  ) {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .lp-page--home .home-pathway__route,
+  .lp-page--home .home-pathway__staff-connector {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .lp-page--home .home-pathway__route-progress {
+    display: none;
+    animation: none !important;
+  }
+
+  .lp-page--home.lp-reveal-ready [data-reveal],
+  .lp-page--home.lp-reveal-ready [data-reveal] > * {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

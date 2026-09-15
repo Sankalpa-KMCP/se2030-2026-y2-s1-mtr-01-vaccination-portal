@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundExceptio
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +22,16 @@ import java.util.Map;
  */
 @RestControllerAdvice(basePackages = "com.se2030.vaccinationportal.screening")
 public class ScreeningExceptionHandler {
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        ErrorResponse response = ErrorResponse.of(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadableRequest(HttpMessageNotReadableException ex) {

@@ -1,6 +1,6 @@
 # Database Configuration and Local Environment Guide
 
-This directory contains database-related documentation, environment configuration, migration scripts, seed data, and design diagrams for the Web-Based Vaccination Portal.
+This directory contains database-related documentation, environment configuration, seed data guidelines, and design diagrams for the Web-Based Vaccination Portal.
 
 ## Declared Technology Baseline
 
@@ -8,14 +8,35 @@ This directory contains database-related documentation, environment configuratio
 - **Local Runtime Environment**: Docker Compose (recommended reproducible development workflow)
 - **Port**: 3306 (default local mapping)
 - **Database Name**: `vaccination_portal`
+- **Migration Framework**: Flyway (managed through Spring Boot backend)
 
-## Directory Purpose
+## Database Architecture & Flyway Migrations
 
-- `migrations/` — Future version-controlled schema migration scripts (Flyway/Liquibase)
-- `seeds/` — Future synthetic development and testing seed data
-- `diagrams/` — Entity-Relationship (ER) diagrams and database design materials
+Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V12` (13 active migrations).
 
-*Note: No business database schema or business tables have been created yet. Schema migrations will be introduced incrementally on assigned feature branches.*
+### Active Migration Schedule
+
+| Version | Migration Script | Module / Domain Focus |
+| :--- | :--- | :--- |
+| `V0` | `V0__core_campaign_center_session_foundation.sql` | Core foundation: Campaigns, Centers, Sessions, Vaccines, Target Groups |
+| `V1` | `V1__mf03_appointment_foundation.sql` | MF-03: Appointments & Booking Guard constraints |
+| `V2` | `V2__mf02_operational_staff_identity.sql` | MF-02: Operational Staff Identity & User linking |
+| `V3` | `V3__mf02_time_slot.sql` | MF-02: Time Slot Capacity & Interval definitions |
+| `V4` | `V4__shared_authentication_foundation.sql` | Shared Auth: Users, Roles, Permissions, Auth tokens |
+| `V5` | `V5__mf01_screening_foundation.sql` | MF-01: Screening Questionnaires, Rules, Assessments |
+| `V6` | `V6__mf01_screening_corrections.sql` | MF-01: Screening schema corrections & constraints |
+| `V7` | `V7__mf03_waitlist_foundation.sql` | MF-03: Waitlist queue & priority models |
+| `V8` | `V8__mf01_screening_triggered_rule_evidence.sql` | MF-01: Evaluation rule evidence snapshots |
+| `V9` | `V9__mf02_session_booking_suspension.sql` | MF-02: Session booking suspension audit flags |
+| `V10` | `V10__mf02_campaign_session_supporting_tables.sql` | MF-02: Recurrence rules, Rosters, Closures, Location targets |
+| `V11` | `V11__mf05_vaccination_foundation.sql` | MF-05: Vaccination administration, Drafts & Certificates |
+| `V12` | `V12__shared_auth_registration_foundation.sql` | Shared Auth: Citizen self-registration & staff registration request audit |
+
+## Directory Structure
+
+- `migrations/` - Reference DDL exports and supplemental database scripts
+- `seeds/` - Synthetic development, testing, and benchmark seed data
+- `diagrams/` - Entity-Relationship (ER) diagrams and database design materials
 
 ## Local Database Setup
 
@@ -78,3 +99,4 @@ Contributors must strictly adhere to the following policies:
 - **Never use real citizen information**, medical records, or actual vaccination data.
 - **Future seed data must be 100% synthetic.**
 - **Never commit production database dumps** or exports to this repository.
+

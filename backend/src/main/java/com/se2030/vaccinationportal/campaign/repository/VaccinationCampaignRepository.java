@@ -57,6 +57,14 @@ public interface VaccinationCampaignRepository extends JpaRepository<Vaccination
     List<VaccinationCampaign> findByStatus(CampaignStatus status);
 
     /**
+     * List campaigns matching any of the given lifecycle statuses ordered deterministically by id ascending (MF02-R-001).
+     *
+     * @param statuses Collection of permitted CampaignStatus values
+     * @return List of matching campaigns ordered by id ascending
+     */
+    List<VaccinationCampaign> findByStatusInOrderByIdAsc(Collection<CampaignStatus> statuses);
+
+    /**
      * List all campaigns configured with a specific vaccine type.
      *
      * @param vaccineTypeId VaccineType entity ID
@@ -114,4 +122,16 @@ public interface VaccinationCampaignRepository extends JpaRepository<Vaccination
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    /**
+     * Aggregate campaign count grouped by lifecycle status, optionally filtered by campaignId.
+     */
+    @Query("SELECT c.status, COUNT(c) FROM VaccinationCampaign c WHERE (:campaignId IS NULL OR c.id = :campaignId) GROUP BY c.status")
+    List<Object[]> countCampaignsByStatus(@Param("campaignId") Long campaignId);
+
+    /**
+     * Count cancelled campaigns, optionally filtered by campaignId.
+     */
+    @Query("SELECT COUNT(c) FROM VaccinationCampaign c WHERE c.status = :cancelledStatus AND (:campaignId IS NULL OR c.id = :campaignId)")
+    long countCancelledCampaigns(@Param("campaignId") Long campaignId, @Param("cancelledStatus") CampaignStatus cancelledStatus);
 }

@@ -23,6 +23,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,6 +55,7 @@ public class CenterController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<CenterResponse> createCenter(@Valid @RequestBody CreateCenterRequest request) {
         VaccinationCenter created = centerService.createCenter(
                 request.code(),
@@ -70,12 +72,14 @@ public class CenterController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<CenterResponse> getCenterById(@PathVariable Long id) {
         VaccinationCenter center = centerService.getRequiredCenterById(id);
         return ResponseEntity.ok(CenterDtoMapper.toResponse(center));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CenterSummaryResponse>> getCenters(
             @RequestParam(required = false) CenterStatus status
     ) {
@@ -87,6 +91,7 @@ public class CenterController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<CenterResponse> updateCenter(
             @PathVariable Long id,
             @Valid @RequestBody UpdateCenterRequest request
@@ -103,18 +108,21 @@ public class CenterController {
     }
 
     @PostMapping("/{id}/activate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<CenterResponse> activateCenter(@PathVariable Long id) {
         VaccinationCenter activated = centerService.activateCenter(id);
         return ResponseEntity.ok(CenterDtoMapper.toResponse(activated));
     }
 
     @PostMapping("/{id}/deactivate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<CenterResponse> deactivateCenter(@PathVariable Long id) {
         VaccinationCenter deactivated = centerService.deactivateCenter(id);
         return ResponseEntity.ok(CenterDtoMapper.toResponse(deactivated));
     }
 
     @PostMapping("/{id}/operating-hours")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperatingHoursResponse> createOperatingHours(
             @PathVariable Long id,
             @Valid @RequestBody CreateOperatingHoursRequest request
@@ -133,6 +141,7 @@ public class CenterController {
     }
 
     @GetMapping("/{id}/operating-hours")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<OperatingHoursResponse>> getOperatingHours(@PathVariable Long id) {
         List<OperatingHours> hours = operatingHoursService.getOperatingHoursByCenter(id);
         List<OperatingHoursResponse> response = hours.stream()
@@ -142,6 +151,7 @@ public class CenterController {
     }
 
     @PutMapping("/{centerId}/operating-hours/{hoursId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperatingHoursResponse> updateOperatingHours(
             @PathVariable Long centerId,
             @PathVariable Long hoursId,
@@ -160,6 +170,7 @@ public class CenterController {
     }
 
     @PostMapping("/{centerId}/operating-hours/{hoursId}/end-date")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperatingHoursResponse> endDateOperatingHours(
             @PathVariable Long centerId,
             @PathVariable Long hoursId,
@@ -174,6 +185,7 @@ public class CenterController {
     }
 
     @PostMapping("/{id}/closures")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<CenterClosureResponse> createClosure(
             @PathVariable Long id,
             @Valid @RequestBody CreateCenterClosureRequest request
@@ -190,6 +202,7 @@ public class CenterController {
     }
 
     @GetMapping("/{id}/closures")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CenterClosureResponse>> getClosures(@PathVariable Long id) {
         List<CenterClosure> closures = closureService.getClosuresForCenter(id);
         List<CenterClosureResponse> response = closures.stream()
@@ -199,6 +212,7 @@ public class CenterController {
     }
 
     @PutMapping("/{centerId}/closures/{closureId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<CenterClosureResponse> updateClosure(
             @PathVariable Long centerId,
             @PathVariable Long closureId,
@@ -215,6 +229,7 @@ public class CenterController {
     }
 
     @PostMapping("/{centerId}/closures/{closureId}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<CenterClosureResponse> cancelClosure(
             @PathVariable Long centerId,
             @PathVariable Long closureId

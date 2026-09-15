@@ -6,7 +6,9 @@ import com.se2030.vaccinationportal.campaign.dto.response.SessionOperationalRead
 import com.se2030.vaccinationportal.campaign.dto.response.SessionResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionScheduleSnapshotResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.SessionSummaryResponse;
+import com.se2030.vaccinationportal.campaign.model.SessionBookingStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
+import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionScheduleSnapshot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
@@ -39,13 +41,19 @@ public final class SessionDtoMapper {
         );
     }
 
-    public static SessionResponse toResponse(VaccinationSession session) {
+    public static SessionResponse toResponse(VaccinationSession session, SessionBookingStatus bookingStatus) {
         if (session == null) {
             return null;
         }
         Long campaignId = session.getCampaign() != null ? session.getCampaign().getId() : null;
         Long centerId = session.getCenter() != null ? session.getCenter().getId() : null;
         Long recurrenceRuleId = session.getRecurrenceRule() != null ? session.getRecurrenceRule().getId() : null;
+        SessionBookingStatus resolvedBookingStatus = bookingStatus != null
+                ? bookingStatus
+                : (session.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED
+                ? (session.isBookingSuspended() ? SessionBookingStatus.SUSPENDED : SessionBookingStatus.OPEN)
+                : SessionBookingStatus.CLOSED);
+
         return new SessionResponse(
                 session.getId(),
                 campaignId,
@@ -59,17 +67,29 @@ public final class SessionDtoMapper {
                 session.getScheduleTimezone(),
                 session.getLifecycleStatus(),
                 session.isGenerated(),
+                resolvedBookingStatus,
+                session.isBookingSuspended(),
                 session.getCreatedAt(),
                 session.getUpdatedAt()
         );
     }
 
-    public static SessionSummaryResponse toSummaryResponse(VaccinationSession session) {
+    public static SessionResponse toResponse(VaccinationSession session) {
+        return toResponse(session, null);
+    }
+
+    public static SessionSummaryResponse toSummaryResponse(VaccinationSession session, SessionBookingStatus bookingStatus) {
         if (session == null) {
             return null;
         }
         Long campaignId = session.getCampaign() != null ? session.getCampaign().getId() : null;
         Long centerId = session.getCenter() != null ? session.getCenter().getId() : null;
+        SessionBookingStatus resolvedBookingStatus = bookingStatus != null
+                ? bookingStatus
+                : (session.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED
+                ? (session.isBookingSuspended() ? SessionBookingStatus.SUSPENDED : SessionBookingStatus.OPEN)
+                : SessionBookingStatus.CLOSED);
+
         return new SessionSummaryResponse(
                 session.getId(),
                 campaignId,
@@ -79,8 +99,14 @@ public final class SessionDtoMapper {
                 session.getBookingCloseAt(),
                 session.getScheduleTimezone(),
                 session.getLifecycleStatus(),
-                session.isGenerated()
+                session.isGenerated(),
+                resolvedBookingStatus,
+                session.isBookingSuspended()
         );
+    }
+
+    public static SessionSummaryResponse toSummaryResponse(VaccinationSession session) {
+        return toSummaryResponse(session, null);
     }
 
     public static SessionScheduleSnapshotResponse toSnapshotResponse(SessionScheduleSnapshot snapshot) {

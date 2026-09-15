@@ -3,31 +3,51 @@ import {
   listCampaigns,
   getCampaignById,
   createCampaign,
+  updateCampaign,
   getCampaignLifecycleEvents,
   scheduleCampaign,
   publishCampaign,
   activateCampaign,
   suspendCampaign,
   resumeCampaign,
+  completeCampaign,
+  cancelCampaign,
+  archiveCampaign,
 } from '../api/campaignApi';
 import CampaignList from '../components/CampaignList';
 import CampaignForm from '../components/CampaignForm';
 import CampaignDetailsModal from '../components/CampaignDetailsModal';
 import CampaignActionModal from '../components/CampaignActionModal';
+import MasterDataManagementModal from '../components/MasterDataManagementModal';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
+import PageHeader from '../../../components/common/PageHeader';
+import SuccessAlert from '../../../components/common/SuccessAlert';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { canManageCampaigns } from '../../../auth/utils/roleUtils';
 
 export default function CampaignManagementPage() {
+  const { user } = useAuth();
+  const isManager = canManageCampaigns(user);
+
   const [campaigns, setCampaigns] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
+  // Master Data Modal state
+  const [showMasterDataModal, setShowMasterDataModal] = useState(false);
+
   // Create Form state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState(null);
+
+  // Edit Form state
+  const [editingCampaign, setEditingCampaign] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState(null);
 
   // Details Modal state
   const [selectedCampaign, setSelectedCampaign] = useState(null);
@@ -70,6 +90,43 @@ export default function CampaignManagementPage() {
       setCreateError(err);
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  // Handle Campaign Edit Initiation
+  const handleInitiateEdit = async (campaign) => {
+    setShowCreateForm(false);
+    setCreateError(null);
+    setEditError(null);
+    try {
+      if (!campaign.bookingOpenAt || !campaign.bookingCloseAt) {
+        setLoading(true);
+        const detailed = await getCampaignById(campaign.id);
+        setEditingCampaign(detailed);
+      } else {
+        setEditingCampaign(campaign);
+      }
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Campaign Edit Submission
+  const handleEditSubmit = async (payload) => {
+    if (!editingCampaign) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      const updated = await updateCampaign(editingCampaign.id, payload);
+      setEditingCampaign(null);
+      setSuccessMessage(`Campaign "${updated.name}" updated successfully.`);
+      await fetchCampaigns();
+    } catch (err) {
+      setEditError(err);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -120,6 +177,15 @@ export default function CampaignManagementPage() {
         case 'RESUME':
           updated = await resumeCampaign(campaignId, payload);
           break;
+        case 'COMPLETE':
+          updated = await completeCampaign(campaignId, payload);
+          break;
+        case 'CANCEL':
+          updated = await cancelCampaign(campaignId, payload);
+          break;
+        case 'ARCHIVE':
+          updated = await archiveCampaign(campaignId, payload);
+          break;
         default:
           throw new Error(`Unsupported lifecycle action: ${actionType}`);
       }
@@ -143,37 +209,34 @@ export default function CampaignManagementPage() {
   };
 
   return (
-    <div className="campaign-management-container">
-      {/* Header section */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
-        <div>
-          <h1 className="h3 text-primary fw-bold mb-1">Vaccination Campaign Management</h1>
-          <p className="text-secondary small mb-0">
-            Define, schedule, activate, and manage vaccination campaigns and lifecycle states.
-          </p>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Vaccination Campaign Management"
+        subtitle="Define, schedule, activate, and manage vaccination campaigns and lifecycle states."
+        actions={isManager && (
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm"
+            onClick={() => setShowMasterDataModal(true)}
+          >
+            Manage Master Data
+          </button>
+        )}
+      />
 
       {/* Success Notification Banner */}
       {successMessage && (
-        <div className="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
-          <div className="d-flex align-items-center">
-            <strong className="me-2">Success:</strong> {successMessage}
-          </div>
-          <button
-            type="button"
-            className="btn-close"
-            aria-label="Close"
-            onClick={() => setSuccessMessage(null)}
-          />
-        </div>
+        <SuccessAlert
+          message={<span><strong className="me-1">Success:</strong> {successMessage}</span>}
+          onDismiss={() => setSuccessMessage(null)}
+        />
       )}
 
       {/* Global Page Error */}
       <ApiErrorAlert error={error} onDismiss={() => setError(null)} />
 
       {/* Create Campaign Form Card */}
-      {showCreateForm && (
+      {isManager && showCreateForm && (
         <CampaignForm
           onSubmit={handleCreateSubmit}
           onCancel={() => {
@@ -182,6 +245,20 @@ export default function CampaignManagementPage() {
           }}
           loading={createLoading}
           error={createError}
+        />
+      )}
+
+      {/* Edit Campaign Form Card */}
+      {isManager && editingCampaign && (
+        <CampaignForm
+          initialCampaign={editingCampaign}
+          onSubmit={handleEditSubmit}
+          onCancel={() => {
+            setEditingCampaign(null);
+            setEditError(null);
+          }}
+          loading={editLoading}
+          error={editError}
         />
       )}
 
@@ -195,10 +272,20 @@ export default function CampaignManagementPage() {
           onStatusFilterChange={setSelectedStatus}
           onSelectCampaign={handleSelectCampaign}
           onInitiateAction={handleInitiateAction}
+          onEditCampaign={handleInitiateEdit}
           onCreateNew={() => {
+            setEditingCampaign(null);
+            setEditError(null);
             setShowCreateForm(true);
             setCreateError(null);
           }}
+        />
+      )}
+
+      {/* Master Data Management Modal */}
+      {showMasterDataModal && (
+        <MasterDataManagementModal
+          onClose={() => setShowMasterDataModal(false)}
         />
       )}
 

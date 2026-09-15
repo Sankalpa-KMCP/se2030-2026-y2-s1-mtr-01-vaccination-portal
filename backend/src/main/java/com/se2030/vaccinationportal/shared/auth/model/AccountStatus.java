@@ -7,6 +7,8 @@ package com.se2030.vaccinationportal.shared.auth.model;
 public enum AccountStatus {
     ACTIVE,
     PENDING_VERIFICATION,
+    PENDING_APPROVAL,
+    REJECTED,
     LOCKED,
     SUSPENDED
 }

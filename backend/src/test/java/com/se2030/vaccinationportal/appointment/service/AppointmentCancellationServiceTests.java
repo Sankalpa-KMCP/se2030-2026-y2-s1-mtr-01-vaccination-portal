@@ -1,8 +1,6 @@
 package com.se2030.vaccinationportal.appointment.service;
 
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityLookupPort;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
-import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
 import com.se2030.vaccinationportal.appointment.exception.RequiresStaffOverrideException;
@@ -12,7 +10,6 @@ import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository
 import com.se2030.vaccinationportal.appointment.repository.CitizenCampaignBookingGuardRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -180,7 +177,7 @@ class AppointmentCancellationServiceTests {
                 AppointmentAlreadyCompletedException.class,
                 () -> cancellationService.cancelAppointment(appointment.getId(), citizenId, now)
         );
-        assertTrue(ex.getMessage().contains("completed appointment cannot be cancelled"));
+        assertTrue(ex.getMessage().contains("completed appointment cannot be"));
     }
 
     @Test

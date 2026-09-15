@@ -315,6 +315,47 @@ public class VaccinationCampaign {
         this.status = CampaignStatus.ACTIVE;
     }
 
+    /**
+     * Transitions campaign status to COMPLETED upon conclusion of vaccination operations.
+     * Allowed only from ACTIVE, PUBLISHED, or SUSPENDED status.
+     */
+    public void complete() {
+        if (this.status != CampaignStatus.ACTIVE
+                && this.status != CampaignStatus.PUBLISHED
+                && this.status != CampaignStatus.SUSPENDED) {
+            throw new IllegalStateException(
+                    "Cannot complete campaign in " + this.status + " status. Only ACTIVE, PUBLISHED, or SUSPENDED campaigns can be completed."
+            );
+        }
+        this.status = CampaignStatus.COMPLETED;
+    }
+
+    /**
+     * Transitions campaign status to CANCELLED.
+     * Allowed only from non-terminal states (DRAFT, SCHEDULED, PUBLISHED, ACTIVE, SUSPENDED).
+     */
+    public void cancel() {
+        if (this.status.isOperationallyClosed()) {
+            throw new IllegalStateException(
+                    "Cannot cancel campaign in " + this.status + " status. Campaign is already operationally closed."
+            );
+        }
+        this.status = CampaignStatus.CANCELLED;
+    }
+
+    /**
+     * Transitions campaign status to ARCHIVED.
+     * Allowed only from COMPLETED or CANCELLED status.
+     */
+    public void archive() {
+        if (!this.status.isArchivable()) {
+            throw new IllegalStateException(
+                    "Cannot archive campaign in " + this.status + " status. Only COMPLETED or CANCELLED campaigns can be archived."
+            );
+        }
+        this.status = CampaignStatus.ARCHIVED;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }

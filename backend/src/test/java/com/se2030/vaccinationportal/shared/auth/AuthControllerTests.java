@@ -59,6 +59,7 @@ class AuthControllerTests {
 
         Role role = roleRepository.save(new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"));
         testUser = new UserAccount("manager@portal.gov", passwordEncoder.encode("Password123!"), AccountStatus.ACTIVE);
+        testUser.setPhoneNumber("+94 77 123 4567");
         testUser.addRole(role);
         testUser = userAccountRepository.save(testUser);
     }
@@ -74,6 +75,7 @@ class AuthControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token", notNullValue()))
                 .andExpect(jsonPath("$.user.email", is("manager@portal.gov")))
+                .andExpect(jsonPath("$.user.phoneNumber", is("+94 77 123 4567")))
                 .andExpect(jsonPath("$.user.roles", hasItem("ROLE_CENTER_MANAGER")));
     }
 
@@ -109,6 +111,7 @@ class AuthControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(testUser.getId().intValue())))
                 .andExpect(jsonPath("$.email", is("manager@portal.gov")))
+                .andExpect(jsonPath("$.phoneNumber", is("+94 77 123 4567")))
                 .andExpect(jsonPath("$.roles", hasItem("ROLE_CENTER_MANAGER")));
     }
 
@@ -132,10 +135,9 @@ class AuthControllerTests {
     }
 
     @Test
-    @DisplayName("Existing business endpoint remains accessible without token during non-breaking AUTH-1 rollout")
-    void existingBusinessEndpoint_remainsAccessibleWithoutToken() throws Exception {
-        // Calling public campaigns listing or centers search without token returns 200, proving no regression
+    @DisplayName("Secured business endpoint denies anonymous access with 403 Forbidden")
+    void securedBusinessEndpoint_deniesAnonymousAccess() throws Exception {
         mockMvc.perform(get("/api/v1/campaigns"))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 }

@@ -38,9 +38,11 @@ public class ScreeningSubmissionService {
     private final ScreeningAnswerRepository answerRepository;
     private final QuestionnaireVersionRepository versionRepository;
     private final QuestionnaireItemRepository itemRepository;
-    private final ConsentNoticeVersionRepository consentNoticeVersionRepository;
+    private final ScreeningConsentNoticeService consentNoticeService;
     private final ScreeningAnswerValidator answerValidator;
     private final PreliminaryScreeningService preliminaryScreeningService;
+    private final EligibilityRuleRepository eligibilityRuleRepository;
+    private final ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
     private final CampaignQuestionnaireAssignmentService assignmentService;
     private final EligibilityReviewService eligibilityReviewService;
     private final Clock clock;
@@ -50,9 +52,11 @@ public class ScreeningSubmissionService {
             ScreeningAnswerRepository answerRepository,
             QuestionnaireVersionRepository versionRepository,
             QuestionnaireItemRepository itemRepository,
-            ConsentNoticeVersionRepository consentNoticeVersionRepository,
+            ScreeningConsentNoticeService consentNoticeService,
             ScreeningAnswerValidator answerValidator,
             PreliminaryScreeningService preliminaryScreeningService,
+            EligibilityRuleRepository eligibilityRuleRepository,
+            ScreeningTriggeredRuleEvidenceRepository evidenceRepository,
             CampaignQuestionnaireAssignmentService assignmentService,
             EligibilityReviewService eligibilityReviewService,
             Clock clock
@@ -61,9 +65,11 @@ public class ScreeningSubmissionService {
         this.answerRepository = answerRepository;
         this.versionRepository = versionRepository;
         this.itemRepository = itemRepository;
-        this.consentNoticeVersionRepository = consentNoticeVersionRepository;
+        this.consentNoticeService = consentNoticeService;
         this.answerValidator = answerValidator;
         this.preliminaryScreeningService = preliminaryScreeningService;
+        this.eligibilityRuleRepository = eligibilityRuleRepository;
+        this.evidenceRepository = evidenceRepository;
         this.assignmentService = assignmentService;
         this.eligibilityReviewService = eligibilityReviewService;
         this.clock = clock;
@@ -154,12 +160,14 @@ public class ScreeningSubmissionService {
             );
         }
 
-        // 5. Validate Consent Notice
-        ConsentNoticeVersion consentNotice = consentNoticeVersionRepository.findById(consentNoticeVersionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Consent notice version not found with ID: " + consentNoticeVersionId));
-
-        if (consentNotice.getRetiredAt() != null) {
-            throw new IllegalStateException("The accepted consent notice version is retired. Please accept the latest active notice.");
+        // 5. Validate the exact current canonical MF-01 screening consent notice.
+        ConsentNoticeVersion consentNotice = consentNoticeService.getCurrentScreeningConsentNotice();
+        if (!Objects.equals(consentNotice.getId(), consentNoticeVersionId)) {
+            throw new IllegalStateException(
+                    "The accepted consent notice is not the current "
+                            + ScreeningConsentNoticeService.SCREENING_NOTICE_CODE + " notice. "
+                            + "Please reload the screening form and accept the current notice."
+            );
         }
 
         // 6. Validate all answers before persisting any submission data
@@ -189,6 +197,7 @@ public class ScreeningSubmissionService {
         // 9. Evaluate Preliminary Result
         PreliminaryScreeningService.RuleEvaluationResult eval = preliminaryScreeningService.evaluateAnswers(versionId, persistedAnswers);
         savedSubmission.setPreliminaryResult(eval.overallResult());
+        persistTriggeredRuleEvidence(savedSubmission, eval.triggeredRules());
 
         return initializeResponseRelations(submissionRepository.save(savedSubmission));
     }
@@ -251,10 +260,42 @@ public class ScreeningSubmissionService {
 
         PreliminaryScreeningService.RuleEvaluationResult eval =
                 preliminaryScreeningService.evaluateAnswers(versionId, persistedAnswers);
+        replaceTriggeredRuleEvidence(submission, eval.triggeredRules());
         submission.setPreliminaryResult(eval.overallResult());
         submission.setStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
 
         return initializeResponseRelations(submissionRepository.save(submission));
+    }
+
+    private void replaceTriggeredRuleEvidence(
+            ScreeningSubmission submission,
+            List<PreliminaryScreeningService.TriggeredRuleResult> triggeredRules
+    ) {
+        evidenceRepository.deleteBySubmissionId(submission.getId());
+        evidenceRepository.flush();
+        persistTriggeredRuleEvidence(submission, triggeredRules);
+    }
+
+    private void persistTriggeredRuleEvidence(
+            ScreeningSubmission submission,
+            List<PreliminaryScreeningService.TriggeredRuleResult> triggeredRules
+    ) {
+        if (triggeredRules.isEmpty()) {
+            return;
+        }
+
+        List<ScreeningTriggeredRuleEvidence> evidenceRows = triggeredRules.stream()
+                .map(triggeredRule -> new ScreeningTriggeredRuleEvidence(
+                        submission,
+                        eligibilityRuleRepository.getReferenceById(triggeredRule.sourceRuleId()),
+                        triggeredRule.ruleCode(),
+                        triggeredRule.message(),
+                        triggeredRule.preliminaryResult(),
+                        triggeredRule.priority(),
+                        triggeredRule.evaluationOrder()
+                ))
+                .toList();
+        evidenceRepository.saveAll(evidenceRows);
     }
 
     private ScreeningSubmission initializeResponseRelations(ScreeningSubmission submission) {

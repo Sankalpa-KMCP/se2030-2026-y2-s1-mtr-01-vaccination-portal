@@ -53,10 +53,24 @@ class PreliminaryScreeningServiceTests {
 
         assertThat(result.overallResult())
                 .isEqualTo(PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED);
-        assertThat(result.triggeredRuleCodes())
-                .containsExactly("PASS-ALLERGY", "REVIEW-ALLERGY");
-        assertThat(result.guidanceMessages())
-                .containsExactly("Allergy answer recorded", "Allergy requires clinical review");
+        assertThat(result.triggeredRules()).containsExactly(
+                new PreliminaryScreeningService.TriggeredRuleResult(
+                        10L,
+                        "PASS-ALLERGY",
+                        "Allergy answer recorded",
+                        PreliminaryScreeningResult.PRELIMINARY_PASS,
+                        10,
+                        1
+                ),
+                new PreliminaryScreeningService.TriggeredRuleResult(
+                        20L,
+                        "REVIEW-ALLERGY",
+                        "Allergy requires clinical review",
+                        PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED,
+                        20,
+                        2
+                )
+        );
     }
 
     @Test
@@ -76,8 +90,35 @@ class PreliminaryScreeningServiceTests {
                 service.evaluateAnswers(VERSION_ID, List.of(allergyAnswer));
 
         assertThat(result.overallResult()).isEqualTo(PreliminaryScreeningResult.PRELIMINARY_PASS);
-        assertThat(result.triggeredRuleCodes()).isEmpty();
-        assertThat(result.guidanceMessages()).isEmpty();
+        assertThat(result.triggeredRules()).isEmpty();
+    }
+
+    @Test
+    void oneTriggeredRuleExposesCompleteSnapshotData() {
+        ScreeningAnswer allergyAnswer = answer("ALLERGY", "yes");
+        EligibilityRule rule = rule(
+                "REVIEW-ALLERGY",
+                "ALLERGY == yes",
+                PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED,
+                25,
+                "Allergy requires clinical review"
+        );
+        when(ruleRepository.findByQuestionnaireVersionIdOrderByPriorityAsc(VERSION_ID))
+                .thenReturn(List.of(rule));
+
+        PreliminaryScreeningService.RuleEvaluationResult result =
+                service.evaluateAnswers(VERSION_ID, List.of(allergyAnswer));
+
+        assertThat(result.triggeredRules()).containsExactly(
+                new PreliminaryScreeningService.TriggeredRuleResult(
+                        25L,
+                        "REVIEW-ALLERGY",
+                        "Allergy requires clinical review",
+                        PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED,
+                        25,
+                        1
+                )
+        );
     }
 
     @Test
@@ -101,9 +142,12 @@ class PreliminaryScreeningServiceTests {
                 service.evaluateAnswers(VERSION_ID, answers);
 
         assertThat(result.overallResult()).isEqualTo(PreliminaryScreeningResult.PRELIMINARY_PASS);
-        assertThat(result.triggeredRuleCodes()).containsExactly("EQUALS", "NOT-EQUALS", "CONTAINS");
-        assertThat(result.guidanceMessages())
-                .containsExactly("Equality matched", "Inequality matched", "Contains matched");
+        assertThat(result.triggeredRules())
+                .extracting(PreliminaryScreeningService.TriggeredRuleResult::ruleCode)
+                .containsExactly("EQUALS", "NOT-EQUALS", "CONTAINS");
+        assertThat(result.triggeredRules())
+                .extracting(PreliminaryScreeningService.TriggeredRuleResult::evaluationOrder)
+                .containsExactly(1, 2, 3);
     }
 
     private ScreeningAnswer answer(String questionCode, String typedAnswer) {
@@ -124,6 +168,8 @@ class PreliminaryScreeningServiceTests {
             int priority,
             String message
     ) {
-        return new EligibilityRule(code, null, code, condition, result, priority, message);
+        EligibilityRule rule = new EligibilityRule(code, null, code, condition, result, priority, message);
+        rule.setId((long) priority);
+        return rule;
     }
 }

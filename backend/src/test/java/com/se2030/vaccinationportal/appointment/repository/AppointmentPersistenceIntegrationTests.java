@@ -114,6 +114,8 @@ class AppointmentPersistenceIntegrationTests {
         );
 
         assertEquals(2, slotAppointments.size());
+        assertTrue(slotAppointments.stream().anyMatch(a -> a.getId().equals(app1.getId())));
+        assertTrue(slotAppointments.stream().anyMatch(a -> a.getId().equals(app2.getId())));
     }
 
     @Test
@@ -124,6 +126,7 @@ class AppointmentPersistenceIntegrationTests {
         Optional<CitizenCampaignBookingGuard> lockedGuard = guardRepository.findByCitizenIdAndCampaignIdForUpdate(1007L, 2007L);
 
         assertTrue(lockedGuard.isPresent());
+        assertEquals(guard.getId(), lockedGuard.get().getId());
         assertEquals(1007L, lockedGuard.get().getCitizenId());
         assertEquals(2007L, lockedGuard.get().getCampaignId());
         /*

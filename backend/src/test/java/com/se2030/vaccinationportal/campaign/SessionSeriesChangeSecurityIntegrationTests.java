@@ -136,7 +136,9 @@ class SessionSeriesChangeSecurityIntegrationTests {
     }
 
     private String obtainSeriesCancellationPreviewToken(Long ruleId) throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/v1/recurrence-rules/" + ruleId + "/cancellation-preview"))
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
+        MvcResult result = mockMvc.perform(post("/api/v1/recurrence-rules/" + ruleId + "/cancellation-preview")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode json = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -144,7 +146,9 @@ class SessionSeriesChangeSecurityIntegrationTests {
     }
 
     private String obtainSeriesChangePreviewToken(Long ruleId, String payload) throws Exception {
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
         MvcResult result = mockMvc.perform(post("/api/v1/recurrence-rules/" + ruleId + "/change-preview")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
@@ -231,7 +235,7 @@ class SessionSeriesChangeSecurityIntegrationTests {
                 }
                 """;
         String token = obtainSeriesChangePreviewToken(rule.getId(), previewPayload);
-        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String confirmPayload = String.format("""
                 {
@@ -275,7 +279,7 @@ class SessionSeriesChangeSecurityIntegrationTests {
                 }
                 """;
         String token = obtainSeriesChangePreviewToken(rule.getId(), previewPayload);
-        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(42L, "officer42@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String confirmPayload = String.format("""
                 {
@@ -312,7 +316,7 @@ class SessionSeriesChangeSecurityIntegrationTests {
     @DisplayName("Authenticated series cancellation persists principal userId string across all sessions")
     void authenticatedSeriesCancelPersistsPrincipalUserIdAcrossSessions() throws Exception {
         String token = obtainSeriesCancellationPreviewToken(rule.getId());
-        String authHeader = createBearerToken(88L, "director88@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(88L, "director88@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -342,7 +346,7 @@ class SessionSeriesChangeSecurityIntegrationTests {
     @DisplayName("Authenticated series cancellation ignores spoofed body actorId and persists principal userId string")
     void authenticatedSeriesCancelIgnoresSpoofedActorId() throws Exception {
         String token = obtainSeriesCancellationPreviewToken(rule.getId());
-        String authHeader = createBearerToken(88L, "director88@health.gov", List.of("ROLE_USER"));
+        String authHeader = createBearerToken(88L, "director88@health.gov", List.of("ROLE_CENTER_MANAGER"));
 
         String payload = String.format("""
                 {
@@ -366,12 +370,12 @@ class SessionSeriesChangeSecurityIntegrationTests {
     }
 
     // =========================================================================
-    // 4. UNCHANGED PUBLIC/PERMITALL ENDPOINTS (PREVIEWS, CREATE, UPDATE, GENERATE)
+    // 4. PREVIEW & MANAGEMENT ENDPOINTS REQUIRE AUTHORIZATION
     // =========================================================================
 
     @Test
-    @DisplayName("Anonymous POST change-preview remains accessible (staged permitAll)")
-    void anonymousChangePreviewRemainsAccessible() throws Exception {
+    @DisplayName("Anonymous POST change-preview is denied 403")
+    void anonymousChangePreviewDenied() throws Exception {
         String previewPayload = """
                 {
                     "weekdays": ["MONDAY"],
@@ -386,21 +390,52 @@ class SessionSeriesChangeSecurityIntegrationTests {
         mockMvc.perform(post("/api/v1/recurrence-rules/" + rule.getId() + "/change-preview")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(previewPayload))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Authorized POST change-preview succeeds for ROLE_CENTER_MANAGER")
+    void authorizedChangePreviewSucceeds() throws Exception {
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
+        String previewPayload = """
+                {
+                    "weekdays": ["MONDAY"],
+                    "startDate": "2026-10-05",
+                    "endDate": "2026-10-16",
+                    "startTime": "10:00:00",
+                    "endTime": "13:00:00",
+                    "timezone": "UTC"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/recurrence-rules/" + rule.getId() + "/change-preview")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(previewPayload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ruleId", is(rule.getId().intValue())));
     }
 
     @Test
-    @DisplayName("Anonymous POST cancellation-preview remains accessible (staged permitAll)")
-    void anonymousCancellationPreviewRemainsAccessible() throws Exception {
+    @DisplayName("Anonymous POST cancellation-preview is denied 403")
+    void anonymousCancellationPreviewDenied() throws Exception {
         mockMvc.perform(post("/api/v1/recurrence-rules/" + rule.getId() + "/cancellation-preview"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Authorized POST cancellation-preview succeeds for ROLE_CENTER_MANAGER")
+    void authorizedCancellationPreviewSucceeds() throws Exception {
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
+        mockMvc.perform(post("/api/v1/recurrence-rules/" + rule.getId() + "/cancellation-preview")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ruleId", is(rule.getId().intValue())));
     }
 
     @Test
-    @DisplayName("Anonymous POST /api/v1/recurrence-rules (create rule) remains accessible (staged permitAll)")
-    void anonymousCreateRuleRemainsAccessible() throws Exception {
+    @DisplayName("Anonymous POST /api/v1/recurrence-rules (create rule) is denied 403")
+    void anonymousCreateRuleDenied() throws Exception {
         String createPayload = String.format("""
                 {
                     "campaignId": %d,
@@ -417,13 +452,36 @@ class SessionSeriesChangeSecurityIntegrationTests {
         mockMvc.perform(post("/api/v1/recurrence-rules")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createPayload))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Authorized POST /api/v1/recurrence-rules (create rule) succeeds for ROLE_CENTER_MANAGER")
+    void authorizedCreateRuleSucceeds() throws Exception {
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
+        String createPayload = String.format("""
+                {
+                    "campaignId": %d,
+                    "centerId": %d,
+                    "weekdays": ["TUESDAY", "THURSDAY"],
+                    "startDate": "2026-10-20",
+                    "endDate": "2026-10-30",
+                    "startTime": "09:00:00",
+                    "endTime": "12:00:00",
+                    "timezone": "UTC"
+                }
+                """, campaign.getId(), center.getId());
+
+        mockMvc.perform(post("/api/v1/recurrence-rules")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createPayload))
                 .andExpect(status().isCreated());
     }
 
     @Test
-    @DisplayName("Anonymous PUT /api/v1/recurrence-rules/{id} (update rule) remains accessible (staged permitAll)")
-    void anonymousUpdateRuleRemainsAccessible() throws Exception {
-        // Create an un-materialized rule so update is allowed
+    @DisplayName("Anonymous PUT /api/v1/recurrence-rules/{id} (update rule) is denied 403")
+    void anonymousUpdateRuleDenied() throws Exception {
         SessionRecurrenceRule ungeneratedRule = ruleRepository.save(new SessionRecurrenceRule(
                 campaign,
                 center,
@@ -449,13 +507,22 @@ class SessionSeriesChangeSecurityIntegrationTests {
         mockMvc.perform(put("/api/v1/recurrence-rules/" + ungeneratedRule.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updatePayload))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("Anonymous POST /api/v1/recurrence-rules/{id}/generate remains accessible (staged permitAll)")
-    void anonymousGenerateRemainsAccessible() throws Exception {
+    @DisplayName("Anonymous POST /api/v1/recurrence-rules/{id}/generate is denied 403")
+    void anonymousGenerateDenied() throws Exception {
         mockMvc.perform(post("/api/v1/recurrence-rules/" + rule.getId() + "/generate"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Authorized POST /api/v1/recurrence-rules/{id}/generate succeeds for ROLE_CENTER_MANAGER")
+    void authorizedGenerateSucceeds() throws Exception {
+        String authHeader = createBearerToken(1L, "manager@health.gov", List.of("ROLE_CENTER_MANAGER"));
+        mockMvc.perform(post("/api/v1/recurrence-rules/" + rule.getId() + "/generate")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.existingCount", is(6)));
     }

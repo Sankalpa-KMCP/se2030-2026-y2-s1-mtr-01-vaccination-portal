@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
+import com.se2030.vaccinationportal.screening.model.EligibilityRule;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
 import com.se2030.vaccinationportal.screening.model.QuestionnaireItem;
@@ -11,16 +12,19 @@ import com.se2030.vaccinationportal.screening.model.ScreeningAnswer;
 import com.se2030.vaccinationportal.screening.model.ScreeningQuestion;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmissionStatus;
+import com.se2030.vaccinationportal.screening.model.ScreeningTriggeredRuleEvidence;
 import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
-import com.se2030.vaccinationportal.screening.repository.ConsentNoticeVersionRepository;
+import com.se2030.vaccinationportal.screening.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireVersionRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningAnswerRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
+import com.se2030.vaccinationportal.screening.repository.ScreeningTriggeredRuleEvidenceRepository;
 import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -63,13 +67,19 @@ class ScreeningSubmissionResubmissionTests {
     private QuestionnaireItemRepository itemRepository;
 
     @Mock
-    private ConsentNoticeVersionRepository consentNoticeVersionRepository;
+    private ScreeningConsentNoticeService consentNoticeService;
 
     @Mock
     private AnswerOptionRepository answerOptionRepository;
 
     @Mock
     private PreliminaryScreeningService preliminaryScreeningService;
+
+    @Mock
+    private EligibilityRuleRepository eligibilityRuleRepository;
+
+    @Mock
+    private ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
 
     @Mock
     private CampaignQuestionnaireAssignmentService campaignQuestionnaireAssignmentService;
@@ -92,9 +102,11 @@ class ScreeningSubmissionResubmissionTests {
                 answerRepository,
                 versionRepository,
                 itemRepository,
-                consentNoticeVersionRepository,
+                consentNoticeService,
                 answerValidator,
                 preliminaryScreeningService,
+                eligibilityRuleRepository,
+                evidenceRepository,
                 campaignQuestionnaireAssignmentService,
                 eligibilityReviewService,
                 clock);
@@ -144,6 +156,9 @@ class ScreeningSubmissionResubmissionTests {
         assertEquals("corrected details", correctedAnswer.getTypedAnswer());
 
         verify(preliminaryScreeningService).evaluateAnswers(eq(VERSION_ID), anyList());
+        verify(evidenceRepository).deleteBySubmissionId(SUBMISSION_ID);
+        verify(evidenceRepository).flush();
+        verify(evidenceRepository, never()).saveAll(any());
         verify(answerRepository).save(any(ScreeningAnswer.class));
         verify(submissionRepository).save(submission);
     }
@@ -172,6 +187,8 @@ class ScreeningSubmissionResubmissionTests {
         verify(answerRepository, never()).save(any(ScreeningAnswer.class));
         verify(submissionRepository, never()).save(any(ScreeningSubmission.class));
         verify(preliminaryScreeningService, never()).evaluateAnswers(any(Long.class), anyList());
+        verify(evidenceRepository, never()).deleteBySubmissionId(any(Long.class));
+        verify(evidenceRepository, never()).saveAll(any());
     }
 
     @Test
@@ -200,6 +217,8 @@ class ScreeningSubmissionResubmissionTests {
         verify(answerRepository, never()).save(any(ScreeningAnswer.class));
         verify(submissionRepository, never()).save(any(ScreeningSubmission.class));
         verify(preliminaryScreeningService, never()).evaluateAnswers(any(Long.class), anyList());
+        verify(evidenceRepository, never()).deleteBySubmissionId(any(Long.class));
+        verify(evidenceRepository, never()).saveAll(any());
     }
 
     @Test
@@ -228,6 +247,75 @@ class ScreeningSubmissionResubmissionTests {
                 .anyMatch(answer -> OPTIONAL_QUESTION_ID == answer.getQuestion().getId()));
     }
 
+    @Test
+    void resubmitCorrectionsReplacesOldEvidenceWithNewTriggeredRule() {
+        ScreeningSubmission submission = correctionsRequiredSubmission();
+        submission.addAnswer(new ScreeningAnswer(submission, requiredQuestion, "original details"));
+
+        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
+        when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
+                .thenReturn(List.of(item(requiredQuestion, 1)));
+        when(answerRepository.save(any(ScreeningAnswer.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        EligibilityRule sourceRule = new EligibilityRule();
+        sourceRule.setId(61L);
+        when(eligibilityRuleRepository.getReferenceById(61L)).thenReturn(sourceRule);
+        when(preliminaryScreeningService.evaluateAnswers(eq(VERSION_ID), anyList()))
+                .thenReturn(new PreliminaryScreeningService.RuleEvaluationResult(
+                        PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED,
+                        List.of(new PreliminaryScreeningService.TriggeredRuleResult(
+                                61L,
+                                "REVIEW-CORRECTED",
+                                "Corrected answer requires review",
+                                PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED,
+                                15,
+                                1
+                        ))
+                ));
+        when(submissionRepository.save(submission)).thenReturn(submission);
+
+        ScreeningSubmission result = service.resubmitCorrections(
+                SUBMISSION_ID,
+                Map.of(REQUIRED_QUESTION_ID, "corrected details")
+        );
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<ScreeningTriggeredRuleEvidence>> evidenceCaptor =
+                ArgumentCaptor.forClass(List.class);
+        verify(evidenceRepository).deleteBySubmissionId(SUBMISSION_ID);
+        verify(evidenceRepository).flush();
+        verify(evidenceRepository).saveAll(evidenceCaptor.capture());
+        assertThatEvidenceMatches(evidenceCaptor.getValue(), submission, sourceRule);
+        assertSame(submission, result);
+        assertEquals(SUBMISSION_ID, result.getId());
+    }
+
+    @Test
+    void evaluationFailureDoesNotReplaceExistingEvidence() {
+        ScreeningSubmission submission = correctionsRequiredSubmission();
+        submission.addAnswer(new ScreeningAnswer(submission, requiredQuestion, "original details"));
+
+        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
+        when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
+                .thenReturn(List.of(item(requiredQuestion, 1)));
+        when(answerRepository.save(any(ScreeningAnswer.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(preliminaryScreeningService.evaluateAnswers(eq(VERSION_ID), anyList()))
+                .thenThrow(new IllegalStateException("evaluation failed"));
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> service.resubmitCorrections(
+                        SUBMISSION_ID,
+                        Map.of(REQUIRED_QUESTION_ID, "corrected details")
+                )
+        );
+
+        assertEquals("evaluation failed", exception.getMessage());
+        verify(evidenceRepository, never()).deleteBySubmissionId(any(Long.class));
+        verify(evidenceRepository, never()).saveAll(any());
+    }
+
     private ScreeningSubmission correctionsRequiredSubmission() {
         ScreeningSubmission submission = new ScreeningSubmission(
                 1L,
@@ -254,7 +342,22 @@ class ScreeningSubmissionResubmissionTests {
     private PreliminaryScreeningService.RuleEvaluationResult passResult() {
         return new PreliminaryScreeningService.RuleEvaluationResult(
                 PreliminaryScreeningResult.PRELIMINARY_PASS,
-                List.of(),
                 List.of());
+    }
+
+    private void assertThatEvidenceMatches(
+            Iterable<ScreeningTriggeredRuleEvidence> evidenceRows,
+            ScreeningSubmission submission,
+            EligibilityRule sourceRule
+    ) {
+        org.assertj.core.api.Assertions.assertThat(evidenceRows).singleElement().satisfies(evidence -> {
+            assertSame(submission, evidence.getSubmission());
+            assertSame(sourceRule, evidence.getSourceRule());
+            assertEquals("REVIEW-CORRECTED", evidence.getRuleCode());
+            assertEquals("Corrected answer requires review", evidence.getMessage());
+            assertEquals(PreliminaryScreeningResult.PRELIMINARY_REVIEW_REQUIRED, evidence.getPreliminaryResult());
+            assertEquals(15, evidence.getPriority());
+            assertEquals(1, evidence.getEvaluationOrder());
+        });
     }
 }

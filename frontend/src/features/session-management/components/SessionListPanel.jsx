@@ -2,6 +2,13 @@ import React, { useMemo } from 'react';
 import { formatDateInTimezone, formatTimeInTimezone } from '../api/sessionApi';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import StatusBadge from '../../../components/common/StatusBadge';
+import EmptyState from '../../../components/common/EmptyState';
+import {
+  sessionStatusVariants,
+  sessionBookingStatusVariants,
+  sessionBookingStatusTitles as BOOKING_STATUS_TITLES,
+} from '../../../components/common/statusVariants';
 
 export default function SessionListPanel({
   sessions = [],
@@ -56,22 +63,18 @@ export default function SessionListPanel({
     return summary;
   }, [sessions]);
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'DRAFT':
-        return <span className="badge bg-secondary text-white">DRAFT</span>;
-      case 'SCHEDULED':
-        return <span className="badge bg-primary text-white">SCHEDULED</span>;
-      case 'IN_PROGRESS':
-        return <span className="badge bg-success text-white">IN_PROGRESS</span>;
-      case 'COMPLETED':
-        return <span className="badge bg-dark text-white">COMPLETED</span>;
-      case 'CANCELLED':
-        return <span className="badge bg-danger text-white">CANCELLED</span>;
-      default:
-        return <span className="badge bg-light text-dark border">{status || 'UNKNOWN'}</span>;
-    }
-  };
+  const getStatusBadge = (status) => (
+    <StatusBadge status={status || 'UNKNOWN'} variants={sessionStatusVariants} />
+  );
+
+  const getBookingStatusBadge = (bookingStatus) => (
+    <StatusBadge
+      status={bookingStatus || 'CLOSED'}
+      variants={sessionBookingStatusVariants}
+      title={BOOKING_STATUS_TITLES[bookingStatus]}
+    />
+  );
+
 
   return (
     <div className="card shadow-sm border-0">
@@ -213,25 +216,24 @@ export default function SessionListPanel({
               <tbody>
                 {filteredSessions.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-5 text-muted">
-                      <div className="d-flex flex-column align-items-center gap-2">
-                        <span className="fs-4 text-secondary">📅</span>
-                        <p className="mb-0 fw-semibold">No vaccination sessions found</p>
-                        <p className="small text-muted mb-2">
-                          {sessions.length === 0
-                            ? 'No sessions have been scheduled yet.'
-                            : 'No sessions match your filter criteria.'}
-                        </p>
-                        {sessions.length === 0 && onOpenCreateModal && (
+                    <td colSpan="7">
+                      <EmptyState
+                        icon="bi-calendar-week"
+                        title="No vaccination sessions found"
+                        action={sessions.length === 0 && onOpenCreateModal && (
                           <button
                             type="button"
-                            className="btn btn-sm btn-primary mt-1"
+                            className="btn btn-sm btn-primary"
                             onClick={onOpenCreateModal}
                           >
                             Create First Session
                           </button>
                         )}
-                      </div>
+                      >
+                        {sessions.length === 0
+                          ? 'No sessions have been scheduled yet.'
+                          : 'No sessions match your filter criteria.'}
+                      </EmptyState>
                     </td>
                   </tr>
                 ) : (
@@ -286,7 +288,15 @@ export default function SessionListPanel({
                             {tz}
                           </span>
                         </td>
-                        <td>{getStatusBadge(s.lifecycleStatus)}</td>
+                        <td>
+                          <div className="d-flex flex-column gap-1">
+                            <div>{getStatusBadge(s.lifecycleStatus)}</div>
+                            {s.bookingStatus && (
+                              <div>{getBookingStatusBadge(s.bookingStatus)}</div>
+                            )}
+                          </div>
+                        </td>
+
                         <td className="text-end">
                           <button
                             type="button"
