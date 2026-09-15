@@ -23,10 +23,9 @@ export default function QuickActions() {
       </div>
       <nav aria-label="Citizen service shortcuts">
         <ul className="citizen-services__grid">
-          {ACTIONS.map((action, index) => (
+          {ACTIONS.map((action) => (
             <li key={action.to}>
               <Link className="citizen-service-card" to={action.to}>
-                <span className="citizen-service-card__number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                 <span className="citizen-service-card__icon"><DashboardIcon name={action.icon} /></span>
                 <span className="citizen-service-card__copy">
                   <strong>{action.title}</strong>
