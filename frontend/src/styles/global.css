@@ -114,15 +114,68 @@ hr {
 }
 
 /* --------------------------------------------------------------------------
-   3b. Application navigation bar -- semantic nav links, clear active pill
+   3b. Application navigation bar -- refined healthcare header & navigation
    -------------------------------------------------------------------------- */
+.app-header {
+  position: relative;
+  z-index: 1020;
+}
+
+.app-navbar {
+  background: linear-gradient(180deg, #0e7490 0%, #0c6780 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 2px 8px rgba(14, 116, 144, 0.12);
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.app-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #ffffff !important;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-right: 1.75rem;
+  padding: 0.2rem 0;
+  text-decoration: none;
+}
+
+.app-header__brand-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.app-header__brand-title {
+  color: #ffffff;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .app-nav .nav-link {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88);
   font-weight: 600;
-  font-size: 0.9rem;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  font-size: 0.875rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
 
 .app-nav .nav-link:hover,
@@ -132,14 +185,98 @@ hr {
 }
 
 .app-nav .nav-link.active {
-  color: var(--primary-hover);
-  background-color: #ffffff;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.36);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  font-weight: 700;
+}
+
+.app-header__user-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.app-header__user-name {
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.app-header__role-badge {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #0b4f46;
+  background: #eaf4eb;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.app-header__logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
+  padding: 0.32rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.35;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.app-header__logout-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.45);
 }
 
 .app-nav .nav-link:focus-visible,
-.navbar .navbar-toggler:focus-visible {
+.navbar .navbar-toggler:focus-visible,
+.app-header__logout-btn:focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 2px;
+}
+
+@media (max-width: 991.98px) {
+  .app-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.5rem;
+  }
+  .app-nav .nav-link {
+    padding: 0.55rem 0.9rem;
+  }
+  .app-header__account {
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin-top: 0.5rem;
+  }
 }
 
 /* Application footer band */
