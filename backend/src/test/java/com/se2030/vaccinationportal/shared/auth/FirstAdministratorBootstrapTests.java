@@ -59,12 +59,12 @@ class FirstAdministratorBootstrapTests {
     @Test
     @DisplayName("full bootstrap configuration creates one active administrator with hashed credentials and no review metadata")
     void fullConfiguration_createsFirstAdministratorSafely() {
-        runner(" FIRST.ADMIN@Example.com ", PASSWORD, " First Administrator ", " +94 77 100 2000 ").run(null);
+        runner(" FIRST.ADMIN@Example.com ", PASSWORD, " First Administrator ", " 0771002000 ").run(null);
 
         UserAccount administrator = userAccountRepository.findByEmailIgnoreCase("first.admin@example.com").orElseThrow();
         assertEquals(AccountStatus.ACTIVE, administrator.getAccountStatus());
         assertEquals("First Administrator", administrator.getFullName());
-        assertEquals("+94 77 100 2000", administrator.getPhoneNumber());
+        assertEquals("0771002000", administrator.getPhoneNumber());
         assertEquals(1, administrator.getRoles().size());
         assertEquals("ROLE_ADMIN", administrator.getRoles().iterator().next().getCode());
         assertNotEquals(PASSWORD, administrator.getPasswordHash());
@@ -76,13 +76,23 @@ class FirstAdministratorBootstrapTests {
     }
 
     @Test
+    @DisplayName("first administrator creation rejects a phone that is not exactly ten digits")
+    void fullConfiguration_invalidPhone_failsWithoutCreatingAdministrator() {
+        IllegalStateException error = assertThrows(IllegalStateException.class, () ->
+                runner("admin@example.com", PASSWORD, "Administrator", "+94771002000").run(null));
+
+        assertTrue(error.getMessage().contains("phone number must contain exactly 10 digits"));
+        assertEquals(0, userAccountRepository.count());
+    }
+
+    @Test
     @DisplayName("rerunning bootstrap when an administrator exists creates no duplicate and never resets password")
     void existingAdministrator_isNeverModified() {
-        runner("admin@example.com", PASSWORD, "Administrator", "+94 77 100 2000").run(null);
+        runner("admin@example.com", PASSWORD, "Administrator", "0771002000").run(null);
         String originalHash = userAccountRepository.findByEmailIgnoreCase("admin@example.com")
                 .orElseThrow().getPasswordHash();
 
-        runner("admin@example.com", "DifferentPassword123!", "Changed Name", "+94 77 999 9999").run(null);
+        runner("invalid legacy config", "legacy config", "Legacy Config", "+94 77 999 9999").run(null);
 
         UserAccount unchanged = userAccountRepository.findByEmailIgnoreCase("admin@example.com").orElseThrow();
         assertEquals(1, userAccountRepository.count());
@@ -100,7 +110,7 @@ class FirstAdministratorBootstrapTests {
         userAccountRepository.saveAndFlush(citizen);
 
         assertThrows(IllegalStateException.class, () -> runner(
-                "existing@example.com", PASSWORD, "Existing Citizen", "+94 77 100 2000").run(null));
+                "existing@example.com", PASSWORD, "Existing Citizen", "0771002000").run(null));
 
         UserAccount unchanged = userAccountRepository.findByEmailIgnoreCase("existing@example.com").orElseThrow();
         assertEquals(1, unchanged.getRoles().size());

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../auth/context/AuthContext';
+import { INVALID_PHONE_NUMBER_MESSAGE, isValidPhoneNumber } from '../../../auth/utils/contactValidation';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
@@ -75,7 +76,7 @@ function validate(form) {
   else if (fullName.length > 255) errors.fullName = 'Full name must not exceed 255 characters.';
 
   if (!phoneNumber) errors.phoneNumber = 'Phone number is required.';
-  else if (phoneNumber.length > 32) errors.phoneNumber = 'Phone number must not exceed 32 characters.';
+  else if (!isValidPhoneNumber(phoneNumber)) errors.phoneNumber = INVALID_PHONE_NUMBER_MESSAGE;
 
   if (form.dateOfBirth && form.dateOfBirth > localToday()) {
     errors.dateOfBirth = 'Date of birth must not be in the future.';
@@ -297,7 +298,8 @@ export default function CitizenProfilePage() {
                       name="phoneNumber"
                       type="tel"
                       value={form.phoneNumber}
-                      maxLength={32}
+                      maxLength={10}
+                      inputMode="numeric"
                       aria-describedby={fieldErrors.phoneNumber ? 'profile-phone-number-error' : undefined}
                       aria-invalid={Boolean(fieldErrors.phoneNumber)}
                       onChange={changeField}

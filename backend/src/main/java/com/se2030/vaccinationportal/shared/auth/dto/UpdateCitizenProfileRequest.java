@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.shared.auth.dto;
 import com.se2030.vaccinationportal.shared.auth.model.CitizenGender;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -13,7 +14,10 @@ public record UpdateCitizenProfileRequest(
         String fullName,
 
         @NotBlank(message = "Phone number must not be blank")
-        @Size(max = 32, message = "Phone number must not exceed 32 characters")
+        @Pattern(
+                regexp = "^[0-9]{10}$",
+                message = "Phone number must contain exactly 10 digits."
+        )
         String phoneNumber,
 
         @PastOrPresent(message = "Date of birth must not be in the future")

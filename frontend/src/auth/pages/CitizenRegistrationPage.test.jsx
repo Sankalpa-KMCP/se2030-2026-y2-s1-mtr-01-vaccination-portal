@@ -24,10 +24,14 @@ function renderPage() {
   );
 }
 
-function fillCitizenForm({ confirmPassword = 'Secret123!' } = {}) {
+function fillCitizenForm({
+  confirmPassword = 'Secret123!',
+  email = 'citizen@example.com',
+  phoneNumber = '0771234567',
+} = {}) {
   fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: 'Citizen User' } });
-  fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'citizen@example.com' } });
-  fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: '+94 77 123 4567' } });
+  fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: phoneNumber } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Secret123!' } });
   fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: confirmPassword } });
 }
@@ -47,6 +51,8 @@ describe('CitizenRegistrationPage', () => {
     expect(screen.getByLabelText('Full Name')).toBeTruthy();
     expect(screen.getByLabelText('Email Address')).toBeTruthy();
     expect(screen.getByLabelText('Phone Number')).toBeTruthy();
+    expect(screen.getByLabelText('Phone Number').maxLength).toBe(10);
+    expect(screen.getByLabelText('Phone Number').inputMode).toBe('numeric');
     expect(screen.getByLabelText('Password')).toBeTruthy();
     expect(screen.getByLabelText('Confirm Password')).toBeTruthy();
   });
@@ -59,6 +65,32 @@ describe('CitizenRegistrationPage', () => {
     expect(registerCitizen).not.toHaveBeenCalled();
   });
 
+  it.each(['student', 'student@', '@gmail.com', 'student gmail.com', 'student@domain'])(
+    'blocks malformed email %s and preserves the entered value',
+    (email) => {
+      renderPage();
+      fillCitizenForm({ email });
+      fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
+
+      expect(screen.getByRole('alert').textContent).toContain('Enter a valid email address.');
+      expect(screen.getByLabelText('Email Address').value).toBe(email);
+      expect(registerCitizen).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['771234567', '07712345678', '07712ABC67', '077-123-4567', '+94771234567', '077 1234567'])(
+    'blocks invalid phone number %s and preserves the entered value',
+    (phoneNumber) => {
+      renderPage();
+      fillCitizenForm({ phoneNumber });
+      fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
+
+      expect(screen.getByRole('alert').textContent).toContain('Phone number must contain exactly 10 digits.');
+      expect(screen.getByLabelText('Phone Number').value).toBe(phoneNumber);
+      expect(registerCitizen).not.toHaveBeenCalled();
+    },
+  );
+
   it('registers, automatically signs in, and redirects a citizen', async () => {
     registerCitizen.mockResolvedValue({ id: 1 });
     auth.login.mockResolvedValue({ success: true, user: { roles: ['ROLE_CITIZEN'] } });
@@ -68,6 +100,12 @@ describe('CitizenRegistrationPage', () => {
 
     await screen.findByRole('heading', { name: 'Citizen Home' });
     expect(registerCitizen).toHaveBeenCalledTimes(1);
+    expect(registerCitizen).toHaveBeenCalledWith({
+      fullName: 'Citizen User',
+      email: 'citizen@example.com',
+      phoneNumber: '0771234567',
+      password: 'Secret123!',
+    });
     expect(auth.login).toHaveBeenCalledWith('citizen@example.com', 'Secret123!');
     expect(registerCitizen.mock.calls[0][0]).not.toHaveProperty('confirmPassword');
   });

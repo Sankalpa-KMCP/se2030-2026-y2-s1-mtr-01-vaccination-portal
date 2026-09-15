@@ -53,7 +53,7 @@ describe('citizen profile API', () => {
       createdAt: '2020-01-01T00:00:00Z',
       updatedAt: '2020-01-01T00:00:00Z',
       fullName: '  Updated Citizen  ',
-      phoneNumber: '  +94 77 000 1111  ',
+      phoneNumber: '  0770001111  ',
       dateOfBirth: '',
       gender: '',
       address: '   ',
@@ -63,7 +63,7 @@ describe('citizen profile API', () => {
       method: 'PUT',
       body: JSON.stringify({
         fullName: 'Updated Citizen',
-        phoneNumber: '+94 77 000 1111',
+        phoneNumber: '0770001111',
         dateOfBirth: null,
         gender: null,
         address: null,
@@ -74,13 +74,13 @@ describe('citizen profile API', () => {
   it('preserves supported optional values in the update contract', () => {
     expect(buildCitizenProfileUpdate({
       fullName: 'Citizen',
-      phoneNumber: '+94 77 000 1111',
+      phoneNumber: '0770001111',
       dateOfBirth: '1994-06-15',
       gender: 'PREFER_NOT_TO_SAY',
       address: '  10 Green Road  ',
     })).toEqual({
       fullName: 'Citizen',
-      phoneNumber: '+94 77 000 1111',
+      phoneNumber: '0770001111',
       dateOfBirth: '1994-06-15',
       gender: 'PREFER_NOT_TO_SAY',
       address: '10 Green Road',

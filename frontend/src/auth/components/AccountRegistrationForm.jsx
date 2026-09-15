@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import ApiErrorAlert from '../../components/common/ApiErrorAlert';
 import { REQUESTABLE_STAFF_ROLES } from '../constants/authRoles';
+import {
+  INVALID_EMAIL_MESSAGE,
+  INVALID_PHONE_NUMBER_MESSAGE,
+  isValidEmail,
+  isValidPhoneNumber,
+} from '../utils/contactValidation';
 import { ArrowIcon, EyeIcon } from './AuthIcons';
 
 const INITIAL_FORM = {
@@ -15,8 +21,9 @@ const INITIAL_FORM = {
 function validate(form, includeStaffRole) {
   if (!form.fullName.trim()) return 'Full name is required.';
   if (!form.email.trim()) return 'Email address is required.';
-  if (!form.email.includes('@') || form.email.startsWith('@') || form.email.endsWith('@')) return 'Please enter a valid email address.';
+  if (!isValidEmail(form.email)) return INVALID_EMAIL_MESSAGE;
   if (!form.phoneNumber.trim()) return 'Phone number is required.';
+  if (!isValidPhoneNumber(form.phoneNumber)) return INVALID_PHONE_NUMBER_MESSAGE;
   if (includeStaffRole && !REQUESTABLE_STAFF_ROLES.some(({ code }) => code === form.requestedRoleCode)) return 'Please select a valid staff role.';
   if (!form.password) return 'Password is required.';
   if (form.password.length > 128) return 'Password must not exceed 128 characters.';
@@ -137,7 +144,7 @@ export default function AccountRegistrationForm({ accountType, apiError, isSubmi
 
           <div className="auth-field auth-field--full">
             <label htmlFor={`${accountType}-phone`}>Phone Number</label>
-            <input className="auth-input" id={`${accountType}-phone`} name="phoneNumber" type="tel" value={form.phoneNumber} onChange={updateField} maxLength={32} autoComplete="tel" inputMode="tel" disabled={isSubmitting} aria-invalid={hasError} placeholder="Your contact number" required />
+            <input className="auth-input" id={`${accountType}-phone`} name="phoneNumber" type="tel" value={form.phoneNumber} onChange={updateField} maxLength={10} autoComplete="tel" inputMode="numeric" disabled={isSubmitting} aria-invalid={hasError} placeholder="Your contact number" required />
           </div>
         </div>
       </fieldset>
