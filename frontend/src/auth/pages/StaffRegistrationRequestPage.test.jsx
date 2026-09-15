@@ -11,10 +11,14 @@ function renderPage() {
   return render(<MemoryRouter><StaffRegistrationRequestPage /></MemoryRouter>);
 }
 
-function fillStaffForm({ confirmPassword = 'Secret123!' } = {}) {
+function fillStaffForm({
+  confirmPassword = 'Secret123!',
+  email = 'staff@example.com',
+  phoneNumber = '0711002000',
+} = {}) {
   fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: 'Staff User' } });
-  fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'staff@example.com' } });
-  fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: '+94 71 100 2000' } });
+  fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: phoneNumber } });
   fireEvent.change(screen.getByLabelText('Requested Staff Role'), { target: { value: 'ROLE_CAMPAIGN_OFFICER' } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Secret123!' } });
   fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: confirmPassword } });
@@ -28,6 +32,8 @@ describe('StaffRegistrationRequestPage', () => {
 
   it('renders only the four publicly requestable staff roles', () => {
     renderPage();
+    expect(screen.getByLabelText('Phone Number').maxLength).toBe(10);
+    expect(screen.getByLabelText('Phone Number').inputMode).toBe('numeric');
     const options = [...screen.getByLabelText('Requested Staff Role').options];
     expect(options.map((option) => option.textContent)).toEqual([
       'Healthcare Officer',
@@ -46,6 +52,30 @@ describe('StaffRegistrationRequestPage', () => {
     expect(registerStaff).not.toHaveBeenCalled();
   });
 
+  it.each(['student', 'student@', '@gmail.com', 'student gmail.com', 'student@domain'])(
+    'blocks malformed email %s',
+    (email) => {
+      renderPage();
+      fillStaffForm({ email });
+      fireEvent.click(screen.getByRole('button', { name: 'Submit Staff Account Request' }));
+
+      expect(screen.getByRole('alert').textContent).toContain('Enter a valid email address.');
+      expect(registerStaff).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['771234567', '07712345678', '07712ABC67', '077-123-4567', '+94771234567', '077 1234567'])(
+    'blocks invalid phone number %s',
+    (phoneNumber) => {
+      renderPage();
+      fillStaffForm({ phoneNumber });
+      fireEvent.click(screen.getByRole('button', { name: 'Submit Staff Account Request' }));
+
+      expect(screen.getByRole('alert').textContent).toContain('Phone number must contain exactly 10 digits.');
+      expect(registerStaff).not.toHaveBeenCalled();
+    },
+  );
+
   it('shows the pending-approval success state without logging in', async () => {
     registerStaff.mockResolvedValue({ id: 2, accountStatus: 'PENDING_APPROVAL' });
     renderPage();
@@ -55,6 +85,8 @@ describe('StaffRegistrationRequestPage', () => {
     expect(await screen.findByRole('heading', { name: /awaiting approval/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Go to Staff Login' })).toBeTruthy();
     expect(registerStaff).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'staff@example.com',
+      phoneNumber: '0711002000',
       requestedRoleCode: 'ROLE_CAMPAIGN_OFFICER',
     }));
   });

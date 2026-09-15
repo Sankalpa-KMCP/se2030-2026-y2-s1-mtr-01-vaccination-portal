@@ -28,7 +28,7 @@ describe('auth API', () => {
     await registerCitizen({
       fullName: '  Citizen User  ',
       email: ' citizen@example.com ',
-      phoneNumber: ' +94 77 123 4567 ',
+      phoneNumber: ' 0771234567 ',
       password: 'Secret123!',
       confirmPassword: 'Secret123!',
     });
@@ -38,7 +38,7 @@ describe('auth API', () => {
       body: JSON.stringify({
         fullName: 'Citizen User',
         email: 'citizen@example.com',
-        phoneNumber: '+94 77 123 4567',
+        phoneNumber: '0771234567',
         password: 'Secret123!',
       }),
     }));
@@ -50,7 +50,7 @@ describe('auth API', () => {
     await registerStaff({
       fullName: 'Staff User',
       email: 'staff@example.com',
-      phoneNumber: '+94 71 100 2000',
+      phoneNumber: '0711002000',
       password: 'Secret123!',
       requestedRoleCode: 'ROLE_CENTER_MANAGER',
     });

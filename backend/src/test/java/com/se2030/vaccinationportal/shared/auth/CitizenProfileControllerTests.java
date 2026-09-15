@@ -25,9 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -85,6 +87,27 @@ class CitizenProfileControllerTests {
     }
 
     @Test
+    @DisplayName("citizen with a legacy phone can still authenticate, call auth/me, and view the profile")
+    void legacyPhone_citizenAuthenticationAndReadsRemainAvailable() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"citizen.profile@example.com",
+                                 "password":"CitizenProfileController123!"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(citizen)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phoneNumber", is("+94 77 000 1111")));
+
+        mockMvc.perform(get("/api/v1/profile/me").header(HttpHeaders.AUTHORIZATION, bearer(citizen)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phoneNumber", is("+94 77 000 1111")));
+    }
+
+    @Test
     @DisplayName("citizen PUT derives ownership from JWT, ignores protected properties, and GET returns updates")
     void updateOwnProfile_citizen_usesPrincipalAndOnlyUpdatesAllowedFields() throws Exception {
         UserAccount otherCitizen = saveActive(
@@ -101,7 +124,7 @@ class CitizenProfileControllerTests {
                   "password": "replacement",
                   "passwordHash": "replacement-hash",
                   "fullName": "  Citizen Updated  ",
-                  "phoneNumber": "  +94 77 123 4567  ",
+                  "phoneNumber": "  0771234567  ",
                   "dateOfBirth": "1995-04-23",
                   "gender": "FEMALE",
                   "address": "  10 Temple Road  "
@@ -115,7 +138,7 @@ class CitizenProfileControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(citizen.getId().intValue())))
                 .andExpect(jsonPath("$.fullName", is("Citizen Updated")))
-                .andExpect(jsonPath("$.phoneNumber", is("+94 77 123 4567")))
+                .andExpect(jsonPath("$.phoneNumber", is("0771234567")))
                 .andExpect(jsonPath("$.dateOfBirth", is("1995-04-23")))
                 .andExpect(jsonPath("$.gender", is("FEMALE")))
                 .andExpect(jsonPath("$.address", is("10 Temple Road")))
@@ -144,7 +167,7 @@ class CitizenProfileControllerTests {
     @DisplayName("future date of birth and invalid controlled gender are rejected")
     void updateOwnProfile_invalidDemographics_returns400() throws Exception {
         assertValidationFailure("""
-                {"fullName":"Citizen","phoneNumber":"+94 77 123 4567",
+                {"fullName":"Citizen","phoneNumber":"0771234567",
                  "dateOfBirth":"2999-01-01","gender":"MALE","address":"Address"}
                 """);
 
@@ -152,7 +175,7 @@ class CitizenProfileControllerTests {
                         .header(HttpHeaders.AUTHORIZATION, bearer(citizen))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"fullName":"Citizen","phoneNumber":"+94 77 123 4567",
+                                {"fullName":"Citizen","phoneNumber":"0771234567",
                                  "dateOfBirth":"1990-01-01","gender":"UNSUPPORTED","address":"Address"}
                                 """))
                 .andExpect(status().isBadRequest())
@@ -161,13 +184,34 @@ class CitizenProfileControllerTests {
 
     @ParameterizedTest(name = "invalid profile payload {index} returns 400")
     @ValueSource(strings = {
-            "{\"fullName\":\"   \",\"phoneNumber\":\"+94 77 123 4567\"}",
+            "{\"fullName\":\"   \",\"phoneNumber\":\"0771234567\"}",
             "{\"fullName\":\"Citizen\",\"phoneNumber\":\"   \"}",
-            "{\"fullName\":\"Citizen\",\"phoneNumber\":\"123456789012345678901234567890123\"}",
-            "{\"fullName\":\"Citizen\",\"phoneNumber\":\"+94 77 123 4567\",\"address\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+            "{\"fullName\":\"Citizen\",\"phoneNumber\":\"0771234567\",\"address\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
     })
     void updateOwnProfile_invalidRequiredOrLengthField_returns400(String payload) throws Exception {
         assertValidationFailure(payload);
+    }
+
+    @ParameterizedTest(name = "invalid profile phone {0} returns 400")
+    @ValueSource(strings = {
+            "771234567",
+            "07712345678",
+            "07712ABC67",
+            "077-123-4567",
+            "+94771234567",
+            "077 1234567"
+    })
+    void updateOwnProfile_invalidPhone_returns400(String phoneNumber) throws Exception {
+        mockMvc.perform(put("/api/v1/profile/me")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(citizen))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName":"Citizen","phoneNumber":"%s"}
+                                """.formatted(phoneNumber)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.phoneNumber",
+                        hasItem("Phone number must contain exactly 10 digits.")));
     }
 
     @Test
@@ -227,7 +271,7 @@ class CitizenProfileControllerTests {
 
     private String validPayload() {
         return """
-                {"fullName":"Citizen","phoneNumber":"+94 77 123 4567",
+                {"fullName":"Citizen","phoneNumber":"0771234567",
                  "dateOfBirth":"1990-01-01","gender":"OTHER","address":"Address"}
                 """;
     }
