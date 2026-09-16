@@ -9,7 +9,20 @@ import org.springframework.stereotype.Repository;
 
 /**
  * Spring Data JPA repository for {@link Appointment} persistence operations.
- * Provides query methods for citizen active appointment validation and slot capacity checking.
+ * Provides query methods for citizen active appointment validation, booking history, and slot queue queries.
+ *
+ * <p><b>User Stories:</b>
+ * <ul>
+ *   <li>US-03: Search, book, cancel, and reschedule appointments.</li>
+ *   <li>US-26: View checked-in appointment queue for clinic arrival and vaccinator intake.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules:</b>
+ * <ul>
+ *   <li>MF03-BR-02: Active appointment duplicate verification per citizen and campaign.</li>
+ *   <li>MF03-BR-10: Query confirmed appointments eligible for check-in.</li>
+ *   <li>MF03-BR-11: Validate non-completed status for modification prevention.</li>
+ * </ul>
  */
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {

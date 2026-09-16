@@ -11,8 +11,20 @@ import org.springframework.stereotype.Repository;
 
 /**
  * Spring Data JPA repository for {@link CitizenCampaignBookingGuard}.
- * Enforces pessimistic locking semantics per Canonical Section 12.4 to serialize
- * appointment and waitlist cross-table invariant checks.
+ * Enforces pessimistic write-locking semantics (SELECT ... FOR UPDATE) per Canonical Section 12.4
+ * to serialize appointment booking, waitlist joining, rescheduling, and promotion workflows.
+ *
+ * <p><b>User Stories:</b>
+ * <ul>
+ *   <li>US-03: Search, book, cancel, and reschedule appointments.</li>
+ *   <li>US-05: Join waitlists and execute automated promotions.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules:</b>
+ * <ul>
+ *   <li>MF03-BR-02: Protects the single active appointment per citizen per campaign invariant against concurrent race conditions.</li>
+ *   <li>MF03-BR-14: Prevents concurrent waitlist joining and appointment booking from creating incompatible dual holdings.</li>
+ * </ul>
  */
 @Repository
 public interface CitizenCampaignBookingGuardRepository extends JpaRepository<CitizenCampaignBookingGuard, Long> {

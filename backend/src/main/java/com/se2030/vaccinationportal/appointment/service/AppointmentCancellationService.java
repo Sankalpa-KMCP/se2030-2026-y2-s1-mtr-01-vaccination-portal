@@ -14,7 +14,20 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Service orchestrating appointment cancellation and time slot capacity release workflows.
  * Enforces 24-hour cancellation rules (MF03-BR-04), completion immutability (MF03-BR-11),
- * and atomic capacity release (MF03-BR-05) within a single transactional boundary.
+ * atomic capacity release (MF03-BR-05), and synchronous waitlist promotion within a single transactional boundary.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Citizen self-service appointment cancellation and staff override cancellation.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-04: Citizen self-cancellation allowed until 24 hours before slot start;
+ *       within 24 hours requires authorized staff override with mandatory reason.</li>
+ *   <li>MF03-BR-05: Atomically releases time slot capacity back to MF-02.</li>
+ *   <li>MF03-BR-11: A COMPLETED appointment cannot be cancelled.</li>
+ * </ul>
  */
 @Service
 @Transactional
@@ -69,6 +82,11 @@ public class AppointmentCancellationService {
 
     /**
      * Core cancellation method handling citizen and staff cancellation workflows atomically (MF03-BR-04, MF03-BR-05, MF03-BR-11).
+     * <p>
+     * <b>Viva / Concurrency Rationale:</b> Validates ownership and the 24-hour modification window before releasing
+     * capacity. Upon cancellation, the slot capacity is released in MF-02 and any queued waitlist candidate is promoted
+     * <i>synchronously</i> within this exact same transaction so that the freed place is not intercepted by an external booker.
+     * </p>
      *
      * @param appointmentId        Identifier of the target appointment
      * @param requestingCitizenId Identifier of the citizen (optional if staff override)
@@ -106,7 +124,12 @@ public class AppointmentCancellationService {
         appointment.cancel(effectiveNow);
         Appointment saved = appointmentRepository.save(appointment);
 
-        // Step 2e: Trigger automatic waitlist promotion if a waiter is queued for this freed capacity
+        // Step 2e: Trigger automatic waitlist promotion if a waiter is queued for this freed capacity.
+        // Viva / Concurrency Sequencing Probe: Why promote synchronously inside cancellation's own transaction?
+        // If cancellation committed before promoting, an external concurrent citizen could swoop in and steal the newly
+        // freed slot via a direct booking request, starving the waitlisted citizen who has been waiting in FIFO order!
+        // By running promotion synchronously within the cancellation transaction, the released capacity is immediately
+        // claimed by the earliest eligible FIFO waitlist entry before other transactions can observe the unreserved capacity.
         if (promotionService != null) {
             promotionService.promoteNextForSlot(appointment.getCampaignId(), appointment.getSlotId(), effectiveNow);
         }

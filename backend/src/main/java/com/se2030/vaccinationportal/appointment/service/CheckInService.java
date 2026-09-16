@@ -19,7 +19,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service orchestrating citizen check-in, check-in reversal, no-show marking, and vaccinator queue inspection workflows (US-26, MF03-BR-09, MF03-BR-10, MF03-BR-15).
+ * Service orchestrating citizen arrival check-in, check-in reversal, no-show marking, and vaccinator queue inspection workflows.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-26: View and manage checked-in and eligible appointments at clinic arrival.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-09: Standard check-in window is 30 minutes before to 30 minutes after slot start time;
+ *       arrival outside this window requires authorized staff override with mandatory reason.</li>
+ *   <li>MF03-BR-10: Check-in is permitted only for CONFIRMED appointments at the designated vaccination center.</li>
+ *   <li>MF03-BR-11: A COMPLETED appointment cannot be checked in again.</li>
+ *   <li>MF03-BR-15: Check-in reversal returns CHECKED_IN to CONFIRMED and is rejected after completion.</li>
+ * </ul>
  */
 @Service
 @Transactional
@@ -73,6 +87,13 @@ public class CheckInService {
 
     /**
      * Core check-in method enforcing status immutability, 30-minute window validation, and state transition.
+     * <p>
+     * <b>Viva / Window Rationale ("Why enforce a 30-minute window"):</b><br>
+     * Clinics operate with scheduled capacity per time slot. Arriving hours early causes lobby congestion and
+     * risks vaccine dose preparation timing; arriving hours late disrupts subsequent slots. The 30-minute buffer
+     * ({@code [-30m, +30m]} from slot start) provides practical grace period while maintaining crowd safety.
+     * Exceptions (e.g. transport delay) require staff override with an audit reason (MF03-BR-09).
+     * </p>
      *
      * @param appointmentId   Identifier of the target appointment
      * @param isStaffOverride {@code true} if staff override is active
@@ -101,6 +122,7 @@ public class CheckInService {
         }
 
         // Validate 30-minute check-in window (MF03-BR-09)
+        // Viva note: Window is [-30 minutes before slot start, +30 minutes after slot start].
         if (slotCapacityPort != null) {
             Instant slotStart = slotCapacityPort.getSlotStartTime(appointment.getSlotId());
             if (slotStart != null) {
@@ -123,6 +145,11 @@ public class CheckInService {
 
     /**
      * Reverts a CHECKED_IN appointment back to CONFIRMED (MF03-BR-15).
+     * <p>
+     * <b>Viva / Clinical Note:</b> Reverses an erroneous check-in (e.g. wrong citizen badge scanned,
+     * or citizen left before nurse consultation). Permitted only while status is CHECKED_IN;
+     * once vaccination is administered and COMPLETED, reversal is strictly prohibited.
+     * </p>
      *
      * @param appointmentId Identifier of the appointment to revert
      * @return Updated {@link Appointment} in CONFIRMED status
@@ -146,6 +173,11 @@ public class CheckInService {
 
     /**
      * Marks a CONFIRMED appointment as NO_SHOW after its check-in window closes, releasing capacity and triggering waitlist promotion.
+     * <p>
+     * <b>Viva / Concurrency Note:</b> A no-show cannot be recorded until after the check-in window expires (+30 minutes
+     * past slot start), ensuring the citizen has full opportunity to arrive. Once recorded, the unused slot capacity is
+     * released and waitlist promotion fires immediately to offer the dose to waiting citizens.
+     * </p>
      *
      * @param appointmentId Identifier of the appointment
      * @param now           Current request timestamp
@@ -165,7 +197,7 @@ public class CheckInService {
                     + appointment.getStatus());
         }
 
-        // Validate window close
+        // Validate window close: Citizen must not be marked NO_SHOW while their 30-minute arrival grace window is still open
         if (slotCapacityPort != null) {
             Instant slotStart = slotCapacityPort.getSlotStartTime(appointment.getSlotId());
             if (slotStart != null) {
@@ -181,6 +213,7 @@ public class CheckInService {
         Appointment saved = appointmentRepository.save(appointment);
 
         // Release capacity on slot and trigger waitlist promotion (same pattern as cancellation)
+        // Viva note: The unused place is immediately reclaimed and allocated to the next FIFO waitlist candidate.
         if (slotCapacityPort != null) {
             slotCapacityPort.releaseCapacity(appointment.getSlotId());
         }
