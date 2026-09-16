@@ -297,9 +297,43 @@ class EligibilityReviewServiceLifecycleTests {
                 () -> assertThat(assessment.getValidUntil()).isEqualTo(REVIEWED_AT.plusSeconds(86_400)),
                 () -> assertThat(assessment.getRevocationReason())
                         .isEqualTo("Eligibility withdrawn after clinical review"),
-                () -> assertThat(assessment.getRevokedAt()).isNotNull()
+                () -> assertThat(assessment.getRevokedAt()).isEqualTo(REVIEWED_AT)
         );
         verify(assessmentRepository).save(same(assessment));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "   "})
+    void revokeAssessmentRejectsBlankReason(String revocationReason) {
+        assertThatThrownBy(() -> service.revokeAssessment(
+                ASSESSMENT_ID,
+                REVIEWER_ID,
+                revocationReason
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Revocation reason is required");
+
+        verify(assessmentRepository, never()).findById(ASSESSMENT_ID);
+        verify(assessmentRepository, never()).save(any(EligibilityAssessment.class));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EligibilityAssessmentStatus.class, names = {"INELIGIBLE", "EXPIRED"})
+    void revokeAssessmentRejectsOtherNonEligibleStatuses(EligibilityAssessmentStatus status) {
+        EligibilityAssessment assessment = assessmentWithStatus(status);
+        when(assessmentRepository.findById(ASSESSMENT_ID)).thenReturn(Optional.of(assessment));
+
+        assertThatThrownBy(() -> service.revokeAssessment(
+                ASSESSMENT_ID,
+                REVIEWER_ID,
+                "Eligibility withdrawn"
+        ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ELIGIBLE");
+
+        assertThat(assessment.getStatus()).isEqualTo(status);
+        verify(assessmentRepository, never()).save(any(EligibilityAssessment.class));
     }
 
     @Test

@@ -100,7 +100,7 @@ function AccountInformation({ profile }) {
       </header>
       <div className="citizen-detail-panel__body">
         <dl className="citizen-profile__details">
-          <Detail label="Account ID">{profile.id}</Detail>
+          <Detail label="Citizen ID">{profile.id != null ? `#${profile.id}` : null}</Detail>
           <Detail label="Email address">{profile.email}</Detail>
           <Detail label="Account status">{formatEnum(profile.accountStatus)}</Detail>
           <Detail label="Account type">Citizen</Detail>
