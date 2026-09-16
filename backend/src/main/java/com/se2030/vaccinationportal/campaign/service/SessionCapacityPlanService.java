@@ -227,9 +227,9 @@ public class SessionCapacityPlanService {
                 throw new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException(
                         "Full authentication is required to override session capacity");
             }
-            if (!actor.hasRole("ROLE_CENTER_MANAGER")) {
+            if (!actor.hasRole("ROLE_CENTER_MANAGER") && !actor.hasRole("ROLE_SUPER_ADMIN")) {
                 throw new org.springframework.security.access.AccessDeniedException(
-                        "User is not authorized to override session capacity. Role ROLE_CENTER_MANAGER is required.");
+                        "User is not authorized to override session capacity. ROLE_CENTER_MANAGER is required (or ROLE_SUPER_ADMIN).");
             }
         }
 

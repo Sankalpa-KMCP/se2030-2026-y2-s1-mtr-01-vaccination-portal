@@ -289,12 +289,14 @@ public class AppointmentController {
                 "ROLE_ADMIN".equals(a.getAuthority()) ||
                 "ROLE_HEALTHCARE_OFFICER".equals(a.getAuthority()) ||
                 "ROLE_CENTER_MANAGER".equals(a.getAuthority()) ||
+                "ROLE_SUPER_ADMIN".equals(a.getAuthority()) ||
                 "ADMIN".equals(a.getAuthority()) ||
                 "HEALTHCARE_OFFICER".equals(a.getAuthority()) ||
-                "CENTER_MANAGER".equals(a.getAuthority())
+                "CENTER_MANAGER".equals(a.getAuthority()) ||
+                "SUPER_ADMIN".equals(a.getAuthority())
         );
         if (!hasStaffRole) {
-            throw new AccessDeniedException("Staff override requires an authorized staff role (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER)");
+            throw new AccessDeniedException("Staff override requires an authorized staff role (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER, SUPER_ADMIN)");
         }
     }
 }
