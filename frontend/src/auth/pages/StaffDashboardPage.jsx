@@ -22,6 +22,7 @@ export default function StaffDashboardPage() {
     canViewCenters(user) && ['Center Operations', 'Access vaccination-center operational information.', '/app/center-operations'],
     canViewSessions(user) && ['Sessions', 'View and manage vaccination sessions permitted for your role.', '/app/sessions'],
     canViewAnalytics(user) && ['Operational Analytics', 'Review operational vaccination programme analytics.', '/app/analytics'],
+    (hasRole(user, 'ROLE_INVENTORY_OFFICER') || hasRole(user, 'ROLE_ADMIN')) && ['Inventory & Batches', 'Manage MF-04 manufacturers, vaccine batches, and center stock.', '/app/inventory'],
   ].filter(Boolean);
 
   return (

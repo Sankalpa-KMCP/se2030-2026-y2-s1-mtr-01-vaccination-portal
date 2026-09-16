@@ -1,12 +1,12 @@
--- Flyway Database Migration V5: MF-04 Vaccine Inventory and Batch Management Foundation
+-- Flyway Database Migration V15: MF-04 Vaccine Inventory and Batch Management Foundation
 -- Canonical Sections 8, 12.2, 12.3 and Business Rules MF04-BR-01 through MF04-BR-12
 
 CREATE TABLE manufacturers (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(64) NOT NULL,
     name VARCHAR(128) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     CONSTRAINT uk_manufacturer_code UNIQUE (code),
     CONSTRAINT uk_manufacturer_name UNIQUE (name),
     CONSTRAINT chk_manufacturer_code_not_blank CHECK (TRIM(code) <> ''),
@@ -21,8 +21,8 @@ CREATE TABLE vaccine_batches (
     manufacture_date DATE NOT NULL,
     expiry_date DATE NOT NULL,
     batch_status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     CONSTRAINT uk_vaccine_batch_identity
         UNIQUE (manufacturer_id, vaccine_type_id, batch_number),
     CONSTRAINT fk_vaccine_batch_manufacturer
@@ -46,8 +46,8 @@ CREATE TABLE center_inventories (
     batch_id BIGINT NOT NULL,
     quantity INT NOT NULL DEFAULT 0,
     lock_version BIGINT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     CONSTRAINT uk_center_inventory_center_batch UNIQUE (center_id, batch_id),
     CONSTRAINT fk_center_inventory_center
         FOREIGN KEY (center_id) REFERENCES vaccination_centers(id) ON DELETE RESTRICT,
@@ -68,9 +68,9 @@ CREATE TABLE stock_transfers (
     quantity INT NOT NULL,
     status VARCHAR(32) NOT NULL,
     requested_by BIGINT NOT NULL,
-    completed_at TIMESTAMP NULL,
+    completed_at DATETIME(6) NULL,
     reason VARCHAR(500) NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     CONSTRAINT uk_stock_transfer_correlation UNIQUE (correlation_id),
     CONSTRAINT fk_stock_transfer_batch
         FOREIGN KEY (batch_id) REFERENCES vaccine_batches(id) ON DELETE RESTRICT,
@@ -99,10 +99,10 @@ CREATE TABLE stock_transactions (
     delta INT NOT NULL,
     before_qty INT NOT NULL,
     after_qty INT NOT NULL,
-    actor_id BIGINT NOT NULL,
+    actor_id BIGINT NULL,
     reason VARCHAR(500) NULL,
     vaccination_record_id BIGINT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     CONSTRAINT uk_stock_transaction_vaccination_record UNIQUE (vaccination_record_id),
     CONSTRAINT uk_stock_transaction_transfer_type UNIQUE (stock_transfer_id, type),
     CONSTRAINT fk_stock_transaction_inventory
@@ -111,6 +111,8 @@ CREATE TABLE stock_transactions (
         FOREIGN KEY (stock_transfer_id) REFERENCES stock_transfers(id) ON DELETE RESTRICT,
     CONSTRAINT fk_stock_transaction_actor
         FOREIGN KEY (actor_id) REFERENCES user_accounts(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_stock_transaction_vaccination_record
+        FOREIGN KEY (vaccination_record_id) REFERENCES vaccination_records(id) ON DELETE RESTRICT,
     CONSTRAINT chk_stock_transaction_type CHECK (
         type IN (
             'RECEIPT',
@@ -135,6 +137,9 @@ CREATE TABLE stock_transactions (
     ),
     CONSTRAINT chk_stock_transaction_vaccination_dose CHECK (
         type <> 'VACCINATION_DEDUCTION' OR delta = -1
+    ),
+    CONSTRAINT chk_stock_transaction_actor CHECK (
+        type = 'VACCINATION_DEDUCTION' OR actor_id IS NOT NULL
     ),
     CONSTRAINT chk_stock_transaction_transfer_link CHECK (
         (type IN ('TRANSFER_OUT', 'TRANSFER_IN') AND stock_transfer_id IS NOT NULL)

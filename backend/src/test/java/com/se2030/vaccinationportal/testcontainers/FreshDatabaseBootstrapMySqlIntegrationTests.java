@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Deterministic Fresh Database Bootstrap and Schema Migration Integration Test.
  *
  * <p>Verifies X3 / VP-002: A completely empty, clean MySQL database instance
- * bootstraps successfully through Flyway (V0-V14), seeds canonical static data,
+ * bootstraps successfully through Flyway (V0-V15), seeds canonical static data,
  * satisfies Hibernate schema validation ({@code ddl-auto=validate}), and proves
  * idempotent migration execution.</p>
  */
@@ -145,11 +145,11 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should apply all migration versions V0 through V14 with SUCCESS status")
+    @DisplayName("Should apply all migration versions V0 through V15 with SUCCESS status")
     void shouldApplyAllMigrationsSuccessfully() {
         assertNotNull(flyway, "Flyway bean must be configured and injected");
         MigrationInfo[] appliedMigrations = flyway.info().all();
-        assertEquals(15, appliedMigrations.length, "Expected exactly 15 migrations (V0-V14)");
+        assertEquals(16, appliedMigrations.length, "Expected exactly 16 migrations (V0-V15)");
 
         for (int i = 0; i <= 14; i++) {
             String expectedVersion = String.valueOf(i);
