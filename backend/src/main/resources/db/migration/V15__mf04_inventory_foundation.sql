@@ -78,8 +78,6 @@ CREATE TABLE stock_transfers (
         FOREIGN KEY (source_center_id) REFERENCES vaccination_centers(id) ON DELETE RESTRICT,
     CONSTRAINT fk_stock_transfer_destination_center
         FOREIGN KEY (destination_center_id) REFERENCES vaccination_centers(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_stock_transfer_requested_by
-        FOREIGN KEY (requested_by) REFERENCES user_accounts(id) ON DELETE RESTRICT,
     CONSTRAINT chk_stock_transfer_correlation_not_blank CHECK (TRIM(correlation_id) <> ''),
     CONSTRAINT chk_stock_transfer_quantity CHECK (quantity > 0),
     CONSTRAINT chk_stock_transfer_distinct_centers CHECK (source_center_id <> destination_center_id)
@@ -109,8 +107,6 @@ CREATE TABLE stock_transactions (
         FOREIGN KEY (inventory_id) REFERENCES center_inventories(id) ON DELETE RESTRICT,
     CONSTRAINT fk_stock_transaction_transfer
         FOREIGN KEY (stock_transfer_id) REFERENCES stock_transfers(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_stock_transaction_actor
-        FOREIGN KEY (actor_id) REFERENCES user_accounts(id) ON DELETE RESTRICT,
     CONSTRAINT fk_stock_transaction_vaccination_record
         FOREIGN KEY (vaccination_record_id) REFERENCES vaccination_records(id) ON DELETE RESTRICT,
     CONSTRAINT chk_stock_transaction_type CHECK (
