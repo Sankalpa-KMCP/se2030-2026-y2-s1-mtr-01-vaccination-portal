@@ -99,7 +99,9 @@ ALTER TABLE digital_certificates
 
 -- 8. Replace the V11 one-certificate-ever rule with historical lifecycle support.
 ALTER TABLE digital_certificates
-    DROP FOREIGN KEY fk_digital_certificate_record,
+    DROP FOREIGN KEY fk_digital_certificate_record;
+
+ALTER TABLE digital_certificates
     DROP INDEX uk_digital_certificate_record;
 
 ALTER TABLE digital_certificates

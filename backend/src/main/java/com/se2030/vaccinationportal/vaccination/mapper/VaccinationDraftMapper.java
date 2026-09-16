@@ -19,13 +19,12 @@ public final class VaccinationDraftMapper {
         }
 
         VaccinationDraft draft = new VaccinationDraft(request.appointmentId());
-        draft.setVaccinatorId(request.vaccinatorId());
         draft.setVaccineBatchId(request.vaccineBatchId());
         draft.setDoseNumber(request.doseNumber());
         draft.setAdministrationTime(request.administrationTime());
         draft.setNextDoseDate(request.nextDoseDate());
         draft.setAuthorizedNotes(request.authorizedNotes());
-        draft.setPhysicalAdministrationConfirmed(Boolean.TRUE.equals(request.physicalAdministrationConfirmed()));
+        draft.setPhysicalAdministrationConfirmed(false);
         return draft;
     }
 
@@ -37,9 +36,6 @@ public final class VaccinationDraftMapper {
             throw new IllegalArgumentException("Vaccination draft is required");
         }
 
-        if (request.vaccinatorId() != null) {
-            draft.setVaccinatorId(request.vaccinatorId());
-        }
         if (request.vaccineBatchId() != null) {
             draft.setVaccineBatchId(request.vaccineBatchId());
         }
@@ -54,9 +50,6 @@ public final class VaccinationDraftMapper {
         }
         if (request.authorizedNotes() != null) {
             draft.setAuthorizedNotes(request.authorizedNotes());
-        }
-        if (request.physicalAdministrationConfirmed() != null) {
-            draft.setPhysicalAdministrationConfirmed(request.physicalAdministrationConfirmed());
         }
     }
 

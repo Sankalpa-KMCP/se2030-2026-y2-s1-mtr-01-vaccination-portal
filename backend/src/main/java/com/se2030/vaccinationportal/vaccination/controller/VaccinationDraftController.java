@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.vaccination.controller;
 
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.dto.VaccinationDraftResponse;
@@ -10,6 +11,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -26,7 +28,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
  */
 @RestController
 @RequestMapping("/api/v1/vaccination/drafts")
-@PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER')")
+@PreAuthorize("hasRole('VACCINATOR')")
 public class VaccinationDraftController {
 
     private final VaccinationDraftService draftService;
@@ -37,9 +39,10 @@ public class VaccinationDraftController {
 
     @PostMapping
     public ResponseEntity<VaccinationDraftResponse> createDraft(
-            @Valid @RequestBody CreateVaccinationDraftRequest request
+            @Valid @RequestBody CreateVaccinationDraftRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        VaccinationDraft created = draftService.createDraft(request);
+        VaccinationDraft created = draftService.createDraft(request, principal.getUserId());
         URI location = URI.create("/api/v1/vaccination/drafts/" + created.getId());
         return ResponseEntity.created(location).body(VaccinationDraftMapper.toResponse(created));
     }

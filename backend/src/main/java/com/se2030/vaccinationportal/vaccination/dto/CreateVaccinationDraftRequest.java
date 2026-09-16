@@ -1,5 +1,7 @@
 package com.se2030.vaccinationportal.vaccination.dto;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
@@ -16,9 +18,6 @@ public record CreateVaccinationDraftRequest(
         @Positive(message = "Appointment ID must be positive")
         Long appointmentId,
 
-        @Positive(message = "Vaccinator ID must be positive")
-        Long vaccinatorId,
-
         @Positive(message = "Vaccine batch ID must be positive")
         Long vaccineBatchId,
 
@@ -32,8 +31,10 @@ public record CreateVaccinationDraftRequest(
         LocalDate nextDoseDate,
 
         @Size(max = 2000, message = "Authorized notes must not exceed 2000 characters")
-        String authorizedNotes,
-
-        Boolean physicalAdministrationConfirmed
+        String authorizedNotes
 ) {
+    @JsonAnySetter
+    public void rejectUnsupportedField(String name, Object value) {
+        throw new IllegalArgumentException("Unsupported draft field: " + name);
+    }
 }

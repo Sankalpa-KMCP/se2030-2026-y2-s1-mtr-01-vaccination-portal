@@ -60,9 +60,10 @@ class VaccinationDraftServiceTests {
         when(draftRepository.saveAndFlush(any(VaccinationDraft.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        VaccinationDraft created = service.createDraft(request);
+        VaccinationDraft created = service.createDraft(request, 201L);
 
         assertEquals(101L, created.getAppointmentId());
+        assertEquals(201L, created.getVaccinatorId());
         assertEquals(2, created.getDoseNumber());
         assertFalse(created.isPhysicalAdministrationConfirmed());
         verify(integrationValidator).validateAppointment(101L);
@@ -73,7 +74,7 @@ class VaccinationDraftServiceTests {
     void createDraft_duplicateAppointment_isRejectedWithoutSaving() {
         when(draftRepository.existsByAppointmentId(101L)).thenReturn(true);
 
-        assertThrows(DuplicateVaccinationDraftException.class, () -> service.createDraft(createRequest(101L)));
+        assertThrows(DuplicateVaccinationDraftException.class, () -> service.createDraft(createRequest(101L), 201L));
 
         verify(draftRepository, never()).saveAndFlush(any());
     }
@@ -81,11 +82,11 @@ class VaccinationDraftServiceTests {
     @Test
     void createDraft_futureAdministrationTime_isRejected() {
         CreateVaccinationDraftRequest request = new CreateVaccinationDraftRequest(
-                101L, 201L, 301L, 1, NOW.plusSeconds(60), null, null, false
+                101L, 301L, 1, NOW.plusSeconds(60), null, null
         );
         when(draftRepository.existsByAppointmentId(101L)).thenReturn(false);
 
-        assertThrows(InvalidVaccinationDraftException.class, () -> service.createDraft(request));
+        assertThrows(InvalidVaccinationDraftException.class, () -> service.createDraft(request, 201L));
 
         verify(draftRepository, never()).saveAndFlush(any());
     }
@@ -118,25 +119,24 @@ class VaccinationDraftServiceTests {
     @Test
     void updateDraft_permittedFields_areApplied() {
         VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccinatorId(201L);
         when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
         when(draftRepository.save(draft)).thenReturn(draft);
         UpdateVaccinationDraftRequest request = new UpdateVaccinationDraftRequest(
-                202L,
                 302L,
                 3,
                 NOW.minusSeconds(60),
                 LocalDate.of(2026, 9, 20),
-                "Updated notes",
-                true
+                "Updated notes"
         );
 
         VaccinationDraft updated = service.updateDraft(1L, request);
 
-        assertEquals(202L, updated.getVaccinatorId());
+        assertEquals(201L, updated.getVaccinatorId());
         assertEquals(302L, updated.getVaccineBatchId());
         assertEquals(3, updated.getDoseNumber());
         assertEquals("Updated notes", updated.getAuthorizedNotes());
-        assertEquals(true, updated.isPhysicalAdministrationConfirmed());
+        assertFalse(updated.isPhysicalAdministrationConfirmed());
         verify(integrationValidator).validateAppointment(101L);
     }
 
@@ -148,7 +148,7 @@ class VaccinationDraftServiceTests {
 
         assertThrows(
                 AppointmentNotCheckedInException.class,
-                () -> service.createDraft(createRequest(101L))
+                () -> service.createDraft(createRequest(101L), 201L)
         );
 
         verify(draftRepository, never()).saveAndFlush(any());
@@ -157,7 +157,7 @@ class VaccinationDraftServiceTests {
     @Test
     void updateDraft_emptyPatch_isRejected() {
         UpdateVaccinationDraftRequest empty = new UpdateVaccinationDraftRequest(
-                null, null, null, null, null, null, null
+                null, null, null, null, null
         );
 
         assertThrows(InvalidVaccinationDraftException.class, () -> service.updateDraft(1L, empty));
@@ -184,16 +184,54 @@ class VaccinationDraftServiceTests {
         verify(draftRepository, never()).delete(any());
     }
 
+    @Test
+    void createDraft_nullRequestOrInvalidIdentityIsRejected() {
+        assertThrows(InvalidVaccinationDraftException.class, () -> service.createDraft(null, 201L));
+        assertThrows(InvalidVaccinationDraftException.class, () -> service.createDraft(createRequest(0L), 201L));
+        assertThrows(InvalidVaccinationDraftException.class, () -> service.createDraft(createRequest(101L), null));
+        assertThrows(InvalidVaccinationDraftException.class, () -> service.createDraft(createRequest(101L), 0L));
+        verify(draftRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void invalidDraftIdsAreRejected() {
+        assertThrows(InvalidVaccinationDraftException.class, () -> service.getDraftById(0L));
+        assertThrows(InvalidVaccinationDraftException.class, () -> service.deleteDraft(-1L));
+        verify(draftRepository, never()).findById(any());
+    }
+
+    @Test
+    void updateAndDeleteRejectNonEditableDraft() {
+        VaccinationDraft draft = org.mockito.Mockito.mock(VaccinationDraft.class);
+        when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
+        assertThrows(InvalidVaccinationDraftException.class,
+                () -> service.updateDraft(1L, new UpdateVaccinationDraftRequest(null, 2, null, null, null)));
+        assertThrows(InvalidVaccinationDraftException.class, () -> service.deleteDraft(1L));
+        verify(draftRepository, never()).save(any());
+        verify(draftRepository, never()).delete(any());
+    }
+
+    @Test
+    void updatePreservesExistingConfirmationAndIdentity() {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccinatorId(201L);
+        draft.setAdministrationTime(NOW.minusSeconds(60));
+        draft.setPhysicalAdministrationConfirmed(true);
+        when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
+        when(draftRepository.save(draft)).thenReturn(draft);
+        service.updateDraft(1L, new UpdateVaccinationDraftRequest(null, null, null, null, "Notes"));
+        assertEquals(201L, draft.getVaccinatorId());
+        assertEquals(true, draft.isPhysicalAdministrationConfirmed());
+    }
+
     private CreateVaccinationDraftRequest createRequest(Long appointmentId) {
         return new CreateVaccinationDraftRequest(
                 appointmentId,
-                201L,
                 301L,
                 2,
                 NOW.minusSeconds(60),
                 LocalDate.of(2026, 9, 20),
-                "Initial notes",
-                false
+                "Initial notes"
         );
     }
 }

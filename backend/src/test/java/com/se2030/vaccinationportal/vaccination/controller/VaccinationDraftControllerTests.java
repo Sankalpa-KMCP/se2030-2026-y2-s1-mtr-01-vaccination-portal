@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,6 +25,13 @@ import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFou
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
 import com.se2030.vaccinationportal.vaccination.service.VaccinationDraftService;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.core.MethodParameter;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.ModelAndViewContainer;
+import org.springframework.web.bind.support.WebDataBinderFactory;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -56,6 +64,15 @@ class VaccinationDraftControllerTests {
         objectMapper = new JsonMapper();
         mockMvc = MockMvcBuilders.standaloneSetup(new VaccinationDraftController(draftService))
                 .setControllerAdvice(new VaccinationExceptionHandler())
+                .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    public boolean supportsParameter(MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
+                    }
+                    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer container,
+                            NativeWebRequest request, WebDataBinderFactory factory) {
+                        return UserPrincipal.fromClaims(201L, "vaccinator@test.gov", List.of("ROLE_VACCINATOR"));
+                    }
+                })
                 .setValidator(validator)
                 .build();
 
@@ -72,13 +89,12 @@ class VaccinationDraftControllerTests {
     @Test
     void createDraft_validRequest_returns201() throws Exception {
         CreateVaccinationDraftRequest request = new CreateVaccinationDraftRequest(
-                101L, 201L, 301L, 1,
+                101L, 301L, 1,
                 Instant.parse("2026-08-26T09:00:00Z"),
                 LocalDate.of(2030, 9, 20),
-                "Notes",
-                false
+                "Notes"
         );
-        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class))).thenReturn(sampleDraft);
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L))).thenReturn(sampleDraft);
 
         mockMvc.perform(post("/api/v1/vaccination/drafts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -101,7 +117,7 @@ class VaccinationDraftControllerTests {
 
     @Test
     void createDraft_duplicateAppointment_returns409() throws Exception {
-        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class)))
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L)))
                 .thenThrow(new DuplicateVaccinationDraftException(
                         "An active vaccination draft already exists for appointment: 101"
                 ));
@@ -115,7 +131,7 @@ class VaccinationDraftControllerTests {
 
     @Test
     void createDraft_unknownAppointment_returns404() throws Exception {
-        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class)))
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L)))
                 .thenThrow(new VaccinationAppointmentNotFoundException("Appointment not found: 101"));
 
         mockMvc.perform(post("/api/v1/vaccination/drafts")
@@ -128,7 +144,7 @@ class VaccinationDraftControllerTests {
 
     @Test
     void createDraft_appointmentNotCheckedIn_returns409() throws Exception {
-        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class)))
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L)))
                 .thenThrow(new AppointmentNotCheckedInException("Appointment is not checked in: 101"));
 
         mockMvc.perform(post("/api/v1/vaccination/drafts")
@@ -141,7 +157,7 @@ class VaccinationDraftControllerTests {
 
     @Test
     void createDraft_existingVaccinationRecord_returns409() throws Exception {
-        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class)))
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L)))
                 .thenThrow(new VaccinationRecordAlreadyExistsException(
                         "A finalized vaccination record already exists for appointment: 101"
                 ));
@@ -205,6 +221,39 @@ class VaccinationDraftControllerTests {
                         .content("{\"doseNumber\":0}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status", is(400)));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "{}", "null", "{", "{\"appointmentId\":null}", "{\"appointmentId\":\"abc\"}",
+            "{\"appointmentId\":101,\"vaccineBatchId\":0}",
+            "{\"appointmentId\":101,\"administrationTime\":\"2099-01-01T00:00:00Z\"}",
+            "{\"appointmentId\":101,\"nextDoseDate\":\"2000-01-01\"}"})
+    void createDraftMalformedOrInvalidPayloadReturns400(String payload) throws Exception {
+        mockMvc.perform(post("/api/v1/vaccination/drafts").contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(draftService);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"vaccinatorId", "physicalAdministrationConfirmed", "status", "id"})
+    void publicRequestsRejectServerControlledFields(String field) throws Exception {
+        String value = field.equals("physicalAdministrationConfirmed") ? "true" : "999";
+        mockMvc.perform(post("/api/v1/vaccination/drafts").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"appointmentId\":101,\"" + field + "\":" + value + "}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/api/v1/vaccination/drafts/1").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"doseNumber\":2,\"" + field + "\":" + value + "}"))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(draftService);
+    }
+
+    @Test
+    void oversizedNotesReturns400() throws Exception {
+        mockMvc.perform(patch("/api/v1/vaccination/drafts/1").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"authorizedNotes\":\"" + "a".repeat(2001) + "\"}"))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(draftService);
     }
 
     @Test
