@@ -31,8 +31,7 @@ export default function Header({ onLogout }) {
   const showAdminNavigation = hasRole(user, ADMIN_ROLE);
   const showScreeningConfigurationNavigation = hasRole(
     user,
-    ADMIN_ROLE,
-    'ROLE_SYSTEM_ADMINISTRATOR',
+    'ROLE_HEALTHCARE_OFFICER',
   );
   const showCitizenNavigation = hasRole(user, CITIZEN_ROLE);
   const showScreeningReview = hasRole(user, 'ROLE_HEALTHCARE_OFFICER');

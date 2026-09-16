@@ -25,16 +25,6 @@ export default function AdminDashboardPage() {
           description="Review pending staff account requests and assign authoritative roles."
           to="/app/admin/staff-requests"
         />
-        <DashboardServiceCard
-          title="Screening Questions"
-          description="Manage the shared pre-vaccination screening question catalogue."
-          to="/app/screening/questions"
-        />
-        <DashboardServiceCard
-          title="Screening Questionnaires"
-          description="Build and manage pre-vaccination screening questionnaires."
-          to="/app/screening/questionnaires"
-        />
       </div>
     </section>
   );

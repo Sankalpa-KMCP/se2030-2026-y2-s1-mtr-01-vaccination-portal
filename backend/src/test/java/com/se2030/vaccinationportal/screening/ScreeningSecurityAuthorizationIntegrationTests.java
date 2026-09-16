@@ -1,6 +1,9 @@
 package com.se2030.vaccinationportal.screening;
 
+import com.se2030.vaccinationportal.screening.controller.QuestionnaireController;
+import com.se2030.vaccinationportal.screening.controller.ScreeningConfigurationController;
 import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
+import com.se2030.vaccinationportal.screening.service.QuestionnaireVersionService;
 import com.se2030.vaccinationportal.screening.service.ScreeningConfigurationService;
 import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
 import com.se2030.vaccinationportal.screening.service.ScreeningHistoryService;
@@ -8,8 +11,11 @@ import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
 import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
+import com.se2030.vaccinationportal.screening.validation.RequireRoles;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -18,9 +24,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.time.Instant;
+import java.util.Arrays;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -52,6 +61,9 @@ class ScreeningSecurityAuthorizationIntegrationTests {
 
     @MockitoBean
     private ScreeningConfigurationService configurationService;
+
+    @MockitoBean
+    private QuestionnaireVersionService questionnaireVersionService;
 
     @MockitoBean
     private EligibilityReviewService reviewService;
@@ -87,10 +99,66 @@ class ScreeningSecurityAuthorizationIntegrationTests {
     }
 
     @Test
-    void authenticatedAdminCanAccessAdminEndpoint() throws Exception {
+    void authenticatedHealthcareOfficerCanPerformScreeningConfigurationMutations() throws Exception {
         mockMvc.perform(delete("/api/v1/screening/questions/{id}", 1L)
-                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_ADMIN")))
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_HEALTHCARE_OFFICER")))
                 .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete("/api/v1/screening/rules/{ruleId}", 2L)
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_HEALTHCARE_OFFICER")))
+                .andExpect(status().isNoContent());
+
+        verify(configurationService).deleteQuestion(1L);
+        verify(questionnaireVersionService).deleteEligibilityRule(2L);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ROLE_ADMIN", "ROLE_SYSTEM_ADMINISTRATOR"})
+    void administrativeRolesCannotPerformScreeningConfigurationMutations(String role) throws Exception {
+        mockMvc.perform(delete("/api/v1/screening/questions/{id}", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, token(role)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete("/api/v1/screening/rules/{ruleId}", 2L)
+                        .header(HttpHeaders.AUTHORIZATION, token(role)))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(configurationService, questionnaireVersionService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ROLE_HEALTHCARE_OFFICER", "ROLE_ADMIN", "ROLE_SYSTEM_ADMINISTRATOR"})
+    void existingQuestionCatalogueReadRolesRemainAuthorized(String role) throws Exception {
+        when(configurationService.getAllQuestions()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/screening/questions")
+                        .header(HttpHeaders.AUTHORIZATION, token(role)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void allScreeningAuthoringMutationsAreHealthcareOfficerOnly() {
+        assertHealthcareOfficerOnly(
+                ScreeningConfigurationController.class,
+                "createQuestion",
+                "updateQuestion",
+                "deleteQuestion",
+                "addAnswerOption",
+                "updateAnswerOption",
+                "removeAnswerOption",
+                "createQuestionnaire"
+        );
+        assertHealthcareOfficerOnly(
+                QuestionnaireController.class,
+                "createDraftVersion",
+                "addQuestionItem",
+                "addEligibilityRule",
+                "updateEligibilityRule",
+                "deleteEligibilityRule",
+                "publishVersion",
+                "retireVersion",
+                "deleteDraftVersion"
+        );
     }
 
     @Test
@@ -209,12 +277,28 @@ class ScreeningSecurityAuthorizationIntegrationTests {
     }
 
     @Test
-    void legacyHeadersCannotOverrideAuthenticatedAuthorities() throws Exception {
+    void legacyHeadersCannotOverrideAuthenticatedHealthcareOfficerAuthority() throws Exception {
         mockMvc.perform(delete("/api/v1/screening/questions/{id}", 1L)
-                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_ADMIN"))
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_HEALTHCARE_OFFICER"))
                         .header(LEGACY_ROLE_HEADER, "CITIZEN")
                         .header(ALTERNATE_LEGACY_ROLE_HEADER, "CITIZEN"))
                 .andExpect(status().isNoContent());
+    }
+
+    private void assertHealthcareOfficerOnly(Class<?> controllerType, String... methodNames) {
+        for (String methodName : methodNames) {
+            Method method = Arrays.stream(controllerType.getDeclaredMethods())
+                    .filter(candidate -> candidate.getName().equals(methodName))
+                    .findFirst()
+                    .orElseThrow();
+            RequireRoles annotation = method.getAnnotation(RequireRoles.class);
+            assertThat(annotation)
+                    .as("@RequireRoles on %s.%s", controllerType.getSimpleName(), methodName)
+                    .isNotNull();
+            assertThat(annotation.value())
+                    .as("authoring roles on %s.%s", controllerType.getSimpleName(), methodName)
+                    .containsExactly("HEALTHCARE_OFFICER");
+        }
     }
 
     private String token(String role) {
