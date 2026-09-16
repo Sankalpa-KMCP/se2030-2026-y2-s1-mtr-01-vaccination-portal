@@ -64,20 +64,6 @@ public class StockTransaction {
         return transaction;
     }
 
-    public static StockTransaction stockChange(Long inventoryId, StockTransactionType type, int delta,
-            int beforeQty, Long actorId, String reason) {
-        StockTransaction transaction = new StockTransaction();
-        transaction.inventoryId = inventoryId;
-        transaction.type = type;
-        transaction.delta = delta;
-        transaction.beforeQty = beforeQty;
-        transaction.afterQty = beforeQty + delta;
-        transaction.actorId = actorId;
-        transaction.reason = reason;
-        transaction.createdAt = Instant.now();
-        return transaction;
-    }
-
     public Long getId() { return id; }
     public Long getInventoryId() { return inventoryId; }
     public Long getVaccinationRecordId() { return vaccinationRecordId; }
@@ -85,7 +71,4 @@ public class StockTransaction {
     public int getDelta() { return delta; }
     public int getBeforeQty() { return beforeQty; }
     public int getAfterQty() { return afterQty; }
-    public Long getActorId() { return actorId; }
-    public String getReason() { return reason; }
-    public Instant getCreatedAt() { return createdAt; }
 }
