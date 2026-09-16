@@ -67,9 +67,9 @@ describe('Public site navigation', () => {
     expect(screen.queryByRole('button', { name: 'Login' })).toBeNull();
   });
 
-  it('exposes the service banner', () => {
+  it('does not render the retired service banner', () => {
     renderHeader();
-    expect(screen.getByText(/vaccination services · citizen & healthcare team access/i)).toBeTruthy();
+    expect(screen.queryByText(/vaccination services · citizen & healthcare team access/i)).toBeNull();
   });
 
   it('connects all public pages through a shared service guide', () => {

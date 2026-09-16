@@ -25,6 +25,8 @@ export default function HeroArtwork() {
         </g>
         <path className="home-pathway__staff-connector home-pathway__staff-connector--campaign" pathLength="1" d="M216 98V192" />
         <path className="home-pathway__staff-connector home-pathway__staff-connector--ready" pathLength="1" d="M506 98V126Q506 138 494 138H372Q360 138 360 150V192" />
+        <path className="home-pathway__support-progress home-pathway__support-progress--campaign" pathLength="1" d="M216 98V192" />
+        <path className="home-pathway__support-progress home-pathway__support-progress--ready" pathLength="1" d="M506 98V126Q506 138 494 138H372Q360 138 360 150V192" />
         <path className="home-pathway__route" pathLength="1" d="M72 228H648" />
         <path className="home-pathway__route-progress" pathLength="1" d="M72 228H648" />
         {STAGES.map((stage, index) => (
@@ -40,6 +42,7 @@ export default function HeroArtwork() {
       </svg>
       <svg className="home-pathway home-pathway--mobile" viewBox="0 0 360 350" fill="none" role="presentation" focusable="false">
         <path className="home-pathway__route" pathLength="1" d="M36 38V302" />
+        <path className="home-pathway__route-progress" pathLength="1" d="M36 38V302" />
         {STAGES.map((stage, index) => (
           <g className={`home-pathway__journey-node home-pathway__journey-node--${index + 1}`} transform={`translate(36 ${38 + index * 66})`} key={stage.label}>
             <g className="home-pathway__node-core">
