@@ -15,6 +15,11 @@ describe('role-aware home redirect', () => {
     expect(getRoleHomePath({ roles: ['ROLE_CITIZEN'] })).toBe('/app/citizen');
   });
 
+  it('recognizes a Vaccinator as staff, without administrator privileges', () => {
+    expect(getRoleHomePath({ roles: ['ROLE_VACCINATOR'] })).toBe('/app/staff');
+    expect(getRoleHomePath({ roles: ['VACCINATOR'] })).toBe('/app/staff');
+  });
+
   it('gives administrator routing priority for multi-role users', () => {
     expect(getRoleHomePath({ roles: ['ROLE_CITIZEN', 'ROLE_ADMIN'] })).toBe('/app/admin');
   });

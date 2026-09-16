@@ -30,7 +30,7 @@ describe('StaffRegistrationRequestPage', () => {
   });
   afterEach(cleanup);
 
-  it('renders only the four publicly requestable staff roles', () => {
+  it('renders the five publicly requestable staff roles including Vaccinator', () => {
     renderPage();
     expect(screen.getByLabelText('Phone Number').maxLength).toBe(10);
     expect(screen.getByLabelText('Phone Number').inputMode).toBe('numeric');
@@ -40,8 +40,10 @@ describe('StaffRegistrationRequestPage', () => {
       'Center Manager',
       'Campaign Officer',
       'Inventory Officer',
+      'Vaccinator',
     ]);
     expect(options.map((option) => option.value)).not.toContain('ROLE_ADMIN');
+    expect(options.map((option) => option.value)).toContain('ROLE_VACCINATOR');
   });
 
   it('blocks mismatched passwords', () => {

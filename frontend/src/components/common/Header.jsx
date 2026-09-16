@@ -119,6 +119,14 @@ export default function Header({ onLogout }) {
                 </li>
               )}
 
+              {hasRole(user, 'ROLE_VACCINATOR') && (
+                <li className="nav-item">
+                  <NavLink className={navigationClassName} to="/app/staff/vaccination-drafts" onClick={closeNav}>
+                    Vaccination Drafts
+                  </NavLink>
+                </li>
+              )}
+
               {showCampaigns && (
                 <li className="nav-item">
                   <NavLink className={navigationClassName} to="/app/campaigns" onClick={closeNav}>

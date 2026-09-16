@@ -44,6 +44,7 @@ import MyAppointmentsPage from '../features/appointment-management/pages/MyAppoi
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
 import InventoryManagementPage from '../features/inventory-management/pages/InventoryManagementPage';
+import VaccinationDraftsPage from '../features/vaccination-administration/pages/VaccinationDraftsPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -227,6 +228,10 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={STAFF_DASHBOARD_ROLES} />}>
             <Route path="staff" element={<StaffDashboardPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={['ROLE_VACCINATOR']} />}>
+            <Route path="staff/vaccination-drafts" element={<VaccinationDraftsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={SCREENING_REVIEW_ROLES} />}>

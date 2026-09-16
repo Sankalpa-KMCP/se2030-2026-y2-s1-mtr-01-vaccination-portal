@@ -13,6 +13,11 @@ import {
 export default function StaffDashboardPage() {
   const { user } = useAuth();
   const services = [
+    hasRole(user, 'ROLE_VACCINATOR') && [
+      'Vaccination Drafts',
+      'Create, review, edit, and delete unfinalized vaccination drafts.',
+      '/app/staff/vaccination-drafts',
+    ],
     hasRole(user, 'ROLE_HEALTHCARE_OFFICER') && [
       'Screening Review',
       'Review citizen pre-vaccination screenings, request corrections, and record eligibility decisions.',
