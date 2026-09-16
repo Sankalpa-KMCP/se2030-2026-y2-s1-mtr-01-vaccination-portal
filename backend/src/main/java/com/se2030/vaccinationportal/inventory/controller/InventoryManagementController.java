@@ -3,15 +3,20 @@ package com.se2030.vaccinationportal.inventory.controller;
 import com.se2030.vaccinationportal.inventory.dto.request.CenterInventoryRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.ManufacturerRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.VaccineBatchRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.StockAdjustmentRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.StockReceiptRequest;
 import com.se2030.vaccinationportal.inventory.dto.response.CenterInventoryResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.InventoryReferenceDataResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.ManufacturerResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.VaccineBatchResponse;
+import com.se2030.vaccinationportal.inventory.dto.response.StockTransactionResponse;
 import com.se2030.vaccinationportal.inventory.service.InventoryManagementService;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -59,8 +64,9 @@ public class InventoryManagementController {
     @GetMapping("/stocks")
     public List<CenterInventoryResponse> stocks() { return service.listInventories(); }
     @PostMapping("/stocks") @ResponseStatus(HttpStatus.CREATED)
-    public CenterInventoryResponse createStock(@Valid @RequestBody CenterInventoryRequest request) {
-        return service.createInventory(request);
+    public CenterInventoryResponse createStock(@Valid @RequestBody CenterInventoryRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return service.createInventory(request, principal.getUserId());
     }
     @PutMapping("/stocks/{id}")
     public CenterInventoryResponse updateStock(@PathVariable Long id, @Valid @RequestBody CenterInventoryRequest request) {
@@ -68,6 +74,21 @@ public class InventoryManagementController {
     }
     @DeleteMapping("/stocks/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteStock(@PathVariable Long id) { service.deleteInventory(id); }
+
+    @PostMapping("/operations/receipts")
+    public CenterInventoryResponse receiveStock(@Valid @RequestBody StockReceiptRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return service.receiveStock(request, principal.getUserId());
+    }
+
+    @PostMapping("/operations/adjustments")
+    public CenterInventoryResponse adjustStock(@Valid @RequestBody StockAdjustmentRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return service.adjustStock(request, principal.getUserId());
+    }
+
+    @GetMapping("/transactions")
+    public List<StockTransactionResponse> transactions() { return service.recentTransactions(); }
 
     @GetMapping("/reference-data")
     public InventoryReferenceDataResponse referenceData() { return service.referenceData(); }
