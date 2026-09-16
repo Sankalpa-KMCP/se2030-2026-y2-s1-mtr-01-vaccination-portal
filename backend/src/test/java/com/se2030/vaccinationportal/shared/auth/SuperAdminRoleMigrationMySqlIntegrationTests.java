@@ -32,8 +32,8 @@ class SuperAdminRoleMigrationMySqlIntegrationTests {
             .withReuse(false);
 
     @Test
-    @DisplayName("V15 seeds canonical ROLE_SUPER_ADMIN, preserves existing roles, is idempotent, and contains 0 user seeds")
-    void v15_realMySql_seedsSuperAdminRoleCleanly() throws Exception {
+    @DisplayName("V16 seeds canonical ROLE_SUPER_ADMIN, preserves existing roles, is idempotent, and contains 0 user seeds")
+    void v16_realMySql_seedsSuperAdminRoleCleanly() throws Exception {
         try (Connection connection = MYSQL.createConnection("");
              Statement statement = connection.createStatement()) {
 
@@ -43,21 +43,21 @@ class SuperAdminRoleMigrationMySqlIntegrationTests {
             assertEquals(0, scalarInt(statement, "SELECT COUNT(*) FROM user_accounts"),
                     "V4 must seed 0 user accounts");
 
-            // Apply V15 migration
-            executeMigration(statement, "db/migration/V15__add_super_admin_role.sql");
+            // Apply V16 migration
+            executeMigration(statement, "db/migration/V16__add_super_admin_role.sql");
 
             // Verify ROLE_SUPER_ADMIN is now present and total count is 8
-            Set<String> rolesAfterV15 = getRoleCodes(statement);
-            assertEquals(8, rolesAfterV15.size(), "V15 must result in exactly 8 canonical roles");
-            assertTrue(rolesAfterV15.contains("ROLE_SUPER_ADMIN"), "ROLE_SUPER_ADMIN must be seeded by V15");
-            assertTrue(rolesAfterV15.contains("ROLE_ADMIN"));
-            assertTrue(rolesAfterV15.contains("ROLE_CITIZEN"));
+            Set<String> rolesAfterV16 = getRoleCodes(statement);
+            assertEquals(8, rolesAfterV16.size(), "V16 must result in exactly 8 canonical roles");
+            assertTrue(rolesAfterV16.contains("ROLE_SUPER_ADMIN"), "ROLE_SUPER_ADMIN must be seeded by V16");
+            assertTrue(rolesAfterV16.contains("ROLE_ADMIN"));
+            assertTrue(rolesAfterV16.contains("ROLE_CITIZEN"));
             assertEquals(0, scalarInt(statement, "SELECT COUNT(*) FROM user_accounts"),
-                    "V15 must seed 0 user accounts");
+                    "V16 must seed 0 user accounts");
 
-            // Re-apply V15 to prove idempotence
-            executeMigration(statement, "db/migration/V15__add_super_admin_role.sql");
-            assertEquals(8, countRoles(statement), "Re-executing V15 must not duplicate roles");
+            // Re-apply V16 to prove idempotence
+            executeMigration(statement, "db/migration/V16__add_super_admin_role.sql");
+            assertEquals(8, countRoles(statement), "Re-executing V16 must not duplicate roles");
         }
     }
 

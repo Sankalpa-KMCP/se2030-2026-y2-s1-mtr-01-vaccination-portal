@@ -43,6 +43,7 @@ import AppointmentBookingPage from '../features/appointment-management/pages/App
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
+import InventoryManagementPage from '../features/inventory-management/pages/InventoryManagementPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -78,6 +79,7 @@ const CHECK_IN_STAFF_ROLES = [
   'ROLE_CENTER_MANAGER',
 ];
 
+const INVENTORY_ROLES = ['ROLE_ADMIN', 'ROLE_INVENTORY_OFFICER'];
 const SCREENING_CONFIGURATION_ROLES = ['ROLE_HEALTHCARE_OFFICER'];
 const SCREENING_REVIEW_ROLES = ['ROLE_HEALTHCARE_OFFICER'];
 
@@ -255,6 +257,10 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={CHECK_IN_STAFF_ROLES} />}>
             <Route path="checkin/queue" element={<CheckInManagementPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={INVENTORY_ROLES} />}>
+            <Route path="inventory" element={<InventoryManagementPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={SCREENING_CONFIGURATION_ROLES} />}>

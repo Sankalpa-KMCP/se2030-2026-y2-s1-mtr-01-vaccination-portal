@@ -1,4 +1,4 @@
--- Flyway Database Migration V15: Canonical Super Administrator Role Seed
+-- Flyway Database Migration V16: Canonical Super Administrator Role Seed
 -- Canonical Section 12.2 (Role/UserRole)
 -- Seeds canonical ROLE_SUPER_ADMIN into the roles table.
 -- Does not seed any default user accounts or credentials.
