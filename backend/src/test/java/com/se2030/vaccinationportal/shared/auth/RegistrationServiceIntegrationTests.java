@@ -65,6 +65,7 @@ class RegistrationServiceIntegrationTests {
                 new Role("ROLE_HEALTHCARE_OFFICER", "Healthcare Officer"),
                 new Role("ROLE_CAMPAIGN_OFFICER", "Campaign Officer"),
                 new Role("ROLE_INVENTORY_OFFICER", "Inventory Officer"),
+                new Role("ROLE_VACCINATOR", "Vaccinator"),
                 new Role("ROLE_CITIZEN", "Citizen"),
                 new Role("ROLE_MANAGEMENT_USER", "Management User")
         ));
@@ -119,7 +120,8 @@ class RegistrationServiceIntegrationTests {
             "ROLE_HEALTHCARE_OFFICER",
             "ROLE_CENTER_MANAGER",
             "ROLE_CAMPAIGN_OFFICER",
-            "ROLE_INVENTORY_OFFICER"
+            "ROLE_INVENTORY_OFFICER",
+            "ROLE_VACCINATOR"
     })
     void registerStaff_allowedRole_persistsPendingRequestWithoutAuthority(String requestedRoleCode) {
         String email = requestedRoleCode.toLowerCase() + "@example.com";
