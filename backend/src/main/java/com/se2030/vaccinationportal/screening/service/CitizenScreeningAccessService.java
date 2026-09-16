@@ -64,7 +64,7 @@ public class CitizenScreeningAccessService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new AccessDeniedException("An authenticated account is required");
         }
-        if (hasAnyRole(authentication, privilegedRoles)) {
+        if (hasAnyRole(authentication, privilegedRoles) || hasRole(authentication, "ROLE_SUPER_ADMIN")) {
             return false;
         }
         if (hasRole(authentication, CITIZEN_ROLE)) {

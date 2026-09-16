@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Deterministic Fresh Database Bootstrap and Schema Migration Integration Test.
  *
  * <p>Verifies X3 / VP-002: A completely empty, clean MySQL database instance
- * bootstraps successfully through Flyway (V0-V15), seeds canonical static data,
+ * bootstraps successfully through Flyway (V0-V16), seeds canonical static data,
  * satisfies Hibernate schema validation ({@code ddl-auto=validate}), and proves
  * idempotent migration execution.</p>
  */
@@ -125,14 +125,15 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             "waitlist_entry"
     );
 
-    private static final Set<String> EXPECTED_7_ROLES = Set.of(
+    private static final Set<String> EXPECTED_8_ROLES = Set.of(
             "ROLE_ADMIN",
             "ROLE_CENTER_MANAGER",
             "ROLE_HEALTHCARE_OFFICER",
             "ROLE_CAMPAIGN_OFFICER",
             "ROLE_INVENTORY_OFFICER",
             "ROLE_CITIZEN",
-            "ROLE_MANAGEMENT_USER"
+            "ROLE_MANAGEMENT_USER",
+            "ROLE_SUPER_ADMIN"
     );
 
     @Test
@@ -150,13 +151,13 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should apply all migration versions V0 through V15 with SUCCESS status")
+    @DisplayName("Should apply all migration versions V0 through V16 with SUCCESS status")
     void shouldApplyAllMigrationsSuccessfully() {
         assertNotNull(flyway, "Flyway bean must be configured and injected");
         MigrationInfo[] appliedMigrations = flyway.info().all();
-        assertEquals(16, appliedMigrations.length, "Expected exactly 16 migrations (V0-V15)");
+        assertEquals(17, appliedMigrations.length, "Expected exactly 17 migrations (V0-V16)");
 
-        for (int i = 0; i <= 14; i++) {
+        for (int i = 0; i <= 16; i++) {
             String expectedVersion = String.valueOf(i);
             MigrationInfo info = appliedMigrations[i];
             assertEquals(expectedVersion, info.getVersion().getVersion(), "Migration version mismatch at index " + i);
@@ -165,7 +166,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should verify presence of all 44 physical tables plus flyway schema history")
+    @DisplayName("Should verify presence of all 49 physical tables plus flyway schema history")
     void shouldVerifyAll44RequiredTablesExist() throws Exception {
         Set<String> actualTables = new HashSet<>();
         try (Connection connection = dataSource.getConnection()) {
@@ -194,7 +195,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should verify exactly 7 canonical static roles seeded by V4")
+    @DisplayName("Should verify exactly 8 canonical static roles seeded by V4 and V16")
     void shouldVerifyCanonicalRolesSeeded() throws Exception {
         Set<String> seededRoles = new HashSet<>();
         try (Connection connection = dataSource.getConnection();
@@ -205,8 +206,8 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             }
         }
 
-        assertEquals(7, seededRoles.size(), "roles table must contain exactly 7 seeded roles");
-        assertEquals(EXPECTED_7_ROLES, seededRoles, "Seeded roles must exactly match canonical 7 roles");
+        assertEquals(8, seededRoles.size(), "roles table must contain exactly 8 seeded roles");
+        assertEquals(EXPECTED_8_ROLES, seededRoles, "Seeded roles must exactly match canonical 8 roles");
     }
 
     @Test

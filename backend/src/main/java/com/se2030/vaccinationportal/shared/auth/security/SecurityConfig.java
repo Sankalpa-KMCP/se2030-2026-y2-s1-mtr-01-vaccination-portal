@@ -4,6 +4,10 @@ import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -45,6 +49,28 @@ public class SecurityConfig {
     }
 
     @Bean
+    public RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.withDefaultRolePrefix()
+                .role("SUPER_ADMIN")
+                .implies(
+                        "ADMIN",
+                        "CAMPAIGN_OFFICER",
+                        "CENTER_MANAGER",
+                        "HEALTHCARE_OFFICER",
+                        "INVENTORY_OFFICER",
+                        "MANAGEMENT_USER"
+                )
+                .build();
+    }
+
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler(RoleHierarchy roleHierarchy) {
+        DefaultMethodSecurityExpressionHandler expressionHandler = new DefaultMethodSecurityExpressionHandler();
+        expressionHandler.setRoleHierarchy(roleHierarchy);
+        return expressionHandler;
+    }
+
+    @Bean
     public UserDetailsService userDetailsService() {
         return email -> userAccountRepository.findByEmailIgnoreCase(UserAccount.normalizeEmail(email))
                 .map(UserPrincipal::fromUserAccount)
@@ -72,7 +98,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/profile/**").authenticated()
 
                         // Administrator-only staff account review endpoints
-                        .requestMatchers("/api/v1/admin/staff-requests/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/staff-requests/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
                         // Protected Screening Endpoints (prevents unauthenticated header spoofing at HTTP boundary)
                         .requestMatchers("/api/v1/screening/**").authenticated()
