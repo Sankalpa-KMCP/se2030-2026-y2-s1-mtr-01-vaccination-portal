@@ -62,6 +62,13 @@ public class CenterInventory {
         quantity--;
     }
 
+    public void applyChange(int delta) {
+        long next = (long) quantity + delta;
+        if (next < 0) throw new IllegalStateException("Inventory cannot become negative");
+        if (next > Integer.MAX_VALUE) throw new IllegalArgumentException("Inventory quantity is too large");
+        quantity = (int) next;
+    }
+
     public Long getId() { return id; }
     public Long getCenterId() { return centerId; }
     public Long getBatchId() { return batchId; }
