@@ -432,6 +432,9 @@ class EligibilityReviewControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.submissionId").value(SUBMISSION_ID))
                 .andExpect(jsonPath("$.preliminaryResult").value("PRELIMINARY_REVIEW_REQUIRED"))
+                .andExpect(jsonPath("$.citizenFullName").value("Kawya Arusha"))
+                .andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(jsonPath("$.phoneNumber").doesNotExist())
                 .andExpect(jsonPath("$.correctionInstructions").value("Clarify the allergy response"))
                 .andExpect(jsonPath("$.answers[0].questionCode").value("ALLERGY"))
                 .andExpect(jsonPath("$.answers[0].typedAnswer").value("yes"))
@@ -466,6 +469,68 @@ class EligibilityReviewControllerTests {
                 .andExpect(jsonPath("$.message").value("Screening submission not found with ID: 30"));
 
         verify(reviewService).getReviewDetails(SUBMISSION_ID);
+    }
+
+    @Test
+    void healthcareOfficerRevocationUsesAuthenticatedPrincipalAndIgnoresCallerReviewerId() throws Exception {
+        long authenticatedUserId = 77L;
+        authenticate(authenticatedUserId, "HEALTHCARE_OFFICER");
+        EligibilityAssessment revoked = assessment(
+                50L,
+                SUBMISSION_ID,
+                EligibilityAssessmentStatus.REVOKED,
+                "Original eligibility decision",
+                REVIEWED_AT,
+                VALID_UNTIL
+        );
+        revoked.setRevokedAt(REVIEWED_AT.plusSeconds(600));
+        revoked.setRevocationReason("Eligibility withdrawn");
+        when(reviewService.revokeAssessment(50L, authenticatedUserId, "Eligibility withdrawn"))
+                .thenReturn(revoked);
+
+        mockMvc.perform(post("/api/v1/screening/assessments/{assessmentId}/revoke", 50L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "reviewerId": 999,
+                                  "revokerId": 998,
+                                  "revocationReason": "Eligibility withdrawn"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REVOKED"))
+                .andExpect(jsonPath("$.revocationReason").value("Eligibility withdrawn"));
+
+        verify(reviewService).revokeAssessment(50L, authenticatedUserId, "Eligibility withdrawn");
+    }
+
+    @Test
+    void revokeAssessmentRejectsBlankReasonBeforeCallingService() throws Exception {
+        mockMvc.perform(post("/api/v1/screening/assessments/{assessmentId}/revoke", 50L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"revocationReason": "   "}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.revocationReason[0]")
+                        .value("Revocation reason is required"));
+
+        verify(reviewService, never()).revokeAssessment(50L, REVIEWER_ID, "   ");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ADMIN", "SYSTEM_ADMINISTRATOR", "CITIZEN"})
+    void normalRevocationIsHealthcareOfficerOnly(String role) throws Exception {
+        authenticateAs(role);
+
+        mockMvc.perform(post("/api/v1/screening/assessments/{assessmentId}/revoke", 50L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"revocationReason": "Eligibility withdrawn"}
+                                """))
+                .andExpect(status().isForbidden());
+
+        verify(reviewService, never()).revokeAssessment(50L, REVIEWER_ID, "Eligibility withdrawn");
     }
 
     private void authenticateAs(String role) {
@@ -534,6 +599,7 @@ class EligibilityReviewControllerTests {
         return new ScreeningReviewDetailsResponse(
                 SUBMISSION_ID,
                 CITIZEN_ID,
+                "Kawya Arusha",
                 CAMPAIGN_ID,
                 60L,
                 61L,

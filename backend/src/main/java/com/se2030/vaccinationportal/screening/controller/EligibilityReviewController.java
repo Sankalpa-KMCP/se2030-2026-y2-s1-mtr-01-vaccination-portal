@@ -156,14 +156,18 @@ public class EligibilityReviewController {
     }
 
     @PostMapping("/assessments/{assessmentId}/revoke")
-    @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<EligibilityAssessmentResponse> revokeAssessment(
             @PathVariable("assessmentId") Long assessmentId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody RevokeAssessmentRequest request
     ) {
+        if (principal == null) {
+            throw new AccessDeniedException("Authenticated revoker identity is unavailable");
+        }
         EligibilityAssessment assessment = reviewService.revokeAssessment(
                 assessmentId,
-                request.reviewerId(),
+                principal.getUserId(),
                 request.revocationReason()
         );
         return ResponseEntity.ok(assessmentMapper.toResponse(assessment));

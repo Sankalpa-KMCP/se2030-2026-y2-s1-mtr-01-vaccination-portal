@@ -62,7 +62,8 @@ describe('CitizenProfilePage', () => {
     expect(screen.getAllByText('Loading your profile...')).toHaveLength(2);
 
     expect(await screen.findByText('Arusha Citizen')).toBeTruthy();
-    expect(screen.getByText('17')).toBeTruthy();
+    expect(screen.getByText('Citizen ID')).toBeTruthy();
+    expect(screen.getByText('#17')).toBeTruthy();
     expect(screen.getByText('arusha@example.com')).toBeTruthy();
     expect(screen.getByText('0771234567')).toBeTruthy();
     expect(screen.getAllByText('Active')).toHaveLength(2);
@@ -112,9 +113,9 @@ describe('CitizenProfilePage', () => {
     expect(screen.queryByLabelText('Email address')).toBeNull();
     expect(screen.queryByLabelText(/role/i)).toBeNull();
     expect(screen.queryByLabelText(/account status/i)).toBeNull();
-    expect(screen.queryByLabelText(/account id/i)).toBeNull();
+    expect(screen.queryByLabelText(/citizen id/i)).toBeNull();
     expect(screen.getByText('arusha@example.com')).toBeTruthy();
-    expect(screen.getByText('17')).toBeTruthy();
+    expect(screen.getByText('#17')).toBeTruthy();
     expect(screen.getAllByText('Active')).toHaveLength(2);
   });
 
@@ -230,6 +231,8 @@ describe('CitizenProfilePage', () => {
     expect(screen.getByText('Updated Citizen')).toBeTruthy();
     expect(screen.queryByText('Client Entry')).toBeNull();
     expect(mocks.updateCurrentUserProfile).toHaveBeenCalledWith(returnedProfile);
+    expect(mocks.updateProfile.mock.calls[0][0]).not.toHaveProperty('id');
+    expect(mocks.updateProfile.mock.calls[0][0]).not.toHaveProperty('userId');
   });
 
   it('prevents duplicate submissions while a save is pending', async () => {

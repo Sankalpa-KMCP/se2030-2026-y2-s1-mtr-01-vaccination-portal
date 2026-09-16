@@ -18,6 +18,7 @@ export default function AccountSummary({ user }) {
         </div>
       </header>
       <dl>
+        <div><dt>Citizen ID</dt><dd>{user?.id != null ? `#${user.id}` : 'Not provided'}</dd></div>
         <div><dt>Full name</dt><dd>{user?.fullName || 'Not provided'}</dd></div>
         <div><dt>Email address</dt><dd>{user?.email || 'Not provided'}</dd></div>
         <div><dt>Phone number</dt><dd>{user?.phoneNumber || 'Not provided'}</dd></div>

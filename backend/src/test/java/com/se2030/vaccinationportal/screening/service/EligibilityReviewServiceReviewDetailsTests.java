@@ -1,6 +1,9 @@
 package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
+import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningReviewDetailsResponse;
 import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.mapper.EligibilityAssessmentMapper;
@@ -69,6 +72,9 @@ class EligibilityReviewServiceReviewDetailsTests {
     @Mock
     private VaccinationCampaignService campaignService;
 
+    @Mock
+    private UserAccountRepository userAccountRepository;
+
     private EligibilityReviewService service;
 
     @BeforeEach
@@ -81,7 +87,8 @@ class EligibilityReviewServiceReviewDetailsTests {
                 evidenceRepository,
                 new ScreeningReviewDetailsMapper(new EligibilityAssessmentMapper()),
                 campaignService,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                userAccountRepository
         );
     }
 
@@ -132,6 +139,9 @@ class EligibilityReviewServiceReviewDetailsTests {
         );
 
         EligibilityAssessment assessment = assessment(submission);
+        UserAccount citizen = new UserAccount("private@example.com", "hash", AccountStatus.ACTIVE);
+        citizen.setFullName("Kawya Arusha");
+        when(userAccountRepository.findById(10L)).thenReturn(Optional.of(citizen));
 
         when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(submission));
         when(questionnaireItemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
@@ -149,6 +159,7 @@ class EligibilityReviewServiceReviewDetailsTests {
         assertAll(
                 () -> assertThat(result.submissionId()).isEqualTo(SUBMISSION_ID),
                 () -> assertThat(result.citizenId()).isEqualTo(10L),
+                () -> assertThat(result.citizenFullName()).isEqualTo("Kawya Arusha"),
                 () -> assertThat(result.campaignId()).isEqualTo(20L),
                 () -> assertThat(result.questionnaireVersionId()).isEqualTo(VERSION_ID),
                 () -> assertThat(result.consentNoticeVersionId()).isEqualTo(80L),
@@ -211,6 +222,7 @@ class EligibilityReviewServiceReviewDetailsTests {
 
         assertAll(
                 () -> assertThat(result.answers()).hasSize(1),
+                () -> assertThat(result.citizenFullName()).isNull(),
                 () -> assertThat(result.answers().get(0).typedAnswer()).isEqualTo("historical-value"),
                 () -> assertThat(result.answers().get(0).selectedOptions()).isEmpty(),
                 () -> assertThat(result.assessment()).isNull()

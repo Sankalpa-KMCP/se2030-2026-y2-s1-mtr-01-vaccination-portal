@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignme
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
@@ -103,6 +104,9 @@ class ScreeningSubmissionEligibilityLifecycleTests {
     @Mock
     private VaccinationCampaignService campaignService;
 
+    @Mock
+    private UserAccountRepository userAccountRepository;
+
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private EligibilityReviewService eligibilityReviewService;
     private ScreeningSubmissionService service;
@@ -117,7 +121,8 @@ class ScreeningSubmissionEligibilityLifecycleTests {
                 evidenceRepository,
                 reviewDetailsMapper,
                 campaignService,
-                clock
+                clock,
+                userAccountRepository
         );
         service = new ScreeningSubmissionService(
                 submissionRepository,

@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.screening.mapper.ScreeningReviewDetailsMapper;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
@@ -59,6 +60,9 @@ class EligibilityReviewServiceCorrectionTests {
     @Mock
     private VaccinationCampaignService campaignService;
 
+    @Mock
+    private UserAccountRepository userAccountRepository;
+
     private EligibilityReviewService service;
 
     @BeforeEach
@@ -71,7 +75,8 @@ class EligibilityReviewServiceCorrectionTests {
                 evidenceRepository,
                 reviewDetailsMapper,
                 campaignService,
-                Clock.fixed(CORRECTION_REQUESTED_AT, ZoneOffset.UTC)
+                Clock.fixed(CORRECTION_REQUESTED_AT, ZoneOffset.UTC),
+                userAccountRepository
         );
     }
 

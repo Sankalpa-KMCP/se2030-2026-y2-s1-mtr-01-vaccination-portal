@@ -221,3 +221,10 @@ export function recordEligibilityDecision(submissionId, payload) {
     body: JSON.stringify(decision),
   });
 }
+
+export function revokeAssessment(assessmentId, revocationReason) {
+  return screeningRequest(`/assessments/${assessmentId}/revoke`, {
+    method: 'POST',
+    body: JSON.stringify({ revocationReason }),
+  });
+}
