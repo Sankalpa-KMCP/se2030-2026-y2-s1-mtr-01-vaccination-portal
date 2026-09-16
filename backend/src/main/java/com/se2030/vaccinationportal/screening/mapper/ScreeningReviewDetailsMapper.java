@@ -32,6 +32,7 @@ public class ScreeningReviewDetailsMapper {
 
     public ScreeningReviewDetailsResponse toResponse(
             ScreeningSubmission submission,
+            String citizenFullName,
             List<QuestionnaireItem> questionnaireItems,
             Map<Long, List<AnswerOption>> optionsByQuestionId,
             List<ScreeningTriggeredRuleEvidence> evidence,
@@ -61,6 +62,7 @@ public class ScreeningReviewDetailsMapper {
         return new ScreeningReviewDetailsResponse(
                 submission.getId(),
                 submission.getCitizenId(),
+                citizenFullName,
                 submission.getCampaignId(),
                 submission.getQuestionnaireVersion().getId(),
                 submission.getConsentNoticeVersion().getId(),

@@ -51,6 +51,9 @@ describe('CitizenDashboardPage', () => {
     expect(screen.getAllByText('citizen@example.com').length).toBeGreaterThan(0);
     expect(screen.getByText('+94 77 123 4567')).toBeTruthy();
     expect(screen.getByText('Active')).toBeTruthy();
+    expect(screen.getByText('Citizen ID')).toBeTruthy();
+    expect(screen.getByText('#71')).toBeTruthy();
+    expect(screen.queryByLabelText('Citizen ID')).toBeNull();
     expect(screen.getByRole('link', { name: /view profile/i }).getAttribute('href')).toBe('/app/citizen/profile');
   });
 

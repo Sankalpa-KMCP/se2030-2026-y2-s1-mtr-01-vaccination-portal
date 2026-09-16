@@ -5,11 +5,15 @@ import { MemoryRouter } from 'react-router-dom';
 
 const mocks = vi.hoisted(() => ({
   listScreeningReviewQueue: vi.fn(),
+  listCitizenEligibilityAssessments: vi.fn(),
+  getScreeningReviewDetails: vi.fn(),
   listCampaigns: vi.fn(),
 }));
 
 vi.mock('../api/screeningApi', () => ({
   listScreeningReviewQueue: mocks.listScreeningReviewQueue,
+  listCitizenEligibilityAssessments: mocks.listCitizenEligibilityAssessments,
+  getScreeningReviewDetails: mocks.getScreeningReviewDetails,
 }));
 vi.mock('../../campaign-management/api/campaignApi', () => ({
   listCampaigns: mocks.listCampaigns,
@@ -46,6 +50,8 @@ describe('HealthcareOfficerScreeningReviewQueuePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.listScreeningReviewQueue.mockResolvedValue(submissions);
+    mocks.listCitizenEligibilityAssessments.mockResolvedValue([]);
+    mocks.getScreeningReviewDetails.mockResolvedValue({ citizenId: 71, citizenFullName: 'Kawya Arusha' });
     mocks.listCampaigns.mockResolvedValue([{ id: 22, name: 'Adult Immunisation', code: 'ADULT-26' }]);
   });
 
@@ -124,5 +130,64 @@ describe('HealthcareOfficerScreeningReviewQueuePage', () => {
     expect(await screen.findByText('Citizen #71')).toBeTruthy();
     expect(screen.getByText('Campaign #22')).toBeTruthy();
     expect(screen.getByText(/Campaign details could not be loaded/)).toBeTruthy();
+  });
+
+  it('locates issued eligible assessments by citizen ID without exposing other statuses', async () => {
+    mocks.listCitizenEligibilityAssessments.mockResolvedValue([
+      {
+        id: 80,
+        citizenId: 71,
+        submissionId: 42,
+        campaignId: 22,
+        status: 'ELIGIBLE',
+        reviewedAt: '2026-09-07T02:00:00Z',
+      },
+      {
+        id: 81,
+        submissionId: 43,
+        campaignId: 23,
+        status: 'REVOKED',
+        reviewedAt: '2026-09-08T02:00:00Z',
+      },
+    ]);
+    renderPage();
+    await screen.findByText('Citizen #71');
+    fireEvent.change(screen.getByLabelText('Citizen ID'), { target: { value: ' 71 ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Find Eligible Assessments' }));
+
+    expect(await screen.findByText('Campaign #22')).toBeTruthy();
+    expect(screen.getByText('Kawya Arusha')).toBeTruthy();
+    expect(screen.getByText('Citizen ID: #71')).toBeTruthy();
+    expect(mocks.getScreeningReviewDetails).toHaveBeenCalledExactlyOnceWith(42);
+    expect(mocks.listCitizenEligibilityAssessments).toHaveBeenCalledExactlyOnceWith('71');
+    expect(screen.getByRole('link', { name: 'View Eligibility' }).getAttribute('href'))
+      .toBe('/app/staff/screening/reviews/42');
+    expect(screen.queryByText('Campaign #23')).toBeNull();
+  });
+
+  it('keeps eligible assessments and citizen IDs accessible when name enrichment fails', async () => {
+    mocks.listCitizenEligibilityAssessments.mockResolvedValue([
+      { id: 80, citizenId: 71, submissionId: 42, campaignId: 22, status: 'ELIGIBLE' },
+    ]);
+    mocks.getScreeningReviewDetails.mockRejectedValueOnce(new Error('Review unavailable'));
+    renderPage();
+    await screen.findByText('Citizen #71');
+    fireEvent.change(screen.getByLabelText('Citizen ID'), { target: { value: '71' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Find Eligible Assessments' }));
+
+    expect(await screen.findByText('Name unavailable')).toBeTruthy();
+    expect(screen.getByText('Citizen ID: #71')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'View Eligibility' }).getAttribute('href'))
+      .toBe('/app/staff/screening/reviews/42');
+  });
+
+  it('validates the citizen ID before eligibility lookup', async () => {
+    renderPage();
+    await screen.findByText('Citizen #71');
+    fireEvent.change(screen.getByLabelText('Citizen ID'), { target: { value: 'not-a-number' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Find Eligible Assessments' }));
+
+    expect(screen.getByText('Enter a valid citizen ID.')).toBeTruthy();
+    expect(mocks.listCitizenEligibilityAssessments).not.toHaveBeenCalled();
   });
 });

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getScreeningReviewDetails: vi.fn(),
   recordEligibilityDecision: vi.fn(),
   requestScreeningCorrections: vi.fn(),
+  revokeAssessment: vi.fn(),
   getCampaignById: vi.fn(),
 }));
 
@@ -14,6 +15,7 @@ vi.mock('../api/screeningApi', () => ({
   getScreeningReviewDetails: mocks.getScreeningReviewDetails,
   recordEligibilityDecision: mocks.recordEligibilityDecision,
   requestScreeningCorrections: mocks.requestScreeningCorrections,
+  revokeAssessment: mocks.revokeAssessment,
 }));
 vi.mock('../../campaign-management/api/campaignApi', () => ({
   getCampaignById: mocks.getCampaignById,
@@ -24,6 +26,7 @@ import HealthcareOfficerScreeningReviewDetailsPage from './HealthcareOfficerScre
 const pendingDetails = {
   submissionId: 42,
   citizenId: 71,
+  citizenFullName: 'Kawya Arusha',
   campaignId: 22,
   questionnaireVersionId: 90,
   status: 'PENDING_REVIEW',
@@ -64,6 +67,8 @@ function reviewedDetails(status = 'ELIGIBLE') {
       clinicalNotes: 'Private notes must not render',
       reviewedAt: '2026-09-07T02:00:00Z',
       validUntil: status === 'ELIGIBLE' ? '2027-01-01T00:00:00Z' : null,
+      revokedAt: status === 'REVOKED' ? '2026-09-08T02:00:00Z' : null,
+      revocationReason: status === 'REVOKED' ? 'Eligibility withdrawn' : null,
     },
   });
 }
@@ -92,6 +97,7 @@ describe('HealthcareOfficerScreeningReviewDetailsPage', () => {
     mocks.getCampaignById.mockResolvedValue(campaign);
     mocks.requestScreeningCorrections.mockResolvedValue({ status: 'CORRECTIONS_REQUIRED' });
     mocks.recordEligibilityDecision.mockResolvedValue({ status: 'ELIGIBLE' });
+    mocks.revokeAssessment.mockResolvedValue({ status: 'REVOKED' });
   });
 
   afterEach(cleanup);
@@ -121,11 +127,20 @@ describe('HealthcareOfficerScreeningReviewDetailsPage', () => {
       .toBe('/app/staff/screening/reviews');
   });
 
+  it('keeps the citizen ID visible when the citizen name is unavailable', async () => {
+    mocks.getScreeningReviewDetails.mockResolvedValue(details({ citizenFullName: null }));
+    renderPage();
+    await waitForPage();
+    expect(screen.getByText('Name unavailable')).toBeTruthy();
+    expect(screen.getByText('Citizen ID: #71')).toBeTruthy();
+  });
+
   it('renders metadata, ordered answers, option labels, friendly values, and rule evidence', async () => {
     renderPage();
     await waitForPage();
 
-    expect(screen.getAllByText('Citizen #71').length).toBeGreaterThan(0);
+    expect(screen.getByText('Kawya Arusha')).toBeTruthy();
+    expect(screen.getByText('Citizen ID: #71')).toBeTruthy();
     expect(screen.getAllByText('Adult Immunisation').length).toBeGreaterThan(0);
     expect(screen.getByText('ADULT-26')).toBeTruthy();
     expect(screen.getByText('Pending review')).toBeTruthy();
@@ -184,7 +199,7 @@ describe('HealthcareOfficerScreeningReviewDetailsPage', () => {
     expect(screen.getByRole('button', { name: 'Request Corrections' })).toBeTruthy();
   });
 
-  it('renders an existing assessment read-only without clinical notes or mutation actions', async () => {
+  it('renders an existing eligible assessment with the focused revoke action', async () => {
     mocks.getScreeningReviewDetails.mockResolvedValue(reviewedDetails());
     renderPage();
     await waitForPage();
@@ -196,7 +211,18 @@ describe('HealthcareOfficerScreeningReviewDetailsPage', () => {
     expect(screen.queryByText('Private notes must not render')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Request Corrections' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Mark Eligible' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Revoke Eligibility' })).toBeTruthy();
   });
+
+  it.each(['INELIGIBLE', 'REVOKED', 'EXPIRED'])(
+    'does not offer revocation when the assessment is %s',
+    async (status) => {
+      mocks.getScreeningReviewDetails.mockResolvedValue(reviewedDetails(status));
+      renderPage();
+      await waitForPage();
+      expect(screen.queryByRole('button', { name: 'Revoke Eligibility' })).toBeNull();
+    },
+  );
 
   it.each(['CORRECTIONS_REQUIRED', 'REVIEWED', 'DRAFT'])(
     'hides all mutation actions when status is %s',
@@ -393,5 +419,61 @@ describe('HealthcareOfficerScreeningReviewDetailsPage', () => {
     expect(screen.getByRole('button', { name: 'Mark Ineligible' }).disabled).toBe(true);
     resolveDecision({ status: 'INELIGIBLE' });
     await screen.findByText('Eligibility decision recorded.');
+  });
+
+  it.each(['', '   '])('blocks a blank revocation reason: %j', async (value) => {
+    mocks.getScreeningReviewDetails.mockResolvedValue(reviewedDetails());
+    renderPage();
+    await waitForPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke Eligibility' }));
+    fireEvent.change(screen.getByLabelText('Revocation reason'), { target: { value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Revocation' }));
+
+    expect(screen.getByText('Revocation reason is required.')).toBeTruthy();
+    expect(mocks.revokeAssessment).not.toHaveBeenCalled();
+  });
+
+  it('submits a trimmed reason once, disables controls, refreshes, and displays revoked state', async () => {
+    let resolveRevocation;
+    mocks.revokeAssessment.mockReturnValue(new Promise((resolve) => { resolveRevocation = resolve; }));
+    mocks.getScreeningReviewDetails
+      .mockResolvedValueOnce(reviewedDetails())
+      .mockResolvedValueOnce(reviewedDetails('REVOKED'));
+    renderPage();
+    await waitForPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke Eligibility' }));
+    fireEvent.change(screen.getByLabelText('Revocation reason'), {
+      target: { value: '  Eligibility withdrawn  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Revocation' }));
+
+    expect(screen.getByRole('button', { name: 'Revoking...' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Revoke Eligibility' }).disabled).toBe(true);
+    expect(mocks.revokeAssessment).toHaveBeenCalledExactlyOnceWith(80, 'Eligibility withdrawn');
+    resolveRevocation({ status: 'REVOKED' });
+
+    expect(await screen.findByText('Eligibility revoked successfully.')).toBeTruthy();
+    await waitFor(() => expect(mocks.getScreeningReviewDetails).toHaveBeenCalledTimes(2));
+    expect(screen.getAllByText('Revoked').length).toBeGreaterThan(0);
+    expect(screen.getByText('Eligibility withdrawn')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Revoke Eligibility' })).toBeNull();
+  });
+
+  it('shows a backend revocation error and preserves the entered reason', async () => {
+    mocks.getScreeningReviewDetails.mockResolvedValue(reviewedDetails());
+    mocks.revokeAssessment.mockRejectedValue(Object.assign(
+      new Error('Assessment has already been revoked'),
+      { status: 400 },
+    ));
+    renderPage();
+    await waitForPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke Eligibility' }));
+    fireEvent.change(screen.getByLabelText('Revocation reason'), {
+      target: { value: 'Keep this revocation reason' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Revocation' }));
+
+    expect(await screen.findByText('Assessment has already been revoked')).toBeTruthy();
+    expect(screen.getByLabelText('Revocation reason').value).toBe('Keep this revocation reason');
   });
 });
