@@ -12,6 +12,17 @@ import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGui
 /**
  * Citizen Waitlist Page (US-05).
  * Displays active waitlist queue position, entry details, and withdrawal controls.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist tracking, queue position display, voluntary withdrawal, and promotion banner.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-06: Displays dynamic FIFO queue position.</li>
+ *   <li>MF03-BR-08: Renders celebration alert and navigation link when status transitions to PROMOTED.</li>
+ * </ul>
  */
 export default function WaitlistPage() {
   const { user } = useAuth();

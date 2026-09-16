@@ -4,6 +4,17 @@ import { searchAvailableAppointments } from '../api/availabilityApi';
 
 /**
  * Reschedule Dialog modal component allowing a citizen to select a new slot and reschedule an appointment (US-03).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search alternative sessions and execute atomic rescheduling of an appointment.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-04: Enforces 24-hour modification policy with staff override checkbox and reason input.</li>
+ *   <li>MF03-BR-05: Coordinates atomic reserve-before-release slot reallocation via the backend.</li>
+ * </ul>
  */
 export default function RescheduleDialog({ appointment, citizenId, onClose, onSuccess }) {
   const getTodayStr = () => new Date().toISOString().split('T')[0];

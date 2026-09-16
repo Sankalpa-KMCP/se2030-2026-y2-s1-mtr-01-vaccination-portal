@@ -38,6 +38,24 @@ import org.springframework.web.bind.annotation.RestController;
  * REST Controller exposing appointment booking, availability search, citizen listing, cancellation, rescheduling,
  * check-in, check-in reversal, and queue endpoints.
  * Thin presentation layer delegating all orchestration strictly to existing domain services.
+ *
+ * <p><b>User Stories:</b>
+ * <ul>
+ *   <li>US-03: Citizen appointment availability search, booking, cancellation, and rescheduling.</li>
+ *   <li>US-26: Clinical vaccinator queue inspection, arrival check-in, reversal, and no-show marking.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Gating booking against screening eligibility.</li>
+ *   <li>MF03-BR-02: Enforcing single active booking per citizen per campaign.</li>
+ *   <li>MF03-BR-03: Atomic slot capacity allocation.</li>
+ *   <li>MF03-BR-04: 24-hour notice window with staff override check for late cancellation/reschedule.</li>
+ *   <li>MF03-BR-05: Atomic slot reallocation on reschedule.</li>
+ *   <li>MF03-BR-09 &amp; MF03-BR-10: 30-minute check-in arrival window and CONFIRMED status check.</li>
+ *   <li>MF03-BR-11: Immutability of COMPLETED appointments.</li>
+ *   <li>MF03-BR-15: Authorized check-in reversal before completion.</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/api/v1/appointments")

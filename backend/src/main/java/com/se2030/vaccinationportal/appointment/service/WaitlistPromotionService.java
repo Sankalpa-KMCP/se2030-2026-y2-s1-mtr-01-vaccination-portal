@@ -29,6 +29,21 @@ import org.springframework.transaction.annotation.Transactional;
  * The first eligible waiter without an active appointment is atomically promoted into a new {@link Appointment} in {@link AppointmentStatus#CONFIRMED}
  * status while their waitlist entry status transitions to {@link WaitlistStatus#PROMOTED}.
  * </p>
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Automatic promotion of queued citizens when appointment slots are freed.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-01 &amp; MF03-BR-07: Promotion rechecks screening eligibility with MF-01; expired or non-eligible entries
+ *       are skipped and marked {@code SKIPPED_INELIGIBLE}.</li>
+ *   <li>MF03-BR-02 &amp; MF03-BR-07: Entries holding an active appointment elsewhere in the campaign are skipped
+ *       and marked {@code SKIPPED_DUPLICATE_APPOINTMENT}.</li>
+ *   <li>MF03-BR-06: Strict deterministic FIFO candidate ordering ({@code joined_at} ASC, then {@code id} ASC).</li>
+ *   <li>MF03-BR-08: Successful promotion creates confirmed appointment and marks waitlist entry {@code PROMOTED}.</li>
+ * </ul>
  */
 @Service
 @Transactional
@@ -103,6 +118,23 @@ public class WaitlistPromotionService {
         return processPromotionCandidates(waitingEntries, slotId, effectiveNow);
     }
 
+    /**
+     * Iterates over FIFO waitlist candidates and promotes the first candidate that passes all clinical
+     * and concurrency checks (MF03-BR-06, MF03-BR-07, MF03-BR-08).
+     * <p>
+     * <b>Viva Probe ("Why re-check eligibility and duplicates during promotion?"):</b><br>
+     * <ul>
+     *   <li><b>Eligibility Re-Check:</b> Waitlist entries can sit in queue for days or weeks. A citizen's clinical
+     *       eligibility is not permanent — their assessment may have expired or been revoked. Allocating a physical dose
+     *       to an unverified citizen violates vaccination safety protocols.</li>
+     *   <li><b>Duplicate Re-Check:</b> While waiting, the citizen might have booked another appointment in the same
+     *       campaign. Promoting them would violate the single active booking rule (MF03-BR-02).</li>
+     *   <li><b>Skipping &amp; Progressing:</b> When a candidate fails either check, their entry is marked with a terminal
+     *       skip status ({@code SKIPPED_INELIGIBLE} or {@code SKIPPED_DUPLICATE_APPOINTMENT}) and the loop immediately
+     *       proceeds to the next waiter in FIFO order without aborting the promotion process.</li>
+     * </ul>
+     * </p>
+     */
     private Optional<Appointment> processPromotionCandidates(List<WaitlistEntry> candidates, Long slotId, Instant effectiveNow) {
         if (candidates == null || candidates.isEmpty()) {
             return Optional.empty();
@@ -112,11 +144,13 @@ public class WaitlistPromotionService {
             Long citizenId = entry.getCitizenId();
             Long campaignId = entry.getCampaignId();
 
-            // Step 1a: Acquire pessimistic write lock for citizen+campaign (Canonical Section 12.4)
+            // Step 1a: Acquire pessimistic write lock for citizen+campaign (Canonical Section 12.4).
+            // Viva note: Ensures mutual exclusion against concurrent citizen bookings during promotion evaluation.
             guardRepository.insertGuardIfAbsent(citizenId, campaignId);
             guardRepository.findByCitizenIdAndCampaignIdForUpdate(citizenId, campaignId);
 
-            // Step 1b: Re-validate screening eligibility via EligibilityLookupPort (MF03-BR-01 & MF03-BR-07)
+            // Step 1b: Re-validate screening eligibility via EligibilityLookupPort (MF03-BR-01 & MF03-BR-07).
+            // Viva note: If medical clearance expired or was revoked in MF-01, mark SKIPPED_INELIGIBLE and continue FIFO loop.
             if (eligibilityLookupPort != null) {
                 EligibilityStatus status = eligibilityLookupPort.getCurrentEligibility(citizenId, campaignId);
                 if (status != EligibilityStatus.ELIGIBLE) {
@@ -126,7 +160,8 @@ public class WaitlistPromotionService {
                 }
             }
 
-            // Step 1c: Re-validate active appointment uniqueness (MF03-BR-02 & MF03-BR-07)
+            // Step 1c: Re-validate active appointment uniqueness (MF03-BR-02 & MF03-BR-07).
+            // Viva note: If citizen booked another slot while waiting, mark SKIPPED_DUPLICATE_APPOINTMENT and continue.
             List<Appointment> activeAppts = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
                     citizenId, campaignId, List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN));
             if (!activeAppts.isEmpty()) {
@@ -144,7 +179,8 @@ public class WaitlistPromotionService {
                 }
             }
 
-            // Step 1e: Create confirmed appointment and update waitlist entry status to PROMOTED (MF03-BR-08)
+            // Step 1e: Create confirmed appointment and update waitlist entry status to PROMOTED (MF03-BR-08).
+            // Viva note: Both entities are persisted within the same atomic transaction.
             Appointment appointment = new Appointment(citizenId, campaignId, slotId, AppointmentStatus.CONFIRMED, effectiveNow);
             Appointment savedAppointment = appointmentRepository.save(appointment);
 

@@ -2,6 +2,16 @@ import React from 'react';
 
 /**
  * Card component displaying details of a single available vaccination session/slot (US-03).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: View session start/end time, clinic center details, and book an open place.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-03: Reflects remaining capacity; disables booking button when remaining capacity is zero.</li>
+ * </ul>
  */
 export default function SessionAvailabilityCard({ session, onBook, isBooking = false }) {
   if (!session) return null;
