@@ -27,6 +27,7 @@ import java.util.Set;
 public class StaffRequestReviewService {
 
     private static final String ADMIN_ROLE_CODE = "ROLE_ADMIN";
+    private static final String SUPER_ADMIN_ROLE_CODE = "ROLE_SUPER_ADMIN";
     private static final Set<String> APPROVABLE_ROLE_CODES = Set.of(
             "ROLE_HEALTHCARE_OFFICER",
             "ROLE_CENTER_MANAGER",
@@ -117,7 +118,8 @@ public class StaffRequestReviewService {
         UserAccount reviewer = userAccountRepository.findById(reviewerUserId)
                 .orElseThrow(() -> new AccessDeniedException("Authenticated administrator account no longer exists"));
         boolean administrator = reviewer.getAccountStatus() == AccountStatus.ACTIVE
-                && reviewer.getRoles().stream().map(Role::getCode).anyMatch(ADMIN_ROLE_CODE::equals);
+                && reviewer.getRoles().stream().map(Role::getCode)
+                .anyMatch(code -> ADMIN_ROLE_CODE.equals(code) || SUPER_ADMIN_ROLE_CODE.equals(code));
         if (!administrator) {
             throw new AccessDeniedException("Authenticated account is not an active administrator");
         }

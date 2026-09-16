@@ -1,4 +1,5 @@
 import {
+  SUPER_ADMIN_ROLE,
   ADMIN_ROLE,
   CITIZEN_ROLE,
   STAFF_DASHBOARD_ROLES,
@@ -6,7 +7,7 @@ import {
 import { hasRole } from './roleUtils';
 
 export function getRoleHomePath(user) {
-  if (hasRole(user, ADMIN_ROLE)) {
+  if (hasRole(user, SUPER_ADMIN_ROLE) || hasRole(user, ADMIN_ROLE)) {
     return '/app/admin';
   }
 

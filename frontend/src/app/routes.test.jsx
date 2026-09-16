@@ -444,7 +444,7 @@ describe('shared routing and role guards', () => {
     });
   });
 
-  it('allows only ADMIN to open admin dashboard and staff requests', () => {
+  it('allows ADMIN and SUPER_ADMIN to open admin dashboard and staff requests', () => {
     setAuth({ roles: ['ROLE_ADMIN'] });
     const view = render(<MemoryRouter key="admin" initialEntries={['/app/admin']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
@@ -452,8 +452,27 @@ describe('shared routing and role guards', () => {
     view.rerender(<MemoryRouter key="requests" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByText('Pending Staff Requests Test Page')).toBeTruthy();
 
+    setAuth({ roles: ['ROLE_SUPER_ADMIN'] });
+    view.rerender(<MemoryRouter key="super-admin" initialEntries={['/app/admin']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
+
+    view.rerender(<MemoryRouter key="super-requests" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByText('Pending Staff Requests Test Page')).toBeTruthy();
+
     setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
     view.rerender(<MemoryRouter key="requests-denied" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+  });
+
+  it('denies SUPER_ADMIN on citizen self-only routes', () => {
+    setAuth({ roles: ['ROLE_SUPER_ADMIN'] });
+    const view = render(<MemoryRouter initialEntries={['/app/citizen']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+
+    view.rerender(<MemoryRouter initialEntries={['/app/citizen/profile']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+
+    view.rerender(<MemoryRouter initialEntries={['/app/appointments/book']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
   });
 
