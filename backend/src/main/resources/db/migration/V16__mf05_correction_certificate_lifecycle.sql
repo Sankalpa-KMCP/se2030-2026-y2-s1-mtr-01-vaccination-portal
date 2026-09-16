@@ -65,6 +65,11 @@ ALTER TABLE digital_certificates
         CHECK (status IN ('VALID', 'REVOKED', 'SUPERSEDED'));
 
 -- 5. MySQL-compatible conditional uniqueness: historical rows produce NULL markers.
+-- Remove the V11 cascading foreign key before adding a generated column that
+-- depends on its base column; the final restrictive foreign key is restored below.
+ALTER TABLE digital_certificates
+    DROP FOREIGN KEY fk_digital_certificate_record;
+
 ALTER TABLE digital_certificates
     ADD COLUMN valid_vaccination_record_id BIGINT
         GENERATED ALWAYS AS (
@@ -98,9 +103,6 @@ ALTER TABLE digital_certificates
         ON DELETE RESTRICT;
 
 -- 8. Replace the V11 one-certificate-ever rule with historical lifecycle support.
-ALTER TABLE digital_certificates
-    DROP FOREIGN KEY fk_digital_certificate_record;
-
 ALTER TABLE digital_certificates
     DROP INDEX uk_digital_certificate_record;
 
