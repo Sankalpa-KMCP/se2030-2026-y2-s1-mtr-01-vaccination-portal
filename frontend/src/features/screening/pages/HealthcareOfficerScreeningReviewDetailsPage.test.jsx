@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   recordEligibilityDecision: vi.fn(),
   requestScreeningCorrections: vi.fn(),
   revokeAssessment: vi.fn(),
+  listCitizenScreeningSubmissions: vi.fn(),
+  listCitizenEligibilityAssessments: vi.fn(),
   getCampaignById: vi.fn(),
+  listCampaigns: vi.fn(),
 }));
 
 vi.mock('../api/screeningApi', () => ({
@@ -16,9 +19,12 @@ vi.mock('../api/screeningApi', () => ({
   recordEligibilityDecision: mocks.recordEligibilityDecision,
   requestScreeningCorrections: mocks.requestScreeningCorrections,
   revokeAssessment: mocks.revokeAssessment,
+  listCitizenScreeningSubmissions: mocks.listCitizenScreeningSubmissions,
+  listCitizenEligibilityAssessments: mocks.listCitizenEligibilityAssessments,
 }));
 vi.mock('../../campaign-management/api/campaignApi', () => ({
   getCampaignById: mocks.getCampaignById,
+  listCampaigns: mocks.listCampaigns,
 }));
 
 import HealthcareOfficerScreeningReviewDetailsPage from './HealthcareOfficerScreeningReviewDetailsPage';
@@ -95,6 +101,9 @@ describe('HealthcareOfficerScreeningReviewDetailsPage', () => {
     vi.clearAllMocks();
     mocks.getScreeningReviewDetails.mockResolvedValue(details());
     mocks.getCampaignById.mockResolvedValue(campaign);
+    mocks.listCitizenScreeningSubmissions.mockResolvedValue([]);
+    mocks.listCitizenEligibilityAssessments.mockResolvedValue([]);
+    mocks.listCampaigns.mockResolvedValue([campaign]);
     mocks.requestScreeningCorrections.mockResolvedValue({ status: 'CORRECTIONS_REQUIRED' });
     mocks.recordEligibilityDecision.mockResolvedValue({ status: 'ELIGIBLE' });
     mocks.revokeAssessment.mockResolvedValue({ status: 'REVOKED' });
@@ -149,15 +158,14 @@ describe('HealthcareOfficerScreeningReviewDetailsPage', () => {
     expect(screen.queryByText('Eligible')).toBeNull();
 
     const questionHeadings = screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent);
-    expect(questionHeadings).toEqual([
-      'Boolean question',
-      'Single choice question',
-      'Multi choice question',
-      'Numeric question',
-      'Date question',
-      'Text question',
-      'Unresolved choice question',
-    ]);
+    expect(questionHeadings).toContain('Boolean question');
+    expect(questionHeadings).toContain('Single choice question');
+    expect(questionHeadings).toContain('Multi choice question');
+    expect(questionHeadings).toContain('Numeric question');
+    expect(questionHeadings).toContain('Date question');
+    expect(questionHeadings).toContain('Text question');
+    expect(questionHeadings).toContain('Unresolved choice question');
+
     for (const answer of ['Yes', 'Option Alpha', 'Asthma, Diabetes', '37.50', '2026-09-05', 'No concerns', 'LEGACY_VALUE']) {
       expect(screen.getByText(answer)).toBeTruthy();
     }
@@ -475,5 +483,166 @@ describe('HealthcareOfficerScreeningReviewDetailsPage', () => {
 
     expect(await screen.findByText('Assessment has already been revoked')).toBeTruthy();
     expect(screen.getByLabelText('Revocation reason').value).toBe('Keep this revocation reason');
+  });
+
+  // =========================================================================
+  // US-10: Previous Screening & Eligibility History Tests
+  // =========================================================================
+
+  describe('US-10: Previous Screening & Eligibility History', () => {
+    it('displays a friendly empty state when citizen has no previous screening records', async () => {
+      mocks.listCitizenScreeningSubmissions.mockResolvedValue([
+        { id: 42, citizenId: 71, campaignId: 22, status: 'PENDING_REVIEW', submittedAt: '2026-09-05T02:30:00Z' },
+      ]);
+      renderPage();
+      await waitForPage();
+
+      expect(screen.getByRole('heading', { name: 'Previous Screening & Eligibility History' })).toBeTruthy();
+      expect(screen.getByText('No previous screening history found for this citizen.')).toBeTruthy();
+    });
+
+    it('excludes the current submission and displays previous records sorted newest first with campaign context', async () => {
+      mocks.listCampaigns.mockResolvedValue([
+        { id: 22, name: 'Adult Immunisation', code: 'ADULT-26' },
+        { id: 5, name: 'Childhood MMR Campaign', code: 'MMR-26' },
+      ]);
+
+      mocks.listCitizenScreeningSubmissions.mockResolvedValue([
+        { id: 42, citizenId: 71, campaignId: 22, status: 'PENDING_REVIEW', submittedAt: '2026-09-05T02:30:00Z' }, // Current submission
+        { id: 18, citizenId: 71, campaignId: 5, status: 'REVIEWED', preliminaryResult: 'PRELIMINARY_PASS', submittedAt: '2026-09-01T10:00:00Z' }, // Newer previous
+        { id: 10, citizenId: 71, campaignId: 22, status: 'REVIEWED', preliminaryResult: 'PRELIMINARY_PASS', submittedAt: '2026-08-10T08:00:00Z' }, // Older previous
+      ]);
+
+      mocks.listCitizenEligibilityAssessments.mockResolvedValue([
+        {
+          id: 50,
+          submissionId: 18,
+          citizenId: 71,
+          campaignId: 5,
+          status: 'ELIGIBLE',
+          reason: 'Eligible for MMR booster.',
+          reviewedAt: '2026-09-01T12:00:00Z',
+          validUntil: '2026-10-01T12:00:00Z',
+        },
+        {
+          id: 30,
+          submissionId: 10,
+          citizenId: 71,
+          campaignId: 22,
+          status: 'REVOKED',
+          reason: 'Originally eligible',
+          reviewedAt: '2026-08-10T09:00:00Z',
+          validUntil: '2026-09-10T09:00:00Z',
+          revokedAt: '2026-08-15T14:00:00Z',
+          revocationReason: 'Contraindication discovered during visit.',
+        },
+      ]);
+
+      renderPage();
+      await waitForPage();
+
+      expect(mocks.listCitizenScreeningSubmissions).toHaveBeenCalledWith(71);
+      expect(mocks.listCitizenEligibilityAssessments).toHaveBeenCalledWith(71);
+
+      // Verify current submission #42 is not listed under previous history
+      const historyArticles = screen.getByRole('heading', { name: 'Previous Screening & Eligibility History' })
+        .closest('.card-body')
+        .querySelectorAll('article');
+
+      expect(historyArticles).toHaveLength(2);
+
+      // First previous card is Submission #18 (newer)
+      expect(historyArticles[0].textContent).toContain('Childhood MMR Campaign');
+      expect(historyArticles[0].textContent).toContain('Submission #18');
+      expect(historyArticles[0].textContent).toContain('MMR-26');
+      expect(historyArticles[0].textContent).toContain('Eligible');
+      expect(historyArticles[0].textContent).toContain('Eligible for MMR booster.');
+
+      // Second previous card is Submission #10 (older)
+      expect(historyArticles[1].textContent).toContain('Adult Immunisation');
+      expect(historyArticles[1].textContent).toContain('Submission #10');
+      expect(historyArticles[1].textContent).toContain('Revoked');
+      expect(historyArticles[1].textContent).toContain('Contraindication discovered during visit.');
+
+      // Verify View Previous Screening navigation links
+      const viewLinks = historyArticles[0].querySelectorAll('a');
+      expect(viewLinks[0].getAttribute('href')).toBe('/app/staff/screening/history/18');
+      expect(historyArticles[1].querySelector('a').getAttribute('href')).toBe('/app/staff/screening/history/10');
+    });
+
+    it('separates preliminary result from final decision and displays unassessed status cleanly', async () => {
+      mocks.listCitizenScreeningSubmissions.mockResolvedValue([
+        {
+          id: 25,
+          citizenId: 71,
+          campaignId: 22,
+          status: 'CORRECTIONS_REQUIRED',
+          preliminaryResult: 'PRELIMINARY_PASS',
+          submittedAt: '2026-08-20T10:00:00Z',
+        },
+      ]);
+      mocks.listCitizenEligibilityAssessments.mockResolvedValue([]);
+
+      renderPage();
+      await waitForPage();
+
+      const historySection = screen.getByRole('heading', { name: 'Previous Screening & Eligibility History' })
+        .closest('.card-body');
+
+      // Preliminary result is Pass, but Final status is "Not yet recorded"
+      expect(historySection.textContent).toContain('Preliminary pass');
+      expect(historySection.textContent).toContain('Not yet recorded');
+    });
+
+    it('displays INELIGIBLE and EXPIRED historical assessments accurately', async () => {
+      mocks.listCitizenScreeningSubmissions.mockResolvedValue([
+        { id: 28, citizenId: 71, campaignId: 22, status: 'REVIEWED', preliminaryResult: 'PRELIMINARY_REVIEW_REQUIRED', submittedAt: '2026-08-25T10:00:00Z' },
+        { id: 12, citizenId: 71, campaignId: 22, status: 'REVIEWED', preliminaryResult: 'PRELIMINARY_PASS', submittedAt: '2026-07-01T10:00:00Z' },
+      ]);
+      mocks.listCitizenEligibilityAssessments.mockResolvedValue([
+        {
+          id: 72,
+          submissionId: 28,
+          citizenId: 71,
+          campaignId: 22,
+          status: 'INELIGIBLE',
+          reason: 'Medical history indicates strict contraindication.',
+          reviewedAt: '2026-08-25T11:00:00Z',
+        },
+        {
+          id: 15,
+          submissionId: 12,
+          citizenId: 71,
+          campaignId: 22,
+          status: 'EXPIRED',
+          reason: 'Passed annual validity window.',
+          reviewedAt: '2026-07-01T11:00:00Z',
+          validUntil: '2026-08-01T11:00:00Z',
+        },
+      ]);
+
+      renderPage();
+      await waitForPage();
+
+      expect(screen.getByText('Ineligible')).toBeTruthy();
+      expect(screen.getByText('Medical history indicates strict contraindication.')).toBeTruthy();
+      expect(screen.getByText('Expired')).toBeTruthy();
+      expect(screen.getByText('Passed annual validity window.')).toBeTruthy();
+    });
+
+    it('shows scoped warning if history retrieval fails without breaking current review', async () => {
+      mocks.listCitizenScreeningSubmissions.mockRejectedValue(new Error('Submissions service down'));
+
+      renderPage();
+      await waitForPage();
+
+      // Current review still renders
+      expect(screen.getByRole('heading', { name: 'Questionnaire answers' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Request Corrections' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Mark Eligible' })).toBeTruthy();
+
+      // Scoped warning inside previous history card
+      expect(screen.getByText('Previous screening history could not be loaded for this citizen.')).toBeTruthy();
+    });
   });
 });

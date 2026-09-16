@@ -48,6 +48,7 @@ vi.mock('../features/screening/pages/CitizenScreeningCorrectionPage', () => ({ d
 vi.mock('../features/citizen-profile/pages/CitizenProfilePage', () => ({ default: () => 'Citizen Profile Test Page' }));
 vi.mock('../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage', () => ({ default: () => 'HCO Screening Review Queue Test Page' }));
 vi.mock('../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage', () => ({ default: () => 'HCO Screening Review Details Test Page' }));
+vi.mock('../features/screening/pages/HealthcareOfficerScreeningHistoryDetailsPage', () => ({ default: () => 'HCO Screening History Details Test Page' }));
 
 function setAuth({ isAuthenticated = true, roles = [] } = {}) {
   const logout = vi.fn();
@@ -418,6 +419,7 @@ describe('shared routing and role guards', () => {
   describe.each([
     ['/app/staff/screening/reviews', 'HCO Screening Review Queue Test Page'],
     ['/app/staff/screening/reviews/42', 'HCO Screening Review Details Test Page'],
+    ['/app/staff/screening/history/42', 'HCO Screening History Details Test Page'],
   ])('healthcare-officer review route %s', (path, page) => {
     it('allows a healthcare officer', () => {
       setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
