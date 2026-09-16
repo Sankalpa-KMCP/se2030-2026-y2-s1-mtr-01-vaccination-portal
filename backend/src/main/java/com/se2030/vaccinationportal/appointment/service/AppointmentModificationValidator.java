@@ -11,12 +11,33 @@ import java.time.Instant;
 /**
  * Shared validator enforcing common appointment modification rules across cancellation and rescheduling:
  * completion immutability (MF03-BR-11) and 24-hour window staff-override requirements (MF03-BR-04).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Cancellation and rescheduling authorization and time window validation.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-04: Citizen self-service modifications are permitted only until 24 hours prior to slot start time.
+ *       Inside the 24-hour window, changes require authorized staff override with a mandatory explanation reason.</li>
+ *   <li>MF03-BR-11: COMPLETED appointments are legally/clinically final and cannot be cancelled or rescheduled.</li>
+ * </ul>
  */
 public class AppointmentModificationValidator {
 
     /**
      * Validates that an appointment can be modified (cancelled or rescheduled) by checking
      * ownership, status non-completion, and the 24-hour notice window rule.
+     * <p>
+     * <b>Viva Rationale:</b>
+     * <ul>
+     *   <li><b>Ownership:</b> Verifies the requesting citizen matches the appointment record to prevent horizontal privilege escalation.</li>
+     *   <li><b>Clinical Finality:</b> Blocks changes to COMPLETED appointments (MF03-BR-11) because the vaccination has already occurred.</li>
+     *   <li><b>24-Hour Notice Window:</b> Protects clinic capacity utilization (MF03-BR-04). Late cancellations/reschedules within 24h
+     *       waste health worker slots unless vetted and recorded by authorized staff.</li>
+     * </ul>
+     * </p>
      *
      * @param appointment         Target {@link Appointment}
      * @param requestingCitizenId Identifier of requesting citizen (null if staff override)
@@ -33,8 +54,10 @@ public class AppointmentModificationValidator {
             Instant effectiveNow,
             SlotCapacityPort slotCapacityPort
     ) {
-        if (!isStaffOverride && requestingCitizenId != null && !requestingCitizenId.equals(appointment.getCitizenId())) {
-            throw new IllegalArgumentException("Citizen ID " + requestingCitizenId + " is not authorized to modify appointment " + appointment.getId());
+        if (!isStaffOverride) {
+            if (requestingCitizenId == null || !requestingCitizenId.equals(appointment.getCitizenId())) {
+                throw new IllegalArgumentException("Citizen ID " + requestingCitizenId + " is not authorized to modify appointment " + appointment.getId());
+            }
         }
 
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {

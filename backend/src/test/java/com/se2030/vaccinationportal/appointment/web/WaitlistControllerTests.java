@@ -11,7 +11,9 @@ import com.se2030.vaccinationportal.appointment.service.TestEligibilityLookupPor
 import com.se2030.vaccinationportal.appointment.service.TestSlotCapacityPortDouble;
 import com.se2030.vaccinationportal.appointment.service.WaitlistJoinService;
 import com.se2030.vaccinationportal.appointment.service.WaitlistLeaveService;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,10 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -77,6 +83,19 @@ class WaitlistControllerTests {
     @Autowired
     private TestSlotCapacityPortDouble slotCapacityPortDouble;
 
+    private void authenticate(Long userId, String role) {
+        UserPrincipal principal = new UserPrincipal(
+                userId,
+                "user" + userId + "@portal.test",
+                null,
+                true,
+                List.of(new SimpleGrantedAuthority(role))
+        );
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
+        );
+    }
+
     @BeforeEach
     void setUp() {
         waitlistRepository.deleteAllInBatch();
@@ -88,6 +107,7 @@ class WaitlistControllerTests {
         WaitlistController waitlistController = new WaitlistController(joinService, leaveService, waitlistRepository);
         this.mockMvc = MockMvcBuilders.standaloneSetup(waitlistController)
                 .setControllerAdvice(new AppointmentExceptionHandler())
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
     }
 
@@ -96,6 +116,7 @@ class WaitlistControllerTests {
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -104,6 +125,7 @@ class WaitlistControllerTests {
         Long campaignId = 2001L;
         Long sessionId = 3001L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSessionFull(sessionId, true);
 
@@ -123,6 +145,7 @@ class WaitlistControllerTests {
         Long campaignId = 2001L;
         Long sessionId = 3001L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSessionFull(sessionId, true);
 
@@ -146,6 +169,7 @@ class WaitlistControllerTests {
         Long campaignId = 2001L;
         Long sessionId = 3001L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSessionFull(sessionId, true);
 
@@ -158,12 +182,13 @@ class WaitlistControllerTests {
     }
 
     @Test
-    void leaveWaitlist_unauthorizedCitizen_returns400BadRequest() throws Exception {
+    void leaveWaitlist_unauthorizedCitizen_returns403Forbidden() throws Exception {
         Long citizenId = 1004L;
         Long otherCitizenId = 9999L;
         Long campaignId = 2001L;
         Long sessionId = 3001L;
 
+        authenticate(otherCitizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSessionFull(sessionId, true);
 
@@ -171,12 +196,13 @@ class WaitlistControllerTests {
 
         mockMvc.perform(post("/api/v1/waitlist/" + entry.getId() + "/leave")
                         .param("citizenId", otherCitizenId.toString()))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error", is("BAD_REQUEST")));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error", is("FORBIDDEN")));
     }
 
     @Test
     void leaveWaitlist_notFound_returns404NotFound() throws Exception {
+        authenticate(1001L, "ROLE_CITIZEN");
         mockMvc.perform(post("/api/v1/waitlist/999999/leave")
                         .param("citizenId", "1001"))
                 .andExpect(status().isNotFound())
@@ -189,6 +215,7 @@ class WaitlistControllerTests {
         Long campaignId = 2001L;
         Long sessionId = 3001L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSessionFull(sessionId, true);
 
@@ -205,6 +232,7 @@ class WaitlistControllerTests {
 
     @Test
     void getWaitlistStatus_notFound_returns404NotFound() throws Exception {
+        authenticate(999999L, "ROLE_CITIZEN");
         mockMvc.perform(get("/api/v1/waitlist/status")
                         .param("citizenId", "999999")
                         .param("campaignId", "999999"))
@@ -217,6 +245,7 @@ class WaitlistControllerTests {
         Long campaignId = 2001L;
         Long sessionId = 3001L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSessionFull(sessionId, true);
 

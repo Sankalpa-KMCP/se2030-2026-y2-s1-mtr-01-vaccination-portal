@@ -79,8 +79,8 @@ const CHECK_IN_STAFF_ROLES = [
   'ROLE_CENTER_MANAGER',
 ];
 
-const SCREENING_ADMIN_ROLES = ['ROLE_ADMIN', 'ROLE_SYSTEM_ADMINISTRATOR'];
 const INVENTORY_ROLES = ['ROLE_ADMIN', 'ROLE_INVENTORY_OFFICER'];
+const SCREENING_CONFIGURATION_ROLES = ['ROLE_HEALTHCARE_OFFICER'];
 const SCREENING_REVIEW_ROLES = ['ROLE_HEALTHCARE_OFFICER'];
 
 function RoleHomeRedirect({ user }) {
@@ -263,7 +263,7 @@ export default function PortalRoutes() {
             <Route path="inventory" element={<InventoryManagementPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={SCREENING_ADMIN_ROLES} />}>
+          <Route element={<ProtectedRoute allowedRoles={SCREENING_CONFIGURATION_ROLES} />}>
             <Route path="screening/questions" element={<ScreeningQuestionsPage />} />
             <Route path="screening/questionnaires" element={<ScreeningQuestionnairesPage />} />
           </Route>

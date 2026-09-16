@@ -55,7 +55,7 @@ public class QuestionnaireController {
     }
 
     @PostMapping("/questionnaires/{questionnaireId}/versions")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<QuestionnaireVersionResponse> createDraftVersion(
             @PathVariable("questionnaireId") Long questionnaireId
     ) {
@@ -64,7 +64,7 @@ public class QuestionnaireController {
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/items")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<QuestionnaireItemResponse> addQuestionItem(
             @PathVariable("versionId") Long versionId,
             @Valid @RequestBody AddQuestionItemRequest request
@@ -79,7 +79,7 @@ public class QuestionnaireController {
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/rules")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<EligibilityRuleResponse> addEligibilityRule(
             @PathVariable("versionId") Long versionId,
             @Valid @RequestBody AddEligibilityRuleRequest request
@@ -111,7 +111,7 @@ public class QuestionnaireController {
     }
 
     @PutMapping("/rules/{ruleId}")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<EligibilityRuleResponse> updateEligibilityRule(
             @PathVariable("ruleId") Long ruleId,
             @Valid @RequestBody UpdateEligibilityRuleRequest request
@@ -129,28 +129,28 @@ public class QuestionnaireController {
     }
 
     @DeleteMapping("/rules/{ruleId}")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<Void> deleteEligibilityRule(@PathVariable("ruleId") Long ruleId) {
         versionService.deleteEligibilityRule(ruleId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/publish")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<QuestionnaireVersionResponse> publishVersion(@PathVariable("versionId") Long versionId) {
         QuestionnaireVersion published = versionService.publishVersion(versionId);
         return ResponseEntity.ok(versionMapper.toResponse(published));
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/retire")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<QuestionnaireVersionResponse> retireVersion(@PathVariable("versionId") Long versionId) {
         QuestionnaireVersion retired = versionService.retireVersion(versionId);
         return ResponseEntity.ok(versionMapper.toResponse(retired));
     }
 
     @DeleteMapping("/questionnaire-versions/{versionId}")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<Void> deleteDraftVersion(@PathVariable("versionId") Long versionId) {
         versionService.deleteDraftVersion(versionId);
         return ResponseEntity.noContent().build();

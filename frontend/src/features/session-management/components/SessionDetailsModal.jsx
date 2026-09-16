@@ -22,7 +22,12 @@ import {
   sessionBookingStatusTitles as BOOKING_STATUS_TITLES,
 } from '../../../components/common/statusVariants';
 import { useAuth } from '../../../auth/context/AuthContext';
-import { canManageSessionBooking } from '../../../auth/utils/roleUtils';
+import {
+  canManageSessionBooking,
+  canManageSessionOperations,
+  canOverrideSessionCapacity,
+  canViewSessionOperations,
+} from '../../../auth/utils/roleUtils';
 
 export default function SessionDetailsModal({
   isOpen,
@@ -34,6 +39,9 @@ export default function SessionDetailsModal({
 }) {
   const { user } = useAuth();
   const canManageBooking = canManageSessionBooking(user);
+  const canViewOperations = canViewSessionOperations(user);
+  const canManageOperations = canManageSessionOperations(user);
+  const canOverrideCapacity = canOverrideSessionCapacity(user);
 
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -93,6 +101,12 @@ export default function SessionDetailsModal({
         }
       });
   }, [isOpen, sessionId]);
+
+  useEffect(() => {
+    if (!canViewOperations && (activeTab === 'assignments' || activeTab === 'capacity')) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, canViewOperations]);
 
   // Manage keyboard focus for inline confirmation announcement
   useEffect(() => {
@@ -241,24 +255,28 @@ export default function SessionDetailsModal({
                     Overview
                   </button>
                 </li>
-                <li className="nav-item">
-                  <button
-                    type="button"
-                    className={`nav-link ${activeTab === 'assignments' ? 'active fw-bold text-primary' : 'text-secondary'}`}
-                    onClick={() => setActiveTab('assignments')}
-                  >
-                    Operational Assignments
-                  </button>
-                </li>
-                <li className="nav-item">
-                  <button
-                    type="button"
-                    className={`nav-link ${activeTab === 'capacity' ? 'active fw-bold text-primary' : 'text-secondary'}`}
-                    onClick={() => setActiveTab('capacity')}
-                  >
-                    Capacity Plan
-                  </button>
-                </li>
+                {canViewOperations && (
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeTab === 'assignments' ? 'active fw-bold text-primary' : 'text-secondary'}`}
+                      onClick={() => setActiveTab('assignments')}
+                    >
+                      Operational Assignments
+                    </button>
+                  </li>
+                )}
+                {canViewOperations && (
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeTab === 'capacity' ? 'active fw-bold text-primary' : 'text-secondary'}`}
+                      onClick={() => setActiveTab('capacity')}
+                    >
+                      Capacity Plan
+                    </button>
+                  </li>
+                )}
                 <li className="nav-item">
                   <button
                     type="button"
@@ -623,12 +641,16 @@ export default function SessionDetailsModal({
               </div>
             )}
 
-            {!loading && session && activeTab === 'assignments' && (
-              <SessionAssignmentsTab session={session} />
+            {!loading && session && canViewOperations && activeTab === 'assignments' && (
+              <SessionAssignmentsTab session={session} canManage={canManageOperations} />
             )}
 
-            {!loading && session && activeTab === 'capacity' && (
-              <SessionCapacityPlanTab session={session} />
+            {!loading && session && canViewOperations && activeTab === 'capacity' && (
+              <SessionCapacityPlanTab
+                session={session}
+                canManage={canManageOperations}
+                canOverride={canOverrideCapacity}
+              />
             )}
 
             {!loading && session && activeTab === 'time-slots' && (

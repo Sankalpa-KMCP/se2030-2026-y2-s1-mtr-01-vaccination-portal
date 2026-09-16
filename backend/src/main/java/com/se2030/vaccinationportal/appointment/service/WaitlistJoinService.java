@@ -28,6 +28,20 @@ import org.springframework.transaction.annotation.Transactional;
  * Enforces pessimistic guard-row locking, campaign eligibility checks (MF03-BR-01), active appointment incompatibility checks
  * (MF03-BR-02), active waitlist uniqueness checks (MF03-BR-14), and transactional entity persistence within ONE {@link Transactional} boundary.
  * </p>
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen joins a waitlist when a vaccination session is full.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Waitlist join requires a currently valid ELIGIBLE screening assessment for the campaign.</li>
+ *   <li>MF03-BR-02 &amp; MF03-BR-14: Citizen cannot join a waitlist if they already hold an active appointment
+ *       (CONFIRMED or CHECKED_IN) for the same campaign.</li>
+ *   <li>MF03-BR-06: Allowed only when all time slots of the session have zero remaining capacity;
+ *       at most one active WAITING entry per citizen per campaign.</li>
+ * </ul>
  */
 @Service
 @Transactional

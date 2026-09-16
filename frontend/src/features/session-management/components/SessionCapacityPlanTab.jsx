@@ -73,8 +73,10 @@ function parseStrictDecimalRatio(rawVal, { fieldName }) {
  *
  * @param {Object} props
  * @param {Object} props.session - Current session object
+ * @param {boolean} props.canManage - Whether the current user can preview/create capacity plans
+ * @param {boolean} props.canOverride - Whether the current user can approve above recommendation
  */
-export default function SessionCapacityPlanTab({ session }) {
+export default function SessionCapacityPlanTab({ session, canManage = false, canOverride = false }) {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState(null);
@@ -100,9 +102,13 @@ export default function SessionCapacityPlanTab({ session }) {
   const previewGenerationRef = useRef(0);
   const previewInFlightRef = useRef(false);
   const createInFlightRef = useRef(false);
+  const previousCanPlanRef = useRef(canManage && session?.lifecycleStatus === 'DRAFT');
+  const previousCanOverrideRef = useRef(canOverride && session?.lifecycleStatus === 'DRAFT');
 
   const tz = session?.scheduleTimezone || 'UTC';
   const isDraft = session?.lifecycleStatus === 'DRAFT';
+  const canPlan = canManage && isDraft;
+  const canOverridePlan = canOverride && isDraft;
 
   // Load immutable revision history for session
   const fetchHistory = useCallback((sessionId) => {
@@ -139,6 +145,28 @@ export default function SessionCapacityPlanTab({ session }) {
     }
   }, [session?.id, fetchHistory]);
 
+  useEffect(() => {
+    if (previousCanPlanRef.current && !canPlan) {
+      previewGenerationRef.current += 1;
+      setPreviewResult(null);
+      setPreviewError(null);
+      setCreateError(null);
+      setSuccessMessage(null);
+      setFormData((prev) => ({ ...prev, overrideReason: '' }));
+    }
+    previousCanPlanRef.current = canPlan;
+  }, [canPlan]);
+
+  useEffect(() => {
+    if (previousCanOverrideRef.current && !canOverridePlan) {
+      previewGenerationRef.current += 1;
+      setPreviewResult(null);
+      setCreateError(null);
+      setFormData((prev) => ({ ...prev, overrideReason: '' }));
+    }
+    previousCanOverrideRef.current = canOverridePlan;
+  }, [canOverridePlan]);
+
   // Derive latest approved plan deterministically from history
   const latestPlan = history.length > 0
     ? history.reduce((latest, current) => (current.revision > (latest?.revision || 0) ? current : latest), history[history.length - 1])
@@ -150,16 +178,18 @@ export default function SessionCapacityPlanTab({ session }) {
       ...prev,
       [name]: value,
     }));
-    // Invalidate preview and bump generation on any field modification
-    previewGenerationRef.current += 1;
-    setPreviewResult(null);
-    setPreviewError(null);
+    // An override reason changes approval validity, but not the server calculation itself.
+    if (name !== 'overrideReason') {
+      previewGenerationRef.current += 1;
+      setPreviewResult(null);
+      setPreviewError(null);
+    }
     if (createError) setCreateError(null);
   };
 
   const handlePreview = async (e) => {
     if (e) e.preventDefault();
-    if (!session?.id) return;
+    if (!session?.id || !canPlan) return;
 
     // Synchronous re-entry and cross-operation guards
     if (previewInFlightRef.current || createInFlightRef.current) {
@@ -225,7 +255,7 @@ export default function SessionCapacityPlanTab({ session }) {
       expectedDwellMinutes: dwellRes.value,
       expectedAccompanyingPersonsPerBooking: accompanyingRes.value,
       approvedCapacity: approvedCapRes.value,
-      overrideReason: formData.overrideReason?.trim() || null,
+      overrideReason: canOverridePlan ? formData.overrideReason?.trim() || null : null,
     };
 
     const currentGeneration = ++previewGenerationRef.current;
@@ -267,6 +297,11 @@ export default function SessionCapacityPlanTab({ session }) {
   const handleCreatePlan = async (e) => {
     if (e) e.preventDefault();
     if (!session?.id) return;
+
+    if (!canPlan) {
+      setCreateError(new Error('You are not authorized to create a capacity plan for this session.'));
+      return;
+    }
 
     // Synchronous re-entry and cross-operation guards
     if (createInFlightRef.current || previewInFlightRef.current) {
@@ -333,9 +368,14 @@ export default function SessionCapacityPlanTab({ session }) {
 
     const reason = formData.overrideReason?.trim() || null;
     const approvedCap = approvedCapRes.value;
+    const overrideRequired = approvedCap > previewResult.recommendedThroughput;
 
     // Enforce current preview constraints
-    if (approvedCap > previewResult.recommendedThroughput && (!reason || reason.length === 0)) {
+    if (overrideRequired && !canOverridePlan) {
+      setCreateError(new Error('Capacity above the recommendation requires ROLE_CENTER_MANAGER authorization.'));
+      return;
+    }
+    if (overrideRequired && (!reason || reason.length === 0)) {
       setCreateError(new Error('An override reason is required when approved capacity exceeds recommended throughput.'));
       return;
     }
@@ -358,7 +398,7 @@ export default function SessionCapacityPlanTab({ session }) {
       safeConcurrentOccupancy: safeOccRes.value,
       expectedDwellMinutes: dwellRes.value,
       expectedAccompanyingPersonsPerBooking: accompanyingRes.value,
-      overrideReason: reason,
+      overrideReason: canOverridePlan ? reason : null,
     };
 
     createInFlightRef.current = true;
@@ -417,6 +457,12 @@ export default function SessionCapacityPlanTab({ session }) {
         </div>
       )}
 
+      {isDraft && !canManage && (
+        <div className="alert alert-secondary py-2 small mb-0">
+          Your role has read-only access to capacity plan history.
+        </div>
+      )}
+
       {/* Section 1: Latest Approved Plan Summary */}
       <div className="card border">
         <div className="card-header bg-light d-flex align-items-center justify-content-between py-2 px-3">
@@ -437,7 +483,7 @@ export default function SessionCapacityPlanTab({ session }) {
           {!loadingHistory && !latestPlan && (
             <div className="text-center text-muted py-4 small">
               No approved capacity plan has been established for this session yet.
-              {isDraft && ' Configure assumptions below and calculate a preview to create the initial revision.'}
+              {canPlan && ' Configure assumptions below and calculate a preview to create the initial revision.'}
             </div>
           )}
 
@@ -529,7 +575,7 @@ export default function SessionCapacityPlanTab({ session }) {
       </div>
 
       {/* Section 2: Capacity Planning & Preview Form */}
-      {isDraft && (
+      {canPlan && (
         <div className="card border">
           <div className="card-header bg-light py-2 px-3">
             <h6 className="fw-bold text-dark mb-0">Plan & Preview Capacity</h6>
@@ -640,25 +686,28 @@ export default function SessionCapacityPlanTab({ session }) {
                   </div>
                 </div>
 
-                <div className="col-md-6">
-                  <label htmlFor="overrideReason" className="form-label fw-semibold small">
-                    Capacity Override Reason <span className="text-muted fw-normal">(required if exceeding recommendation)</span>
-                  </label>
-                  <textarea
-                    id="overrideReason"
-                    name="overrideReason"
-                    rows="2"
-                    maxLength="255"
-                    className="form-control form-control-sm"
-                    placeholder="Provide justification if approved capacity exceeds recommended throughput"
-                    value={formData.overrideReason}
-                    onChange={handleInputChange}
-                  />
-                  <div className="form-text small d-flex justify-content-between">
-                    <span>Must not exceed 255 characters.</span>
-                    <span>{formData.overrideReason.length}/255</span>
+                {canOverridePlan && previewResult &&
+                  parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value > previewResult.recommendedThroughput && (
+                  <div className="col-md-6">
+                    <label htmlFor="overrideReason" className="form-label fw-semibold small">
+                      Capacity Override Reason <span className="text-muted fw-normal">(required)</span>
+                    </label>
+                    <textarea
+                      id="overrideReason"
+                      name="overrideReason"
+                      rows="2"
+                      maxLength="255"
+                      className="form-control form-control-sm"
+                      placeholder="Provide justification for exceeding recommended throughput"
+                      value={formData.overrideReason}
+                      onChange={handleInputChange}
+                    />
+                    <div className="form-text small d-flex justify-content-between">
+                      <span>Must not exceed 255 characters.</span>
+                      <span>{formData.overrideReason.length}/255</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="d-flex align-items-center gap-2 mt-3">
@@ -722,7 +771,7 @@ export default function SessionCapacityPlanTab({ session }) {
                 {/* Override Condition Alert */}
                 {parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value != null &&
                   parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value > previewResult.recommendedThroughput && (
-                  <div className="alert alert-warning border-0 shadow-sm small mb-3" role="alert">
+                  <div className={`alert ${canOverridePlan ? 'alert-warning' : 'alert-danger'} border-0 shadow-sm small mb-3`} role="alert">
                     <div className="fw-bold mb-1">
                       <i className="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
                       Capacity Override Detected
@@ -731,8 +780,11 @@ export default function SessionCapacityPlanTab({ session }) {
                       The target approved capacity (<strong>{formData.approvedCapacity} doses</strong>) exceeds the recommended throughput (<strong>{previewResult.recommendedThroughput} doses</strong>).
                     </div>
                     <ul className="mb-0 mt-1 ps-3">
-                      <li>A non-blank <strong>Override Reason</strong> is required.</li>
-                      <li>Backend authorization requires authenticated <strong>ROLE_CENTER_MANAGER</strong>.</li>
+                      {canOverridePlan ? (
+                        <li>A non-blank <strong>Override Reason</strong> is required.</li>
+                      ) : (
+                        <li>You cannot approve this value. A <strong>CENTER_MANAGER</strong> must authorize capacity above the recommendation.</li>
+                      )}
                       {previewResult.sessionServiceCeiling != null && (
                         <li>Hard session service ceiling (<strong>{previewResult.sessionServiceCeiling} doses</strong>) cannot be exceeded under any circumstances.</li>
                       )}
@@ -762,7 +814,8 @@ export default function SessionCapacityPlanTab({ session }) {
                     type="button"
                     className="btn btn-sm btn-primary d-inline-flex align-items-center gap-2"
                     onClick={handleCreatePlan}
-                    disabled={submittingCreate || loadingPreview}
+                    disabled={submittingCreate || loadingPreview || (!canOverridePlan &&
+                      parseStrictInteger(formData.approvedCapacity, { fieldName: 'Approved capacity' }).value > previewResult.recommendedThroughput)}
                   >
                     {submittingCreate ? (
                       <>

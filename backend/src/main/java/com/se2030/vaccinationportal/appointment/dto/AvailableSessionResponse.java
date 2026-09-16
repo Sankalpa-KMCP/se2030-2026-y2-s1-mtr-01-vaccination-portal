@@ -4,7 +4,12 @@ import com.se2030.vaccinationportal.appointment.dependency.AvailableSessionSumma
 import java.time.Instant;
 
 /**
- * REST response DTO for bookable session/slot availability search (US-03).
+ * REST response DTO for bookable session/slot availability search.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search available vaccination sessions and slots.</li>
+ * </ul>
  */
 public record AvailableSessionResponse(
         Long sessionId,

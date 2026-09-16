@@ -115,6 +115,9 @@ public class SessionCapacityPlanService {
                 ? request.expectedAccompanyingPersonsPerBooking()
                 : SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO;
 
+        List<TimeSlot> existingSlots = timeSlotRepository.findBySessionIdOrderByStartTimeAsc(sessionId);
+        validateExistingSlotOccupancy(existingSlots, dwellMinutes, accompanying, safeOccupancy);
+
         Integer ceiling = session.getCenter().getSessionServiceCeiling();
 
         boolean overrideRequired = request.approvedCapacity() != null
@@ -240,6 +243,8 @@ public class SessionCapacityPlanService {
         double accompanying = (request.expectedAccompanyingPersonsPerBooking() != null)
                 ? request.expectedAccompanyingPersonsPerBooking()
                 : SessionCapacityPlan.DEFAULT_ACCOMPANYING_RATIO;
+
+        validateExistingSlotOccupancy(existingSlots, dwellMinutes, accompanying, safeOccupancy);
 
         Integer ceiling = lockedCenter.getSessionServiceCeiling();
 
@@ -379,5 +384,31 @@ public class SessionCapacityPlanService {
                 SessionResourceAssignment::getStartAt,
                 SessionResourceAssignment::getEndAt
         );
+    }
+
+    private void validateExistingSlotOccupancy(List<TimeSlot> existingSlots,
+                                               int dwellMinutes,
+                                               double accompanyingRatio,
+                                               int safeConcurrentOccupancy) {
+        if (existingSlots == null || existingSlots.isEmpty()) {
+            return;
+        }
+        List<OccupancyInterval> intervals = calculationService.mapSlotsToOccupancyIntervals(
+                existingSlots,
+                dwellMinutes,
+                accompanyingRatio
+        );
+        OccupancyEvaluationResult result = calculationService.evaluateConcurrentOccupancy(
+                intervals,
+                safeConcurrentOccupancy
+        );
+        if (!result.safe()) {
+            throw new IllegalStateException(String.format(
+                    "Session time slots exceed safe concurrent occupancy (peak: %.1f, limit: %d at %s)",
+                    result.peakOccupancyUnits(),
+                    result.safeConcurrentOccupancy(),
+                    result.peakIntervalStart()
+            ));
+        }
     }
 }
