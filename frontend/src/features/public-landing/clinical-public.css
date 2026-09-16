@@ -389,6 +389,11 @@
   display: none;
 }
 
+.premium-visual--registry,
+.premium-visual--registry .premium-visual__face {
+  min-height: 485px;
+}
+
 .premium-visual__metrics {
   gap: 0;
   background: transparent;
@@ -402,6 +407,8 @@
   color: #677b87;
   background: #f8fbfd;
   border-right: 1px solid var(--clinical-border);
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .premium-visual__metrics span:last-child {
@@ -464,6 +471,17 @@
   border-radius: 6px;
   box-shadow: none;
   transform: none;
+  animation-name: clinical-role-place;
+}
+
+@keyframes clinical-role-place {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .premium-registry-card__code {
