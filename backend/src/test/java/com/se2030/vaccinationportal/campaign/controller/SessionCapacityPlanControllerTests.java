@@ -252,6 +252,27 @@ class SessionCapacityPlanControllerTests {
                 .andExpect(jsonPath("$.status", is(404)));
     }
 
+    @Test
+    @DisplayName("POST /preview returns 409 when existing slots exceed safe concurrent occupancy")
+    void previewCapacityPlan_exceedsConcurrentOccupancy_returns409() throws Exception {
+        when(capacityPlanService.previewCapacityPlan(eq(300L), any(PreviewCapacityPlanRequest.class)))
+                .thenThrow(new IllegalStateException(
+                        "Session time slots exceed safe concurrent occupancy (peak: 60.0, limit: 50 at 2026-09-01T08:00:00Z)"));
+
+        String jsonPayload = """
+                {
+                    "fullyEquippedStationCount": 3
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/300/capacity-plans/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.message", containsString("Session time slots exceed safe concurrent occupancy")));
+    }
+
     // --- Create Revision Endpoints ---
 
     @Test
@@ -332,6 +353,28 @@ class SessionCapacityPlanControllerTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status", is(409)))
                 .andExpect(jsonPath("$.message", containsString("only be created for sessions in DRAFT status")));
+    }
+
+    @Test
+    @DisplayName("POST /capacity-plans returns 409 when existing slots exceed safe concurrent occupancy")
+    void createCapacityPlan_exceedsConcurrentOccupancy_returns409() throws Exception {
+        when(capacityPlanService.createCapacityPlan(eq(300L), any(CreateSessionCapacityPlanRequest.class), any()))
+                .thenThrow(new IllegalStateException(
+                        "Session time slots exceed safe concurrent occupancy (peak: 60.0, limit: 50 at 2026-09-01T08:00:00Z)"));
+
+        String jsonPayload = """
+                {
+                    "fullyEquippedStationCount": 3,
+                    "approvedCapacity": 72
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/sessions/300/capacity-plans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.message", containsString("Session time slots exceed safe concurrent occupancy")));
     }
 
     @Test

@@ -17,7 +17,7 @@ import AssignStaffModal from './AssignStaffModal';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 
-export default function SessionAssignmentsTab({ session }) {
+export default function SessionAssignmentsTab({ session, canManage = false }) {
   const [resourceAssignments, setResourceAssignments] = useState([]);
   const [loadingResources, setLoadingResources] = useState(false);
   const [resourceError, setResourceError] = useState(null);
@@ -37,6 +37,7 @@ export default function SessionAssignmentsTab({ session }) {
 
   const tz = session?.scheduleTimezone || 'UTC';
   const isDraft = session?.lifecycleStatus === 'DRAFT';
+  const canMutate = canManage && isDraft;
 
   const fetchResources = useCallback((sessionId) => {
     if (!sessionId) return;
@@ -89,7 +90,21 @@ export default function SessionAssignmentsTab({ session }) {
     }
   }, [session?.id, fetchResources, fetchStaff]);
 
+  useEffect(() => {
+    if (!canMutate) {
+      setIsAssignResourceOpen(false);
+      setIsAssignStaffOpen(false);
+      setDeletingResourceId(null);
+      setDeletingStaffId(null);
+      setActionError(null);
+    }
+  }, [canMutate]);
+
   const handleRemoveResource = async (assignmentId) => {
+    if (!canMutate) {
+      setActionError(new Error('You are not authorized to modify operational assignments for this session.'));
+      return;
+    }
     if (!window.confirm('Are you sure you want to remove this operational resource assignment?')) {
       return;
     }
@@ -108,6 +123,10 @@ export default function SessionAssignmentsTab({ session }) {
   };
 
   const handleRemoveStaff = async (assignmentId) => {
+    if (!canMutate) {
+      setActionError(new Error('You are not authorized to modify operational assignments for this session.'));
+      return;
+    }
     if (!window.confirm('Are you sure you want to remove this staff assignment?')) {
       return;
     }
@@ -154,6 +173,12 @@ export default function SessionAssignmentsTab({ session }) {
         </div>
       )}
 
+      {isDraft && !canManage && (
+        <div className="alert alert-secondary py-2 small mb-0">
+          Your role has read-only access to operational assignments.
+        </div>
+      )}
+
       {/* Resource Assignments Section */}
       <div className="card border">
         <div className="card-header bg-light d-flex align-items-center justify-content-between py-2 px-3">
@@ -161,7 +186,7 @@ export default function SessionAssignmentsTab({ session }) {
             <h6 className="fw-bold text-dark mb-0">Assigned Operational Resources</h6>
             <span className="badge bg-secondary">{resourceAssignments.length}</span>
           </div>
-          {isDraft && (
+          {canMutate && (
             <button
               type="button"
               className="btn btn-sm btn-outline-primary"
@@ -204,7 +229,7 @@ export default function SessionAssignmentsTab({ session }) {
                     <th scope="col" style={{ width: '25%' }}>Resource Name</th>
                     <th scope="col" style={{ width: '15%' }}>Start Time</th>
                     <th scope="col" style={{ width: '15%' }}>End Time</th>
-                    {isDraft && <th scope="col" style={{ width: '8%', textAlign: 'right' }}>Actions</th>}
+                    {canMutate && <th scope="col" style={{ width: '8%', textAlign: 'right' }}>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -221,7 +246,7 @@ export default function SessionAssignmentsTab({ session }) {
                       <td>{a.resourceName || '—'}</td>
                       <td>{formatTimeInTimezone(a.startAt, tz)}</td>
                       <td>{formatTimeInTimezone(a.endAt, tz)}</td>
-                      {isDraft && (
+                      {canMutate && (
                         <td className="text-end">
                           <button
                             type="button"
@@ -250,7 +275,7 @@ export default function SessionAssignmentsTab({ session }) {
             <h6 className="fw-bold text-dark mb-0">Assigned Operational Staff</h6>
             <span className="badge bg-secondary">{staffAssignments.length}</span>
           </div>
-          {isDraft && (
+          {canMutate && (
             <button
               type="button"
               className="btn btn-sm btn-outline-primary"
@@ -292,7 +317,7 @@ export default function SessionAssignmentsTab({ session }) {
                     <th scope="col" style={{ width: '25%' }}>Assigned Role</th>
                     <th scope="col" style={{ width: '22%' }}>Start Time</th>
                     <th scope="col" style={{ width: '22%' }}>End Time</th>
-                    {isDraft && <th scope="col" style={{ width: '11%', textAlign: 'right' }}>Actions</th>}
+                    {canMutate && <th scope="col" style={{ width: '11%', textAlign: 'right' }}>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -308,7 +333,7 @@ export default function SessionAssignmentsTab({ session }) {
                       </td>
                       <td>{formatTimeInTimezone(s.startAt, tz)}</td>
                       <td>{formatTimeInTimezone(s.endAt, tz)}</td>
-                      {isDraft && (
+                      {canMutate && (
                         <td className="text-end">
                           <button
                             type="button"
@@ -331,7 +356,7 @@ export default function SessionAssignmentsTab({ session }) {
       </div>
 
       {/* Assign Resource Modal */}
-      {isAssignResourceOpen && (
+      {canMutate && isAssignResourceOpen && (
         <AssignResourceModal
           isOpen={isAssignResourceOpen}
           onClose={() => setIsAssignResourceOpen(false)}
@@ -341,7 +366,7 @@ export default function SessionAssignmentsTab({ session }) {
       )}
 
       {/* Assign Staff Modal */}
-      {isAssignStaffOpen && (
+      {canMutate && isAssignStaffOpen && (
         <AssignStaffModal
           isOpen={isAssignStaffOpen}
           onClose={() => setIsAssignStaffOpen(false)}

@@ -54,8 +54,10 @@ public class AppointmentModificationValidator {
             Instant effectiveNow,
             SlotCapacityPort slotCapacityPort
     ) {
-        if (!isStaffOverride && requestingCitizenId != null && !requestingCitizenId.equals(appointment.getCitizenId())) {
-            throw new IllegalArgumentException("Citizen ID " + requestingCitizenId + " is not authorized to modify appointment " + appointment.getId());
+        if (!isStaffOverride) {
+            if (requestingCitizenId == null || !requestingCitizenId.equals(appointment.getCitizenId())) {
+                throw new IllegalArgumentException("Citizen ID " + requestingCitizenId + " is not authorized to modify appointment " + appointment.getId());
+            }
         }
 
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
