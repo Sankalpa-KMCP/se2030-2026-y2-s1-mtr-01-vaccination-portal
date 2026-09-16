@@ -116,11 +116,32 @@ export function canPlanSessions(user) {
 }
 
 /**
+ * Whether user can view session operational assignments and capacity plan history.
+ * Authorized: ADMIN, CENTER_MANAGER, HEALTHCARE_OFFICER
+ */
+export function canViewSessionOperations(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CENTER_MANAGER',
+    'ROLE_HEALTHCARE_OFFICER'
+  );
+}
+
+/**
  * Whether user can manage day-of-operations (capacity plans, operational assignments).
  * Authorized: ADMIN, CENTER_MANAGER
  */
 export function canManageSessionOperations(user) {
   return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
+}
+
+/**
+ * Whether user can approve capacity above the server-recommended throughput.
+ * Authorized: CENTER_MANAGER
+ */
+export function canOverrideSessionCapacity(user) {
+  return hasRole(user, 'ROLE_CENTER_MANAGER');
 }
 
 /**

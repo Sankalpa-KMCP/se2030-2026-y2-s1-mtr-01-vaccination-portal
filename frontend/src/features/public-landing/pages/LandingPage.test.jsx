@@ -85,9 +85,11 @@ describe('LandingPage', () => {
     expect(artwork.querySelectorAll('.home-pathway__node-core')).toHaveLength(5);
     expect(artwork.querySelector('.home-pathway__route').getAttribute('pathLength')).toBe('1');
     expect(artwork.querySelector('.home-pathway__route-progress')).toBeTruthy();
+    expect(artwork.querySelectorAll('.home-pathway__support-progress')).toHaveLength(2);
     expect(artwork.querySelector('.home-pathway__staff-connector--ready')).toBeTruthy();
     expect(artwork.textContent).toContain('Session readiness');
     expect(artwork.textContent).toContain('Center, capacity and staff confirmed');
+    expect(container.querySelector('.home-pathway--mobile .home-pathway__route-progress')).toBeTruthy();
   });
 
   it('fires onLoginClick from the login call-to-action', () => {

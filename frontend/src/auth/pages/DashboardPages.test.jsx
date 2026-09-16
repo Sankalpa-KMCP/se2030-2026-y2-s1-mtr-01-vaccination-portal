@@ -58,7 +58,7 @@ describe('role dashboards', () => {
     expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
-  it('adds screening review to the healthcare officer dashboard without removing existing cards', () => {
+  it('adds screening review and clinical configuration to the healthcare officer dashboard without removing existing cards', () => {
     authState.current = { user: {
       fullName: 'Healthcare Officer',
       email: 'hco@example.com',
@@ -69,6 +69,12 @@ describe('role dashboards', () => {
     const screeningCard = screen.getByRole('heading', { name: 'Screening Review' }).closest('.card');
     expect(within(screeningCard).getByRole('link', { name: 'Open' }).getAttribute('href'))
       .toBe('/app/staff/screening/reviews');
+    const questionsCard = screen.getByRole('heading', { name: 'Screening Questions' }).closest('.card');
+    expect(within(questionsCard).getByRole('link', { name: 'Open' }).getAttribute('href'))
+      .toBe('/app/screening/questions');
+    const questionnairesCard = screen.getByRole('heading', { name: 'Screening Questionnaires' }).closest('.card');
+    expect(within(questionnairesCard).getByRole('link', { name: 'Open' }).getAttribute('href'))
+      .toBe('/app/screening/questionnaires');
     expect(screen.getByRole('heading', { name: 'Campaigns' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Center Operations' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Sessions' })).toBeTruthy();
@@ -87,5 +93,7 @@ describe('role dashboards', () => {
     expect(screen.getAllByRole('link', { name: 'Open' }).some(
       (link) => link.getAttribute('href') === '/app/admin/staff-requests',
     )).toBe(true);
+    expect(screen.queryByRole('heading', { name: 'Screening Questions' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Screening Questionnaires' })).toBeNull();
   });
 });

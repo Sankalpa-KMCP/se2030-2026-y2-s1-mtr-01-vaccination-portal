@@ -5,7 +5,11 @@ import EmptyState from '../../../components/common/EmptyState';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import PageHeader from '../../../components/common/PageHeader';
 import { listCampaigns } from '../../campaign-management/api/campaignApi';
-import { listScreeningReviewQueue } from '../api/screeningApi';
+import {
+  getScreeningReviewDetails,
+  listCitizenEligibilityAssessments,
+  listScreeningReviewQueue,
+} from '../api/screeningApi';
 import {
   PRELIMINARY_SCREENING_RESULT,
   SCREENING_SUBMISSION_STATUS_LABELS,
@@ -43,6 +47,13 @@ export default function HealthcareOfficerScreeningReviewQueuePage() {
   const [queueError, setQueueError] = useState(null);
   const [campaignError, setCampaignError] = useState(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [lookupCitizenId, setLookupCitizenId] = useState('');
+  const [assessmentLookup, setAssessmentLookup] = useState({
+    loading: false,
+    searched: false,
+    error: null,
+    assessments: [],
+  });
 
   useEffect(() => {
     let active = true;
@@ -87,6 +98,44 @@ export default function HealthcareOfficerScreeningReviewQueuePage() {
     [campaigns],
   );
 
+  const handleAssessmentLookup = async (event) => {
+    event.preventDefault();
+    const citizenId = lookupCitizenId.trim();
+    if (!/^\d+$/.test(citizenId) || Number(citizenId) <= 0) {
+      setAssessmentLookup({
+        loading: false,
+        searched: false,
+        error: 'Enter a valid citizen ID.',
+        assessments: [],
+      });
+      return;
+    }
+
+    setAssessmentLookup({ loading: true, searched: false, error: null, assessments: [] });
+    try {
+      const result = await listCitizenEligibilityAssessments(citizenId);
+      const eligible = (Array.isArray(result) ? result : [])
+        .filter((assessment) => assessment.status === 'ELIGIBLE');
+      let citizenFullName = null;
+      if (eligible.length > 0) {
+        try {
+          const details = await getScreeningReviewDetails(eligible[0].submissionId);
+          if (String(details?.citizenId) === citizenId) citizenFullName = details.citizenFullName;
+        } catch {
+          // Keep assessments reachable even if identity enrichment is unavailable.
+        }
+      }
+      setAssessmentLookup({
+        loading: false,
+        searched: true,
+        error: null,
+        assessments: eligible.map((assessment) => ({ ...assessment, citizenFullName })),
+      });
+    } catch (error) {
+      setAssessmentLookup({ loading: false, searched: false, error, assessments: [] });
+    }
+  };
+
   return (
     <section aria-labelledby="screening-review-queue-title">
       <PageHeader
@@ -125,6 +174,56 @@ export default function HealthcareOfficerScreeningReviewQueuePage() {
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      <div className="card border-0 shadow-sm mb-4">
+        <div className="card-body p-3 p-md-4">
+          <h2 className="h5">Find issued eligibility</h2>
+          <p className="text-secondary">Locate an eligible assessment by citizen ID to review or revoke it.</p>
+          <form className="row g-2 align-items-end" onSubmit={handleAssessmentLookup}>
+            <div className="col-md-8">
+              <label className="form-label fw-semibold" htmlFor="eligibility-citizen-id">Citizen ID</label>
+              <input
+                id="eligibility-citizen-id"
+                className="form-control"
+                inputMode="numeric"
+                value={lookupCitizenId}
+                onChange={(event) => setLookupCitizenId(event.target.value)}
+                disabled={assessmentLookup.loading}
+              />
+            </div>
+            <div className="col-md-4 d-grid">
+              <button type="submit" className="btn btn-outline-primary" disabled={assessmentLookup.loading}>
+                {assessmentLookup.loading ? 'Searching...' : 'Find Eligible Assessments'}
+              </button>
+            </div>
+          </form>
+          {assessmentLookup.error && <div className="mt-3"><ApiErrorAlert error={assessmentLookup.error} /></div>}
+          {assessmentLookup.searched && assessmentLookup.assessments.length === 0 && (
+            <div className="alert alert-info mt-3 mb-0" role="status">
+              No eligible assessments were found for this citizen.
+            </div>
+          )}
+          {assessmentLookup.assessments.length > 0 && (
+            <div className="list-group mt-3">
+              {assessmentLookup.assessments.map((assessment) => (
+                <div className="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-3" key={assessment.id}>
+                  <div>
+                    <div className="fw-semibold">{assessment.citizenFullName || 'Name unavailable'}</div>
+                    <div className="small text-secondary">Citizen ID: #{assessment.citizenId}</div>
+                    <div className="fw-semibold">Campaign #{assessment.campaignId}</div>
+                    <div className="small text-secondary">
+                      Eligible · Reviewed {formatScreeningTimestamp(assessment.reviewedAt)}
+                    </div>
+                  </div>
+                  <Link className="btn btn-outline-danger btn-sm" to={`/app/staff/screening/reviews/${assessment.submissionId}`}>
+                    View Eligibility
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -137,3 +137,11 @@ graphify-out/
 /ai/
 /.mcp.json
 
+
+# Domscribe artifacts
+.domscribe
+.domscribe/
+domscribe.config.json
+
+# OpenCode artifacts
+.opencode/

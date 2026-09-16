@@ -19,7 +19,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/** Verifies V15 against real MySQL, including migration of existing V11 certificate data. */
+/** Verifies V16 against real MySQL, including migration of existing V11 certificate data. */
 @SpringBootTest
 @Testcontainers
 @Tag("mysql-testcontainers")
@@ -46,7 +46,7 @@ class Mf05CorrectionCertificateLifecycleMigrationMySqlIntegrationTests {
         registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.flyway.locations", () -> "classpath:db/migration");
         registry.add("spring.flyway.baseline-on-migrate", () -> "false");
-        registry.add("spring.flyway.target", () -> "14");
+        registry.add("spring.flyway.target", () -> "15");
     }
 
     @Autowired
@@ -59,20 +59,20 @@ class Mf05CorrectionCertificateLifecycleMigrationMySqlIntegrationTests {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void v15MigratesExistingDataAndEnforcesCorrectionAndCertificateLifecycleSchema() {
-        assertEquals("14", initialFlyway.info().current().getVersion().getVersion());
+    void v16MigratesExistingDataAndEnforcesCorrectionAndCertificateLifecycleSchema() {
+        assertEquals("15", initialFlyway.info().current().getVersion().getVersion());
         insertV11Fixture();
 
-        Flyway v15Flyway = Flyway.configure()
+        Flyway v16Flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
-                .target(MigrationVersion.fromVersion("15"))
+                .target(MigrationVersion.fromVersion("16"))
                 .load();
-        MigrateResult result = v15Flyway.migrate();
+        MigrateResult result = v16Flyway.migrate();
 
         assertEquals(1, result.migrationsExecuted);
-        assertEquals("15", v15Flyway.info().current().getVersion().getVersion());
-        assertEquals(16, v15Flyway.info().applied().length);
+        assertEquals("16", v16Flyway.info().current().getVersion().getVersion());
+        assertEquals(17, v16Flyway.info().applied().length);
         assertEquals(1, jdbcTemplate.queryForObject(
                 """
                 SELECT COUNT(*)

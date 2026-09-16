@@ -13,9 +13,29 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 
 /**
- * Shared booking guard entity (one row per citizen and campaign).
- * Used with SELECT ... FOR UPDATE to serialize appointment and waitlist cross-table invariant checks.
- * Canonical section 12.2 and section 12.4.
+ * Shared booking guard entity (one row per citizen and campaign) providing an explicit database mutex.
+ *
+ * <p><b>User Stories:</b>
+ * <ul>
+ *   <li>US-03: Search, book, and reschedule appointments without race conditions.</li>
+ *   <li>US-05: Join waitlists and execute automated promotions without concurrent double-booking.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules:</b>
+ * <ul>
+ *   <li>MF03-BR-02: Exactly one active appointment per citizen per campaign.</li>
+ *   <li>MF03-BR-14: Citizen cannot hold an active waitlist entry while holding an active appointment.</li>
+ * </ul>
+ *
+ * <p><b>Viva / Concurrency Architecture ("Why this class exists"):</b><br>
+ * Cross-table invariants exist between {@code appointment} and {@code waitlist_entry} for a given
+ * {@code (citizenId, campaignId)} tuple (e.g. a citizen must not book an appointment while being concurrently
+ * promoted from a waitlist, nor join a waitlist while holding an active booking). In relational databases,
+ * locking rows that do not yet exist or locking across separate tables without a common row lock creates
+ * race windows. By performing {@code SELECT ... FOR UPDATE} on this guard row at the very start of booking,
+ * waitlist joining, rescheduling, and promotion transactions, all mutating operations for the same citizen
+ * within the campaign are serialized deterministically, eliminating cross-table race conditions.
+ * </p>
  */
 @Entity
 @Table(

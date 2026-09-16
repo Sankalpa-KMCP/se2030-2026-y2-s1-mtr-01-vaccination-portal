@@ -8,8 +8,10 @@ import {
   getScreeningReviewDetails,
   recordEligibilityDecision,
   requestScreeningCorrections,
+  revokeAssessment,
 } from '../api/screeningApi';
 import {
+  ELIGIBILITY_ASSESSMENT_STATUS,
   ELIGIBILITY_ASSESSMENT_STATUS_LABELS,
   PRELIMINARY_SCREENING_RESULT,
   SCREENING_SUBMISSION_STATUS,
@@ -63,6 +65,7 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
   const [action, setAction] = useState(null);
   const [instructions, setInstructions] = useState('');
   const [reason, setReason] = useState('');
+  const [revocationReason, setRevocationReason] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [formError, setFormError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -103,6 +106,7 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
     [details?.triggeredRuleEvidence],
   );
   const canMutate = details?.status === SCREENING_SUBMISSION_STATUS.PENDING_REVIEW;
+  const canRevoke = details?.assessment?.status === ELIGIBILITY_ASSESSMENT_STATUS.ELIGIBLE;
   const campaignName = campaign?.name || (details ? `Campaign #${details.campaignId}` : 'Campaign');
 
   const openAction = (nextAction) => {
@@ -174,6 +178,31 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
     }
   };
 
+  const handleRevocation = async (event) => {
+    event.preventDefault();
+    const trimmedReason = revocationReason.trim();
+    if (!trimmedReason) {
+      setFormError('Revocation reason is required.');
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError(null);
+    setMutationError(null);
+    try {
+      await revokeAssessment(details.assessment.id, trimmedReason);
+      setSuccessMessage('Eligibility revoked successfully.');
+      setAction(null);
+      setRevocationReason('');
+      await loadDetails({ silent: true });
+    } catch (error) {
+      setMutationError(staleError(error));
+      if (error?.status === 409) await loadDetails({ silent: true });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner message="Loading screening review..." />;
 
   if (loadError || !details) {
@@ -197,7 +226,7 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
         id="screening-review-details-title"
         eyebrow="Healthcare Officer"
         title="Screening Review Details"
-        subtitle={`${campaignName} · Citizen #${details.citizenId}`}
+        subtitle={`${campaignName} · ${details.citizenFullName || 'Name unavailable'} · Citizen ID: #${details.citizenId}`}
         actions={<Link className="btn btn-outline-primary" to={QUEUE_PATH}>Back to Review Queue</Link>}
       />
 
@@ -217,7 +246,11 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-body p-4">
           <div className="row g-3">
-            <div className="col-md-4"><div className="small text-secondary">Citizen</div><div className="fw-semibold">Citizen #{details.citizenId}</div></div>
+            <div className="col-md-4">
+              <div className="small text-secondary">Citizen</div>
+              <div className="fw-semibold">{details.citizenFullName || 'Name unavailable'}</div>
+              <div className="small text-secondary">Citizen ID: #{details.citizenId}</div>
+            </div>
             <div className="col-md-4">
               <div className="small text-secondary">Campaign</div>
               <div className="fw-semibold">{campaignName}</div>
@@ -301,7 +334,48 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
               <dd className="col-sm-9">{formatScreeningTimestamp(details.assessment.validUntil)}</dd>
               <dt className="col-sm-3">Reviewer</dt>
               <dd className="col-sm-9">Reviewer #{details.assessment.reviewerId}</dd>
+              {details.assessment.revokedAt && (
+                <>
+                  <dt className="col-sm-3">Revoked</dt>
+                  <dd className="col-sm-9">{formatScreeningTimestamp(details.assessment.revokedAt)}</dd>
+                </>
+              )}
+              {details.assessment.revocationReason && (
+                <>
+                  <dt className="col-sm-3">Revocation reason</dt>
+                  <dd className="col-sm-9 text-break">{details.assessment.revocationReason}</dd>
+                </>
+              )}
             </dl>
+            {canRevoke && (
+              <div className="border-top mt-3 pt-3">
+                <button
+                  type="button"
+                  className="btn btn-outline-danger"
+                  disabled={submitting}
+                  onClick={() => openAction('REVOKE')}
+                >
+                  Revoke Eligibility
+                </button>
+                {action === 'REVOKE' && (
+                  <form className="mt-3" onSubmit={handleRevocation}>
+                    {formError && <div className="alert alert-danger" role="alert">{formError}</div>}
+                    <label className="form-label fw-semibold" htmlFor="revocation-reason">Revocation reason</label>
+                    <textarea
+                      id="revocation-reason"
+                      className="form-control mb-3"
+                      rows="4"
+                      value={revocationReason}
+                      onChange={(event) => setRevocationReason(event.target.value)}
+                      disabled={submitting}
+                    />
+                    <button type="submit" className="btn btn-danger" disabled={submitting}>
+                      {submitting ? 'Revoking...' : 'Confirm Revocation'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
