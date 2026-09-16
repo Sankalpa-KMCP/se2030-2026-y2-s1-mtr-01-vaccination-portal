@@ -18,6 +18,22 @@ import java.time.Instant;
  * Core JPA entity representing a citizen waitlist entry for a vaccination session.
  * Enforces field list per canonical section 12.x and database conditional uniqueness on active WAITING status per campaign.
  * Status mutation is restricted to package-private access; dedicated services handle state transitions.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist join, queue position tracking, voluntary leave, and automated promotion.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-06: Deterministic FIFO queue ordering based on {@code joined_at} ascending, then {@code id} ascending;
+ *       only one active WAITING entry allowed per citizen per campaign via generated column {@code active_campaign_id}
+ *       and unique constraint {@code uk_waitlist_active_citizen_campaign}.</li>
+ *   <li>MF03-BR-07: Ineligible or duplicate waiters are skipped during promotion and transition to terminal statuses
+ *       ({@code SKIPPED_INELIGIBLE} or {@code SKIPPED_DUPLICATE_APPOINTMENT}).</li>
+ *   <li>MF03-BR-08: Successful promotion transitions status to {@code PROMOTED}.</li>
+ *   <li>MF03-BR-14: Incompatible with holding an active appointment for the same campaign.</li>
+ * </ul>
  */
 @Entity
 @Table(
@@ -154,6 +170,11 @@ public class WaitlistEntry {
 
     /**
      * Marks this waitlist entry as PROMOTED (MF03-BR-08).
+     * <p>
+     * <b>Viva Note:</b> Terminal success state for a waitlist entry. Causes the database generated column
+     * {@code active_campaign_id} to evaluate to {@code NULL}, releasing the active waitlist constraint
+     * so that the newly promoted confirmed appointment can be created safely.
+     * </p>
      */
     public void markPromoted() {
         this.status = WaitlistStatus.PROMOTED;
@@ -161,6 +182,11 @@ public class WaitlistEntry {
 
     /**
      * Marks this waitlist entry as SKIPPED_INELIGIBLE (MF03-BR-07).
+     * <p>
+     * <b>Viva Note:</b> Terminal state reached when promotion evaluates this entry and finds that the
+     * citizen's medical screening assessment is no longer ELIGIBLE. Releases the waitlist slot so the
+     * next FIFO candidate can be evaluated.
+     * </p>
      */
     public void markSkippedIneligible() {
         this.status = WaitlistStatus.SKIPPED_INELIGIBLE;
@@ -168,13 +194,20 @@ public class WaitlistEntry {
 
     /**
      * Marks this waitlist entry as SKIPPED_DUPLICATE_APPOINTMENT (MF03-BR-07).
+     * <p>
+     * <b>Viva Note:</b> Terminal state reached when promotion evaluates this entry and finds that the
+     * citizen already holds an active appointment (CONFIRMED or CHECKED_IN) for the same campaign.
+     * </p>
      */
     public void markSkippedDuplicate() {
         this.status = WaitlistStatus.SKIPPED_DUPLICATE_APPOINTMENT;
     }
 
     /**
-     * Cancels this waitlist entry.
+     * Cancels this waitlist entry upon voluntary citizen withdrawal (US-05).
+     * <p>
+     * <b>Viva Note:</b> Terminal state reached when a citizen leaves the queue, releasing their hold.
+     * </p>
      */
     public void cancel() {
         this.status = WaitlistStatus.CANCELLED;

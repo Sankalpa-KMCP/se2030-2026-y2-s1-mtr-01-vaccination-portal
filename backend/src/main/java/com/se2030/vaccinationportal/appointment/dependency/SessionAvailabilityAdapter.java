@@ -18,6 +18,17 @@ import org.springframework.transaction.annotation.Transactional;
  * MF-03 read adapter for the existing MF-02 session and slot services.
  * Does not access MF-02 repositories, mutate capacity, or reserve places.
  * Results are snapshots; the booking service still reserves capacity atomically.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search available vaccination appointment slots at nearby vaccination centers.</li>
+ * </ul>
+ *
+ * <p><b>Viva / Architectural Separation Note:</b><br>
+ * This adapter is deliberately read-only and decoupled from {@link SlotCapacityPort}.
+ * Keeping the search path separate from the booking/reservation mutation path prevents read operations
+ * from locking capacity rows and enables independent testability with lightweight doubles.
+ * </p>
  */
 @Component
 @Transactional(readOnly = true)

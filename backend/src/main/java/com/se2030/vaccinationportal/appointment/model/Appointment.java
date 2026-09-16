@@ -18,6 +18,23 @@ import java.time.Instant;
  * Core JPA entity representing a citizen appointment for a vaccination session slot.
  * Enforces field list per canonical section 12.2 and baseline conditional uniqueness per 12.4.
  * Status mutation is restricted to package-private access; dedicated services handle state transitions.
+ *
+ * <p><b>User Stories:</b>
+ * <ul>
+ *   <li>US-03: Search, book, cancel, and reschedule appointment slots.</li>
+ *   <li>US-26: Checked-in appointment queue for clinic arrival and vaccinator intake.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-02: Exactly one active appointment (CONFIRMED or CHECKED_IN) per citizen per campaign,
+ *       enforced at the database layer via generated column {@code active_campaign_id} and the unique
+ *       constraint {@code uk_appointment_active_citizen_campaign}.</li>
+ *   <li>MF03-BR-05: In-place slot reallocation during atomic rescheduling, preserving appointment ID and history.</li>
+ *   <li>MF03-BR-10: Check-in is permitted only for CONFIRMED appointments.</li>
+ *   <li>MF03-BR-11: COMPLETED appointments are immutable and cannot be cancelled, rescheduled, or checked in again.</li>
+ *   <li>MF03-BR-15: Check-in reversal transitions CHECKED_IN back to CONFIRMED prior to finalization.</li>
+ * </ul>
  */
 @Entity
 @Table(
@@ -156,6 +173,12 @@ public class Appointment {
 
     /**
      * Cancels this appointment and sets the cancellation timestamp.
+     * <p>
+     * <b>Viva / Concurrency Note:</b> Setting status to {@link AppointmentStatus#CANCELLED} causes
+     * the generated column {@code active_campaign_id} to evaluate to {@code NULL}. This releases the
+     * database unique constraint ({@code uk_appointment_active_citizen_campaign}) so the citizen can
+     * book another appointment in the same campaign if desired (MF03-BR-02).
+     * </p>
      *
      * @param cancelledAt Timestamp of cancellation
      */
@@ -165,14 +188,24 @@ public class Appointment {
     }
 
     /**
-     * Completes this appointment.
+     * Completes this appointment once the vaccination draft has been finalized (MF-05 handover).
+     * <p>
+     * <b>Viva / Invariant Note:</b> Transitioning to {@link AppointmentStatus#COMPLETED} makes the
+     * record immutable per MF03-BR-11. It can never be cancelled, rescheduled, or checked in again,
+     * preserving legal audit trails and clinical records.
+     * </p>
      */
     public void complete() {
         this.status = AppointmentStatus.COMPLETED;
     }
 
     /**
-     * Reschedules this appointment to a new time slot (MF03-BR-06).
+     * Reschedules this appointment to a new time slot (MF03-BR-05).
+     * <p>
+     * <b>Viva / Concurrency Note:</b> Updates the slot pointer in place rather than deleting and re-creating
+     * the entity. This preserves the original appointment ID, booking history, and citizen audit trail.
+     * The service guarantees that new slot capacity has been reserved before this mutation occurs.
+     * </p>
      *
      * @param newSlotId Identifier of the target time slot
      */
@@ -184,7 +217,12 @@ public class Appointment {
     }
 
     /**
-     * Checks in this appointment (MF03-BR-09, MF03-BR-10).
+     * Checks in this appointment upon citizen arrival at the clinic (MF03-BR-09, MF03-BR-10).
+     * <p>
+     * <b>Viva / Queue Note:</b> Transitions status from CONFIRMED to CHECKED_IN. This places the
+     * appointment into the vaccinator work queue (US-26), making it visible to clinical staff
+     * for vaccination draft creation in MF-05.
+     * </p>
      */
     public void checkIn() {
         this.status = AppointmentStatus.CHECKED_IN;
@@ -192,13 +230,21 @@ public class Appointment {
 
     /**
      * Reverts check-in status back to CONFIRMED (MF03-BR-15).
+     * <p>
+     * <b>Viva / Clinical Note:</b> Allows reception staff to undo an accidental check-in (e.g. citizen
+     * walked out before vaccination). Permitted only if no active vaccination draft exists in MF-05.
+     * </p>
      */
     public void reverseCheckIn() {
         this.status = AppointmentStatus.CONFIRMED;
     }
 
     /**
-     * Marks this appointment as NO_SHOW.
+     * Marks this appointment as NO_SHOW when the citizen failed to arrive within the allowable window.
+     * <p>
+     * <b>Viva Note:</b> Terminal state indicating unattended appointment. Releases the citizen's hold
+     * so waitlist promotion or capacity reallocation can occur.
+     * </p>
      */
     public void markNoShow() {
         this.status = AppointmentStatus.NO_SHOW;

@@ -19,22 +19,23 @@ import org.springframework.transaction.annotation.Transactional;
  * ("As a Citizen, I want to search for and book an available appointment slot at a nearby
  * vaccination center").
  *
- * <p>Queries bookable sessions from MF-02 via {@link SlotAvailabilityPort}, then applies
- * citizen-specific filtering:
+ * <p><b>User Story:</b>
  * <ul>
- *   <li>Excludes slots where the citizen already has a CONFIRMED or CHECKED_IN appointment
- *       for the same campaign (MF03-BR-02 — one active appointment per citizen per campaign).
- *       Other slots remain discoverable for rescheduling; booking enforces campaign uniqueness.</li>
- *   <li>Excludes sessions where the citizen already has a WAITING waitlist entry for the same
- *       campaign (MF03-BR-14). Again, prevented at join time, but filtered here for UX clarity.</li>
+ *   <li>US-03: Citizen searches available vaccination sessions and slots.</li>
  * </ul>
  *
- * <p>Eligibility filtering is intentionally <em>not</em> applied here. MF03-BR-01 is enforced
- * at booking/promotion time by the eligibility port (MF-01 concern). Search is deliberately
- * eligibility-agnostic so a citizen can discover sessions even if their current eligibility
- * status is pending review — the booking step will gate them correctly.
+ * <p><b>Business Rules:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Eligibility is deliberately not filtered during search so citizens can discover slots;
+ *       it is strictly enforced at booking time.</li>
+ *   <li>MF03-BR-02: Excludes slots where the citizen already holds a CONFIRMED or CHECKED_IN appointment
+ *       for the same campaign, though alternative slots remain visible for rescheduling.</li>
+ *   <li>MF03-BR-14: Excludes sessions where the citizen already holds a WAITING waitlist entry for the same campaign.</li>
+ * </ul>
  *
- * <p>This service is read-only ({@code readOnly = true}) and holds no write locks.
+ * <p>Queries bookable sessions from MF-02 via {@link SlotAvailabilityPort}, then applies
+ * citizen-specific filtering.
+ * This service is read-only ({@code readOnly = true}) and holds no write locks.
  */
 @Service
 @Transactional(readOnly = true)

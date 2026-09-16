@@ -2,6 +2,20 @@ package com.se2030.vaccinationportal.appointment.model;
 
 /**
  * Status enumeration for waitlist entries (MF-03 Canonical Section 7.4).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist lifecycle tracking and automated promotion.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules:</b>
+ * <ul>
+ *   <li>MF03-BR-06: WAITING represents active presence in the FIFO queue.</li>
+ *   <li>MF03-BR-07: SKIPPED_INELIGIBLE and SKIPPED_DUPLICATE_APPOINTMENT record promotion bypass reasons.</li>
+ *   <li>MF03-BR-08: PROMOTED marks successful conversion into a confirmed appointment.</li>
+ *   <li>MF03-BR-14: WAITING is mutually exclusive with active appointment holdings.</li>
+ * </ul>
+ *
  * <p>
  * Separate status model from {@link AppointmentStatus}.
  * States:

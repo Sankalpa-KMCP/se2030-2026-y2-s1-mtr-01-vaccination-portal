@@ -1,7 +1,14 @@
 package com.se2030.vaccinationportal.appointment.dependency;
 
 /**
- * Result enum representing a citizen's campaign-specific screening eligibility status (MF03-BR-01).
+ * Result enum representing a citizen's campaign-specific screening eligibility status (MF03-BR-01, MF03-BR-07).
+ *
+ * <p><b>User Stories:</b>
+ * <ul>
+ *   <li>US-03: Booking appointment (must be {@link #ELIGIBLE}).</li>
+ *   <li>US-05: Waitlist promotion (must remain {@link #ELIGIBLE}).</li>
+ * </ul>
+ *
  * <p>
  * Evaluation values:
  * <ul>
