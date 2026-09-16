@@ -9,5 +9,5 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     boolean existsByInventoryId(Long inventoryId);
     boolean existsByVaccinationRecordId(Long vaccinationRecordId);
     Optional<StockTransaction> findByVaccinationRecordId(Long vaccinationRecordId);
-    List<StockTransaction> findTop100ByOrderByCreatedAtDesc();
+    List<StockTransaction> findTop100ByOrderByCreatedAtDescIdDesc();
 }

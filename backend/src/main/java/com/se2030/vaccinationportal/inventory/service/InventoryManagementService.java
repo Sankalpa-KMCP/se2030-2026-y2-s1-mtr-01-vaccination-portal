@@ -149,8 +149,10 @@ public class InventoryManagementService {
         if (!inventory.getCenterId().equals(request.centerId()) || !inventory.getBatchId().equals(request.batchId())) {
             throw new InventoryConflictException("Center and batch cannot be changed; create another inventory row");
         }
-        inventory.setQuantity(request.quantity());
-        return toResponse(inventories.saveAndFlush(inventory));
+        if (inventory.getQuantity() != request.quantity()) {
+            throw new InventoryConflictException("Use a stock receipt or adjustment so the quantity change is audited");
+        }
+        return toResponse(inventory);
     }
 
     @Transactional
@@ -197,7 +199,7 @@ public class InventoryManagementService {
 
     @Transactional(readOnly = true)
     public List<StockTransactionResponse> recentTransactions() {
-        return transactions.findTop100ByOrderByCreatedAtDesc().stream().map(this::toResponse).toList();
+        return transactions.findTop100ByOrderByCreatedAtDescIdDesc().stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
