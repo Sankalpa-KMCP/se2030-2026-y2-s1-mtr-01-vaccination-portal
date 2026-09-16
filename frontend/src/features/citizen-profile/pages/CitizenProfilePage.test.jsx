@@ -69,6 +69,7 @@ describe('CitizenProfilePage', () => {
     expect(screen.getAllByText('Active')).toHaveLength(2);
     expect(screen.getByText('Citizen')).toBeTruthy();
     expect(screen.getByText(/Aug 1, 2026/)).toBeTruthy();
+    expect(screen.getByText(/Sep 1, 2026/)).toBeTruthy();
     expect(screen.getByText(/Jun 15, 1994/)).toBeTruthy();
     expect(screen.getByText('Female')).toBeTruthy();
     expect(screen.getByText('10 Green Road, Colombo')).toBeTruthy();

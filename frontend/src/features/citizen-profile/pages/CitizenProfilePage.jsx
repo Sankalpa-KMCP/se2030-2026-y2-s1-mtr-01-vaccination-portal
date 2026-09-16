@@ -55,7 +55,7 @@ function formatDateOnly(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
   if (!match) return value || 'Not provided';
   const [, year, month, day] = match;
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' })
     .format(new Date(Number(year), Number(month) - 1, Number(day)));
 }
 
@@ -63,7 +63,7 @@ function formatTimestamp(value) {
   if (!value) return 'Not provided';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
 function validate(form) {
