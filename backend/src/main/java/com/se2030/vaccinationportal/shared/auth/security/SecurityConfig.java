@@ -95,6 +95,9 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
 
+                        // Protected Appointments and Waitlist Endpoints (MF-03)
+                        .requestMatchers("/api/v1/appointments/**", "/api/v1/waitlist/**").authenticated()
+
                         // Functional REST endpoints delegate method-level security to @PreAuthorize
                         .requestMatchers("/api/v1/**").permitAll()
 

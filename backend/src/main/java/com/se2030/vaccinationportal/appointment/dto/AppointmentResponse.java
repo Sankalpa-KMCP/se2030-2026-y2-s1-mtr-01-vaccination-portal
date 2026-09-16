@@ -5,7 +5,13 @@ import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
 import java.time.Instant;
 
 /**
- * Response DTO representing an Appointment entity.
+ * REST response DTO representing an Appointment entity.
+ *
+ * <p><b>User Stories:</b>
+ * <ul>
+ *   <li>US-03: Returned upon booking, cancellation, rescheduling, and citizen history queries.</li>
+ *   <li>US-26: Returned upon arrival check-in, check-in reversal, and vaccinator queue queries.</li>
+ * </ul>
  */
 public record AppointmentResponse(
         Long id,

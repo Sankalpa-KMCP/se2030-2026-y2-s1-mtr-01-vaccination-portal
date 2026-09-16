@@ -5,6 +5,11 @@ import java.time.Instant;
 /**
  * Read-only projection of a bookable MF-02 vaccination session for the MF-03 availability search port.
  *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search available vaccination appointment slots.</li>
+ * </ul>
+ *
  * <p>Fields are sourced exclusively from fields that are verified to exist on
  * {@link com.se2030.vaccinationportal.campaign.model.VaccinationSession} and
  * {@link com.se2030.vaccinationportal.campaign.model.VaccinationCenter} and

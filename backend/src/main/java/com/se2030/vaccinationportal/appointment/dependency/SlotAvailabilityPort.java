@@ -6,6 +6,16 @@ import java.util.List;
 /**
  * Cross-module read-only integration port for querying bookable MF-02 vaccination sessions (US-03).
  *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search for available appointment slots.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Eligibility is intentionally deferred to booking time, keeping search open for discovery.</li>
+ * </ul>
+ *
  * <p>MF-03 defines this contract; an MF-03 read adapter consumes existing MF-02 services to implement it.
  * This port is intentionally separate from {@link SlotCapacityPort}, which handles write operations
  * (reserve/release). Keeping read and write port boundaries distinct avoids coupling MF-03's search

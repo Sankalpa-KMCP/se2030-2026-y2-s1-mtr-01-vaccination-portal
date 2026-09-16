@@ -14,6 +14,7 @@ import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRep
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
 import java.time.Instant;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,7 @@ class VaccinationCorrectionLifecycleRollbackIntegrationTests {
     private DigitalCertificateService certificateService;
 
     @BeforeEach
+    @AfterEach
     void cleanDatabase() {
         certificateRepository.deleteAll();
         correctionRepository.deleteAll();

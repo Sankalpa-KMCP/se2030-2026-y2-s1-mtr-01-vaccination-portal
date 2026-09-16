@@ -246,12 +246,9 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('heading', { name: 'Not Authorized Route' })).toBeTruthy();
   });
 
-  describe.each([
-    ['ROLE_ADMIN', 'ADMIN'],
-    ['ROLE_SYSTEM_ADMINISTRATOR', 'SYSTEM_ADMINISTRATOR'],
-  ])('screening configuration access for %s', (role) => {
+  describe('screening configuration access for ROLE_HEALTHCARE_OFFICER', () => {
     it('opens the screening questions route', () => {
-      setAuth({ roles: [role] });
+      setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
 
       render(
         <MemoryRouter initialEntries={['/app/screening/questions']}>
@@ -263,7 +260,7 @@ describe('shared routing and role guards', () => {
     });
 
     it('opens the screening questionnaires route', () => {
-      setAuth({ roles: [role] });
+      setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
 
       render(
         <MemoryRouter initialEntries={['/app/screening/questionnaires']}>
@@ -276,7 +273,8 @@ describe('shared routing and role guards', () => {
   });
 
   describe.each([
-    'ROLE_HEALTHCARE_OFFICER',
+    'ROLE_ADMIN',
+    'ROLE_SYSTEM_ADMINISTRATOR',
     'ROLE_CITIZEN',
     'ROLE_CAMPAIGN_OFFICER',
     'ROLE_CENTER_MANAGER',
@@ -326,8 +324,8 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
   });
 
-  it('shows screening configuration navigation to ADMIN and SYSTEM_ADMINISTRATOR only', () => {
-    setAuth({ roles: ['ROLE_ADMIN'] });
+  it('shows screening configuration navigation to HEALTHCARE_OFFICER only', () => {
+    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
     const view = render(
       <MemoryRouter>
         <Header />
@@ -336,20 +334,21 @@ describe('shared routing and role guards', () => {
 
     expect(screen.getByRole('link', { name: 'Screening Questions' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Questionnaires' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Staff Requests' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Screening Review' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Staff Requests' })).toBeNull();
 
-    setAuth({ roles: ['ROLE_SYSTEM_ADMINISTRATOR'] });
+    setAuth({ roles: ['ROLE_ADMIN'] });
     view.rerender(
       <MemoryRouter>
         <Header />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Screening Questions' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Questionnaires' })).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Staff Requests' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Screening Questions' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Questionnaires' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Staff Requests' })).toBeTruthy();
 
-    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
+    setAuth({ roles: ['ROLE_SYSTEM_ADMINISTRATOR'] });
     view.rerender(
       <MemoryRouter>
         <Header />

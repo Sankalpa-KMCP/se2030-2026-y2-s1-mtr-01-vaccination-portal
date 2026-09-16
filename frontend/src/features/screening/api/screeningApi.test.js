@@ -43,6 +43,7 @@ import {
   resubmitScreening,
   requestScreeningCorrections,
   recordEligibilityDecision,
+  revokeAssessment,
   submitScreening,
   updateAnswerOption,
   updateEligibilityRule,
@@ -379,5 +380,21 @@ describe('screeningApi', () => {
       status: 'INELIGIBLE',
       reason: 'Contraindication requires deferral',
     });
+  });
+
+  it('posts only the revocation reason when revoking an assessment', async () => {
+    await revokeAssessment(80, 'Eligibility withdrawn after reassessment');
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith(
+      '/v1/screening/assessments/80/revoke',
+      {
+        method: 'POST',
+        body: JSON.stringify({ revocationReason: 'Eligibility withdrawn after reassessment' }),
+      },
+    );
+    const payload = JSON.parse(clientMocks.apiRequest.mock.calls[0][1].body);
+    expect(payload).not.toHaveProperty('reviewerId');
+    expect(payload).not.toHaveProperty('revokerId');
+    expect(payload).not.toHaveProperty('userId');
   });
 });

@@ -5,7 +5,12 @@ import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import java.time.Instant;
 
 /**
- * Response DTO representing a WaitlistEntry entity.
+ * REST response DTO representing a WaitlistEntry entity and its queue position.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Returned upon waitlist join, leave, and status queries with dynamic queue position.</li>
+ * </ul>
  */
 public record WaitlistEntryResponse(
         Long id,

@@ -9,7 +9,19 @@ import org.springframework.stereotype.Repository;
 
 /**
  * Spring Data JPA Repository for {@link WaitlistEntry} persistence.
- * Provides query methods for active waitlist entry checks and FIFO promotion ordering (MF03-BR-06 / MF03-BR-14).
+ * Provides query methods for active waitlist entry checks and deterministic FIFO promotion ordering.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist join, queue position tracking, voluntary leave, and automated promotion.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules:</b>
+ * <ul>
+ *   <li>MF03-BR-06: Strict FIFO queue evaluation ordering (joinedAt ascending); single WAITING entry per citizen/campaign.</li>
+ *   <li>MF03-BR-07: Candidate retrieval for promotion eligibility and duplicate screening.</li>
+ *   <li>MF03-BR-14: Duplicate active waitlist entry validation.</li>
+ * </ul>
  */
 @Repository
 public interface WaitlistRepository extends JpaRepository<WaitlistEntry, Long> {

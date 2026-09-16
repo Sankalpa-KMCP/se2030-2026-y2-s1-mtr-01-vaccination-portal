@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * REST API Controller for Admin Screening Configuration:
+ * REST API Controller for Healthcare Officer Screening Configuration:
  * - Questions catalog CRUD
  * - Answer options management
  * - Root Questionnaire definition management
@@ -68,7 +68,7 @@ public class ScreeningConfigurationController {
     }
 
     @PostMapping("/questions")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<ScreeningQuestionResponse> createQuestion(@Valid @RequestBody CreateQuestionRequest request) {
         ScreeningQuestion created = configurationService.createQuestion(
                 request.code(),
@@ -81,7 +81,7 @@ public class ScreeningConfigurationController {
     }
 
     @PutMapping("/questions/{id}")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<ScreeningQuestionResponse> updateQuestion(
             @PathVariable("id") Long id,
             @Valid @RequestBody UpdateQuestionRequest request
@@ -97,7 +97,7 @@ public class ScreeningConfigurationController {
     }
 
     @DeleteMapping("/questions/{id}")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<Void> deleteQuestion(@PathVariable("id") Long id) {
         configurationService.deleteQuestion(id);
         return ResponseEntity.noContent().build();
@@ -114,7 +114,7 @@ public class ScreeningConfigurationController {
     }
 
     @PostMapping("/questions/{id}/options")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<AnswerOptionResponse> addAnswerOption(
             @PathVariable("id") Long id,
             @Valid @RequestBody AddAnswerOptionRequest request
@@ -136,7 +136,7 @@ public class ScreeningConfigurationController {
     }
 
     @PutMapping("/options/{optionId}")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<AnswerOptionResponse> updateAnswerOption(
             @PathVariable("optionId") Long optionId,
             @Valid @RequestBody UpdateAnswerOptionRequest request
@@ -152,7 +152,7 @@ public class ScreeningConfigurationController {
     }
 
     @DeleteMapping("/options/{optionId}")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<Void> removeAnswerOption(@PathVariable("optionId") Long optionId) {
         configurationService.removeAnswerOption(optionId);
         return ResponseEntity.noContent().build();
@@ -175,7 +175,7 @@ public class ScreeningConfigurationController {
     }
 
     @PostMapping("/questionnaires")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR"})
+    @RequireRoles({"HEALTHCARE_OFFICER"})
     public ResponseEntity<QuestionnaireResponse> createQuestionnaire(@Valid @RequestBody CreateQuestionnaireRequest request) {
         Questionnaire questionnaire = configurationService.createQuestionnaire(
                 request.code(),
