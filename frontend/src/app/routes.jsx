@@ -10,6 +10,9 @@ import { useAuth } from '../auth/context/AuthContext';
 import LoginPage from '../auth/pages/LoginPage';
 import CitizenRegistrationPage from '../auth/pages/CitizenRegistrationPage';
 import StaffRegistrationRequestPage from '../auth/pages/StaffRegistrationRequestPage';
+import ForgotPasswordPage from '../auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '../auth/pages/ResetPasswordPage';
+import VerifyEmailPage from '../auth/pages/VerifyEmailPage';
 import CitizenDashboardPage from '../auth/pages/CitizenDashboardPage';
 import StaffDashboardPage from '../auth/pages/StaffDashboardPage';
 import AdminDashboardPage from '../auth/pages/AdminDashboardPage';
@@ -204,6 +207,9 @@ export default function PortalRoutes() {
         <Route path="/login/staff" element={<Navigate to="/login" replace />} />
         <Route path="/register/citizen" element={<CitizenRegistrationPage />} />
         <Route path="/register/staff" element={<StaffRegistrationRequestPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>

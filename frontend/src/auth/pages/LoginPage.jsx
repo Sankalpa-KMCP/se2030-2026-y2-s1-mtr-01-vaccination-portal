@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getRoleHomePath } from '../utils/roleRedirect';
+import { resendVerification } from '../api/authApi';
 import { ArrowIcon, EyeIcon } from '../components/AuthIcons';
 
 function LoginForm() {
@@ -12,16 +13,39 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [clientError, setClientError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState('');
 
   const clearErrors = () => {
     if (clientError) setClientError('');
     if (loginError) clearLoginError();
+    if (resendSuccess) setResendSuccess('');
+  };
+
+  const handleResendVerification = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setClientError('Please enter your email address to resend verification.');
+      return;
+    }
+    setIsResending(true);
+    try {
+      const response = await resendVerification(trimmedEmail);
+      setResendSuccess(
+        response?.message || 'If the account exists and is pending verification, a verification email has been sent.',
+      );
+    } catch (err) {
+      setClientError(err?.message || 'Failed to resend verification email.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setClientError('');
     clearLoginError();
+    setResendSuccess('');
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) return setClientError('Email address is required.');
@@ -43,10 +67,46 @@ function LoginForm() {
   };
 
   const activeError = clientError || loginError;
+  const isPendingVerification = Boolean(
+    activeError && (
+      activeError === 'Your email address still needs to be verified before you can sign in.' ||
+      activeError.includes('needs to be verified')
+    ),
+  );
 
   return (
     <>
-      {activeError && <div className="auth-alert" id="login-error" role="alert">{activeError}</div>}
+      {activeError && (
+        <div className="auth-alert" id="login-error" role="alert">
+          <div>{activeError}</div>
+          {isPendingVerification && (
+            <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(122, 48, 52, 0.2)' }}>
+              {resendSuccess ? (
+                <span style={{ fontSize: '0.74rem', color: '#166534', fontWeight: 600 }}>{resendSuccess}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="auth-resend-btn"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid currentColor',
+                    borderRadius: '4px',
+                    color: '#7a3034',
+                    fontSize: '0.72rem',
+                    padding: '0.25rem 0.55rem',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                >
+                  {isResending ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <form className="auth-form" onSubmit={handleSubmit} noValidate aria-label="Sign in credentials">
         <div className="auth-field">
           <label htmlFor="login-email">Email Address</label>
@@ -69,7 +129,15 @@ function LoginForm() {
         </div>
 
         <div className="auth-field">
-          <label htmlFor="login-password">Password</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.45rem' }}>
+            <label htmlFor="login-password" style={{ marginBottom: 0 }}>Password</label>
+            <Link
+              to="/forgot-password"
+              style={{ fontSize: '0.72rem', color: 'var(--auth-accent)', textDecoration: 'none', fontWeight: 600 }}
+            >
+              Forgot password?
+            </Link>
+          </div>
           <div className="auth-password">
             <input
               type={showPassword ? 'text' : 'password'}

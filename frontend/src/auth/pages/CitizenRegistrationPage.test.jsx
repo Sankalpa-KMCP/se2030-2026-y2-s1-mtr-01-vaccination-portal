@@ -91,14 +91,13 @@ describe('CitizenRegistrationPage', () => {
     },
   );
 
-  it('registers, automatically signs in, and redirects a citizen', async () => {
+  it('registers a citizen and displays email verification guidance before login', async () => {
     registerCitizen.mockResolvedValue({ id: 1 });
-    auth.login.mockResolvedValue({ success: true, user: { roles: ['ROLE_CITIZEN'] } });
     renderPage();
     fillCitizenForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
 
-    await screen.findByRole('heading', { name: 'Citizen Home' });
+    await screen.findByRole('heading', { name: 'Verify your email before signing in.' });
     expect(registerCitizen).toHaveBeenCalledTimes(1);
     expect(registerCitizen).toHaveBeenCalledWith({
       fullName: 'Citizen User',
@@ -106,19 +105,9 @@ describe('CitizenRegistrationPage', () => {
       phoneNumber: '0771234567',
       password: 'Secret123!',
     });
-    expect(auth.login).toHaveBeenCalledWith('citizen@example.com', 'Secret123!');
     expect(registerCitizen.mock.calls[0][0]).not.toHaveProperty('confirmPassword');
-  });
-
-  it('preserves account-created success when automatic login fails', async () => {
-    registerCitizen.mockResolvedValue({ id: 1 });
-    auth.login.mockResolvedValue({ success: false, error: 'Login unavailable' });
-    renderPage();
-    fillCitizenForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
-
-    expect(await screen.findByRole('heading', { name: 'Your citizen account is ready.' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Go to Citizen Login' })).toBeTruthy();
+    expect(screen.getByText(/Please check your email and click the verification link/i)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Go to Citizen Login' }).getAttribute('href')).toBe('/login');
   });
 
   it('shows a backend registration error', async () => {
@@ -128,6 +117,5 @@ describe('CitizenRegistrationPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Email is already registered'));
-    expect(auth.login).not.toHaveBeenCalled();
   });
 });

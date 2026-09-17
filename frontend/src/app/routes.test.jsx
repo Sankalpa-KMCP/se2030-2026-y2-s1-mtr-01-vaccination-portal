@@ -388,6 +388,19 @@ describe('shared routing and role guards', () => {
     expect(screen.getByText('Sign in with your registered account to continue.')).toBeTruthy();
   });
 
+  it('keeps /verify-email, /forgot-password, and /reset-password public', () => {
+    setAuth({ isAuthenticated: false });
+
+    const view = render(<MemoryRouter key="forgot" initialEntries={['/forgot-password']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: /forgot your password/i })).toBeTruthy();
+
+    view.rerender(<MemoryRouter key="reset" initialEntries={['/reset-password']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: /set new password/i })).toBeTruthy();
+
+    view.rerender(<MemoryRouter key="verify" initialEntries={['/verify-email']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: /email verification/i })).toBeTruthy();
+  });
+
   it('uses /app/overview as a compatibility redirect to the role dashboard', () => {
     setAuth({ roles: ['ROLE_CITIZEN'] });
     render(<MemoryRouter initialEntries={['/app/overview']}><PortalRoutes /></MemoryRouter>);

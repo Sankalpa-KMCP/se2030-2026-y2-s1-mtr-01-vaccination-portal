@@ -9,9 +9,11 @@ import {
 } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LoginPage from './LoginPage';
+import { resendVerification } from '../api/authApi';
 
 const authState = vi.hoisted(() => ({ current: null }));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => authState.current }));
+vi.mock('../api/authApi', () => ({ resendVerification: vi.fn() }));
 
 function renderPage(path = '/login') {
   return render(<MemoryRouter initialEntries={[path]}><LoginPage /></MemoryRouter>);
@@ -24,6 +26,7 @@ describe('LoginPage universal experience', () => {
       loginError: null,
       clearLoginError: vi.fn(),
     };
+    resendVerification.mockReset();
   });
 
   afterEach(cleanup);
@@ -45,11 +48,44 @@ describe('LoginPage universal experience', () => {
   it.each([
     'Your staff account is waiting for administrator approval.',
     'Your staff account request was rejected. Contact an administrator if you need assistance.',
+    'Your email address still needs to be verified before you can sign in.',
     'Invalid email or password',
   ])('shows the authentication message: %s', (message) => {
     authState.current = { ...authState.current, loginError: message };
     renderPage();
-    expect(screen.getByRole('alert').textContent).toBe(message);
+    expect(screen.getByRole('alert').textContent).toContain(message);
+  });
+
+  it('displays resend verification option when account is pending verification and triggers resend', async () => {
+    authState.current = {
+      ...authState.current,
+      loginError: 'Your email address still needs to be verified before you can sign in.',
+    };
+    resendVerification.mockResolvedValueOnce({
+      message: 'If the account exists and is pending verification, a verification email has been sent.',
+    });
+
+    renderPage();
+
+    const emailInput = screen.getByLabelText('Email Address');
+    fireEvent.change(emailInput, { target: { value: 'citizen@example.gov' } });
+
+    const resendBtn = screen.getByRole('button', { name: /resend verification email/i });
+    expect(resendBtn).toBeTruthy();
+
+    fireEvent.click(resendBtn);
+
+    await waitFor(() => {
+      expect(resendVerification).toHaveBeenCalledWith('citizen@example.gov');
+      expect(screen.getByText(/If the account exists and is pending verification/i)).toBeTruthy();
+    });
+  });
+
+  it('renders a forgot-password link leading to /forgot-password', () => {
+    renderPage();
+    const forgotLink = screen.getByRole('link', { name: 'Forgot password?' });
+    expect(forgotLink).toBeTruthy();
+    expect(forgotLink.getAttribute('href')).toBe('/forgot-password');
   });
 
   it('submits credentials through the universal login form', async () => {

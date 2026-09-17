@@ -7,6 +7,9 @@ const ROUTE_META = {
   '/login': { order: 0, branch: 'Sign in', step: '01' },
   '/register/citizen': { order: 1, branch: 'Citizen registration', step: '02' },
   '/register/staff': { order: 2, branch: 'Staff registration', step: '02' },
+  '/forgot-password': { order: 1, branch: 'Password recovery', step: '02' },
+  '/reset-password': { order: 2, branch: 'Reset password', step: '02' },
+  '/verify-email': { order: 1, branch: 'Email verification', step: '02' },
 };
 
 const TRANSITION_MS = 480;
