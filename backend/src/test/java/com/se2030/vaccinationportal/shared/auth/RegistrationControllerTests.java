@@ -90,7 +90,7 @@ class RegistrationControllerTests {
                         .content(request))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email", is("citizen.one@example.com")))
-                .andExpect(jsonPath("$.accountStatus", is("ACTIVE")))
+                .andExpect(jsonPath("$.accountStatus", is("PENDING_VERIFICATION")))
                 .andExpect(jsonPath("$.roles", hasItem("ROLE_CITIZEN")))
                 .andExpect(jsonPath("$.roles.length()", is(1)))
                 .andExpect(jsonPath("$.requestedRoleCode").isEmpty())

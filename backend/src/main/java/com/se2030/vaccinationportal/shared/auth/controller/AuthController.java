@@ -1,11 +1,16 @@
 package com.se2030.vaccinationportal.shared.auth.controller;
 
 import com.se2030.vaccinationportal.shared.auth.dto.CitizenRegistrationRequest;
+import com.se2030.vaccinationportal.shared.auth.dto.ForgotPasswordRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginResponse;
+import com.se2030.vaccinationportal.shared.auth.dto.MessageResponse;
 import com.se2030.vaccinationportal.shared.auth.dto.RegistrationResponse;
+import com.se2030.vaccinationportal.shared.auth.dto.ResendVerificationRequest;
+import com.se2030.vaccinationportal.shared.auth.dto.ResetPasswordRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.StaffRegistrationRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.UserProfileResponse;
+import com.se2030.vaccinationportal.shared.auth.dto.VerifyEmailRequest;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -42,6 +47,26 @@ public class AuthController {
             @Valid @RequestBody StaffRegistrationRequest request
     ) {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(authService.registerStaffRequest(request));
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<MessageResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        return ResponseEntity.ok(authService.verifyEmail(request));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<MessageResponse> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        return ResponseEntity.ok(authService.resendVerification(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(authService.forgotPassword(request));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.resetPassword(request));
     }
 
     @GetMapping("/me")

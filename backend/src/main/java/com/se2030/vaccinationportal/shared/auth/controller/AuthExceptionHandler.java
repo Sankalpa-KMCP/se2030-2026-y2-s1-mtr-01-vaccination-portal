@@ -2,13 +2,17 @@ package com.se2030.vaccinationportal.shared.auth.controller;
 
 import com.se2030.vaccinationportal.shared.auth.dto.AuthErrorResponse;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingApprovalException;
+import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingVerificationException;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountRejectedException;
 import com.se2030.vaccinationportal.shared.auth.exception.DuplicateEmailException;
+import com.se2030.vaccinationportal.shared.auth.exception.InvalidAuthActionTokenException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidApprovalRoleException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidRejectionReasonException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidRequestedRoleException;
 import com.se2030.vaccinationportal.shared.auth.exception.StaffRequestNotFoundException;
 import com.se2030.vaccinationportal.shared.auth.exception.StaffRequestNotPendingException;
+import com.se2030.vaccinationportal.shared.auth.exception.TokenAlreadyUsedException;
+import com.se2030.vaccinationportal.shared.auth.exception.TokenExpiredException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -110,12 +114,44 @@ public class AuthExceptionHandler {
         return response(HttpStatus.FORBIDDEN, "ACCOUNT_PENDING_APPROVAL", exception.getMessage(), request, null);
     }
 
+    @ExceptionHandler(AccountPendingVerificationException.class)
+    public ResponseEntity<AuthErrorResponse> handlePendingVerification(
+            AccountPendingVerificationException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.FORBIDDEN, "ACCOUNT_PENDING_VERIFICATION", exception.getMessage(), request, null);
+    }
+
     @ExceptionHandler(AccountRejectedException.class)
     public ResponseEntity<AuthErrorResponse> handleRejected(
             AccountRejectedException exception,
             HttpServletRequest request
     ) {
         return response(HttpStatus.FORBIDDEN, "ACCOUNT_REJECTED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidAuthActionTokenException.class)
+    public ResponseEntity<AuthErrorResponse> handleInvalidToken(
+            InvalidAuthActionTokenException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "INVALID_TOKEN", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<AuthErrorResponse> handleTokenExpired(
+            TokenExpiredException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "TOKEN_EXPIRED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(TokenAlreadyUsedException.class)
+    public ResponseEntity<AuthErrorResponse> handleTokenAlreadyUsed(
+            TokenAlreadyUsedException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "TOKEN_ALREADY_USED", exception.getMessage(), request, null);
     }
 
     private ResponseEntity<AuthErrorResponse> response(
