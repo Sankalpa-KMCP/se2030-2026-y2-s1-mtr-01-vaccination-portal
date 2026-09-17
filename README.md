@@ -43,13 +43,11 @@ The frontend application provides public navigation and dedicated access flows:
 | `/` | `LandingPage` | Home portal landing page with program overview, readiness gates, and trust metrics. |
 | `/how-it-works` | `HowItWorksPage` | Informational guide explaining the vaccination journey for citizens and providers. |
 | `/about` | `AboutPage` | Portal mission, architecture, and governance standards. |
-| `/login` | `LoginPage` | Generic authentication portal. |
-| `/login/citizen` | `LoginPage (citizen)` | Dedicated citizen login view. |
-| `/login/staff` | `LoginPage (staff)` | Dedicated healthcare and operational staff login view. |
+| `/login` | `LoginPage` | Universal login portal for all registered accounts (legacy `/login/citizen` and `/login/staff` routes redirect here). |
 | `/register/citizen` | `CitizenRegistrationPage` | Citizen self-registration for vaccination access. |
 | `/register/staff` | `StaffRegistrationRequestPage` | Operational/medical staff registration request submission. |
 
-Authenticated users accessing `/app` are routed automatically to their role-specific dashboards (`/app/citizen`, `/app/staff`, `/app/admin`) or authorized management interfaces. Citizen users can access session availability search and appointment booking at `/app/appointments/book`, and personal appointment history, rescheduling, and cancellation management at `/app/appointments/mine`.
+All active citizen and staff accounts sign in through `/login`. After authentication, the application redirects users to the appropriate area based on their assigned role (`/app/citizen`, `/app/staff`, `/app/admin`) or authorized management interfaces. Citizen registration (`/register/citizen`) and staff access-request registration (`/register/staff`) remain separate workflows. Citizen users can access session availability search and appointment booking at `/app/appointments/book`, and personal appointment history, rescheduling, and cancellation management at `/app/appointments/mine`.
 
 ## Digital Certificate Management & Verification API
 
