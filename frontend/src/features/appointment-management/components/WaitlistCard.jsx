@@ -23,7 +23,17 @@ function WaitlistStatusBadge({ status }) {
 }
 
 /**
- * Card displaying details of a citizen's waitlist entry and action controls (US-05).
+ * Card displaying details of a citizen's waitlist entry and action controls.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist status inspection and voluntary withdrawal from session queue.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-06: Displays active WAITING status badge and voluntary cancellation confirmation modal.</li>
+ * </ul>
  *
  * @param {Object} props
  * @param {Object} props.entry - WaitlistEntryResponse

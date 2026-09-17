@@ -1,8 +1,21 @@
 import { apiRequest } from '../../../services/apiClient';
 
 /**
- * API client methods for waitlist management (US-05).
+ * API client methods for waitlist management.
  * Interfaces with backend /api/v1/waitlist endpoints.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist join, queue position tracking, voluntary leave, and promotion status.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Screening eligibility required to join waitlist.</li>
+ *   <li>MF03-BR-06: Allowed only when all session slots are full; maintains strict FIFO queue.</li>
+ *   <li>MF03-BR-08: Successful promotion converts waitlist entry to confirmed appointment.</li>
+ *   <li>MF03-BR-14: Citizen cannot join waitlist if already holding active appointment in same campaign.</li>
+ * </ul>
  */
 
 /**

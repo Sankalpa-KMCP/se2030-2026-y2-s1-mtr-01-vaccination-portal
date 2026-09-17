@@ -3,7 +3,19 @@ import AppointmentStatusBadge from './AppointmentStatusBadge';
 
 /**
  * Panel component displaying details of a queued appointment and providing
- * operational controls for staff (Check-In, Reverse Check-In, Mark No-Show) (US-04).
+ * operational controls for staff (Check-In, Reverse Check-In, Mark No-Show).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-26: View checked-in queue and perform clinic arrival check-in, reversal, and no-show processing.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-09: Check-in modal allows staff override checkbox and requires override reason if outside 30-minute window.</li>
+ *   <li>MF03-BR-10: Shows "Check In" button strictly when status is CONFIRMED.</li>
+ *   <li>MF03-BR-15: Shows "Reverse Check-In" button strictly when status is CHECKED_IN.</li>
+ * </ul>
  *
  * @param {Object} props
  * @param {Object} props.appointment - AppointmentResponse object

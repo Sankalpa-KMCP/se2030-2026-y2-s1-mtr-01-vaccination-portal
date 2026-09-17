@@ -179,7 +179,7 @@ class CampaignReverseImpactMySqlConcurrencyIntegrationTests extends AbstractMySq
                             initialStart,
                             initialEnd,
                             Instant.parse("2026-05-01T08:00:00Z"),
-                            Instant.parse("2026-12-31T18:00:00Z"),
+                            Instant.parse("2026-08-31T18:00:00Z"),
                             CampaignStatus.ACTIVE
                     )
             );

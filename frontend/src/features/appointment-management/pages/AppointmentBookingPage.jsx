@@ -14,6 +14,18 @@ import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGui
  * Composes AvailabilitySearch, handles booking execution, and maps backend error responses.
  * Uses the authenticated user's ID from AuthContext — no manual citizen ID entry required.
  * Offers waitlist join action when booking fails due to slot capacity exhaustion (MF03-BR-03, MF03-BR-06).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search available vaccination sessions and confirm an atomic booking.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Displays clear ineligibility guidance if screening assessment is not ELIGIBLE.</li>
+ *   <li>MF03-BR-02: Detects and displays active booking conflict guidance.</li>
+ *   <li>MF03-BR-03: Detects slot exhaustion and provides an immediate CTA to join the session waitlist (MF03-BR-06).</li>
+ * </ul>
  */
 export default function AppointmentBookingPage() {
   const { user } = useAuth();

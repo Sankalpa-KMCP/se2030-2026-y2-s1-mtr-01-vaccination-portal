@@ -1,7 +1,18 @@
 import { apiRequest } from '../../../services/apiClient';
 
 /**
- * API client methods for appointment session availability search (US-03).
+ * API client methods for appointment session availability search.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search available vaccination appointment slots at nearby centers.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Eligibility is not checked during discovery to allow browsing.</li>
+ *   <li>MF03-BR-02: Backend excludes already-booked slots for the same campaign.</li>
+ * </ul>
  */
 
 /**

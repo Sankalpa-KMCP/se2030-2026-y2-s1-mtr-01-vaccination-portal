@@ -28,7 +28,19 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST Controller exposing waitlist join, leave, and citizen waitlist status inspection endpoints (US-05).
+ * REST Controller exposing waitlist join, leave, and citizen waitlist status inspection endpoints.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist join, queue position tracking, voluntary leave, and promotion status inspection.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Screening eligibility verified before waitlist entry creation.</li>
+ *   <li>MF03-BR-06: Allowed only when all session slots are full; maintains deterministic FIFO queue.</li>
+ *   <li>MF03-BR-14: Rejects waitlist join if citizen already holds an active appointment for the campaign.</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/api/v1/waitlist")

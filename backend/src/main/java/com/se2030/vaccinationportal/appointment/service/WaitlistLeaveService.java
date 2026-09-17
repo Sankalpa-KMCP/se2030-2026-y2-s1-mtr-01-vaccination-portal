@@ -11,7 +11,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service orchestrating voluntary waitlist entry cancellation (leaving waitlist) and waitlist status/position inspection (US-05).
+ * Service orchestrating voluntary waitlist entry cancellation (leaving waitlist) and waitlist status/position inspection.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist status checking, queue position inspection, and voluntary withdrawal.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced:</b>
+ * <ul>
+ *   <li>MF03-BR-06: Evaluates FIFO queue order to compute dynamic 1-based queue position;
+ *       voluntary cancellation transitions status to CANCELLED and frees queue position for subsequent waiters.</li>
+ * </ul>
  */
 @Service
 @Transactional
