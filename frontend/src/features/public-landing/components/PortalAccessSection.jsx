@@ -23,7 +23,6 @@ export default function PortalAccessSection() {
         <div className="home-access__ledger" data-reveal="access">
           <article className="home-access__citizen">
             <div className="home-access__body">
-              <span className="home-access__role">Citizen access</span>
               <h3>Plan and keep track of your vaccination care.</h3>
               <p>
                 Create an account, manage your profile, complete campaign screening,
@@ -44,7 +43,6 @@ export default function PortalAccessSection() {
 
           <article className="home-access__staff">
             <div className="home-access__body">
-              <span className="home-access__role">Staff operations</span>
               <h3>Coordinate campaigns, clinics, and sessions.</h3>
               <p>
                 Staff access is reviewed by an administrator before operational
