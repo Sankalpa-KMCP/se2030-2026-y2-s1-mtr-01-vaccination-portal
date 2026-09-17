@@ -213,14 +213,16 @@ public class AuthService {
             throw new TokenExpiredException();
         }
 
+        UserAccount user = token.getUser();
+        if (user == null || user.getAccountStatus() != AccountStatus.PENDING_VERIFICATION) {
+            throw new InvalidAuthActionTokenException();
+        }
+
         token.markUsed(now);
         emailVerificationTokenRepository.saveAndFlush(token);
 
-        UserAccount user = token.getUser();
         user.setEmailVerifiedAt(now);
-        if (user.getAccountStatus() == AccountStatus.PENDING_VERIFICATION) {
-            user.setAccountStatus(AccountStatus.ACTIVE);
-        }
+        user.setAccountStatus(AccountStatus.ACTIVE);
         userAccountRepository.saveAndFlush(user);
 
         return new MessageResponse("Email verified successfully");

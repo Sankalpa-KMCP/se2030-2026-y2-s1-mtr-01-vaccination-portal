@@ -321,6 +321,90 @@ class RegistrationControllerTests {
     }
 
     @Test
+    @DisplayName("citizen registration rejects password shorter than 8 characters")
+    void registerCitizen_shortPassword_returns400() throws Exception {
+        CitizenRegistrationRequest request = new CitizenRegistrationRequest(
+                "Citizen", "citizen.shortpw@example.com", "0771234567", "1234567");
+
+        mockMvc.perform(post("/api/v1/auth/register/citizen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.password", hasItem("Password must be between 8 and 128 characters")));
+    }
+
+    @Test
+    @DisplayName("citizen registration rejects password longer than 128 characters")
+    void registerCitizen_longPassword_returns400() throws Exception {
+        String longPassword = "a".repeat(129);
+        CitizenRegistrationRequest request = new CitizenRegistrationRequest(
+                "Citizen", "citizen.longpw@example.com", "0771234567", longPassword);
+
+        mockMvc.perform(post("/api/v1/auth/register/citizen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.password", hasItem("Password must be between 8 and 128 characters")));
+    }
+
+    @Test
+    @DisplayName("citizen registration accepts 8-character minimum password")
+    void registerCitizen_minimumPasswordLength_returns201() throws Exception {
+        String eightCharPassword = "a".repeat(8);
+        CitizenRegistrationRequest requestMin = new CitizenRegistrationRequest(
+                "Citizen Min", "citizen.minpw@example.com", "0771234567", eightCharPassword);
+
+        mockMvc.perform(post("/api/v1/auth/register/citizen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestMin)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("staff registration rejects password shorter than 8 characters")
+    void registerStaff_shortPassword_returns400() throws Exception {
+        StaffRegistrationRequest request = new StaffRegistrationRequest(
+                "Staff", "staff.shortpw@example.com", "0771234567", "1234567", "ROLE_HEALTHCARE_OFFICER");
+
+        mockMvc.perform(post("/api/v1/auth/register/staff")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.password", hasItem("Password must be between 8 and 128 characters")));
+    }
+
+    @Test
+    @DisplayName("staff registration rejects password longer than 128 characters")
+    void registerStaff_longPassword_returns400() throws Exception {
+        String longPassword = "a".repeat(129);
+        StaffRegistrationRequest request = new StaffRegistrationRequest(
+                "Staff", "staff.longpw@example.com", "0771234567", longPassword, "ROLE_HEALTHCARE_OFFICER");
+
+        mockMvc.perform(post("/api/v1/auth/register/staff")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.password", hasItem("Password must be between 8 and 128 characters")));
+    }
+
+    @Test
+    @DisplayName("staff registration accepts 8-character minimum password")
+    void registerStaff_minimumPasswordLength_returns202() throws Exception {
+        String eightCharPassword = "a".repeat(8);
+        StaffRegistrationRequest requestMin = new StaffRegistrationRequest(
+                "Staff Min", "staff.minpw@example.com", "0771234567", eightCharPassword, "ROLE_HEALTHCARE_OFFICER");
+
+        mockMvc.perform(post("/api/v1/auth/register/staff")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestMin)))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
     @DisplayName("pending account returns stable 403 only with correct password and never returns a token")
     void login_pendingAccount_returnsProtectedStatusOutcome() throws Exception {
         saveAccount("pending@example.com", AccountStatus.PENDING_APPROVAL);

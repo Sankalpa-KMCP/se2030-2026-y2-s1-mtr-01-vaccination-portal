@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../api/authApi';
 import { ArrowIcon, EyeIcon, SuccessSealIcon } from '../components/AuthIcons';
@@ -19,8 +19,20 @@ function mapResetError(error) {
 }
 
 export default function ResetPasswordPage() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') || '';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [token] = useState(() => searchParams.get('token') || '');
+
+  useEffect(() => {
+    if (searchParams.has('token')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('token');
+      setSearchParams(nextParams, { replace: true });
+      if (typeof window !== 'undefined' && window.history?.replaceState) {
+        const nextSearch = nextParams.toString() ? `?${nextParams.toString()}` : '';
+        window.history.replaceState({}, document.title, window.location.pathname + nextSearch);
+      }
+    }
+  }, [searchParams, setSearchParams]);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,12 +43,6 @@ export default function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-
-  const cleanUrlToken = () => {
-    if (typeof window !== 'undefined' && window.history?.replaceState) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -68,7 +74,6 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true);
     try {
       const response = await resetPassword(token, newPassword);
-      cleanUrlToken();
       setSuccessMessage(response?.message || 'Password has been reset successfully.');
       setIsSuccess(true);
     } catch (error) {

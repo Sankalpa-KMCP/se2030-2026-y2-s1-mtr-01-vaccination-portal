@@ -65,6 +65,18 @@ describe('CitizenRegistrationPage', () => {
     expect(registerCitizen).not.toHaveBeenCalled();
   });
 
+  it('blocks passwords shorter than 8 characters before calling the API', () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: 'Citizen User' } });
+    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'citizen@example.com' } });
+    fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: '0771234567' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } });
+    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'short' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
+    expect(screen.getByRole('alert').textContent).toBe('Password must be between 8 and 128 characters.');
+    expect(registerCitizen).not.toHaveBeenCalled();
+  });
+
   it.each(['student', 'student@', '@gmail.com', 'student gmail.com', 'student@domain'])(
     'blocks malformed email %s and preserves the entered value',
     (email) => {

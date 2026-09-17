@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.shared.auth.dto.ForgotPasswordRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.ResendVerificationRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.ResetPasswordRequest;
+import com.se2030.vaccinationportal.shared.auth.dto.StaffRegistrationRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.VerifyEmailRequest;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.EmailVerificationToken;
@@ -19,6 +20,8 @@ import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRe
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.security.AuthActionTokenService;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +38,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.*;
@@ -353,6 +357,141 @@ class AuthVerificationAndRecoveryIntegrationTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
                 .andExpect(jsonPath("$.fieldErrors.newPassword").isArray());
+    }
+
+    @Test
+    @DisplayName("Verification token for an ACTIVE account is rejected with 400 INVALID_TOKEN and left unconsumed")
+    void verifyEmail_activeAccount_rejectedWithInvalidToken() throws Exception {
+        UserAccount user = createActiveCitizen("already.active@example.com");
+        Instant initialVerifiedAt = user.getEmailVerifiedAt();
+        String rawToken = "token-for-already-active-user";
+        String tokenHash = authActionTokenService.hashToken(rawToken);
+        emailVerificationTokenRepository.saveAndFlush(
+                new EmailVerificationToken(user, tokenHash, Instant.now().plus(24, ChronoUnit.HOURS)));
+
+        VerifyEmailRequest request = new VerifyEmailRequest(rawToken);
+        mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("INVALID_TOKEN")));
+
+        EmailVerificationToken token = emailVerificationTokenRepository.findByTokenHash(tokenHash).orElseThrow();
+        assertFalse(token.isConsumed());
+        assertNull(token.getUsedAt());
+
+        UserAccount refreshedUser = userAccountRepository.findById(user.getId()).orElseThrow();
+        assertEquals(AccountStatus.ACTIVE, refreshedUser.getAccountStatus());
+        assertEquals(initialVerifiedAt, refreshedUser.getEmailVerifiedAt());
+    }
+
+    @Test
+    @DisplayName("Verification token for a PENDING_APPROVAL account is rejected with 400 INVALID_TOKEN and left unconsumed")
+    void verifyEmail_pendingApprovalAccount_rejectedWithInvalidToken() throws Exception {
+        UserAccount user = new UserAccount("staff.pending@example.com", passwordEncoder.encode(RAW_PASSWORD), AccountStatus.PENDING_APPROVAL);
+        user.setFullName("Pending Staff");
+        user.setPhoneNumber("0770003333");
+        user = userAccountRepository.saveAndFlush(user);
+
+        String rawToken = "token-for-pending-approval-user";
+        String tokenHash = authActionTokenService.hashToken(rawToken);
+        emailVerificationTokenRepository.saveAndFlush(
+                new EmailVerificationToken(user, tokenHash, Instant.now().plus(24, ChronoUnit.HOURS)));
+
+        VerifyEmailRequest request = new VerifyEmailRequest(rawToken);
+        mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("INVALID_TOKEN")));
+
+        EmailVerificationToken token = emailVerificationTokenRepository.findByTokenHash(tokenHash).orElseThrow();
+        assertFalse(token.isConsumed());
+        assertNull(token.getUsedAt());
+
+        UserAccount refreshedUser = userAccountRepository.findById(user.getId()).orElseThrow();
+        assertEquals(AccountStatus.PENDING_APPROVAL, refreshedUser.getAccountStatus());
+        assertNull(refreshedUser.getEmailVerifiedAt());
+    }
+
+    @Test
+    @DisplayName("Verification token for a REJECTED account is rejected with 400 INVALID_TOKEN and left unconsumed")
+    void verifyEmail_rejectedAccount_rejectedWithInvalidToken() throws Exception {
+        UserAccount user = new UserAccount("rejected.user@example.com", passwordEncoder.encode(RAW_PASSWORD), AccountStatus.REJECTED);
+        user.setFullName("Rejected User");
+        user.setPhoneNumber("0770004444");
+        user = userAccountRepository.saveAndFlush(user);
+
+        String rawToken = "token-for-rejected-user";
+        String tokenHash = authActionTokenService.hashToken(rawToken);
+        emailVerificationTokenRepository.saveAndFlush(
+                new EmailVerificationToken(user, tokenHash, Instant.now().plus(24, ChronoUnit.HOURS)));
+
+        VerifyEmailRequest request = new VerifyEmailRequest(rawToken);
+        mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("INVALID_TOKEN")));
+
+        EmailVerificationToken token = emailVerificationTokenRepository.findByTokenHash(tokenHash).orElseThrow();
+        assertFalse(token.isConsumed());
+        assertNull(token.getUsedAt());
+
+        UserAccount refreshedUser = userAccountRepository.findById(user.getId()).orElseThrow();
+        assertEquals(AccountStatus.REJECTED, refreshedUser.getAccountStatus());
+        assertNull(refreshedUser.getEmailVerifiedAt());
+    }
+
+    @Test
+    @DisplayName("Password reset accepts 8-character minimum password and rejects 129 character password")
+    void passwordReset_boundaryPasswordLengths() throws Exception {
+        UserAccount user = createActiveCitizen("boundary.pw@example.com");
+
+        // 129 chars rejected
+        ResetPasswordRequest requestOver = new ResetPasswordRequest("some-token", "a".repeat(129));
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestOver)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.newPassword", hasItem("Password must be between 8 and 128 characters")));
+
+        // 8 chars accepted
+        String validMinToken = "token-for-8-char-reset";
+        passwordResetTokenRepository.saveAndFlush(
+                new PasswordResetToken(user, authActionTokenService.hashToken(validMinToken), Instant.now().plus(30, ChronoUnit.MINUTES)));
+
+        ResetPasswordRequest requestMin = new ResetPasswordRequest(validMinToken, "a".repeat(8));
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestMin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", is("Password has been reset successfully")));
+    }
+
+    @Test
+    @DisplayName("Password length boundaries at 8, 128, and 129 are verified across auth DTOs")
+    void passwordDtoValidationBoundaries() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+        // CitizenRegistrationRequest
+        assertEquals(1, validator.validate(new CitizenRegistrationRequest("User", "u@e.com", "0771234567", "1234567")).size());
+        assertEquals(0, validator.validate(new CitizenRegistrationRequest("User", "u@e.com", "0771234567", "a".repeat(8))).size());
+        assertEquals(0, validator.validate(new CitizenRegistrationRequest("User", "u@e.com", "0771234567", "a".repeat(128))).size());
+        assertEquals(1, validator.validate(new CitizenRegistrationRequest("User", "u@e.com", "0771234567", "a".repeat(129))).size());
+
+        // StaffRegistrationRequest
+        assertEquals(1, validator.validate(new StaffRegistrationRequest("User", "u@e.com", "0771234567", "1234567", "ROLE_HEALTHCARE_OFFICER")).size());
+        assertEquals(0, validator.validate(new StaffRegistrationRequest("User", "u@e.com", "0771234567", "a".repeat(8), "ROLE_HEALTHCARE_OFFICER")).size());
+        assertEquals(0, validator.validate(new StaffRegistrationRequest("User", "u@e.com", "0771234567", "a".repeat(128), "ROLE_HEALTHCARE_OFFICER")).size());
+        assertEquals(1, validator.validate(new StaffRegistrationRequest("User", "u@e.com", "0771234567", "a".repeat(129), "ROLE_HEALTHCARE_OFFICER")).size());
+
+        // ResetPasswordRequest
+        assertEquals(1, validator.validate(new ResetPasswordRequest("token", "1234567")).size());
+        assertEquals(0, validator.validate(new ResetPasswordRequest("token", "a".repeat(8))).size());
+        assertEquals(0, validator.validate(new ResetPasswordRequest("token", "a".repeat(128))).size());
+        assertEquals(1, validator.validate(new ResetPasswordRequest("token", "a".repeat(129))).size());
     }
 
     private UserAccount createPendingCitizen(String email) {

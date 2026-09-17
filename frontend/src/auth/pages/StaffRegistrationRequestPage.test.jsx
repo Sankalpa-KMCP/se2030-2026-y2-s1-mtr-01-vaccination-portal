@@ -52,6 +52,15 @@ describe('StaffRegistrationRequestPage', () => {
     expect(registerStaff).not.toHaveBeenCalled();
   });
 
+  it('blocks passwords shorter than 8 characters', () => {
+    renderPage();
+    fillStaffForm({ confirmPassword: 'short' });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit Staff Account Request' }));
+    expect(screen.getByRole('alert').textContent).toBe('Password must be between 8 and 128 characters.');
+    expect(registerStaff).not.toHaveBeenCalled();
+  });
+
   it.each(['student', 'student@', '@gmail.com', 'student gmail.com', 'student@domain'])(
     'blocks malformed email %s',
     (email) => {
