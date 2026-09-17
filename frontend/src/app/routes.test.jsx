@@ -369,9 +369,10 @@ describe('shared routing and role guards', () => {
     );
 
     expect(screen.getByRole('link', { name: /create citizen account/i })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /sign in/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /^sign in$/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: /request staff account/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: /enter staff portal/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /manage your appointments/i }).getAttribute('href')).toBe('/login');
   });
 
   it('redirects /login/citizen and /login/staff to the universal /login route', () => {
@@ -480,7 +481,7 @@ describe('shared routing and role guards', () => {
     setAuth({ isAuthenticated: false });
 
     render(<MemoryRouter key="home" initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { level: 1, name: /a clear path from campaign to clinic appointment/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: /your next step to a healthier tomorrow/i })).toBeTruthy();
     cleanup();
 
     render(<MemoryRouter key="how" initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);

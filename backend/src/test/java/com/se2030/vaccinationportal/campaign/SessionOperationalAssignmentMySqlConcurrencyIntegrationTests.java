@@ -136,7 +136,7 @@ class SessionOperationalAssignmentMySqlConcurrencyIntegrationTests extends Abstr
                             LocalDate.of(2026, 6, 1),
                             LocalDate.of(2026, 8, 31),
                             Instant.parse("2026-05-01T08:00:00Z"),
-                            Instant.parse("2026-12-31T18:00:00Z"),
+                            Instant.parse("2026-08-31T18:00:00Z"),
                             CampaignStatus.ACTIVE
                     )
             );

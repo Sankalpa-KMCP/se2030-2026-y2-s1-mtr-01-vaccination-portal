@@ -19,7 +19,7 @@ describe('LandingPage', () => {
     renderLanding();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /a clear path from campaign to clinic appointment/i }),
+      screen.getByRole('heading', { level: 1, name: /your next step to a healthier tomorrow/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: /one service. two ways in/i }),
@@ -45,6 +45,7 @@ describe('LandingPage', () => {
     expect(screen.getByRole('link', { name: /^sign in$/i }).getAttribute('href')).toBe('/login');
     expect(screen.getByRole('link', { name: /request staff account/i }).getAttribute('href')).toBe('/register/staff');
     expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login');
+    expect(screen.getByRole('link', { name: /manage your appointments/i }).getAttribute('href')).toBe('/login');
   });
 
   it('explains the selected capability and updates its connected outcome', () => {

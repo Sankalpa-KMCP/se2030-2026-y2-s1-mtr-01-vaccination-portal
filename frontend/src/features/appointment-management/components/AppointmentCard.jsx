@@ -3,6 +3,19 @@ import AppointmentStatusBadge from './AppointmentStatusBadge';
 
 /**
  * Card component displaying details of a citizen's appointment and providing action controls (US-03).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: View booked appointments, initiate cancellation, and open rescheduling dialog.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-04: Displays cancellation confirmation modal with staff override checkbox and mandatory
+ *       audit reason input for late cancellations within 24 hours of session start.</li>
+ *   <li>MF03-BR-11: Restricts cancellation and rescheduling controls strictly to CONFIRMED appointments;
+ *       COMPLETED appointments cannot be modified.</li>
+ * </ul>
  */
 export default function AppointmentCard({ appointment, onCancel, onReschedule }) {
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);

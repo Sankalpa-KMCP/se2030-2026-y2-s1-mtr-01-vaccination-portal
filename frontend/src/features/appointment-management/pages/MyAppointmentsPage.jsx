@@ -13,6 +13,17 @@ import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
  * Citizen My Appointments Page (US-03).
  * Fetches and displays the authenticated citizen's appointments across all statuses,
  * enabling cancellation and rescheduling. Uses the authenticated user ID from AuthContext.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: View recorded appointments, cancel existing booking, or launch rescheduling modal.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-04: Enforces 24-hour notice rule guidance when cancellation or rescheduling fails due to window restriction.</li>
+ *   <li>MF03-BR-11: Restricts action controls to active CONFIRMED appointments, keeping completed and cancelled records read-only.</li>
+ * </ul>
  */
 export default function MyAppointmentsPage() {
   const { user } = useAuth();

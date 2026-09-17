@@ -651,8 +651,8 @@ class EligibilityReviewServiceLifecycleTests {
                 null,
                 serviceEndDate.minusDays(30),
                 serviceEndDate,
-                REVIEWED_AT.minusSeconds(86_400),
-                REVIEWED_AT.plusSeconds(86_400)
+                serviceEndDate.minusDays(30).atStartOfDay(ZoneOffset.UTC).toInstant(),
+                serviceEndDate.atTime(23, 59, 59).toInstant(ZoneOffset.UTC)
         );
         lenient().when(campaignService.getRequiredCampaignById(CAMPAIGN_ID)).thenReturn(campaign);
     }
