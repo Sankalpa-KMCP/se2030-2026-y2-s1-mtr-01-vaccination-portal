@@ -11,6 +11,7 @@ import com.se2030.vaccinationportal.shared.auth.exception.InvalidRejectionReason
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidRequestedRoleException;
 import com.se2030.vaccinationportal.shared.auth.exception.StaffRequestNotFoundException;
 import com.se2030.vaccinationportal.shared.auth.exception.StaffRequestNotPendingException;
+import com.se2030.vaccinationportal.shared.auth.exception.AuthEmailDeliveryException;
 import com.se2030.vaccinationportal.shared.auth.exception.TokenAlreadyUsedException;
 import com.se2030.vaccinationportal.shared.auth.exception.TokenExpiredException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -152,6 +153,20 @@ public class AuthExceptionHandler {
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, "TOKEN_ALREADY_USED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(AuthEmailDeliveryException.class)
+    public ResponseEntity<AuthErrorResponse> handleEmailDeliveryFailure(
+            AuthEmailDeliveryException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "EMAIL_DELIVERY_FAILED",
+                "Email delivery service is currently unavailable. Please try again later.",
+                request,
+                null
+        );
     }
 
     private ResponseEntity<AuthErrorResponse> response(

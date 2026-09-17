@@ -12,12 +12,12 @@ import java.nio.charset.StandardCharsets;
 /**
  * Non-SMTP delivery implementation logging verification and recovery links
  * to the console for development and evaluation.
- * Only enabled when app.security.auth.console-delivery-enabled=true.
+ * Only enabled when app.security.auth.delivery-mode=console.
  */
 @Service
 @ConditionalOnProperty(
-        name = "app.security.auth.console-delivery-enabled",
-        havingValue = "true"
+        name = "app.security.auth.delivery-mode",
+        havingValue = "console"
 )
 public class ConsoleAuthLinkDeliveryService implements AuthLinkDeliveryService {
 

@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.shared.auth.security;
 import com.se2030.vaccinationportal.shared.auth.service.AuthLinkDeliveryService;
 import com.se2030.vaccinationportal.shared.auth.service.ConsoleAuthLinkDeliveryService;
 import com.se2030.vaccinationportal.shared.auth.service.NoOpAuthLinkDeliveryService;
+import com.se2030.vaccinationportal.shared.auth.service.SmtpAuthLinkDeliveryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -12,8 +13,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ApplicationContext;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.Map;
 
@@ -25,8 +28,9 @@ class AuthLinkDeliveryServiceGatingTests {
     @Nested
     @SpringBootTest
     @ActiveProfiles("test")
-    @DisplayName("Default / Missing property: NoOp delivery active, console delivery absent, no token logging")
-    class DefaultConfigurationTests {
+    @TestPropertySource(properties = "app.security.auth.delivery-mode=smtp")
+    @DisplayName("SMTP delivery mode: SmtpAuthLinkDeliveryService active, others absent, no raw token logging")
+    class SmtpDeliveryModeTests {
 
         @Autowired
         private ApplicationContext applicationContext;
@@ -34,70 +38,51 @@ class AuthLinkDeliveryServiceGatingTests {
         @Autowired
         private AuthLinkDeliveryService authLinkDeliveryService;
 
+        @MockitoBean
+        private JavaMailSender mailSender;
+
         @Test
-        @DisplayName("Resolves exactly one AuthLinkDeliveryService bean of type NoOpAuthLinkDeliveryService")
-        void resolvesNoOpDeliveryByDefault() {
+        @DisplayName("Resolves exactly one AuthLinkDeliveryService bean of type SmtpAuthLinkDeliveryService")
+        void resolvesSmtpDeliveryInSmtpMode() {
             Map<String, AuthLinkDeliveryService> beans = applicationContext.getBeansOfType(AuthLinkDeliveryService.class);
             assertEquals(1, beans.size(), "Must resolve exactly one AuthLinkDeliveryService bean");
 
-            assertInstanceOf(NoOpAuthLinkDeliveryService.class, authLinkDeliveryService,
-                    "Default bean must be NoOpAuthLinkDeliveryService");
+            assertInstanceOf(SmtpAuthLinkDeliveryService.class, authLinkDeliveryService,
+                    "Bean must be SmtpAuthLinkDeliveryService");
 
             assertTrue(applicationContext.getBeansOfType(ConsoleAuthLinkDeliveryService.class).isEmpty(),
-                    "ConsoleAuthLinkDeliveryService must be absent in default configuration");
+                    "ConsoleAuthLinkDeliveryService must be absent in SMTP mode");
+            assertTrue(applicationContext.getBeansOfType(NoOpAuthLinkDeliveryService.class).isEmpty(),
+                    "NoOpAuthLinkDeliveryService must be absent in SMTP mode");
         }
 
         @Test
-        @DisplayName("Default delivery does not log raw verification or reset tokens")
-        void defaultDelivery_doesNotLogRawTokens(CapturedOutput output) {
-            String verificationSentinel = "SENTINEL_RAW_VERIFICATION_TOKEN_ABC123";
-            String resetSentinel = "SENTINEL_RAW_RESET_TOKEN_XYZ789";
+        @DisplayName("SMTP delivery does not log raw verification or reset tokens")
+        void smtpDelivery_doesNotLogRawTokens(CapturedOutput output) {
+            String verificationSentinel = "SENTINEL_RAW_VERIFICATION_TOKEN_SMTP_123";
+            String resetSentinel = "SENTINEL_RAW_RESET_TOKEN_SMTP_456";
 
             authLinkDeliveryService.sendEmailVerificationLink("citizen@example.com", verificationSentinel);
             authLinkDeliveryService.sendPasswordResetLink("citizen@example.com", resetSentinel);
 
             String logs = output.getAll();
             assertFalse(logs.contains(verificationSentinel),
-                    "Raw verification sentinel token must NEVER appear in logs under default configuration");
+                    "Raw verification sentinel token must NEVER appear in logs under SMTP configuration");
             assertFalse(logs.contains(resetSentinel),
-                    "Raw reset sentinel token must NEVER appear in logs under default configuration");
-            assertFalse(logs.contains("http://localhost:5173/verify-email"),
-                    "Complete verification URL must not be logged under default configuration");
-            assertFalse(logs.contains("http://localhost:5173/reset-password"),
-                    "Complete reset URL must not be logged under default configuration");
+                    "Raw reset sentinel token must NEVER appear in logs under SMTP configuration");
+            assertFalse(logs.contains("/verify-email?token="),
+                    "Complete verification URL must not be logged under SMTP configuration");
+            assertFalse(logs.contains("/reset-password?token="),
+                    "Complete reset URL must not be logged under SMTP configuration");
         }
     }
 
     @Nested
     @SpringBootTest
     @ActiveProfiles("test")
-    @TestPropertySource(properties = "app.security.auth.console-delivery-enabled=false")
-    @DisplayName("Explicit false: NoOp delivery active, console delivery absent")
-    class ExplicitFalseConfigurationTests {
-
-        @Autowired
-        private ApplicationContext applicationContext;
-
-        @Autowired
-        private AuthLinkDeliveryService authLinkDeliveryService;
-
-        @Test
-        @DisplayName("Resolves NoOpAuthLinkDeliveryService and excludes ConsoleAuthLinkDeliveryService")
-        void resolvesNoOpDeliveryWhenExplicitlyFalse() {
-            Map<String, AuthLinkDeliveryService> beans = applicationContext.getBeansOfType(AuthLinkDeliveryService.class);
-            assertEquals(1, beans.size());
-
-            assertInstanceOf(NoOpAuthLinkDeliveryService.class, authLinkDeliveryService);
-            assertTrue(applicationContext.getBeansOfType(ConsoleAuthLinkDeliveryService.class).isEmpty());
-        }
-    }
-
-    @Nested
-    @SpringBootTest
-    @ActiveProfiles("test")
-    @TestPropertySource(properties = "app.security.auth.console-delivery-enabled=true")
-    @DisplayName("Explicit opt-in true: Console delivery active, NoOp delivery absent")
-    class ExplicitTrueConfigurationTests {
+    @TestPropertySource(properties = "app.security.auth.delivery-mode=console")
+    @DisplayName("Console delivery mode: ConsoleAuthLinkDeliveryService active, others absent")
+    class ConsoleDeliveryModeTests {
 
         @Autowired
         private ApplicationContext applicationContext;
@@ -107,13 +92,15 @@ class AuthLinkDeliveryServiceGatingTests {
 
         @Test
         @DisplayName("Resolves exactly one bean of type ConsoleAuthLinkDeliveryService")
-        void resolvesConsoleDeliveryWhenExplicitlyEnabled() {
+        void resolvesConsoleDeliveryInConsoleMode() {
             Map<String, AuthLinkDeliveryService> beans = applicationContext.getBeansOfType(AuthLinkDeliveryService.class);
             assertEquals(1, beans.size(), "Must resolve exactly one AuthLinkDeliveryService bean");
 
             assertInstanceOf(ConsoleAuthLinkDeliveryService.class, authLinkDeliveryService,
-                    "Explicit true must activate ConsoleAuthLinkDeliveryService");
+                    "Bean must be ConsoleAuthLinkDeliveryService");
 
+            assertTrue(applicationContext.getBeansOfType(SmtpAuthLinkDeliveryService.class).isEmpty(),
+                    "SmtpAuthLinkDeliveryService must be absent when console delivery is enabled");
             assertTrue(applicationContext.getBeansOfType(NoOpAuthLinkDeliveryService.class).isEmpty(),
                     "NoOpAuthLinkDeliveryService must be absent when console delivery is enabled");
         }
@@ -133,6 +120,51 @@ class AuthLinkDeliveryServiceGatingTests {
                     "Console delivery must log reset link banner when explicitly enabled");
             assertTrue(logs.contains("/verify-email?token=" + syntheticToken));
             assertTrue(logs.contains("/reset-password?token=" + syntheticToken));
+        }
+    }
+
+    @Nested
+    @SpringBootTest
+    @ActiveProfiles("test")
+    @TestPropertySource(properties = "app.security.auth.delivery-mode=disabled")
+    @DisplayName("Disabled delivery mode: NoOp delivery active, others absent")
+    class DisabledDeliveryModeTests {
+
+        @Autowired
+        private ApplicationContext applicationContext;
+
+        @Autowired
+        private AuthLinkDeliveryService authLinkDeliveryService;
+
+        @Test
+        @DisplayName("Resolves NoOpAuthLinkDeliveryService and excludes Smtp and Console services")
+        void resolvesNoOpDeliveryWhenDisabled() {
+            Map<String, AuthLinkDeliveryService> beans = applicationContext.getBeansOfType(AuthLinkDeliveryService.class);
+            assertEquals(1, beans.size());
+
+            assertInstanceOf(NoOpAuthLinkDeliveryService.class, authLinkDeliveryService);
+            assertTrue(applicationContext.getBeansOfType(SmtpAuthLinkDeliveryService.class).isEmpty());
+            assertTrue(applicationContext.getBeansOfType(ConsoleAuthLinkDeliveryService.class).isEmpty());
+        }
+
+        @Test
+        @DisplayName("Disabled delivery does not log raw verification or reset tokens")
+        void disabledDelivery_doesNotLogRawTokens(CapturedOutput output) {
+            String verificationSentinel = "SENTINEL_RAW_VERIFICATION_TOKEN_DISABLED_123";
+            String resetSentinel = "SENTINEL_RAW_RESET_TOKEN_DISABLED_456";
+
+            authLinkDeliveryService.sendEmailVerificationLink("citizen@example.com", verificationSentinel);
+            authLinkDeliveryService.sendPasswordResetLink("citizen@example.com", resetSentinel);
+
+            String logs = output.getAll();
+            assertFalse(logs.contains(verificationSentinel),
+                    "Raw verification sentinel token must NEVER appear in logs under disabled configuration");
+            assertFalse(logs.contains(resetSentinel),
+                    "Raw reset sentinel token must NEVER appear in logs under disabled configuration");
+            assertFalse(logs.contains("/verify-email?token="),
+                    "Complete verification URL must not be logged under disabled configuration");
+            assertFalse(logs.contains("/reset-password?token="),
+                    "Complete reset URL must not be logged under disabled configuration");
         }
     }
 }
