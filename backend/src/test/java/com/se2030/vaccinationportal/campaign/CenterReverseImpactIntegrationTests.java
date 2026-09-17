@@ -32,6 +32,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -84,7 +85,7 @@ class CenterReverseImpactIntegrationTests {
         campaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-REV-CTR", "Rev Center Campaign", "Desc", vaccineType, targetGroup,
                 today.minusDays(10), today.plusDays(30),
-                Instant.now(clock).minusSeconds(3600), Instant.now(clock).plusSeconds(86400 * 180),
+                Instant.now(clock).minusSeconds(3600), today.plusDays(30).atTime(23, 59, 59).toInstant(ZoneOffset.UTC),
                 CampaignStatus.ACTIVE
         ));
 

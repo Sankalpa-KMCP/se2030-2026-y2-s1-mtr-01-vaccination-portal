@@ -7,6 +7,17 @@ import { listCitizenCampaigns } from '../../campaign-management/api/campaignApi'
 /**
  * Availability search component containing filter form, API fetch, and result list (US-03).
  * Center ID is automatically shown and extracted from the administrator's Vaccination Center Operations Centre code.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search available vaccination appointment slots at nearby vaccination centers.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled:</b>
+ * <ul>
+ *   <li>MF03-BR-01: Displays available sessions without premature eligibility gating during search.</li>
+ *   <li>MF03-BR-02: Backend excludes slots where the citizen holds an existing active booking.</li>
+ * </ul>
  */
 export default function AvailabilitySearch({ onBookSession, bookingSessionId, citizenId }) {
   const getTodayStr = () => new Date().toISOString().split('T')[0];

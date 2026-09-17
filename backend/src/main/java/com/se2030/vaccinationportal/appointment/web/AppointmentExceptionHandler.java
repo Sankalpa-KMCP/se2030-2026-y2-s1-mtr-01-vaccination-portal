@@ -19,6 +19,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * Controller advice translating domain exceptions thrown during appointment and waitlist operations to standard HTTP status responses.
+ *
+ * <p><b>HTTP Status Code Architecture:</b>
+ * <ul>
+ *   <li><b>403 FORBIDDEN:</b> Medical ineligibility ({@link NotEligibleException} - MF03-BR-01),
+ *       unauthorized modification inside 24-hour window ({@link RequiresStaffOverrideException} - MF03-BR-04),
+ *       or unauthorized role access ({@link AccessDeniedException}).</li>
+ *   <li><b>409 CONFLICT:</b> State conflicts including duplicate active appointments ({@link DuplicateActiveAppointmentException} - MF03-BR-02),
+ *       duplicate waitlist entries ({@link DuplicateWaitlistEntryException} - MF03-BR-06, MF03-BR-14),
+ *       slot capacity exhaustion ({@link SlotFullException} - MF03-BR-03), and mutation of completed appointments
+ *       ({@link AppointmentAlreadyCompletedException} - MF03-BR-11).</li>
+ *   <li><b>400 BAD REQUEST:</b> Out-of-window check-in or premature no-show ({@link InvalidCheckInWindowException} - MF03-BR-09),
+ *       incompatible status transitions ({@link InvalidAppointmentStateException} - MF03-BR-10, MF03-BR-15), and validation failures.</li>
+ *   <li><b>404 NOT FOUND:</b> Non-existent appointments or waitlist records ({@link AppointmentNotFoundException}).</li>
+ * </ul>
+ * </p>
  */
 @RestControllerAdvice(basePackages = "com.se2030.vaccinationportal.appointment")
 public class AppointmentExceptionHandler {

@@ -10,10 +10,22 @@ import {
 import { listTimeSlots } from '../../session-management/api/sessionApi';
 
 /**
- * Staff-facing Vaccinator Queue & Check-In Management Page (US-04).
+ * Staff-facing Vaccinator Queue & Check-In Management Page.
  * Restricted to staff roles (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER).
  * Provides live queue inspection per time slot, arrival check-in with staff override,
  * check-in reversal, and mark no-show capabilities.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-26: Vaccinator views list of checked-in appointments; clinic staff process arrival and queue status.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-09: Standard check-in window is 30 minutes before to 30 minutes after slot start; handles override reason prompts.</li>
+ *   <li>MF03-BR-10: Check-in queue displays CONFIRMED appointments awaiting check-in and CHECKED_IN queue for vaccinators.</li>
+ *   <li>MF03-BR-15: Reverse check-in resets erroneous check-in back to CONFIRMED.</li>
+ * </ul>
  */
 export default function CheckInManagementPage() {
   const [slotId, setSlotId] = useState('4001');
