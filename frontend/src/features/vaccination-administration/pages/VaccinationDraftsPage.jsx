@@ -45,6 +45,7 @@ export default function VaccinationDraftsPage() {
   const [form, setForm] = useState(null);
   const [initialForm, setInitialForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [viewingDraft, setViewingDraft] = useState(null);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
 
@@ -61,6 +62,15 @@ export default function VaccinationDraftsPage() {
   useEffect(() => { load(); }, [load]);
 
   const resetForm = () => { setForm(null); setEditingId(null); };
+  const view = async (id) => {
+    setBusy(true);
+    setError(null);
+    setMessage('');
+    try {
+      setViewingDraft(await vaccinationDraftApi.get(id));
+    } catch (exception) { setError(exception); }
+    finally { setBusy(false); }
+  };
   const create = () => {
     const values = {
       ...emptyForm,
@@ -80,6 +90,7 @@ export default function VaccinationDraftsPage() {
       if (!editableStatuses.includes(draft.status)) throw new Error('Only an unfinalized draft may be changed.');
       const values = draftForm(draft);
       setForm(values); setInitialForm(values); setEditingId(id);
+      setViewingDraft(null);
     } catch (exception) { setError(exception); }
     finally { setBusy(false); }
   };
@@ -148,6 +159,25 @@ export default function VaccinationDraftsPage() {
       {message && <div role="status" className="alert alert-success">{message}</div>}
       {busy && <p role="status">Processing request…</p>}
 
+      {viewingDraft && <div className="card shadow-sm mb-4" aria-labelledby="view-draft-title"><div className="card-body">
+        <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+          <h2 id="view-draft-title" className="h5 mb-0">View draft {viewingDraft.id}</h2>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setViewingDraft(null)}>Close</button>
+        </div>
+        <dl className="row mb-0">
+          <dt className="col-sm-4">Draft ID</dt><dd className="col-sm-8">{viewingDraft.id}</dd>
+          <dt className="col-sm-4">Appointment ID</dt><dd className="col-sm-8">{viewingDraft.appointmentId}</dd>
+          <dt className="col-sm-4">Vaccine Batch ID</dt><dd className="col-sm-8">{viewingDraft.vaccineBatchId ?? '—'}</dd>
+          <dt className="col-sm-4">Dose Number</dt><dd className="col-sm-8">{viewingDraft.doseNumber ?? '—'}</dd>
+          <dt className="col-sm-4">Administration Date</dt><dd className="col-sm-8">{localDate(viewingDraft.administrationTime) || '—'}</dd>
+          <dt className="col-sm-4">Next Dose Date</dt><dd className="col-sm-8">{viewingDraft.nextDoseDate || '—'}</dd>
+          <dt className="col-sm-4">Authorized Notes</dt><dd className="col-sm-8 text-break">{viewingDraft.authorizedNotes || '—'}</dd>
+          <dt className="col-sm-4">Status</dt><dd className="col-sm-8">{viewingDraft.status}</dd>
+          <dt className="col-sm-4">Physical Confirmation</dt>
+          <dd className="col-sm-8">{viewingDraft.physicalAdministrationConfirmed ? 'Confirmed' : 'Not confirmed'}</dd>
+        </dl>
+      </div></div>}
+
       {form && <div className="card shadow-sm mb-4"><div className="card-body">
         <h2 className="h5">{editingId !== null ? `Edit draft ${editingId}` : 'Create draft'}</h2>
         <p className="small text-muted">Appointment ID is required. Other fields may be left blank when creating an incomplete draft.</p>
@@ -191,6 +221,8 @@ export default function VaccinationDraftsPage() {
           <td>{draft.nextDoseDate || '—'}</td><td className="text-break">{draft.authorizedNotes || '—'}</td><td>{draft.status}</td>
           <td>{draft.physicalAdministrationConfirmed ? 'Confirmed' : 'Not confirmed'}</td>
           <td className="text-nowrap">
+            <button type="button" className="btn btn-sm btn-outline-secondary me-2" aria-label={`View draft ${draft.id}`}
+              disabled={busy} onClick={() => view(draft.id)}>View</button>
             <button type="button" className="btn btn-sm btn-outline-primary me-2" aria-label={`Edit draft ${draft.id}`}
               disabled={busy || !editableStatuses.includes(draft.status)} onClick={() => edit(draft.id)}>Edit</button>
             <button type="button" className="btn btn-sm btn-outline-danger" aria-label={`Delete draft ${draft.id}`}

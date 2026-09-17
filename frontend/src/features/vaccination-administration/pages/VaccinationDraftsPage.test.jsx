@@ -70,8 +70,8 @@ describe('Vaccination Drafts CRUD', () => {
     await screen.findByText('Draft created successfully.');
     const payload = vaccinationDraftApi.create.mock.calls[0][0];
     expect(payload).toEqual({ appointmentId: 101, vaccineBatchId: 301, doseNumber: 1,
-      administrationTime: `${today}T00:00:00`, nextDoseDate: '2030-01-01', authorizedNotes: 'Demo notes' });
-    expect(payload.administrationTime).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00$/);
+      administrationTime: `${today}T00:00:00Z`, nextDoseDate: '2030-01-01', authorizedNotes: 'Demo notes' });
+    expect(payload.administrationTime).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00Z$/);
     expect(payload).not.toHaveProperty('vaccinatorId');
     expect(payload).not.toHaveProperty('physicalAdministrationConfirmed');
     expect(screen.queryByRole('form')).toBeNull();
@@ -87,8 +87,23 @@ describe('Vaccination Drafts CRUD', () => {
     await screen.findByText('Draft created successfully.');
     expect(vaccinationDraftApi.create).toHaveBeenCalledWith({
       appointmentId: 101,
-      administrationTime: `${new Date().toLocaleDateString('en-CA')}T00:00:00`,
+      administrationTime: `${new Date().toLocaleDateString('en-CA')}T00:00:00Z`,
     });
+  });
+
+  it('views draft details with GET and closes the read-only panel', async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole('button', { name: 'View draft 1' }));
+    await screen.findByRole('heading', { name: 'View draft 1' });
+    expect(vaccinationDraftApi.get).toHaveBeenCalledWith(1);
+    expect(screen.getByText('Draft ID')).toBeTruthy();
+    expect(screen.getByText('Vaccine Batch ID')).toBeTruthy();
+    expect(screen.getByText('Administration Date')).toBeTruthy();
+    expect(screen.getAllByText('2026-09-16').length).toBeGreaterThan(0);
+    expect(screen.getByText('Physical Confirmation')).toBeTruthy();
+    expect(screen.getAllByText('Not confirmed').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('heading', { name: 'View draft 1' })).toBeNull();
   });
 
   it('fetches and populates edit, then PATCHes changed editable fields only', async () => {
