@@ -56,6 +56,11 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class AuthService {
 
+    public static final String GENERIC_RESEND_VERIFICATION_MESSAGE =
+            "If the account exists and is pending verification, a verification email has been sent.";
+    public static final String GENERIC_FORGOT_PASSWORD_MESSAGE =
+            "If an eligible account is associated with this email address, password reset instructions have been sent.";
+
     private static final String CITIZEN_ROLE_CODE = "ROLE_CITIZEN";
     private static final Set<String> PUBLIC_STAFF_ROLE_CODES = Set.of(
             "ROLE_HEALTHCARE_OFFICER",
@@ -247,7 +252,7 @@ public class AuthService {
             }
         }
 
-        return new MessageResponse("If the account exists and is pending verification, a verification email has been sent.");
+        return new MessageResponse(GENERIC_RESEND_VERIFICATION_MESSAGE);
     }
 
     @Transactional
@@ -276,7 +281,7 @@ public class AuthService {
             }
         }
 
-        return new MessageResponse("If an eligible account is associated with this email address, password reset instructions have been sent.");
+        return new MessageResponse(GENERIC_FORGOT_PASSWORD_MESSAGE);
     }
 
     @Transactional

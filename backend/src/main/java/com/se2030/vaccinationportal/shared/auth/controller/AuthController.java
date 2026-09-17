@@ -11,6 +11,7 @@ import com.se2030.vaccinationportal.shared.auth.dto.ResetPasswordRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.StaffRegistrationRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.UserProfileResponse;
 import com.se2030.vaccinationportal.shared.auth.dto.VerifyEmailRequest;
+import com.se2030.vaccinationportal.shared.auth.exception.AuthEmailDeliveryException;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -56,12 +57,20 @@ public class AuthController {
 
     @PostMapping("/resend-verification")
     public ResponseEntity<MessageResponse> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
-        return ResponseEntity.ok(authService.resendVerification(request));
+        try {
+            return ResponseEntity.ok(authService.resendVerification(request));
+        } catch (AuthEmailDeliveryException ex) {
+            return ResponseEntity.ok(new MessageResponse(AuthService.GENERIC_RESEND_VERIFICATION_MESSAGE));
+        }
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        return ResponseEntity.ok(authService.forgotPassword(request));
+        try {
+            return ResponseEntity.ok(authService.forgotPassword(request));
+        } catch (AuthEmailDeliveryException ex) {
+            return ResponseEntity.ok(new MessageResponse(AuthService.GENERIC_FORGOT_PASSWORD_MESSAGE));
+        }
     }
 
     @PostMapping("/reset-password")

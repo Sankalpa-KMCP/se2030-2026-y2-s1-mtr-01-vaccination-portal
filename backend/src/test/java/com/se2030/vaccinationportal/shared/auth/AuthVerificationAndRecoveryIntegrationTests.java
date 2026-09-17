@@ -83,6 +83,7 @@ class AuthVerificationAndRecoveryIntegrationTests {
         passwordResetTokenRepository.deleteAll();
         userAccountRepository.deleteAll();
         roleRepository.deleteAll();
+        roleRepository.flush();
 
         roleRepository.saveAll(List.of(
                 new Role("ROLE_ADMIN", "System Administrator"),
