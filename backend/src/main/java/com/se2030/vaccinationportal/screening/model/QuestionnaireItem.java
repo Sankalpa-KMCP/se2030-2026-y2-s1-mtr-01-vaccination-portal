@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.screening.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import java.time.Instant;
 
 @Entity
@@ -25,6 +26,7 @@ public class QuestionnaireItem {
     @JoinColumn(name = "question_id", nullable = false, foreignKey = @ForeignKey(name = "fk_questionnaire_item_question"))
     private ScreeningQuestion question;
 
+    @Min(value = 1, message = "Display order must be at least 1")
     @Column(name = "display_order", nullable = false)
     private int displayOrder;
 

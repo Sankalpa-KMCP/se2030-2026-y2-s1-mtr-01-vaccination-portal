@@ -89,6 +89,10 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
         QuestionnaireVersion version = getVersionById(versionId);
         mutabilityValidator.assertVersionIsDraft(version);
 
+        if (displayOrder < 1) {
+            throw new IllegalArgumentException("Display order must be at least 1");
+        }
+
         ScreeningQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found with ID: " + questionId));
 

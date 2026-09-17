@@ -117,4 +117,91 @@ describe('AddQuestionnaireItemModal', () => {
     expect(screen.getByRole('button', { name: 'Select Existing' }).disabled).toBe(true);
     expect(screen.getByLabelText(/Question Code/).closest('fieldset').disabled).toBe(true);
   });
+
+  describe('Display Order validation', () => {
+    it('modal starts with Display Order = 1 when opened without explicit order', () => {
+      renderModal({ suggestedOrder: undefined });
+      const orderInput = screen.getByLabelText('Display Order *');
+      expect(orderInput.value).toBe('1');
+      expect(orderInput.getAttribute('min')).toBe('1');
+      expect(orderInput.getAttribute('step')).toBe('1');
+    });
+
+    it('modal starts with Display Order = 1 when suggestedOrder is 1', () => {
+      renderModal({ suggestedOrder: 1 });
+      const orderInput = screen.getByLabelText('Display Order *');
+      expect(orderInput.value).toBe('1');
+    });
+
+    it('Display Order 1 is accepted', () => {
+      const { props } = renderModal({ suggestedOrder: 1 });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+      expect(props.onSubmit).toHaveBeenCalledWith({
+        questionId: 1,
+        displayOrder: 1,
+        requiredOverride: null,
+      });
+    });
+
+    it.each([2, 3])('positive integer %i is accepted', (order) => {
+      const { props } = renderModal({ suggestedOrder: 1 });
+      fireEvent.change(screen.getByLabelText('Display Order *'), { target: { value: String(order) } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+      expect(props.onSubmit).toHaveBeenCalledWith({
+        questionId: 1,
+        displayOrder: order,
+        requiredOverride: null,
+      });
+    });
+
+    it('0 is rejected and prevents submission', () => {
+      const { props } = renderModal();
+      fireEvent.change(screen.getByLabelText('Display Order *'), { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+      expect(screen.getByRole('alert').textContent).toContain('Display order must be a whole number of 1 or greater.');
+      expect(props.onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('-1 is rejected and prevents submission', () => {
+      const { props } = renderModal();
+      fireEvent.change(screen.getByLabelText('Display Order *'), { target: { value: '-1' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+      expect(screen.getByRole('alert').textContent).toContain('Display order must be a whole number of 1 or greater.');
+      expect(props.onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('negative number -5 cannot be submitted', () => {
+      const { props } = renderModal();
+      fireEvent.change(screen.getByLabelText('Display Order *'), { target: { value: '-5' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+      expect(screen.getByRole('alert').textContent).toContain('Display order must be a whole number of 1 or greater.');
+      expect(props.onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('decimal/non-integer input is rejected and prevents submission', () => {
+      const { props } = renderModal();
+      fireEvent.change(screen.getByLabelText('Display Order *'), { target: { value: '1.5' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+      expect(screen.getByRole('alert').textContent).toContain('Display order must be a whole number of 1 or greater.');
+      expect(props.onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('blank display order is rejected and prevents submission', () => {
+      const { props } = renderModal();
+      fireEvent.change(screen.getByLabelText('Display Order *'), { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Question' }));
+      expect(screen.getByRole('alert').textContent).toContain('Display order must be a whole number of 1 or greater.');
+      expect(props.onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('display order < 1 in Create New mode prevents onCreateAndAttach API call', () => {
+      const { props } = renderModal();
+      chooseCreate();
+      fillMetadata('BOOLEAN');
+      fireEvent.change(screen.getByLabelText('Display Order *'), { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Create and Add Question' }));
+      expect(screen.getByRole('alert').textContent).toContain('Display order must be a whole number of 1 or greater.');
+      expect(props.onCreateAndAttach).not.toHaveBeenCalled();
+    });
+  });
 });

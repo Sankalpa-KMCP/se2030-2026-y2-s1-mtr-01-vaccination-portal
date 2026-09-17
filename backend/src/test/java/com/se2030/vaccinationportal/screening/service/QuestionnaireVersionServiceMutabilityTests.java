@@ -89,6 +89,40 @@ class QuestionnaireVersionServiceMutabilityTests {
 
         assertThat(item.getQuestionnaireVersion()).isSameAs(version);
         assertThat(item.getQuestion()).isSameAs(question);
+        assertThat(item.getDisplayOrder()).isEqualTo(1);
+    }
+
+    @Test
+    void questionItemWithPositiveDisplayOrderGreaterThanOneCanBeAdded() {
+        when(versionRepository.findById(20L)).thenReturn(Optional.of(version));
+        when(questionRepository.findById(30L)).thenReturn(Optional.of(question));
+        when(itemRepository.save(any(QuestionnaireItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        QuestionnaireItem item = service.addQuestionItem(20L, 30L, 5, null);
+
+        assertThat(item.getDisplayOrder()).isEqualTo(5);
+    }
+
+    @Test
+    void questionItemWithZeroDisplayOrderIsRejected() {
+        when(versionRepository.findById(20L)).thenReturn(Optional.of(version));
+
+        assertThatThrownBy(() -> service.addQuestionItem(20L, 30L, 0, true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Display order must be at least 1");
+
+        verify(itemRepository, never()).save(any());
+    }
+
+    @Test
+    void questionItemWithNegativeDisplayOrderIsRejected() {
+        when(versionRepository.findById(20L)).thenReturn(Optional.of(version));
+
+        assertThatThrownBy(() -> service.addQuestionItem(20L, 30L, -1, true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Display order must be at least 1");
+
+        verify(itemRepository, never()).save(any());
     }
 
     @Test
