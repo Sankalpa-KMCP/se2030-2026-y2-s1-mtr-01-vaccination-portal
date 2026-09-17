@@ -18,6 +18,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.Instant;
+import java.time.ZoneOffset;
 
 /**
  * Core domain entity representing a Vaccination Campaign.
@@ -112,6 +113,7 @@ public class VaccinationCampaign {
      * Validates business rule MF02-BR-01:
      * - Campaign end date must be strictly after campaign start date.
      * - Booking close timestamp must be strictly after booking open timestamp.
+     * - Booking close timestamp must not be after campaign service end date.
      */
     public void validateDateConsistency() {
         if (serviceStartDate != null && serviceEndDate != null) {
@@ -125,6 +127,14 @@ public class VaccinationCampaign {
             if (!bookingCloseAt.isAfter(bookingOpenAt)) {
                 throw new IllegalArgumentException(
                         "Campaign booking close time (" + bookingCloseAt + ") must be after booking open time (" + bookingOpenAt + ") [MF02-BR-01]"
+                );
+            }
+        }
+        if (bookingCloseAt != null && serviceEndDate != null) {
+            LocalDate bookingCloseDate = bookingCloseAt.atZone(ZoneOffset.UTC).toLocalDate();
+            if (bookingCloseDate.isAfter(serviceEndDate)) {
+                throw new IllegalArgumentException(
+                        "Campaign booking close time (" + bookingCloseAt + ") must not be after campaign service end date (" + serviceEndDate + ") [MF02-BR-01]"
                 );
             }
         }

@@ -31,6 +31,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.EnumSet;
 import java.util.List;
@@ -639,6 +640,31 @@ public class VaccinationCampaignService {
         if (targetGroup != null && !targetGroup.isActive()) {
             throw new IllegalArgumentException("Cannot create campaign with inactive TargetGroup: " + targetGroup.getCode());
         }
+        if (serviceStartDate == null) {
+            throw new IllegalArgumentException("Service start date is required");
+        }
+        if (serviceEndDate == null) {
+            throw new IllegalArgumentException("Service end date is required");
+        }
+        if (bookingOpenAt == null) {
+            throw new IllegalArgumentException("Booking open timestamp is required");
+        }
+        if (bookingCloseAt == null) {
+            throw new IllegalArgumentException("Booking close timestamp is required");
+        }
+        if (!serviceEndDate.isAfter(serviceStartDate)) {
+            throw new IllegalArgumentException("Campaign service end date (" + serviceEndDate +
+                    ") must be after service start date (" + serviceStartDate + ") [MF02-BR-01]");
+        }
+        if (!bookingCloseAt.isAfter(bookingOpenAt)) {
+            throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
+                    ") must be after booking open time (" + bookingOpenAt + ") [MF02-BR-01]");
+        }
+        LocalDate bookingCloseDate = bookingCloseAt.atZone(ZoneOffset.UTC).toLocalDate();
+        if (bookingCloseDate.isAfter(serviceEndDate)) {
+            throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
+                    ") must not be after campaign service end date (" + serviceEndDate + ") [MF02-BR-01]");
+        }
 
         String normalizedCode = code != null ? code.trim() : null;
         if (campaignRepository.existsByCode(normalizedCode)) {
@@ -729,6 +755,13 @@ public class VaccinationCampaignService {
         }
 
         campaign.validateDateConsistency();
+        if (campaign.getBookingCloseAt() != null) {
+            LocalDate bookingCloseDate = campaign.getBookingCloseAt().atZone(ZoneOffset.UTC).toLocalDate();
+            if (bookingCloseDate.isAfter(serviceEndDate)) {
+                throw new IllegalArgumentException("Campaign booking close time (" + campaign.getBookingCloseAt() +
+                        ") must not be after campaign service end date (" + serviceEndDate + ")");
+            }
+        }
         validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
 
         campaign.setServiceStartDate(serviceStartDate);
@@ -776,6 +809,11 @@ public class VaccinationCampaignService {
         if (!bookingCloseAt.isAfter(bookingOpenAt)) {
             throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
                     ") must be after booking open time (" + bookingOpenAt + ")");
+        }
+        LocalDate bookingCloseDate = bookingCloseAt.atZone(ZoneOffset.UTC).toLocalDate();
+        if (bookingCloseDate.isAfter(serviceEndDate)) {
+            throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
+                    ") must not be after campaign service end date (" + serviceEndDate + ")");
         }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)

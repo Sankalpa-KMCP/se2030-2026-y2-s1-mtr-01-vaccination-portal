@@ -322,6 +322,26 @@ public class CampaignUpdateIntegrationTests {
     }
 
     @Test
+    @DisplayName("L2: Booking close after service end date returns 400 Bad Request")
+    void bookingCloseAfterServiceEndDateReturns400() throws Exception {
+        VaccinationCampaign campaign = createTestCampaign("CMP-UPD-INVALID-BC-SE", CampaignStatus.DRAFT);
+
+        String payload = updatePayload(
+                "Invalid Close Date", "Desc",
+                INITIAL_START, INITIAL_END,
+                INITIAL_BOOK_OPEN,
+                Instant.parse("2027-01-05T12:00:00Z")
+        );
+
+        mockMvc.perform(put("/api/v1/campaigns/" + campaign.getId())
+                        .header(HttpHeaders.AUTHORIZATION, adminAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Campaign booking close time (2027-01-05T12:00:00Z) must not be after campaign service end date (2026-12-31)")));
+    }
+
+    @Test
     @DisplayName("M: Shortening service dates so an existing blocking session falls outside proposed range returns 400 Bad Request")
     void shorteningServiceDatesWithBlockingSessionReturns400() throws Exception {
         LocalDate today = LocalDate.now(clock);
