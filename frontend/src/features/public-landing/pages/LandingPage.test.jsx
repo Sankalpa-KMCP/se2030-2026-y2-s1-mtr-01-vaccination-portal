@@ -19,7 +19,7 @@ describe('LandingPage', () => {
     renderLanding();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /a clear path from campaign to clinic appointment/i }),
+      screen.getByRole('heading', { level: 1, name: /your next step to a healthier tomorrow/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: /one service. two ways in/i }),

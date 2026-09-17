@@ -7,12 +7,13 @@ export default function HeroSection() {
     <section className="home-hero" aria-labelledby="home-hero-title">
       <div className="lp-container home-hero__frame">
         <div className="home-hero__copy">
+          <span className="hospital-eyebrow">CONNECTED CARE · VACCINATION SERVICES</span>
           <h1 id="home-hero-title">
-            A clear path from <em>campaign</em> to clinic appointment.
+            Your next step to a <em>healthier tomorrow.</em>
           </h1>
           <p className="home-hero__lead">
-            Explore available campaigns, complete campaign-specific screening, and
-            reserve an eligible clinic appointment.
+            Vaccination planning, made simpler. Explore campaigns, complete your
+            screening and book an available clinic appointment once eligible.
           </p>
           <div className="home-hero__actions">
             <Link to="/register/citizen" className="home-action home-action--primary">
@@ -35,7 +36,7 @@ export default function HeroSection() {
             <span className="home-hero__visual-context">Citizen services</span>
           </div>
           <div className="home-hero__visual-title">
-            <span>Every step, connected.</span>
+            <span>Care that moves with you.</span>
             <p>From campaign screening to a booked clinic visit.</p>
           </div>
           <div className="home-hero__visual-screen">
