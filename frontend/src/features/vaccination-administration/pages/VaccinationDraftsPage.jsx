@@ -1,22 +1,30 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { vaccinationDraftApi } from '../api/vaccinationDraftApi';
 
+function todayDate() {
+  return new Date().toLocaleDateString('en-CA');
+}
+
 const emptyForm = {
-  appointmentId: '', vaccineBatchId: '', doseNumber: '', administrationTime: '', nextDoseDate: '', authorizedNotes: '',
+  appointmentId: '',
+  vaccineBatchId: '',
+  doseNumber: '',
+  administrationTime: todayDate(),
+  nextDoseDate: '',
+  authorizedNotes: '',
 };
 const editableStatuses = ['IN_PROGRESS', 'READY_FOR_FINALIZATION'];
 const fields = [
   ['appointmentId', 'Appointment ID', 'number'],
   ['vaccineBatchId', 'Vaccine batch ID', 'number'],
   ['doseNumber', 'Dose number', 'number'],
-  ['administrationTime', 'Administration time', 'datetime-local'],
+  ['administrationTime', 'Administration date', 'date'],
   ['nextDoseDate', 'Next dose date', 'date'],
 ];
 
-function localDateTime(value) {
+function localDate(value) {
   if (!value) return '';
-  const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+  return String(value).slice(0, 10);
 }
 
 function draftForm(draft) {
@@ -24,7 +32,7 @@ function draftForm(draft) {
     appointmentId: String(draft.appointmentId),
     vaccineBatchId: draft.vaccineBatchId == null ? '' : String(draft.vaccineBatchId),
     doseNumber: draft.doseNumber == null ? '' : String(draft.doseNumber),
-    administrationTime: localDateTime(draft.administrationTime),
+    administrationTime: localDate(draft.administrationTime),
     nextDoseDate: draft.nextDoseDate || '',
     authorizedNotes: draft.authorizedNotes || '',
   };
@@ -54,7 +62,16 @@ export default function VaccinationDraftsPage() {
 
   const resetForm = () => { setForm(null); setEditingId(null); };
   const create = () => {
-    setForm({ ...emptyForm }); setInitialForm(emptyForm); setEditingId(null); setError(null); setMessage('');
+    const values = {
+      ...emptyForm,
+      administrationTime: todayDate(),
+    };
+
+    setForm(values);
+    setInitialForm(values);
+    setEditingId(null);
+    setError(null);
+    setMessage('');
   };
   const edit = async (id) => {
     setBusy(true); setError(null); setMessage('');
@@ -80,7 +97,10 @@ export default function VaccinationDraftsPage() {
           continue;
         }
         payload[field] = ['appointmentId', 'vaccineBatchId', 'doseNumber'].includes(field)
-          ? Number(value) : field === 'administrationTime' ? new Date(value).toISOString() : value;
+          ? Number(value)
+          : field === 'administrationTime'
+            ? `${value}T00:00:00Z`
+            : value;
       }
       if (editingId !== null && Object.keys(payload).length === 0) throw new Error('Change at least one editable field.');
       if (editingId !== null) await vaccinationDraftApi.update(editingId, payload);
@@ -138,8 +158,11 @@ export default function VaccinationDraftsPage() {
                 <label className="form-label" htmlFor={`draft-${field}`}>{label}</label>
                 <input id={`draft-${field}`} className="form-control" type={type} value={form[field]}
                   required={field === 'appointmentId'} min={type === 'number' ? 1 : undefined}
-                  step={type === 'number' || type === 'datetime-local' ? 1 : undefined}
-                  disabled={field === 'appointmentId' && editingId !== null}
+                  step={type === 'number' ? 1 : undefined}
+                  disabled={
+                    (field === 'appointmentId' && editingId !== null) ||
+                    field === 'administrationTime'
+                  }
                   onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))} />
               </div>)}
               <div className="col-12">
@@ -148,7 +171,7 @@ export default function VaccinationDraftsPage() {
                   onChange={(event) => setForm((current) => ({ ...current, authorizedNotes: event.target.value }))} />
               </div>
               <div className="col-12 d-flex gap-2">
-                <button type="submit" className="btn btn-primary">{editingId !== null ? 'Save Changes' : 'Save Draft'}</button>
+                <button type="submit" className="btn btn-primary">{editingId !== null ? 'Update Draft' : 'Create Draft'}</button>
                 <button type="button" className="btn btn-outline-secondary" onClick={resetForm}>Cancel</button>
               </div>
             </div>
@@ -160,11 +183,11 @@ export default function VaccinationDraftsPage() {
         !error && <div className="alert alert-info">No vaccination drafts yet. Create a draft for a checked-in appointment.</div>
       ) : <div className="table-responsive"><table className="table table-striped align-middle">
         <caption>Vaccination drafts</caption>
-        <thead><tr>{['ID', 'Appointment ID', 'Vaccine batch ID', 'Dose number', 'Administration time', 'Next dose date', 'Authorized notes', 'Status', 'Physical confirmation (read-only)', 'Actions']
+        <thead><tr>{['ID', 'Appointment ID', 'Vaccine batch ID', 'Dose number', 'Administration date', 'Next dose date', 'Authorized notes', 'Status', 'Physical confirmation (read-only)', 'Actions']
           .map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
         <tbody>{drafts.map((draft) => <tr key={draft.id}>
           <td>{draft.id}</td><td>{draft.appointmentId}</td><td>{draft.vaccineBatchId ?? '—'}</td><td>{draft.doseNumber ?? '—'}</td>
-          <td>{draft.administrationTime ? new Date(draft.administrationTime).toLocaleString() : '—'}</td>
+          <td>{draft.administrationTime ? String(draft.administrationTime).slice(0, 10) : '—'}</td>
           <td>{draft.nextDoseDate || '—'}</td><td className="text-break">{draft.authorizedNotes || '—'}</td><td>{draft.status}</td>
           <td>{draft.physicalAdministrationConfirmed ? 'Confirmed' : 'Not confirmed'}</td>
           <td className="text-nowrap">

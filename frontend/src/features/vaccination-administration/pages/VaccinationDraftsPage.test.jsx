@@ -43,6 +43,9 @@ describe('Vaccination Drafts CRUD', () => {
     expect(vaccinationDraftApi.list).toHaveBeenCalledTimes(1);
     expect(screen.getByText('101')).toBeTruthy();
     expect(screen.getByText('301')).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'Administration date' })).toBeTruthy();
+    expect(screen.queryByRole('columnheader', { name: 'Administration time' })).toBeNull();
+    expect(screen.getByText('2026-09-16')).toBeTruthy();
     expect(screen.getByText('IN_PROGRESS')).toBeTruthy();
     expect(screen.getByText('Not confirmed')).toBeTruthy();
   });
@@ -55,16 +58,20 @@ describe('Vaccination Drafts CRUD', () => {
 
   it('creates using all public fields, excluding vaccinator identity and confirmation', async () => {
     await openCreate();
+    const today = new Date().toLocaleDateString('en-CA');
+    expect(screen.getByLabelText('Administration date').value).toBe(today);
+    expect(screen.getByLabelText('Administration date').disabled).toBe(true);
+    expect(screen.getAllByRole('button', { name: 'Create Draft' })).toHaveLength(2);
     fireEvent.change(screen.getByLabelText('Vaccine batch ID'), { target: { value: '301' } });
     fireEvent.change(screen.getByLabelText('Dose number'), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText('Administration time'), { target: { value: '2026-09-16T10:00:00' } });
     fireEvent.change(screen.getByLabelText('Next dose date'), { target: { value: '2030-01-01' } });
     fireEvent.change(screen.getByLabelText('Authorized notes'), { target: { value: 'Demo notes' } });
     fireEvent.submit(screen.getByRole('form', { name: 'Vaccination draft form' }));
     await screen.findByText('Draft created successfully.');
     const payload = vaccinationDraftApi.create.mock.calls[0][0];
     expect(payload).toEqual({ appointmentId: 101, vaccineBatchId: 301, doseNumber: 1,
-      administrationTime: new Date('2026-09-16T10:00:00').toISOString(), nextDoseDate: '2030-01-01', authorizedNotes: 'Demo notes' });
+      administrationTime: `${today}T00:00:00`, nextDoseDate: '2030-01-01', authorizedNotes: 'Demo notes' });
+    expect(payload.administrationTime).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00$/);
     expect(payload).not.toHaveProperty('vaccinatorId');
     expect(payload).not.toHaveProperty('physicalAdministrationConfirmed');
     expect(screen.queryByRole('form')).toBeNull();
@@ -78,7 +85,10 @@ describe('Vaccination Drafts CRUD', () => {
     expect(screen.getByLabelText('Authorized notes').maxLength).toBe(2000);
     fireEvent.submit(screen.getByRole('form'));
     await screen.findByText('Draft created successfully.');
-    expect(vaccinationDraftApi.create).toHaveBeenCalledWith({ appointmentId: 101 });
+    expect(vaccinationDraftApi.create).toHaveBeenCalledWith({
+      appointmentId: 101,
+      administrationTime: `${new Date().toLocaleDateString('en-CA')}T00:00:00`,
+    });
   });
 
   it('fetches and populates edit, then PATCHes changed editable fields only', async () => {
@@ -87,7 +97,10 @@ describe('Vaccination Drafts CRUD', () => {
     await screen.findByRole('heading', { name: 'Edit draft 1' });
     expect(vaccinationDraftApi.get).toHaveBeenCalledWith(1);
     expect(screen.getByLabelText('Appointment ID').disabled).toBe(true);
+    expect(screen.getByLabelText('Administration date').value).toBe('2026-09-16');
+    expect(screen.getByLabelText('Administration date').disabled).toBe(true);
     expect(screen.getByLabelText('Vaccine batch ID').value).toBe('301');
+    expect(screen.getByRole('button', { name: 'Update Draft' })).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Authorized notes'), { target: { value: 'Updated notes' } });
     fireEvent.submit(screen.getByRole('form'));
     await screen.findByText('Draft updated successfully.');
