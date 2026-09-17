@@ -39,6 +39,7 @@ import CitizenScreeningCorrectionPage from '../features/screening/pages/CitizenS
 import CitizenProfilePage from '../features/citizen-profile/pages/CitizenProfilePage';
 import HealthcareOfficerScreeningReviewQueuePage from '../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage';
 import HealthcareOfficerScreeningReviewDetailsPage from '../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage';
+import HealthcareOfficerScreeningHistoryDetailsPage from '../features/screening/pages/HealthcareOfficerScreeningHistoryDetailsPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
@@ -232,6 +233,7 @@ export default function PortalRoutes() {
           <Route element={<ProtectedRoute allowedRoles={SCREENING_REVIEW_ROLES} />}>
             <Route path="staff/screening/reviews" element={<HealthcareOfficerScreeningReviewQueuePage />} />
             <Route path="staff/screening/reviews/:submissionId" element={<HealthcareOfficerScreeningReviewDetailsPage />} />
+            <Route path="staff/screening/history/:submissionId" element={<HealthcareOfficerScreeningHistoryDetailsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={[ADMIN_ROLE]} />}>
