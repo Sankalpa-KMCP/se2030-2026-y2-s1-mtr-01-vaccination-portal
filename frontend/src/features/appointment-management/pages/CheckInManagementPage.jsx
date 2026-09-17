@@ -178,8 +178,30 @@ export default function CheckInManagementPage() {
                 id="slotIdInput"
                 className="form-control"
                 value={slotId}
-                onChange={(e) => setSlotId(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setSlotId('');
+                    return;
+                  }
+                  const cleanVal = val.replace(/[^0-9]/g, '');
+                  if (cleanVal === '') {
+                    setSlotId('');
+                    return;
+                  }
+                  const num = parseInt(cleanVal, 10);
+                  if (num > 0) {
+                    setSlotId(String(num));
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="e.g. 4001"
+                min="1"
+                step="1"
                 required
               />
             </div>
@@ -211,7 +233,29 @@ export default function CheckInManagementPage() {
                     className="form-control form-control-sm"
                     placeholder="Enter Session ID"
                     value={lookupSessionId}
-                    onChange={(e) => setLookupSessionId(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setLookupSessionId('');
+                        return;
+                      }
+                      const cleanVal = val.replace(/[^0-9]/g, '');
+                      if (cleanVal === '') {
+                        setLookupSessionId('');
+                        return;
+                      }
+                      const num = parseInt(cleanVal, 10);
+                      if (num > 0) {
+                        setLookupSessionId(String(num));
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                        e.preventDefault();
+                      }
+                    }}
+                    min="1"
+                    step="1"
                   />
                 </div>
                 <div className="col-auto">

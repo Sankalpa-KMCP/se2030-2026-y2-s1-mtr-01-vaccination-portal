@@ -22,9 +22,60 @@ export default function AvailabilitySearch({ onBookSession, bookingSessionId, ci
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const handlePositiveIntegerKeyDown = (e) => {
+    if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+      e.preventDefault();
+    }
+  };
+
+  const handleCampaignIdChange = (e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setCampaignId('');
+      return;
+    }
+    const cleanVal = val.replace(/[^0-9]/g, '');
+    if (cleanVal === '') {
+      setCampaignId('');
+      return;
+    }
+    const num = parseInt(cleanVal, 10);
+    if (num > 0) {
+      setCampaignId(String(num));
+    }
+  };
+
+  const handleCenterIdChange = (e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setCenterId('');
+      return;
+    }
+    const cleanVal = val.replace(/[^0-9]/g, '');
+    if (cleanVal === '') {
+      setCenterId('');
+      return;
+    }
+    const num = parseInt(cleanVal, 10);
+    if (num > 0) {
+      setCenterId(String(num));
+    }
+  };
+
   const handleSearch = async (e) => {
     e.preventDefault();
     setError(null);
+
+    if (!campaignId || Number(campaignId) <= 0) {
+      setError('Campaign ID must be a positive number.');
+      return;
+    }
+
+    if (centerId !== '' && Number(centerId) <= 0) {
+      setError('Center ID must be a positive number.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -69,8 +120,11 @@ export default function AvailabilitySearch({ onBookSession, bookingSessionId, ci
                   id="campaignIdInput"
                   className="form-control"
                   value={campaignId}
-                  onChange={(e) => setCampaignId(e.target.value)}
+                  onChange={handleCampaignIdChange}
+                  onKeyDown={handlePositiveIntegerKeyDown}
                   placeholder="e.g. 8001"
+                  min="1"
+                  step="1"
                   required
                 />
               </div>
@@ -84,8 +138,11 @@ export default function AvailabilitySearch({ onBookSession, bookingSessionId, ci
                   id="centerIdInput"
                   className="form-control"
                   value={centerId}
-                  onChange={(e) => setCenterId(e.target.value)}
+                  onChange={handleCenterIdChange}
+                  onKeyDown={handlePositiveIntegerKeyDown}
                   placeholder="All Centers"
+                  min="1"
+                  step="1"
                 />
               </div>
 

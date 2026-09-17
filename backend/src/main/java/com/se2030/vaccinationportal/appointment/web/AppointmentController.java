@@ -113,6 +113,12 @@ public class AppointmentController {
         if (citizenId != null && !citizenId.equals(user.getUserId())) {
             throw new AccessDeniedException("Citizens may only search with their own identity");
         }
+        if (campaignId != null && campaignId <= 0) {
+            throw new IllegalArgumentException("Campaign ID must be a positive integer");
+        }
+        if (centerId != null && centerId <= 0) {
+            throw new IllegalArgumentException("Center ID must be a positive integer");
+        }
         Long effectiveCitizenId = user.getUserId();
         if (searchService == null) {
             return ResponseEntity.ok(List.of());

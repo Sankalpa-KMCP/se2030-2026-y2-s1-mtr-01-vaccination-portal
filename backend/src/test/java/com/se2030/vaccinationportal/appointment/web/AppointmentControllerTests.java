@@ -197,6 +197,35 @@ class AppointmentControllerTests {
     }
 
     @Test
+    void searchAvailableAppointments_negativeCenterId_returns400BadRequest() throws Exception {
+        Long citizenId = 1001L;
+        authenticate(citizenId, "ROLE_CITIZEN");
+
+        mockMvc.perform(get("/api/v1/appointments/search")
+                        .param("citizenId", citizenId.toString())
+                        .param("campaignId", "8001")
+                        .param("centerId", "-9")
+                        .param("fromDate", LocalDate.now().toString())
+                        .param("toDate", LocalDate.now().plusDays(7).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("BAD_REQUEST")));
+    }
+
+    @Test
+    void searchAvailableAppointments_negativeCampaignId_returns400BadRequest() throws Exception {
+        Long citizenId = 1001L;
+        authenticate(citizenId, "ROLE_CITIZEN");
+
+        mockMvc.perform(get("/api/v1/appointments/search")
+                        .param("citizenId", citizenId.toString())
+                        .param("campaignId", "-1")
+                        .param("fromDate", LocalDate.now().toString())
+                        .param("toDate", LocalDate.now().plusDays(7).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("BAD_REQUEST")));
+    }
+
+    @Test
     void bookAppointment_success_returns201Created() throws Exception {
         Long citizenId = 1001L;
         Long campaignId = 2001L;
