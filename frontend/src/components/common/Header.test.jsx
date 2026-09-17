@@ -93,7 +93,7 @@ describe('Header', () => {
     expect(screen.queryByText('Campaigns')).toBeNull();
   });
 
-  it('shows the screening review link only for a healthcare officer and keeps existing links', () => {
+  it('shows only screening links in navbar for a healthcare officer and hides operational links', () => {
     mockUser({
       id: 3,
       fullName: 'Healthcare Officer',
@@ -102,14 +102,16 @@ describe('Header', () => {
     });
     renderHeader('/app/staff/screening/reviews');
 
+    expect(screen.getByText('Dashboard').getAttribute('href')).toBe('/app/staff');
     const reviewLink = screen.getByText('Screening Review');
     expect(reviewLink.getAttribute('href')).toBe('/app/staff/screening/reviews');
     expect(reviewLink.className).toContain('active');
     expect(screen.getByText('Screening Questions').getAttribute('href')).toBe('/app/screening/questions');
     expect(screen.getByText('Questionnaires').getAttribute('href')).toBe('/app/screening/questionnaires');
-    expect(screen.getByText('Campaigns')).toBeTruthy();
-    expect(screen.getByText('Center Operations')).toBeTruthy();
-    expect(screen.getByText('Sessions')).toBeTruthy();
+    expect(screen.queryByText('Campaigns')).toBeNull();
+    expect(screen.queryByText('Center Operations')).toBeNull();
+    expect(screen.queryByText('Sessions')).toBeNull();
+    expect(screen.queryByText('Check-In Queue')).toBeNull();
   });
 
   it('does not show screening review to an unrelated staff role', () => {

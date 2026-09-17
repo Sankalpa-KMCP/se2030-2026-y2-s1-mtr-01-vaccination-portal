@@ -149,7 +149,6 @@ public class CenterSecurityAuthorizationIntegrationTests {
                     "ROLE_ADMIN",
                     "ROLE_CAMPAIGN_OFFICER",
                     "ROLE_CENTER_MANAGER",
-                    "ROLE_HEALTHCARE_OFFICER",
                     "ROLE_MANAGEMENT_USER"
             );
 
@@ -174,6 +173,20 @@ public class CenterSecurityAuthorizationIntegrationTests {
                                 .header(HttpHeaders.AUTHORIZATION, auth))
                         .andExpect(status().isOk());
             }
+        }
+
+        @Test
+        @DisplayName("ROLE_HEALTHCARE_OFFICER is denied 403 on center GET endpoints")
+        void healthcareOfficerCenterReadsDenied() throws Exception {
+            String auth = token(301L, "hco@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+
+            mockMvc.perform(get("/api/v1/centers")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/v1/centers/" + center.getId())
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
         }
     }
 
@@ -301,12 +314,12 @@ public class CenterSecurityAuthorizationIntegrationTests {
         }
 
         @Test
-        @DisplayName("ROLE_HEALTHCARE_OFFICER GET resources succeeds 200")
-        void healthcareOfficerListResourcesSucceeds() throws Exception {
+        @DisplayName("ROLE_HEALTHCARE_OFFICER GET resources is denied 403")
+        void healthcareOfficerListResourcesDenied() throws Exception {
             String auth = token(301L, "hco@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
             mockMvc.perform(get("/api/v1/centers/" + center.getId() + "/resources")
                             .header(HttpHeaders.AUTHORIZATION, auth))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isForbidden());
         }
 
         @Test

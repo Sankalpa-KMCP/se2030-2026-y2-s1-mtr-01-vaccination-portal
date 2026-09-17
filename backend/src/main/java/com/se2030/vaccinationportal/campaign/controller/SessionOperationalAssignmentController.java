@@ -64,7 +64,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @GetMapping("/resource-assignments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<List<SessionResourceAssignmentResponse>> listResourceAssignments(
             @PathVariable("sessionId") Long sessionId
     ) {
@@ -76,7 +76,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @GetMapping("/resource-assignments/{assignmentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<SessionResourceAssignmentResponse> getResourceAssignment(
             @PathVariable("sessionId") Long sessionId,
             @PathVariable("assignmentId") Long assignmentId
@@ -116,7 +116,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @GetMapping("/staff-assignments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<List<StaffAssignmentResponse>> listStaffAssignments(
             @PathVariable("sessionId") Long sessionId
     ) {
@@ -128,7 +128,7 @@ public class SessionOperationalAssignmentController {
     }
 
     @GetMapping("/staff-assignments/{assignmentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<StaffAssignmentResponse> getStaffAssignment(
             @PathVariable("sessionId") Long sessionId,
             @PathVariable("assignmentId") Long assignmentId

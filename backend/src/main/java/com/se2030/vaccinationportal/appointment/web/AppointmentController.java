@@ -170,7 +170,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> cancelAppointment(
             @PathVariable("id") Long id,
             @RequestBody(required = false) AppointmentCancellationRequest request,
@@ -211,7 +211,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/reschedule")
-    @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> rescheduleAppointment(
             @PathVariable("id") Long id,
             @Valid @RequestBody AppointmentRescheduleRequest request,
@@ -251,7 +251,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/check-in")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> checkIn(
             @PathVariable("id") Long id,
             @RequestBody(required = false) CheckInRequest request
@@ -264,21 +264,21 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/reverse-check-in")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> reverseCheckIn(@PathVariable("id") Long id) {
         Appointment reversed = checkInService.reverseCheckIn(id);
         return ResponseEntity.ok(AppointmentResponse.fromEntity(reversed));
     }
 
     @PostMapping("/{id}/no-show")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> markNoShow(@PathVariable("id") Long id) {
         Appointment noShow = checkInService.markNoShow(id, Instant.now());
         return ResponseEntity.ok(AppointmentResponse.fromEntity(noShow));
     }
 
     @GetMapping("/queue")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<List<AppointmentResponse>> getVaccinatorQueue(@RequestParam("slotId") Long slotId) {
         List<Appointment> queue = checkInService.getVaccinatorQueueForSlot(slotId);
         List<AppointmentResponse> responseList = queue.stream()
@@ -311,16 +311,14 @@ public class AppointmentController {
         }
         boolean hasStaffRole = auth.getAuthorities().stream().anyMatch(a ->
                 "ROLE_ADMIN".equals(a.getAuthority()) ||
-                "ROLE_HEALTHCARE_OFFICER".equals(a.getAuthority()) ||
                 "ROLE_CENTER_MANAGER".equals(a.getAuthority()) ||
                 "ROLE_SUPER_ADMIN".equals(a.getAuthority()) ||
                 "ADMIN".equals(a.getAuthority()) ||
-                "HEALTHCARE_OFFICER".equals(a.getAuthority()) ||
                 "CENTER_MANAGER".equals(a.getAuthority()) ||
                 "SUPER_ADMIN".equals(a.getAuthority())
         );
         if (!hasStaffRole) {
-            throw new AccessDeniedException("Staff override requires an authorized staff role (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER, SUPER_ADMIN)");
+            throw new AccessDeniedException("Staff override requires an authorized staff role (ADMIN, CENTER_MANAGER, SUPER_ADMIN)");
         }
     }
 }

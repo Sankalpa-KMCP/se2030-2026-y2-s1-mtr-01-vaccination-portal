@@ -510,4 +510,38 @@ describe('shared routing and role guards', () => {
     render(<MemoryRouter initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByText('Citizen Dashboard')).toBeTruthy();
   });
+
+  describe('direct URL boundaries for ROLE_HEALTHCARE_OFFICER', () => {
+    it.each([
+      ['/app/campaigns'],
+      ['/app/center-operations'],
+      ['/app/sessions'],
+      ['/app/checkin/queue'],
+    ])('denies HCO access to %s and renders Not Authorized', (path) => {
+      setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
+      render(
+        <MemoryRouter initialEntries={[path]}>
+          <PortalRoutes />
+        </MemoryRouter>,
+      );
+      expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+    });
+
+    it.each([
+      ['/app/staff', 'Staff Dashboard'],
+      ['/app/staff/screening/reviews', 'HCO Screening Review Queue Test Page'],
+      ['/app/staff/screening/reviews/42', 'HCO Screening Review Details Test Page'],
+      ['/app/staff/screening/history/42', 'HCO Screening History Details Test Page'],
+      ['/app/screening/questions', 'Screening Questions Test Page'],
+      ['/app/screening/questionnaires', 'Screening Questionnaires Test Page'],
+    ])('allows HCO access to %s', (path, expectedContent) => {
+      setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
+      render(
+        <MemoryRouter initialEntries={[path]}>
+          <PortalRoutes />
+        </MemoryRouter>,
+      );
+      expect(screen.getByText(expectedContent)).toBeTruthy();
+    });
+  });
 });

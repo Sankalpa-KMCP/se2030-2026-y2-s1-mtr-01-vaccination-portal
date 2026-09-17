@@ -68,7 +68,7 @@ public class SessionCapacityPlanController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<List<SessionCapacityPlanResponse>> listCapacityPlans(
             @PathVariable("sessionId") Long sessionId
     ) {
@@ -80,7 +80,7 @@ public class SessionCapacityPlanController {
     }
 
     @GetMapping("/latest")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<SessionCapacityPlanResponse> getLatestCapacityPlan(
             @PathVariable("sessionId") Long sessionId
     ) {
@@ -89,7 +89,7 @@ public class SessionCapacityPlanController {
     }
 
     @GetMapping("/{revision:[0-9]+}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<SessionCapacityPlanResponse> getCapacityPlanByRevision(
             @PathVariable("sessionId") Long sessionId,
             @PathVariable("revision") int revision

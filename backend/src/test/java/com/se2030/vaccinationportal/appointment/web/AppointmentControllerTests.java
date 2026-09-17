@@ -386,7 +386,7 @@ class AppointmentControllerTests {
         Long slotId = 4007L;
         Instant now = Instant.now();
 
-        authenticate(999L, "ROLE_HEALTHCARE_OFFICER");
+        authenticate(999L, "ROLE_CENTER_MANAGER");
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
         slotCapacityPortDouble.setSlotStartTime(slotId, now);
 
@@ -406,7 +406,7 @@ class AppointmentControllerTests {
         Long slotId = 4008L;
         Instant now = Instant.now();
 
-        authenticate(999L, "ROLE_HEALTHCARE_OFFICER");
+        authenticate(999L, "ROLE_CENTER_MANAGER");
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
         slotCapacityPortDouble.setSlotStartTime(slotId, now);
 
@@ -422,7 +422,7 @@ class AppointmentControllerTests {
     void getVaccinatorQueue_returns200Ok() throws Exception {
         Long slotId = 4009L;
 
-        authenticate(999L, "ROLE_HEALTHCARE_OFFICER");
+        authenticate(999L, "ROLE_CENTER_MANAGER");
         mockMvc.perform(get("/api/v1/appointments/queue").param("slotId", slotId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
@@ -430,7 +430,7 @@ class AppointmentControllerTests {
 
     @Test
     void getAppointment_notFound_returns404NotFound() throws Exception {
-        authenticate(999L, "ROLE_HEALTHCARE_OFFICER");
+        authenticate(999L, "ROLE_CENTER_MANAGER");
         mockMvc.perform(post("/api/v1/appointments/999999/reverse-check-in"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error", is("NOT_FOUND")));

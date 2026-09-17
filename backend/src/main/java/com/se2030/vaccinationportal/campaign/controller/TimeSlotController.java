@@ -34,7 +34,7 @@ public class TimeSlotController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<List<TimeSlotResponse>> listTimeSlots(
             @PathVariable("sessionId") Long sessionId
     ) {

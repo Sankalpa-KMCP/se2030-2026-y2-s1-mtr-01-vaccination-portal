@@ -54,7 +54,6 @@ export function canViewCampaigns(user) {
     'ROLE_ADMIN',
     'ROLE_CAMPAIGN_OFFICER',
     'ROLE_CENTER_MANAGER',
-    'ROLE_HEALTHCARE_OFFICER',
     'ROLE_MANAGEMENT_USER'
   );
 }
@@ -93,7 +92,6 @@ export function canViewCenters(user) {
     'ROLE_ADMIN',
     'ROLE_CAMPAIGN_OFFICER',
     'ROLE_CENTER_MANAGER',
-    'ROLE_HEALTHCARE_OFFICER',
     'ROLE_MANAGEMENT_USER'
   );
 }
@@ -116,8 +114,7 @@ export function canViewSessions(user) {
     user,
     'ROLE_ADMIN',
     'ROLE_CENTER_MANAGER',
-    'ROLE_CAMPAIGN_OFFICER',
-    'ROLE_HEALTHCARE_OFFICER'
+    'ROLE_CAMPAIGN_OFFICER'
   );
 }
 
@@ -142,8 +139,7 @@ export function canViewSessionOperations(user) {
   return hasRole(
     user,
     'ROLE_ADMIN',
-    'ROLE_CENTER_MANAGER',
-    'ROLE_HEALTHCARE_OFFICER'
+    'ROLE_CENTER_MANAGER'
   );
 }
 
@@ -171,8 +167,7 @@ export function canViewTimeSlots(user) {
   return hasRole(
     user,
     'ROLE_ADMIN',
-    'ROLE_CENTER_MANAGER',
-    'ROLE_HEALTHCARE_OFFICER'
+    'ROLE_CENTER_MANAGER'
   );
 }
 

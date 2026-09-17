@@ -58,7 +58,7 @@ describe('role dashboards', () => {
     expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
-  it('adds screening review and clinical configuration to the healthcare officer dashboard without removing existing cards', () => {
+  it('shows only screening review and clinical configuration cards on the healthcare officer dashboard', () => {
     authState.current = { user: {
       fullName: 'Healthcare Officer',
       email: 'hco@example.com',
@@ -75,9 +75,9 @@ describe('role dashboards', () => {
     const questionnairesCard = screen.getByRole('heading', { name: 'Screening Questionnaires' }).closest('.card');
     expect(within(questionnairesCard).getByRole('link', { name: 'Open' }).getAttribute('href'))
       .toBe('/app/screening/questionnaires');
-    expect(screen.getByRole('heading', { name: 'Campaigns' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Center Operations' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Sessions' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Campaigns' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Center Operations' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Sessions' })).toBeNull();
   });
 
   it('shows the administrator profile and staff request entry', () => {

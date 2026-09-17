@@ -43,7 +43,7 @@ export default function Header({ onLogout }) {
   const showCenters = canViewCenters(user);
   const showSessions = canViewSessions(user);
   const showAnalytics = canViewAnalytics(user);
-  const showCheckIn = hasRole(user, ADMIN_ROLE, 'ROLE_HEALTHCARE_OFFICER', 'ROLE_CENTER_MANAGER');
+  const showCheckIn = hasRole(user, ADMIN_ROLE, 'ROLE_CENTER_MANAGER');
   const showAdminNavigation = hasRole(user, ADMIN_ROLE);
   const showScreeningConfigurationNavigation = hasRole(
     user,
