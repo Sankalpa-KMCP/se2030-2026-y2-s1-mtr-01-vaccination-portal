@@ -161,6 +161,57 @@ class VaccinationCampaignModelTests {
     }
 
     @Test
+    @DisplayName("Booking close timestamp after campaign service end date violates MF02-BR-01")
+    void bookingCloseTimestampAfterServiceEndDateThrowsException() {
+        LocalDate startDate = LocalDate.of(2026, 9, 1);
+        LocalDate endDate = LocalDate.of(2026, 12, 31);
+        Instant bookingOpen = Instant.parse("2026-08-15T08:00:00Z");
+        Instant bookingClose = Instant.parse("2027-01-05T18:00:00Z");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                CampaignTestFixtures.campaign(
+                        "CMP-INVALID-05",
+                        "Booking Close After Service End",
+                        null,
+                        sampleVaccineType,
+                        sampleTargetGroup,
+                        startDate,
+                        endDate,
+                        bookingOpen,
+                        bookingClose,
+                        CampaignStatus.DRAFT
+                )
+        );
+
+        assertTrue(ex.getMessage().contains("must not be after campaign service end date"));
+        assertTrue(ex.getMessage().contains("MF02-BR-01"));
+    }
+
+    @Test
+    @DisplayName("Booking close timestamp on campaign service end date passes MF02-BR-01")
+    void bookingCloseTimestampOnServiceEndDatePasses() {
+        LocalDate startDate = LocalDate.of(2026, 9, 1);
+        LocalDate endDate = LocalDate.of(2026, 12, 31);
+        Instant bookingOpen = Instant.parse("2026-08-15T08:00:00Z");
+        Instant bookingClose = Instant.parse("2026-12-31T23:59:59Z");
+
+        VaccinationCampaign campaign = CampaignTestFixtures.campaign(
+                "CMP-VALID-BOUNDARY",
+                "Boundary Booking Campaign",
+                null,
+                sampleVaccineType,
+                sampleTargetGroup,
+                startDate,
+                endDate,
+                bookingOpen,
+                bookingClose,
+                CampaignStatus.DRAFT
+        );
+
+        assertDoesNotThrow(campaign::validateDateConsistency);
+    }
+
+    @Test
     @DisplayName("isBookingWindowOpenAt evaluates status and temporal boundaries accurately (MF02-BR-03)")
     void bookingWindowEvaluationRespectsStatusAndDates() {
         LocalDate startDate = LocalDate.of(2026, 9, 1);

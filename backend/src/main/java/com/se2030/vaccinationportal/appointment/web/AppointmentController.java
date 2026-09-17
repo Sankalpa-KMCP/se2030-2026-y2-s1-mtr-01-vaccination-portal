@@ -22,9 +22,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -95,11 +97,20 @@ public class AppointmentController {
     }
 
     @GetMapping("/mine")
-    public ResponseEntity<List<AppointmentResponse>> getMyAppointments(@RequestParam("citizenId") Long citizenId) {
-        if (appointmentRepository == null || citizenId == null) {
+    @PreAuthorize("hasRole('CITIZEN')")
+    public ResponseEntity<List<AppointmentResponse>> getMyAppointments(
+            @RequestParam(value = "citizenId", required = false) Long citizenId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UserPrincipal user = getAuthenticatedPrincipal(principal);
+        if (citizenId != null && !citizenId.equals(user.getUserId())) {
+            throw new AccessDeniedException("Citizens may only access their own appointments");
+        }
+        Long effectiveCitizenId = user.getUserId();
+        if (appointmentRepository == null) {
             return ResponseEntity.ok(List.of());
         }
-        List<Appointment> appointments = appointmentRepository.findByCitizenIdOrderByBookedAtDesc(citizenId);
+        List<Appointment> appointments = appointmentRepository.findByCitizenIdOrderByBookedAtDesc(effectiveCitizenId);
         List<AppointmentResponse> responseList = appointments.stream()
                 .map(AppointmentResponse::fromEntity)
                 .toList();
@@ -107,18 +118,31 @@ public class AppointmentController {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<List<AvailableSessionResponse>> searchAvailableAppointments(
-            @RequestParam("citizenId") Long citizenId,
+            @RequestParam(value = "citizenId", required = false) Long citizenId,
             @RequestParam("campaignId") Long campaignId,
             @RequestParam(value = "centerId", required = false) Long centerId,
             @RequestParam("fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-            @RequestParam("toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
+            @RequestParam("toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
+        UserPrincipal user = getAuthenticatedPrincipal(principal);
+        if (citizenId != null && !citizenId.equals(user.getUserId())) {
+            throw new AccessDeniedException("Citizens may only search with their own identity");
+        }
+        if (campaignId != null && campaignId <= 0) {
+            throw new IllegalArgumentException("Campaign ID must be a positive integer");
+        }
+        if (centerId != null && centerId <= 0) {
+            throw new IllegalArgumentException("Center ID must be a positive integer");
+        }
+        Long effectiveCitizenId = user.getUserId();
         if (searchService == null) {
             return ResponseEntity.ok(List.of());
         }
         List<AvailableSessionSummary> summaries = searchService.searchAvailableSessions(
-                citizenId, campaignId, centerId, fromDate, toDate
+                effectiveCitizenId, campaignId, centerId, fromDate, toDate
         );
         List<AvailableSessionResponse> responseList = summaries.stream()
                 .map(AvailableSessionResponse::fromSummary)
@@ -127,9 +151,18 @@ public class AppointmentController {
     }
 
     @PostMapping("/book")
-    public ResponseEntity<AppointmentResponse> bookAppointment(@Valid @RequestBody AppointmentBookingRequest request) {
+    @PreAuthorize("hasRole('CITIZEN')")
+    public ResponseEntity<AppointmentResponse> bookAppointment(
+            @Valid @RequestBody AppointmentBookingRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UserPrincipal user = getAuthenticatedPrincipal(principal);
+        if (request.citizenId() != null && !request.citizenId().equals(user.getUserId())) {
+            throw new AccessDeniedException("Citizens may only book appointments for themselves");
+        }
+        Long effectiveCitizenId = user.getUserId();
         Appointment appointment = bookingService.bookAppointment(
-                request.citizenId(),
+                effectiveCitizenId,
                 request.campaignId(),
                 request.slotId()
         );
@@ -137,21 +170,39 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> cancelAppointment(
             @PathVariable("id") Long id,
-            @RequestBody(required = false) AppointmentCancellationRequest request
+            @RequestBody(required = false) AppointmentCancellationRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long requestingCitizenId = (request != null) ? request.requestingCitizenId() : null;
+        UserPrincipal user = getAuthenticatedPrincipal(principal);
         boolean isStaffOverride = (request != null && Boolean.TRUE.equals(request.isStaffOverride()));
         String staffReason = (request != null) ? request.staffReason() : null;
 
+        Long effectiveCitizenId;
         if (isStaffOverride) {
             validateStaffOverrideAuthority();
+            effectiveCitizenId = (request != null) ? request.requestingCitizenId() : null;
+        } else {
+            validateCitizenAuthority(user);
+            Long requestingCitizenId = (request != null) ? request.requestingCitizenId() : null;
+            if (requestingCitizenId != null && !requestingCitizenId.equals(user.getUserId())) {
+                throw new AccessDeniedException("Citizens may only cancel their own appointments");
+            }
+            effectiveCitizenId = user.getUserId();
+            if (appointmentRepository != null) {
+                appointmentRepository.findById(id).ifPresent(appt -> {
+                    if (!user.getUserId().equals(appt.getCitizenId())) {
+                        throw new AccessDeniedException("Citizen ID " + user.getUserId() + " is not authorized to modify appointment " + id);
+                    }
+                });
+            }
         }
 
         Appointment cancelled = cancellationService.cancelAppointment(
                 id,
-                requestingCitizenId,
+                effectiveCitizenId,
                 isStaffOverride,
                 staffReason,
                 Instant.now()
@@ -160,19 +211,37 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/reschedule")
+    @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN', 'HEALTHCARE_OFFICER', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> rescheduleAppointment(
             @PathVariable("id") Long id,
-            @Valid @RequestBody AppointmentRescheduleRequest request
+            @Valid @RequestBody AppointmentRescheduleRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
+        UserPrincipal user = getAuthenticatedPrincipal(principal);
         boolean isStaffOverride = Boolean.TRUE.equals(request.isStaffOverride());
 
+        Long effectiveCitizenId;
         if (isStaffOverride) {
             validateStaffOverrideAuthority();
+            effectiveCitizenId = request.requestingCitizenId();
+        } else {
+            validateCitizenAuthority(user);
+            if (request.requestingCitizenId() != null && !request.requestingCitizenId().equals(user.getUserId())) {
+                throw new AccessDeniedException("Citizens may only reschedule their own appointments");
+            }
+            effectiveCitizenId = user.getUserId();
+            if (appointmentRepository != null) {
+                appointmentRepository.findById(id).ifPresent(appt -> {
+                    if (!user.getUserId().equals(appt.getCitizenId())) {
+                        throw new AccessDeniedException("Citizen ID " + user.getUserId() + " is not authorized to modify appointment " + id);
+                    }
+                });
+            }
         }
 
         Appointment rescheduled = rescheduleService.rescheduleAppointment(
                 id,
-                request.requestingCitizenId(),
+                effectiveCitizenId,
                 request.newSlotId(),
                 isStaffOverride,
                 request.staffReason(),
@@ -218,6 +287,23 @@ public class AppointmentController {
         return ResponseEntity.ok(responseList);
     }
 
+    private UserPrincipal getAuthenticatedPrincipal(UserPrincipal principal) {
+        if (principal != null) {
+            return principal;
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal up) {
+            return up;
+        }
+        throw new AccessDeniedException("Authentication required");
+    }
+
+    private void validateCitizenAuthority(UserPrincipal user) {
+        if (user == null || (!user.hasRole("ROLE_CITIZEN") && !user.hasRole("CITIZEN"))) {
+            throw new AccessDeniedException("Citizen role required for self-service appointment modification");
+        }
+    }
+
     private void validateStaffOverrideAuthority() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
@@ -227,12 +313,14 @@ public class AppointmentController {
                 "ROLE_ADMIN".equals(a.getAuthority()) ||
                 "ROLE_HEALTHCARE_OFFICER".equals(a.getAuthority()) ||
                 "ROLE_CENTER_MANAGER".equals(a.getAuthority()) ||
+                "ROLE_SUPER_ADMIN".equals(a.getAuthority()) ||
                 "ADMIN".equals(a.getAuthority()) ||
                 "HEALTHCARE_OFFICER".equals(a.getAuthority()) ||
-                "CENTER_MANAGER".equals(a.getAuthority())
+                "CENTER_MANAGER".equals(a.getAuthority()) ||
+                "SUPER_ADMIN".equals(a.getAuthority())
         );
         if (!hasStaffRole) {
-            throw new AccessDeniedException("Staff override requires an authorized staff role (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER)");
+            throw new AccessDeniedException("Staff override requires an authorized staff role (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER, SUPER_ADMIN)");
         }
     }
 }

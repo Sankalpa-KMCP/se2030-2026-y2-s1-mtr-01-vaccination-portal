@@ -2,16 +2,23 @@ package com.se2030.vaccinationportal.appointment.web;
 
 import com.se2030.vaccinationportal.appointment.dto.WaitlistEntryResponse;
 import com.se2030.vaccinationportal.appointment.dto.WaitlistJoinRequest;
+import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
 import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.appointment.service.WaitlistJoinService;
 import com.se2030.vaccinationportal.appointment.service.WaitlistLeaveService;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,9 +66,18 @@ public class WaitlistController {
     }
 
     @PostMapping("/join")
-    public ResponseEntity<WaitlistEntryResponse> joinWaitlist(@Valid @RequestBody WaitlistJoinRequest request) {
+    @PreAuthorize("hasRole('CITIZEN')")
+    public ResponseEntity<WaitlistEntryResponse> joinWaitlist(
+            @Valid @RequestBody WaitlistJoinRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UserPrincipal user = getAuthenticatedPrincipal(principal);
+        if (request.citizenId() != null && !request.citizenId().equals(user.getUserId())) {
+            throw new AccessDeniedException("Citizens may only join waitlist for themselves");
+        }
+        Long effectiveCitizenId = user.getUserId();
         WaitlistEntry entry = joinService.joinWaitlist(
-                request.citizenId(),
+                effectiveCitizenId,
                 request.campaignId(),
                 request.sessionId(),
                 Instant.now()
@@ -70,34 +86,65 @@ public class WaitlistController {
     }
 
     @PostMapping("/{id}/leave")
+    @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<WaitlistEntryResponse> leaveWaitlist(
             @PathVariable("id") Long id,
-            @RequestParam("citizenId") Long citizenId
+            @RequestParam(value = "citizenId", required = false) Long citizenId,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
+        UserPrincipal user = getAuthenticatedPrincipal(principal);
+        if (citizenId != null && !citizenId.equals(user.getUserId())) {
+            throw new AccessDeniedException("Citizens may only leave their own waitlist entries");
+        }
+        if (waitlistRepository != null) {
+            waitlistRepository.findById(id).ifPresent(entry -> {
+                if (!user.getUserId().equals(entry.getCitizenId())) {
+                    throw new AccessDeniedException("Waitlist entry " + id + " does not belong to citizen " + user.getUserId());
+                }
+            });
+        }
         if (leaveService == null) {
             throw new IllegalStateException("WaitlistLeaveService is not available");
         }
-        WaitlistEntry entry = leaveService.leaveWaitlist(id, citizenId);
+        WaitlistEntry entry = leaveService.leaveWaitlist(id, user.getUserId());
         return ResponseEntity.ok(WaitlistEntryResponse.fromEntity(entry));
     }
 
     @GetMapping("/status")
+    @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<WaitlistEntryResponse> getWaitlistStatus(
-            @RequestParam("citizenId") Long citizenId,
-            @RequestParam("campaignId") Long campaignId
+            @RequestParam(value = "citizenId", required = false) Long citizenId,
+            @RequestParam("campaignId") Long campaignId,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
+        UserPrincipal user = getAuthenticatedPrincipal(principal);
+        if (citizenId != null && !citizenId.equals(user.getUserId())) {
+            throw new AccessDeniedException("Citizens may only inspect their own waitlist status");
+        }
+        Long effectiveCitizenId = user.getUserId();
         if (leaveService != null) {
-            return leaveService.getWaitlistStatus(citizenId, campaignId)
+            return leaveService.getWaitlistStatus(effectiveCitizenId, campaignId)
                     .map(entry -> {
                         Integer position = leaveService.getQueuePosition(entry);
                         return ResponseEntity.ok(WaitlistEntryResponse.fromEntity(entry, position));
                     })
                     .orElseGet(() -> ResponseEntity.notFound().build());
         }
-        return waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(citizenId, campaignId, WaitlistStatus.WAITING)
+        return waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(effectiveCitizenId, campaignId, WaitlistStatus.WAITING)
                 .or(() -> waitlistRepository.findFirstByCitizenIdAndCampaignIdAndStatusOrderByJoinedAtDesc(
-                        citizenId, campaignId, WaitlistStatus.PROMOTED))
+                        effectiveCitizenId, campaignId, WaitlistStatus.PROMOTED))
                 .map(entry -> ResponseEntity.ok(WaitlistEntryResponse.fromEntity(entry)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    private UserPrincipal getAuthenticatedPrincipal(UserPrincipal principal) {
+        if (principal != null) {
+            return principal;
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal up) {
+            return up;
+        }
+        throw new AccessDeniedException("Authentication required");
     }
 }

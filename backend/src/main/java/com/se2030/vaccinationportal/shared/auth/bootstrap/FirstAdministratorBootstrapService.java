@@ -17,6 +17,7 @@ public class FirstAdministratorBootstrapService {
 
     private static final String ADMIN_ROLE_CODE = "ROLE_ADMIN";
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile("^[0-9]{10}$");
 
     private final UserAccountRepository userAccountRepository;
     private final RoleRepository roleRepository;
@@ -34,17 +35,17 @@ public class FirstAdministratorBootstrapService {
 
     @Transactional
     public void bootstrap(String email, String password, String fullName, String phoneNumber) {
-        String normalizedEmail = validateAndNormalizeEmail(email);
-        validatePassword(password);
-        String normalizedFullName = validateText(fullName, "full name", 255);
-        String normalizedPhoneNumber = validateText(phoneNumber, "phone number", 32);
-
         Role administratorRole = roleRepository.findByCodeForUpdate(ADMIN_ROLE_CODE)
                 .orElseThrow(() -> new IllegalStateException("Canonical ROLE_ADMIN is not configured"));
 
         if (userAccountRepository.existsByAuthoritativeRoleCode(ADMIN_ROLE_CODE)) {
             return;
         }
+
+        String normalizedEmail = validateAndNormalizeEmail(email);
+        validatePassword(password);
+        String normalizedFullName = validateText(fullName, "full name", 255);
+        String normalizedPhoneNumber = validatePhoneNumber(phoneNumber);
 
         if (userAccountRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new IllegalStateException(
@@ -74,6 +75,14 @@ public class FirstAdministratorBootstrapService {
         if (!StringUtils.hasText(password) || password.length() > 128) {
             throw new IllegalStateException("Bootstrap administrator password must be nonblank and at most 128 characters");
         }
+    }
+
+    private String validatePhoneNumber(String phoneNumber) {
+        String normalized = validateText(phoneNumber, "phone number", 32);
+        if (!PHONE_NUMBER_PATTERN.matcher(normalized).matches()) {
+            throw new IllegalStateException("Bootstrap administrator phone number must contain exactly 10 digits");
+        }
+        return normalized;
     }
 
     private String validateText(String value, String label, int maxLength) {

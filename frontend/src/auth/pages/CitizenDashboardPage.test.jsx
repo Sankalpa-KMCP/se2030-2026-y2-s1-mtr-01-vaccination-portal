@@ -32,6 +32,7 @@ describe('CitizenDashboardPage', () => {
         fullName: 'Citizen User',
         email: 'citizen@example.com',
         phoneNumber: '+94 77 123 4567',
+        accountStatus: 'ACTIVE',
         roles: ['ROLE_CITIZEN'],
       },
     };
@@ -49,6 +50,26 @@ describe('CitizenDashboardPage', () => {
     expect(screen.getByRole('heading', { name: 'Welcome, Citizen User' })).toBeTruthy();
     expect(screen.getAllByText('citizen@example.com').length).toBeGreaterThan(0);
     expect(screen.getByText('+94 77 123 4567')).toBeTruthy();
+    expect(screen.getByText('Active')).toBeTruthy();
+    expect(screen.getByText('Citizen ID')).toBeTruthy();
+    expect(screen.getByText('#71')).toBeTruthy();
+    expect(screen.queryByLabelText('Citizen ID')).toBeNull();
+    expect(screen.getByRole('link', { name: /view profile/i }).getAttribute('href')).toBe('/app/citizen/profile');
+  });
+
+  it('reflects profile changes from shared authenticated user state', () => {
+    const view = renderDashboard();
+    mocks.auth = {
+      user: {
+        ...mocks.auth.user,
+        fullName: 'Updated Citizen',
+        phoneNumber: '+94 11 222 3333',
+      },
+    };
+    view.rerender(<MemoryRouter><CitizenDashboardPage /></MemoryRouter>);
+
+    expect(screen.getByRole('heading', { name: 'Welcome, Updated Citizen' })).toBeTruthy();
+    expect(screen.getByText('+94 11 222 3333')).toBeTruthy();
   });
 
   it('links every supported quick action and exposes no dead or unsupported service', () => {

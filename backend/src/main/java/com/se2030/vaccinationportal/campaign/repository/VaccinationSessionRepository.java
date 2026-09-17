@@ -75,9 +75,20 @@ public interface VaccinationSessionRepository extends JpaRepository<VaccinationS
             @Param("now") Instant now
     );
 
-    @Query("SELECT s FROM VaccinationSession s WHERE " +
-            "(:campaignId IS NULL OR s.campaign.id = :campaignId) AND " +
-            "(:centerId IS NULL OR s.center.id = :centerId) AND " +
+    @Query("SELECT s FROM VaccinationSession s " +
+            "JOIN FETCH s.campaign c " +
+            "JOIN FETCH s.center cnt " +
+            "LEFT JOIN FETCH s.recurrenceRule rr " +
+            "WHERE s.id = :id")
+    Optional<VaccinationSession> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("SELECT s FROM VaccinationSession s " +
+            "JOIN FETCH s.campaign c " +
+            "JOIN FETCH s.center cnt " +
+            "LEFT JOIN FETCH s.recurrenceRule rr " +
+            "WHERE " +
+            "(:campaignId IS NULL OR c.id = :campaignId) AND " +
+            "(:centerId IS NULL OR cnt.id = :centerId) AND " +
             "(:status IS NULL OR s.lifecycleStatus = :status) " +
             "ORDER BY s.startAt ASC, s.id ASC")
     List<VaccinationSession> findWithFilters(

@@ -76,19 +76,19 @@ describe('Header', () => {
     expect(screen.getByText('Check-In Queue')).toBeTruthy();
     expect(screen.getByText('Analytics')).toBeTruthy();
     expect(screen.getByText('Staff Requests').getAttribute('href')).toBe('/app/admin/staff-requests');
-    expect(screen.getByText('Screening Questions').getAttribute('href')).toBe('/app/screening/questions');
-    expect(screen.getByText('Questionnaires').getAttribute('href')).toBe('/app/screening/questionnaires');
+    expect(screen.queryByText('Screening Questions')).toBeNull();
+    expect(screen.queryByText('Questionnaires')).toBeNull();
     expect(screen.queryByText('Book Appointment')).toBeNull();
     expect(screen.queryByText('Waitlist')).toBeNull();
     expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
-  it('shows only screening configuration administration links to a system administrator', () => {
+  it('does not show screening configuration links to a system administrator', () => {
     mockUser(SYSTEM_ADMIN_USER);
     renderHeader('/app/screening/questions');
 
-    expect(screen.getByText('Screening Questions').getAttribute('href')).toBe('/app/screening/questions');
-    expect(screen.getByText('Questionnaires').getAttribute('href')).toBe('/app/screening/questionnaires');
+    expect(screen.queryByText('Screening Questions')).toBeNull();
+    expect(screen.queryByText('Questionnaires')).toBeNull();
     expect(screen.queryByText('Staff Requests')).toBeNull();
     expect(screen.queryByText('Campaigns')).toBeNull();
   });
@@ -105,6 +105,8 @@ describe('Header', () => {
     const reviewLink = screen.getByText('Screening Review');
     expect(reviewLink.getAttribute('href')).toBe('/app/staff/screening/reviews');
     expect(reviewLink.className).toContain('active');
+    expect(screen.getByText('Screening Questions').getAttribute('href')).toBe('/app/screening/questions');
+    expect(screen.getByText('Questionnaires').getAttribute('href')).toBe('/app/screening/questionnaires');
     expect(screen.getByText('Campaigns')).toBeTruthy();
     expect(screen.getByText('Center Operations')).toBeTruthy();
     expect(screen.getByText('Sessions')).toBeTruthy();

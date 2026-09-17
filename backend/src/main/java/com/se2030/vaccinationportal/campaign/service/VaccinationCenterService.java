@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.campaign.service;
 
+import com.se2030.vaccinationportal.campaign.dto.response.CitizenCenterDiscoveryResponse;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionCapacityPlan;
@@ -247,6 +248,23 @@ public class VaccinationCenterService {
             return centerRepository.findAllByOrderByCodeAsc();
         }
         return centerRepository.findByCenterStatusOrderByCodeAsc(status);
+    }
+
+    /**
+     * Retrieves active centers for citizen discovery projection.
+     */
+    @Transactional(readOnly = true)
+    public List<CitizenCenterDiscoveryResponse> getCitizenDiscoveryCenters() {
+        return centerRepository.findByCenterStatusOrderByCodeAsc(CenterStatus.ACTIVE).stream()
+                .map(c -> new CitizenCenterDiscoveryResponse(
+                        c.getId(),
+                        c.getCode(),
+                        c.getName(),
+                        c.getAddress(),
+                        c.getContact(),
+                        c.getTimezone()
+                ))
+                .toList();
     }
 
     private VaccinationCenter findAuthoritativeCenter(Long id) {

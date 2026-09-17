@@ -45,8 +45,10 @@ vi.mock('../features/screening/pages/CitizenEligibilityPage', () => ({ default: 
 vi.mock('../features/screening/pages/CitizenScreeningHistoryPage', () => ({ default: () => 'Citizen History Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningHistoryDetailsPage', () => ({ default: () => 'Citizen History Details Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningCorrectionPage', () => ({ default: () => 'Citizen Correction Test Page' }));
+vi.mock('../features/citizen-profile/pages/CitizenProfilePage', () => ({ default: () => 'Citizen Profile Test Page' }));
 vi.mock('../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage', () => ({ default: () => 'HCO Screening Review Queue Test Page' }));
 vi.mock('../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage', () => ({ default: () => 'HCO Screening Review Details Test Page' }));
+vi.mock('../features/screening/pages/HealthcareOfficerScreeningHistoryDetailsPage', () => ({ default: () => 'HCO Screening History Details Test Page' }));
 
 function setAuth({ isAuthenticated = true, roles = [] } = {}) {
   const logout = vi.fn();
@@ -123,6 +125,34 @@ describe('shared routing and role guards', () => {
       render(<MemoryRouter initialEntries={[path]}><PortalRoutes /></MemoryRouter>);
       expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
       expect(screen.queryByText(page)).toBeNull();
+    });
+  });
+
+  describe('citizen profile route', () => {
+    it('allows a citizen', () => {
+      setAuth({ roles: ['ROLE_CITIZEN'] });
+      render(<MemoryRouter initialEntries={['/app/citizen/profile']}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByText('Citizen Profile Test Page')).toBeTruthy();
+    });
+
+    it('redirects an unauthenticated visitor to login', () => {
+      render(<MemoryRouter initialEntries={['/app/citizen/profile']}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
+      expect(screen.queryByText('Citizen Profile Test Page')).toBeNull();
+    });
+
+    it.each([
+      'ROLE_ADMIN',
+      'ROLE_HEALTHCARE_OFFICER',
+      'ROLE_SYSTEM_ADMINISTRATOR',
+      'ROLE_CAMPAIGN_OFFICER',
+      'ROLE_CENTER_MANAGER',
+      'ROLE_MANAGEMENT_USER',
+    ])('denies %s', (role) => {
+      setAuth({ roles: [role] });
+      render(<MemoryRouter initialEntries={['/app/citizen/profile']}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+      expect(screen.queryByText('Citizen Profile Test Page')).toBeNull();
     });
   });
 
@@ -217,12 +247,9 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('heading', { name: 'Not Authorized Route' })).toBeTruthy();
   });
 
-  describe.each([
-    ['ROLE_ADMIN', 'ADMIN'],
-    ['ROLE_SYSTEM_ADMINISTRATOR', 'SYSTEM_ADMINISTRATOR'],
-  ])('screening configuration access for %s', (role) => {
+  describe('screening configuration access for ROLE_HEALTHCARE_OFFICER', () => {
     it('opens the screening questions route', () => {
-      setAuth({ roles: [role] });
+      setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
 
       render(
         <MemoryRouter initialEntries={['/app/screening/questions']}>
@@ -234,7 +261,7 @@ describe('shared routing and role guards', () => {
     });
 
     it('opens the screening questionnaires route', () => {
-      setAuth({ roles: [role] });
+      setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
 
       render(
         <MemoryRouter initialEntries={['/app/screening/questionnaires']}>
@@ -247,7 +274,8 @@ describe('shared routing and role guards', () => {
   });
 
   describe.each([
-    'ROLE_HEALTHCARE_OFFICER',
+    'ROLE_ADMIN',
+    'ROLE_SYSTEM_ADMINISTRATOR',
     'ROLE_CITIZEN',
     'ROLE_CAMPAIGN_OFFICER',
     'ROLE_CENTER_MANAGER',
@@ -297,8 +325,8 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
   });
 
-  it('shows screening configuration navigation to ADMIN and SYSTEM_ADMINISTRATOR only', () => {
-    setAuth({ roles: ['ROLE_ADMIN'] });
+  it('shows screening configuration navigation to HEALTHCARE_OFFICER only', () => {
+    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
     const view = render(
       <MemoryRouter>
         <Header />
@@ -307,20 +335,21 @@ describe('shared routing and role guards', () => {
 
     expect(screen.getByRole('link', { name: 'Screening Questions' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Questionnaires' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Staff Requests' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Screening Review' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Staff Requests' })).toBeNull();
 
-    setAuth({ roles: ['ROLE_SYSTEM_ADMINISTRATOR'] });
+    setAuth({ roles: ['ROLE_ADMIN'] });
     view.rerender(
       <MemoryRouter>
         <Header />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Screening Questions' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Questionnaires' })).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Staff Requests' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Screening Questions' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Questionnaires' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Staff Requests' })).toBeTruthy();
 
-    setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
+    setAuth({ roles: ['ROLE_SYSTEM_ADMINISTRATOR'] });
     view.rerender(
       <MemoryRouter>
         <Header />
@@ -390,6 +419,7 @@ describe('shared routing and role guards', () => {
   describe.each([
     ['/app/staff/screening/reviews', 'HCO Screening Review Queue Test Page'],
     ['/app/staff/screening/reviews/42', 'HCO Screening Review Details Test Page'],
+    ['/app/staff/screening/history/42', 'HCO Screening History Details Test Page'],
   ])('healthcare-officer review route %s', (path, page) => {
     it('allows a healthcare officer', () => {
       setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
@@ -416,7 +446,7 @@ describe('shared routing and role guards', () => {
     });
   });
 
-  it('allows only ADMIN to open admin dashboard and staff requests', () => {
+  it('allows ADMIN and SUPER_ADMIN to open admin dashboard and staff requests', () => {
     setAuth({ roles: ['ROLE_ADMIN'] });
     const view = render(<MemoryRouter key="admin" initialEntries={['/app/admin']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
@@ -424,8 +454,27 @@ describe('shared routing and role guards', () => {
     view.rerender(<MemoryRouter key="requests" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByText('Pending Staff Requests Test Page')).toBeTruthy();
 
+    setAuth({ roles: ['ROLE_SUPER_ADMIN'] });
+    view.rerender(<MemoryRouter key="super-admin" initialEntries={['/app/admin']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
+
+    view.rerender(<MemoryRouter key="super-requests" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByText('Pending Staff Requests Test Page')).toBeTruthy();
+
     setAuth({ roles: ['ROLE_HEALTHCARE_OFFICER'] });
     view.rerender(<MemoryRouter key="requests-denied" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+  });
+
+  it('denies SUPER_ADMIN on citizen self-only routes', () => {
+    setAuth({ roles: ['ROLE_SUPER_ADMIN'] });
+    const view = render(<MemoryRouter initialEntries={['/app/citizen']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+
+    view.rerender(<MemoryRouter initialEntries={['/app/citizen/profile']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+
+    view.rerender(<MemoryRouter initialEntries={['/app/appointments/book']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
   });
 
@@ -433,7 +482,7 @@ describe('shared routing and role guards', () => {
     setAuth({ isAuthenticated: false });
 
     render(<MemoryRouter key="home" initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { level: 1, name: /a clear path from campaign to vaccination record/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: /a clear path from campaign to clinic appointment/i })).toBeTruthy();
     cleanup();
 
     render(<MemoryRouter key="how" initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);

@@ -1,0 +1,57 @@
+/* The art follows the care path while leaving the message and actions clear. */
+.lp-page--home .home-hero {
+  isolation: isolate;
+  background: #f9fcfa;
+}
+
+.lp-page--home .home-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  background: url('./assets/care-path-field.svg') center center / cover no-repeat;
+  opacity: 0.92;
+  mask-image: none;
+}
+
+.lp-page--home .home-hero::after {
+  display: none;
+}
+
+.lp-page--home .home-hero__frame {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 960px) {
+  .lp-page--home .home-hero__frame {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-page--home :is(.home-hero__copy, .home-hero__visual, .home-hero__rail) {
+    grid-column: 1;
+  }
+
+  .lp-page--home .home-hero__visual {
+    width: 100%;
+    max-width: 680px;
+    justify-self: center;
+  }
+}
+
+@media (max-width: 800px) {
+  .lp-page--home .home-hero::before {
+    background-position: 60% top;
+    opacity: 0.62;
+  }
+}
+
+@media (max-width: 560px) {
+  .lp-page--home .home-hero::before {
+    background-position: 52% 8%;
+    background-size: auto 680px;
+    opacity: 0.42;
+  }
+}

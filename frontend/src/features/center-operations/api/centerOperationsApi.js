@@ -43,6 +43,16 @@ export async function listCenters(status = null) {
 }
 
 /**
+ * Fetch active vaccination centers for authenticated citizen discovery.
+ *
+ * @returns {Promise<Array>} List of CitizenCenterDiscoveryResponse objects ({ id, code, name, address, contact, timezone })
+ */
+export async function listCitizenCenters() {
+  const response = await apiRequest('/v1/citizen/centers', { method: 'GET' });
+  return handleResponse(response);
+}
+
+/**
  * Fetch detailed vaccination center record by identifier.
  *
  * @param {number|string} id - Center identifier

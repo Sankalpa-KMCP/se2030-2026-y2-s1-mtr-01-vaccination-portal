@@ -19,16 +19,22 @@ public interface CampaignCenterAssignmentRepository
     Optional<Long> findCampaignIdById(@Param("id") Long id);
 
     @Query("SELECT a FROM CampaignCenterAssignment a " +
+            "JOIN FETCH a.center " +
+            "JOIN FETCH a.campaign " +
             "WHERE a.campaign.id = :campaignId " +
             "ORDER BY a.activeFrom, CASE WHEN a.activeTo IS NULL THEN 1 ELSE 0 END, a.activeTo, a.id")
     List<CampaignCenterAssignment> findCampaignHistory(@Param("campaignId") Long campaignId);
 
     @Query("SELECT a FROM CampaignCenterAssignment a " +
+            "JOIN FETCH a.center " +
+            "JOIN FETCH a.campaign " +
             "WHERE a.center.id = :centerId " +
             "ORDER BY a.activeFrom, CASE WHEN a.activeTo IS NULL THEN 1 ELSE 0 END, a.activeTo, a.id")
     List<CampaignCenterAssignment> findCenterHistory(@Param("centerId") Long centerId);
 
     @Query("SELECT a FROM CampaignCenterAssignment a " +
+            "JOIN FETCH a.center " +
+            "JOIN FETCH a.campaign " +
             "WHERE a.campaign.id = :campaignId AND a.center.id = :centerId " +
             "AND a.status = :status " +
             "AND a.activeFrom <= :date " +

@@ -55,6 +55,7 @@ class SharedAuthenticationMigrationMySqlIntegrationTests extends AbstractMySqlTe
                 // Drop V4-owned tables in dependency-safe order so test proves V4 creates schema independently of Hibernate auto-DDL
                 stmt.execute("DROP TABLE IF EXISTS refresh_token_sessions;");
                 stmt.execute("DROP TABLE IF EXISTS user_roles;");
+                stmt.execute("DROP TABLE IF EXISTS citizen_profiles;");
                 stmt.execute("DROP TABLE IF EXISTS user_accounts;");
                 stmt.execute("DROP TABLE IF EXISTS roles;");
 

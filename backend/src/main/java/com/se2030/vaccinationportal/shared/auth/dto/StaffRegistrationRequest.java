@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.shared.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record StaffRegistrationRequest(
@@ -10,12 +11,18 @@ public record StaffRegistrationRequest(
         String fullName,
 
         @NotBlank(message = "Email must not be blank")
-        @Email(message = "Email must be a well-formed email address")
+        @Email(
+                regexp = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+                message = "Enter a valid email address."
+        )
         @Size(max = 255, message = "Email must not exceed 255 characters")
         String email,
 
         @NotBlank(message = "Phone number must not be blank")
-        @Size(max = 32, message = "Phone number must not exceed 32 characters")
+        @Pattern(
+                regexp = "^[0-9]{10}$",
+                message = "Phone number must contain exactly 10 digits."
+        )
         String phoneNumber,
 
         @NotBlank(message = "Password must not be blank")

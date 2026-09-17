@@ -3,8 +3,19 @@
  * Aligns frontend UI visibility and actions strictly with backend @PreAuthorize policies.
  */
 
+const SUPER_ADMIN_ROLE = 'ROLE_SUPER_ADMIN';
+const SUPER_ADMIN_IMPLIED_ROLES = new Set([
+  'ROLE_ADMIN',
+  'ROLE_CAMPAIGN_OFFICER',
+  'ROLE_CENTER_MANAGER',
+  'ROLE_HEALTHCARE_OFFICER',
+  'ROLE_INVENTORY_OFFICER',
+  'ROLE_MANAGEMENT_USER',
+]);
+
 /**
  * Checks if the user has any of the specified roles (with or without 'ROLE_' prefix).
+ * Super Admin implicitly inherits all staff and management roles, but never citizen self-identity (ROLE_CITIZEN).
  *
  * @param {Object|null} user - User object containing `roles` array
  * @param {...string} roles - Role names to check against (e.g. 'ROLE_ADMIN' or 'ADMIN')
@@ -19,9 +30,17 @@ export function hasRole(user, ...roles) {
     user.roles.map((r) => (r.startsWith('ROLE_') ? r : `ROLE_${r}`))
   );
 
+  const isSuperAdmin = normalizedUserRoles.has(SUPER_ADMIN_ROLE);
+
   return roles.some((role) => {
     const normalizedTarget = role.startsWith('ROLE_') ? role : `ROLE_${role}`;
-    return normalizedUserRoles.has(normalizedTarget);
+    if (normalizedUserRoles.has(normalizedTarget)) {
+      return true;
+    }
+    if (isSuperAdmin && SUPER_ADMIN_IMPLIED_ROLES.has(normalizedTarget)) {
+      return true;
+    }
+    return false;
   });
 }
 
@@ -116,11 +135,32 @@ export function canPlanSessions(user) {
 }
 
 /**
+ * Whether user can view session operational assignments and capacity plan history.
+ * Authorized: ADMIN, CENTER_MANAGER, HEALTHCARE_OFFICER
+ */
+export function canViewSessionOperations(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CENTER_MANAGER',
+    'ROLE_HEALTHCARE_OFFICER'
+  );
+}
+
+/**
  * Whether user can manage day-of-operations (capacity plans, operational assignments).
  * Authorized: ADMIN, CENTER_MANAGER
  */
 export function canManageSessionOperations(user) {
   return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
+}
+
+/**
+ * Whether user can approve capacity above the server-recommended throughput.
+ * Authorized: CENTER_MANAGER, SUPER_ADMIN
+ */
+export function canOverrideSessionCapacity(user) {
+  return hasRole(user, 'ROLE_CENTER_MANAGER', 'ROLE_SUPER_ADMIN');
 }
 
 /**

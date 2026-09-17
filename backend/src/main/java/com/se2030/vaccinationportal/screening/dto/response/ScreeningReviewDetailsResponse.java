@@ -9,6 +9,7 @@ import java.util.List;
 public record ScreeningReviewDetailsResponse(
         Long submissionId,
         Long citizenId,
+        String citizenFullName,
         Long campaignId,
         Long questionnaireVersionId,
         Long consentNoticeVersionId,

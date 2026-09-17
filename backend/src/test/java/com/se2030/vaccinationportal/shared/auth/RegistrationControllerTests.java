@@ -12,6 +12,8 @@ import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -74,7 +76,7 @@ class RegistrationControllerTests {
                 {
                   "fullName": "Citizen One",
                   "email": " CITIZEN.ONE@Example.com ",
-                  "phoneNumber": "+94 77 100 2000",
+                  "phoneNumber": "0771002000",
                   "password": "RegistrationPassword123!",
                   "accountStatus": "REJECTED",
                   "roles": ["ROLE_ADMIN"],
@@ -99,7 +101,7 @@ class RegistrationControllerTests {
     @DisplayName("anonymous staff registration returns 202 without granting requested authority")
     void registerStaff_anonymousRequest_returns202WithoutAuthority() throws Exception {
         StaffRegistrationRequest request = new StaffRegistrationRequest(
-                "Healthcare Worker", "worker@example.com", "+94 76 100 2000",
+                "Healthcare Worker", "worker@example.com", "0761002000",
                 RAW_PASSWORD, "ROLE_HEALTHCARE_OFFICER");
 
         mockMvc.perform(post("/api/v1/auth/register/staff")
@@ -118,7 +120,7 @@ class RegistrationControllerTests {
         userAccountRepository.saveAndFlush(new UserAccount(
                 "duplicate@example.com", passwordEncoder.encode(RAW_PASSWORD), AccountStatus.ACTIVE));
         CitizenRegistrationRequest request = new CitizenRegistrationRequest(
-                "Duplicate", " DUPLICATE@EXAMPLE.COM ", "+94 77 222 3333", RAW_PASSWORD);
+                "Duplicate", " DUPLICATE@EXAMPLE.COM ", "0772223333", RAW_PASSWORD);
 
         mockMvc.perform(post("/api/v1/auth/register/citizen")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -133,7 +135,7 @@ class RegistrationControllerTests {
     @DisplayName("forbidden public staff role returns 400")
     void registerStaff_adminRole_returns400() throws Exception {
         StaffRegistrationRequest request = new StaffRegistrationRequest(
-                "Administrator Request", "admin-request@example.com", "+94 77 444 5555",
+                "Administrator Request", "admin-request@example.com", "0774445555",
                 RAW_PASSWORD, "ROLE_ADMIN");
 
         mockMvc.perform(post("/api/v1/auth/register/staff")
@@ -157,6 +159,165 @@ class RegistrationControllerTests {
                 .andExpect(jsonPath("$.fieldErrors.email").isArray())
                 .andExpect(jsonPath("$.fieldErrors.phoneNumber").isArray())
                 .andExpect(jsonPath("$.fieldErrors.password").isArray());
+    }
+
+    @Test
+    @DisplayName("contact format failures return friendly field messages")
+    void registerCitizen_invalidContactFormat_returnsFriendlyMessages() throws Exception {
+        CitizenRegistrationRequest request = new CitizenRegistrationRequest(
+                "Citizen", "student@domain", "077-123-4567", RAW_PASSWORD);
+
+        mockMvc.perform(post("/api/v1/auth/register/citizen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.email", hasItem("Enter a valid email address.")))
+                .andExpect(jsonPath("$.fieldErrors.phoneNumber",
+                        hasItem("Phone number must contain exactly 10 digits.")));
+    }
+
+    @ParameterizedTest(name = "citizen registration accepts email {0}")
+    @ValueSource(strings = {
+            "student@gmail.com",
+            "student@university.edu",
+            "admin@email.com",
+            "  student@gmail.com  "
+    })
+    void registerCitizen_validEmail_returns201(String email) throws Exception {
+        CitizenRegistrationRequest request = new CitizenRegistrationRequest(
+                "Citizen", email, "0771234567", RAW_PASSWORD);
+
+        mockMvc.perform(post("/api/v1/auth/register/citizen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+    }
+
+    @ParameterizedTest(name = "staff registration accepts email {0}")
+    @ValueSource(strings = {
+            "student@gmail.com",
+            "student@university.edu",
+            "admin@email.com",
+            "  student@gmail.com  "
+    })
+    void registerStaff_validEmail_returns202(String email) throws Exception {
+        StaffRegistrationRequest request = new StaffRegistrationRequest(
+                "Staff", email, "0771234567", RAW_PASSWORD, "ROLE_HEALTHCARE_OFFICER");
+
+        mockMvc.perform(post("/api/v1/auth/register/staff")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isAccepted());
+    }
+
+    @ParameterizedTest(name = "citizen registration rejects email {0}")
+    @ValueSource(strings = {
+            "student",
+            "student@",
+            "@gmail.com",
+            "student gmail.com",
+            "student@domain",
+            "   "
+    })
+    void registerCitizen_invalidEmail_returns400(String email) throws Exception {
+        CitizenRegistrationRequest request = new CitizenRegistrationRequest(
+                "Citizen", email, "0771234567", RAW_PASSWORD);
+
+        mockMvc.perform(post("/api/v1/auth/register/citizen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.email").isArray());
+    }
+
+    @ParameterizedTest(name = "staff registration rejects email {0}")
+    @ValueSource(strings = {
+            "student",
+            "student@",
+            "@gmail.com",
+            "student gmail.com",
+            "student@domain",
+            "   "
+    })
+    void registerStaff_invalidEmail_returns400(String email) throws Exception {
+        StaffRegistrationRequest request = new StaffRegistrationRequest(
+                "Staff", email, "0771234567", RAW_PASSWORD, "ROLE_HEALTHCARE_OFFICER");
+
+        mockMvc.perform(post("/api/v1/auth/register/staff")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.email").isArray());
+    }
+
+    @ParameterizedTest(name = "citizen registration accepts phone {0}")
+    @ValueSource(strings = {"0771234567", "  0771234567  "})
+    void registerCitizen_validPhone_returns201(String phoneNumber) throws Exception {
+        CitizenRegistrationRequest request = new CitizenRegistrationRequest(
+                "Citizen", "citizen@example.com", phoneNumber, RAW_PASSWORD);
+
+        mockMvc.perform(post("/api/v1/auth/register/citizen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+    }
+
+    @ParameterizedTest(name = "staff registration accepts phone {0}")
+    @ValueSource(strings = {"0771234567", "  0771234567  "})
+    void registerStaff_validPhone_returns202(String phoneNumber) throws Exception {
+        StaffRegistrationRequest request = new StaffRegistrationRequest(
+                "Staff", "staff@example.com", phoneNumber, RAW_PASSWORD, "ROLE_HEALTHCARE_OFFICER");
+
+        mockMvc.perform(post("/api/v1/auth/register/staff")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isAccepted());
+    }
+
+    @ParameterizedTest(name = "citizen registration rejects phone {0}")
+    @ValueSource(strings = {
+            "771234567",
+            "07712345678",
+            "07712ABC67",
+            "077-123-4567",
+            "+94771234567",
+            "077 1234567",
+            "   "
+    })
+    void registerCitizen_invalidPhone_returns400(String phoneNumber) throws Exception {
+        CitizenRegistrationRequest request = new CitizenRegistrationRequest(
+                "Citizen", "citizen@example.com", phoneNumber, RAW_PASSWORD);
+
+        mockMvc.perform(post("/api/v1/auth/register/citizen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.phoneNumber").isArray());
+    }
+
+    @ParameterizedTest(name = "staff registration rejects phone {0}")
+    @ValueSource(strings = {
+            "771234567",
+            "07712345678",
+            "07712ABC67",
+            "077-123-4567",
+            "+94771234567",
+            "077 1234567",
+            "   "
+    })
+    void registerStaff_invalidPhone_returns400(String phoneNumber) throws Exception {
+        StaffRegistrationRequest request = new StaffRegistrationRequest(
+                "Staff", "staff@example.com", phoneNumber, RAW_PASSWORD, "ROLE_HEALTHCARE_OFFICER");
+
+        mockMvc.perform(post("/api/v1/auth/register/staff")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("VALIDATION_FAILED")))
+                .andExpect(jsonPath("$.fieldErrors.phoneNumber").isArray());
     }
 
     @Test

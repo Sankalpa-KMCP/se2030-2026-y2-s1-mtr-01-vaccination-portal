@@ -11,13 +11,14 @@ import PublicServiceGuide from '../components/PublicServiceGuide';
 import '../public-landing.css';
 import '../premium-public.css';
 import '../clinical-public.css';
+import '../glass-header.css';
 
 const ROLES = [
   {
     num: '01',
     role: 'Citizen',
     scope: 'Self-service',
-    desc: 'Registers, completes screening, books appointments, and views a personal immunisation record.',
+    desc: 'Registers, manages supported profile details, completes screening, and manages appointments.',
     icon: (
       <>
         <circle cx="12" cy="7.5" r="3.4" stroke="currentColor" strokeWidth="1.6" />
@@ -29,7 +30,7 @@ const ROLES = [
     num: '02',
     role: 'Healthcare Officer',
     scope: 'Clinical operations',
-    desc: 'Runs vaccination administration, reviews screening outcomes, and manages clinic sessions on the day.',
+    desc: 'Reviews screening outcomes, manages clinic check-in, and prepares protected vaccination drafts.',
     icon: (
       <>
         <path d="M9.5 12.5a4.5 4.5 0 0 0-4.5 4.5v2h9v-2a4.5 4.5 0 0 0-4.5-4.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
@@ -65,9 +66,21 @@ const ROLES = [
   },
   {
     num: '05',
+    role: 'Inventory Officer',
+    scope: 'Inventory responsibilities',
+    desc: 'An approved organizational account role for staff assigned to inventory responsibilities.',
+    icon: (
+      <>
+        <path d="M4.5 20.5v-10L12 4.5l7.5 6v10" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M12 10.5v4.5M9.75 12.75h4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </>
+    ),
+  },
+  {
+    num: '06',
     role: 'Management User',
     scope: 'Oversight',
-    desc: 'Monitors campaign and center operations across the programme through operational analytics.',
+    desc: 'Reviews campaign, center, and lifecycle information available through its role-specific portal access.',
     icon: (
       <>
         <path d="M4 20.5h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -76,10 +89,10 @@ const ROLES = [
     ),
   },
   {
-    num: '06',
-    role: 'Admin',
+    num: '07',
+    role: 'Administrator',
     scope: 'System authority',
-    desc: 'Approves staff access, configures screening questionnaires, and holds system-wide authority.',
+    desc: 'Approves or rejects staff requests and manages screening questionnaires in protected Administrator areas.',
     icon: (
       <>
         <path d="M12 3 5.5 5.5v4.8c0 4.2 2.7 8 6.5 9.2 3.8-1.2 6.5-5 6.5-9.2V5.5L12 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
@@ -93,7 +106,7 @@ const LEDGER = [
   {
     num: '01',
     title: 'Campaign lifecycle',
-    desc: 'Campaigns move through controlled stages — draft, configured, active, suspended, completed — each transition recorded with who made it and why.',
+    desc: 'Campaigns move through draft, scheduled, published, active, suspended, completed, cancelled, and archived states. Key lifecycle changes record who acted, why, and when.',
   },
   {
     num: '02',
@@ -112,8 +125,8 @@ const LEDGER = [
   },
   {
     num: '05',
-    title: 'Records & certificates',
-    desc: 'Vaccination records and digital certificates are created when clinics administer doses — tied to citizens, campaigns, and sessions.',
+    title: 'Vaccination draft documentation',
+    desc: 'Authorized Healthcare Officers and Administrators can prepare protected vaccination drafts for checked-in appointments.',
   },
 ];
 
@@ -121,12 +134,12 @@ const COMMITMENTS = [
   {
     num: '01',
     title: 'Controlled access',
-    desc: 'Every account sees exactly what its role permits — nothing more.',
+    desc: 'Protected portal areas use authenticated access and role checks appropriate to those areas.',
   },
   {
     num: '02',
     title: 'Recorded changes',
-    desc: 'Operational changes carry their rationale and author, permanently.',
+    desc: 'Key campaign and session lifecycle changes record actor, reason, timestamp, and transition details.',
   },
   {
     num: '03',
@@ -143,8 +156,8 @@ const COMMITMENTS = [
 const DATA_STATEMENTS = [
   {
     title: 'Privacy',
-    statement: 'Your record is yours.',
-    detail: 'Citizens see their own immunisation data only. Personal information is stored securely and access is role-scoped end to end.',
+    statement: 'Your profile follows your account.',
+    detail: 'After signing in, citizens can view their profile and update their name, phone number, date of birth, gender, and address.',
     icon: (
       <>
         <rect x="5.5" y="10.5" width="13" height="9.5" rx="2" stroke="currentColor" strokeWidth="1.5" />
@@ -155,8 +168,8 @@ const DATA_STATEMENTS = [
   },
   {
     title: 'Traceability',
-    statement: 'Every change leaves a mark.',
-    detail: 'Campaign decisions, staffing revisions, and session changes are recorded with administrative metadata — reviewable at any time.',
+    statement: 'Key lifecycle changes are recorded.',
+    detail: 'Specific campaign and session lifecycle changes record actor, reason, timestamp, and transition details.',
     icon: (
       <>
         <path d="M5 19.5h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -198,7 +211,7 @@ export default function AboutPage({ onLoginClick }) {
           label="About the portal"
           title="A system built on"
           accent="responsibility."
-          lead="Six roles, five operational domains, one auditable record of every decision. This is the structure that keeps a vaccination programme trustworthy."
+          lead="Seven account roles, five operational domains, and selected lifecycle records support responsible vaccination programme operations."
         />
         <PublicServiceGuide />
 
@@ -213,7 +226,7 @@ export default function AboutPage({ onLoginClick }) {
             <div className="lp-section__header" data-reveal>
               <div className="lp-section__header-text">
                 <h2 className="lp-section__title" id="lp-roles-title">
-                  Six roles, one{' '}
+                  Seven roles, one{' '}
                   <span className="lp-hero__accent">registry</span>
                 </h2>
               </div>
@@ -268,7 +281,7 @@ export default function AboutPage({ onLoginClick }) {
                 </h2>
               </div>
               <p className="lp-section__lead">
-                Five operational domains, each with its own rules and record.
+                Five operational domains, each with its own workflow and validation rules.
               </p>
             </div>
 
@@ -361,11 +374,11 @@ export default function AboutPage({ onLoginClick }) {
                 <span className="lp-cta-kicker__rule" aria-hidden="true" />
               </div>
               <h2 className="lp-cta-panel__title" id="lp-cta-title">
-                See the service from start to record.
+                See the service from account to clinic.
               </h2>
               <p className="lp-cta-panel__text">
-                Follow the connected steps for citizens and health teams, from
-                registration to a recorded vaccination.
+                Follow the connected steps for citizens and health teams, from registration
+                and screening to appointment booking and clinic check-in.
               </p>
             </div>
             <div className="lp-cta-panel__actions">

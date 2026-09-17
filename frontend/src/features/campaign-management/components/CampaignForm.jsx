@@ -38,12 +38,27 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
   const [bookingOpenAt, setBookingOpenAt] = useState(formatForDateTimeLocal(initialCampaign?.bookingOpenAt));
   const [bookingCloseAt, setBookingCloseAt] = useState(formatForDateTimeLocal(initialCampaign?.bookingCloseAt));
   const [clientError, setClientError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Master data lookup state (relevant for create mode)
   const [vaccineTypes, setVaccineTypes] = useState([]);
   const [targetGroups, setTargetGroups] = useState([]);
   const [masterDataLoading, setMasterDataLoading] = useState(!isEditMode);
   const [masterDataError, setMasterDataError] = useState(null);
+
+  const clearFieldErrors = (...fields) => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      fields.forEach((f) => {
+        if (next[f]) {
+          delete next[f];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  };
 
   useEffect(() => {
     if (initialCampaign) {
@@ -56,6 +71,8 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       setServiceEndDate(initialCampaign.serviceEndDate || '');
       setBookingOpenAt(formatForDateTimeLocal(initialCampaign.bookingOpenAt));
       setBookingCloseAt(formatForDateTimeLocal(initialCampaign.bookingCloseAt));
+      setFieldErrors({});
+      setClientError(null);
     }
   }, [initialCampaign]);
 
@@ -96,32 +113,79 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
     };
   }, [isEditMode, initialCampaign]);
 
+  const validateForm = () => {
+    const errs = {};
+
+    if (!isEditMode) {
+      if (!code.trim()) {
+        errs.code = 'Campaign code is required.';
+      }
+      if (!vaccineTypeId) {
+        errs.vaccineTypeId = 'Please select a valid active Vaccine Type.';
+      }
+      if (!targetGroupId) {
+        errs.targetGroupId = 'Please select a valid active Target Demographic Group.';
+      }
+    }
+
+    if (!name.trim()) {
+      errs.name = 'Campaign name is required.';
+    }
+
+    // Service window validation
+    if (!serviceStartDate) {
+      errs.serviceStartDate = 'Service start date is required.';
+    }
+    if (!serviceEndDate) {
+      errs.serviceEndDate = 'Service end date is required.';
+    } else if (serviceStartDate) {
+      if (serviceEndDate < serviceStartDate) {
+        errs.serviceEndDate = 'Service end date cannot be before the service start date.';
+      } else if (serviceEndDate === serviceStartDate) {
+        errs.serviceEndDate = 'Service end date must be after the service start date.';
+      }
+    }
+
+    // Citizen booking window validation
+    if (!bookingOpenAt) {
+      errs.bookingOpenAt = 'Citizen booking open timestamp is required.';
+    }
+    if (!bookingCloseAt) {
+      errs.bookingCloseAt = 'Citizen booking close timestamp is required.';
+    } else {
+      if (bookingOpenAt) {
+        const openTime = new Date(bookingOpenAt).getTime();
+        const closeTime = new Date(bookingCloseAt).getTime();
+        if (!isNaN(openTime) && !isNaN(closeTime)) {
+          if (closeTime <= openTime) {
+            errs.bookingCloseAt = 'Booking close time must be after the booking open time.';
+          }
+        }
+      }
+      // Booking close vs service window containment
+      if (serviceEndDate && !errs.bookingCloseAt) {
+        const bookingCloseDateStr = bookingCloseAt.slice(0, 10);
+        if (bookingCloseDateStr > serviceEndDate) {
+          errs.bookingCloseAt = 'Booking must close no later than the allowed campaign service window.';
+        }
+      }
+    }
+
+    return errs;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setClientError(null);
 
-    if (isEditMode) {
-      if (!name.trim()) {
-        setClientError('Campaign name is required.');
-        return;
-      }
-      if (!serviceStartDate || !serviceEndDate) {
-        setClientError('Service start and end dates are required.');
-        return;
-      }
-      if (new Date(serviceStartDate) > new Date(serviceEndDate)) {
-        setClientError('Service start date must not be after service end date.');
-        return;
-      }
-      if (!bookingOpenAt || !bookingCloseAt) {
-        setClientError('Booking open and close timestamps are required.');
-        return;
-      }
-      if (new Date(bookingOpenAt) > new Date(bookingCloseAt)) {
-        setClientError('Booking open timestamp must not be after booking close timestamp.');
-        return;
-      }
+    const errs = validateForm();
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
 
+    if (isEditMode) {
       // In edit mode: strictly approved fields only (no code, vaccineType, targetGroup, status, or id)
       const payload = {
         name: name.trim(),
@@ -133,40 +197,6 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       };
 
       onSubmit(payload);
-      return;
-    }
-
-    // Create mode validation & payload
-    if (!code.trim()) {
-      setClientError('Campaign code is required.');
-      return;
-    }
-    if (!name.trim()) {
-      setClientError('Campaign name is required.');
-      return;
-    }
-    if (!vaccineTypeId) {
-      setClientError('Please select a valid active Vaccine Type.');
-      return;
-    }
-    if (!targetGroupId) {
-      setClientError('Please select a valid active Target Demographic Group.');
-      return;
-    }
-    if (!serviceStartDate || !serviceEndDate) {
-      setClientError('Service start and end dates are required.');
-      return;
-    }
-    if (new Date(serviceStartDate) > new Date(serviceEndDate)) {
-      setClientError('Service start date must not be after service end date.');
-      return;
-    }
-    if (!bookingOpenAt || !bookingCloseAt) {
-      setClientError('Booking open and close timestamps are required.');
-      return;
-    }
-    if (new Date(bookingOpenAt) > new Date(bookingCloseAt)) {
-      setClientError('Booking open timestamp must not be after booking close timestamp.');
       return;
     }
 
@@ -186,6 +216,12 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
     onSubmit(payload);
   };
 
+  const handleCancel = () => {
+    setFieldErrors({});
+    setClientError(null);
+    onCancel();
+  };
+
   return (
     <div className="card shadow-sm border-0 mb-4">
       <div className="card-header bg-primary text-white py-3">
@@ -194,7 +230,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       <div className="card-body p-4">
         <ApiErrorAlert error={clientError || (!isEditMode ? masterDataError : null) || error} onDismiss={() => setClientError(null)} />
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="row g-3">
             {/* Campaign Code & Name */}
             <div className="col-md-4">
@@ -204,15 +240,18 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
               <input
                 id="campaignCode"
                 type="text"
-                className="form-control"
+                className={`form-control ${fieldErrors.code ? 'is-invalid' : ''}`}
                 placeholder="e.g. COVID19-2026-Q1"
                 maxLength={64}
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  clearFieldErrors('code');
+                }}
                 disabled={isEditMode}
                 readOnly={isEditMode}
-                required={!isEditMode}
               />
+              {fieldErrors.code && <div className="invalid-feedback d-block">{fieldErrors.code}</div>}
               {isEditMode && <div className="form-text small">Campaign code is immutable.</div>}
             </div>
 
@@ -223,13 +262,16 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
               <input
                 id="campaignName"
                 type="text"
-                className="form-control"
+                className={`form-control ${fieldErrors.name ? 'is-invalid' : ''}`}
                 placeholder="e.g. National COVID-19 Booster Rollout 2026"
                 maxLength={128}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
+                onChange={(e) => {
+                  setName(e.target.value);
+                  clearFieldErrors('name');
+                }}
               />
+              {fieldErrors.name && <div className="invalid-feedback d-block">{fieldErrors.name}</div>}
             </div>
 
             {/* Description */}
@@ -273,11 +315,13 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                 <>
                   <select
                     id="vaccineTypeId"
-                    className="form-select"
+                    className={`form-select ${fieldErrors.vaccineTypeId ? 'is-invalid' : ''}`}
                     value={vaccineTypeId}
-                    onChange={(e) => setVaccineTypeId(e.target.value)}
+                    onChange={(e) => {
+                      setVaccineTypeId(e.target.value);
+                      clearFieldErrors('vaccineTypeId');
+                    }}
                     disabled={masterDataLoading || vaccineTypes.length === 0}
-                    required
                   >
                     {masterDataLoading ? (
                       <option value="">Loading vaccine types...</option>
@@ -291,6 +335,9 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                       ))
                     )}
                   </select>
+                  {fieldErrors.vaccineTypeId && (
+                    <div className="invalid-feedback d-block">{fieldErrors.vaccineTypeId}</div>
+                  )}
                   <div className="form-text small">Select an approved active vaccine type.</div>
                 </>
               )}
@@ -320,11 +367,13 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                 <>
                   <select
                     id="targetGroupId"
-                    className="form-select"
+                    className={`form-select ${fieldErrors.targetGroupId ? 'is-invalid' : ''}`}
                     value={targetGroupId}
-                    onChange={(e) => setTargetGroupId(e.target.value)}
+                    onChange={(e) => {
+                      setTargetGroupId(e.target.value);
+                      clearFieldErrors('targetGroupId');
+                    }}
                     disabled={masterDataLoading || targetGroups.length === 0}
-                    required
                   >
                     {masterDataLoading ? (
                       <option value="">Loading target demographic groups...</option>
@@ -338,6 +387,9 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                       ))
                     )}
                   </select>
+                  {fieldErrors.targetGroupId && (
+                    <div className="invalid-feedback d-block">{fieldErrors.targetGroupId}</div>
+                  )}
                   <div className="form-text small">Select an eligible active target demographic group.</div>
                 </>
               )}
@@ -351,11 +403,17 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
               <input
                 id="serviceStartDate"
                 type="date"
-                className="form-control"
+                className={`form-control ${fieldErrors.serviceStartDate ? 'is-invalid' : ''}`}
                 value={serviceStartDate}
-                onChange={(e) => setServiceStartDate(e.target.value)}
-                required
+                max={serviceEndDate || undefined}
+                onChange={(e) => {
+                  setServiceStartDate(e.target.value);
+                  clearFieldErrors('serviceStartDate', 'serviceEndDate');
+                }}
               />
+              {fieldErrors.serviceStartDate && (
+                <div className="invalid-feedback d-block">{fieldErrors.serviceStartDate}</div>
+              )}
             </div>
 
             <div className="col-md-6">
@@ -365,11 +423,17 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
               <input
                 id="serviceEndDate"
                 type="date"
-                className="form-control"
+                className={`form-control ${fieldErrors.serviceEndDate ? 'is-invalid' : ''}`}
                 value={serviceEndDate}
-                onChange={(e) => setServiceEndDate(e.target.value)}
-                required
+                min={serviceStartDate || undefined}
+                onChange={(e) => {
+                  setServiceEndDate(e.target.value);
+                  clearFieldErrors('serviceStartDate', 'serviceEndDate', 'bookingCloseAt');
+                }}
               />
+              {fieldErrors.serviceEndDate && (
+                <div className="invalid-feedback d-block">{fieldErrors.serviceEndDate}</div>
+              )}
             </div>
 
             {/* Booking Window */}
@@ -380,11 +444,17 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
               <input
                 id="bookingOpenAt"
                 type="datetime-local"
-                className="form-control"
+                className={`form-control ${fieldErrors.bookingOpenAt ? 'is-invalid' : ''}`}
                 value={bookingOpenAt}
-                onChange={(e) => setBookingOpenAt(e.target.value)}
-                required
+                max={bookingCloseAt || (serviceEndDate ? `${serviceEndDate}T23:59` : undefined)}
+                onChange={(e) => {
+                  setBookingOpenAt(e.target.value);
+                  clearFieldErrors('bookingOpenAt', 'bookingCloseAt');
+                }}
               />
+              {fieldErrors.bookingOpenAt && (
+                <div className="invalid-feedback d-block">{fieldErrors.bookingOpenAt}</div>
+              )}
             </div>
 
             <div className="col-md-6">
@@ -394,11 +464,18 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
               <input
                 id="bookingCloseAt"
                 type="datetime-local"
-                className="form-control"
+                className={`form-control ${fieldErrors.bookingCloseAt ? 'is-invalid' : ''}`}
                 value={bookingCloseAt}
-                onChange={(e) => setBookingCloseAt(e.target.value)}
-                required
+                min={bookingOpenAt || undefined}
+                max={serviceEndDate ? `${serviceEndDate}T23:59` : undefined}
+                onChange={(e) => {
+                  setBookingCloseAt(e.target.value);
+                  clearFieldErrors('bookingCloseAt');
+                }}
               />
+              {fieldErrors.bookingCloseAt && (
+                <div className="invalid-feedback d-block">{fieldErrors.bookingCloseAt}</div>
+              )}
             </div>
           </div>
 
@@ -408,7 +485,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
             <button
               type="button"
               className="btn btn-outline-secondary"
-              onClick={onCancel}
+              onClick={handleCancel}
               disabled={loading}
             >
               Cancel

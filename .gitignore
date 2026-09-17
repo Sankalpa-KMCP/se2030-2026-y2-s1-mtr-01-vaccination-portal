@@ -8,6 +8,10 @@
 *.keystore
 application-local.properties
 !application-local.properties.example
+application-local.yml
+!application-local.yml.example
+application-local.yaml
+!application-local.yaml.example
 
 # Dependencies
 node_modules/
@@ -39,37 +43,51 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Java
+# Java & JVM
 *.class
 *.jar
 *.war
 *.ear
+*.pid
+*.seed
+*.pid.lck
 hs_err_pid*
 replay_pid*
 
-# Frontend & Vite cache
+# Frontend, Vite & Vitest cache
 .eslintcache
 .stylelintcache
 .vite/
 frontend/.vite/
+.vitest/
+frontend/.vitest/
 .parcel-cache/
 .turbo/
 
-# Testing & Coverage
+# Testing, Testcontainers & Coverage
 test-results/
 playwright-report/
+blob-report/
+.playwright/
+.playwright-cli/
+frontend/.playwright-cli/
 jacoco/
 *.exec
 surefire-reports/
 failsafe-reports/
 .nyc_output/
+.testcontainers.properties
+testcontainers.log
 
 # IDE and editor files
 .idea/
 .vscode/
+.history/
 *.iml
 *.ipr
 *.iws
+*.sublime-project
+*.sublime-workspace
 .settings/
 .project
 .classpath
@@ -81,35 +99,12 @@ failsafe-reports/
 .DS_Store
 ._*
 Thumbs.db
+Thumbs.db:encryptable
 Desktop.ini
 ehthumbs.db
-
-# Temporary files
-*.tmp
-*.temp
-*.swp
-*.swo
-.cache/
-
-# Local database & Docker volumes
-mysql-data/
-*.sqlite
-*.sqlite3
-*.dump
-*.sql.dump
-*.sql.gz
-*.bak
-
-# Testing, Testcontainers & Coverage
-test-results/
-playwright-report/
-jacoco/
-*.exec
-surefire-reports/
-failsafe-reports/
-.nyc_output/
-.testcontainers.properties
-testcontainers.log
+$RECYCLE.BIN/
+.Spotlight-V100
+.Trashes
 
 # Temporary & Editor backup files
 *.tmp
@@ -123,6 +118,19 @@ testcontainers.log
 .npm/
 .pnpm-store/
 
+# Local database & Docker volumes
+mysql-data/
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.dump
+*.sql.gz
+*.bak
+docker-compose.override.yml
+docker-compose.override.yaml
+compose.override.yaml
+compose.override.yml
+
 # Python
 __pycache__/
 *.py[cod]
@@ -133,7 +141,19 @@ venv/
 graphify-out/
 .graphify_*/
 
-# AI and IDE configurations
+# AI, Assistant and IDE configurations
 /ai/
 /.mcp.json
+mcp_config.json
+claude.json
+.claude/
+.gemini/
+
+# Domscribe artifacts
+.domscribe
+.domscribe/
+domscribe.config.json
+
+# OpenCode artifacts
+.opencode/
 

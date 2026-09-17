@@ -11,6 +11,8 @@ import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRe
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningTriggeredRuleEvidenceRepository;
+import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +43,7 @@ public class EligibilityReviewService {
     private final ScreeningReviewDetailsMapper reviewDetailsMapper;
     private final VaccinationCampaignService campaignService;
     private final Clock clock;
+    private final UserAccountRepository userAccountRepository;
 
     public EligibilityReviewService(
             EligibilityAssessmentRepository assessmentRepository,
@@ -50,7 +53,8 @@ public class EligibilityReviewService {
             ScreeningTriggeredRuleEvidenceRepository evidenceRepository,
             ScreeningReviewDetailsMapper reviewDetailsMapper,
             VaccinationCampaignService campaignService,
-            Clock clock
+            Clock clock,
+            UserAccountRepository userAccountRepository
     ) {
         this.assessmentRepository = assessmentRepository;
         this.submissionRepository = submissionRepository;
@@ -60,6 +64,7 @@ public class EligibilityReviewService {
         this.reviewDetailsMapper = reviewDetailsMapper;
         this.campaignService = campaignService;
         this.clock = clock;
+        this.userAccountRepository = userAccountRepository;
     }
 
     // ==========================================
@@ -113,9 +118,13 @@ public class EligibilityReviewService {
         List<ScreeningTriggeredRuleEvidence> evidence = evidenceRepository
                 .findBySubmissionIdOrderByEvaluationOrderAsc(submissionId);
         EligibilityAssessment assessment = assessmentRepository.findBySubmissionId(submissionId).orElse(null);
+        String citizenFullName = userAccountRepository.findById(submission.getCitizenId())
+                .map(UserAccount::getFullName)
+                .orElse(null);
 
         return reviewDetailsMapper.toResponse(
                 submission,
+                citizenFullName,
                 questionnaireItems,
                 optionsByQuestionId,
                 evidence,
@@ -298,9 +307,9 @@ public class EligibilityReviewService {
     /**
      * Revokes an existing ELIGIBLE assessment.
      */
-    public EligibilityAssessment revokeAssessment(Long assessmentId, Long reviewerId, String revocationReason) {
+    public EligibilityAssessment revokeAssessment(Long assessmentId, Long revokerId, String revocationReason) {
         if (assessmentId == null) throw new IllegalArgumentException("Assessment ID is required");
-        if (reviewerId == null) throw new IllegalArgumentException("Reviewer ID is required");
+        if (revokerId == null) throw new IllegalArgumentException("Revoker ID is required");
         if (revocationReason == null || revocationReason.trim().isEmpty()) {
             throw new IllegalArgumentException("Revocation reason is required");
         }
@@ -313,7 +322,7 @@ public class EligibilityReviewService {
         }
 
         assessment.setStatus(EligibilityAssessmentStatus.REVOKED);
-        assessment.setRevokedAt(Instant.now());
+        assessment.setRevokedAt(Instant.now(clock));
         assessment.setRevocationReason(revocationReason.trim());
 
         return assessmentRepository.save(assessment);

@@ -36,12 +36,15 @@ import CitizenEligibilityPage from '../features/screening/pages/CitizenEligibili
 import CitizenScreeningHistoryPage from '../features/screening/pages/CitizenScreeningHistoryPage';
 import CitizenScreeningHistoryDetailsPage from '../features/screening/pages/CitizenScreeningHistoryDetailsPage';
 import CitizenScreeningCorrectionPage from '../features/screening/pages/CitizenScreeningCorrectionPage';
+import CitizenProfilePage from '../features/citizen-profile/pages/CitizenProfilePage';
 import HealthcareOfficerScreeningReviewQueuePage from '../features/screening/pages/HealthcareOfficerScreeningReviewQueuePage';
 import HealthcareOfficerScreeningReviewDetailsPage from '../features/screening/pages/HealthcareOfficerScreeningReviewDetailsPage';
+import HealthcareOfficerScreeningHistoryDetailsPage from '../features/screening/pages/HealthcareOfficerScreeningHistoryDetailsPage';
 import AppointmentBookingPage from '../features/appointment-management/pages/AppointmentBookingPage';
 import MyAppointmentsPage from '../features/appointment-management/pages/MyAppointmentsPage';
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
+import InventoryManagementPage from '../features/inventory-management/pages/InventoryManagementPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -77,7 +80,8 @@ const CHECK_IN_STAFF_ROLES = [
   'ROLE_CENTER_MANAGER',
 ];
 
-const SCREENING_ADMIN_ROLES = ['ROLE_ADMIN', 'ROLE_SYSTEM_ADMINISTRATOR'];
+const INVENTORY_ROLES = ['ROLE_ADMIN', 'ROLE_INVENTORY_OFFICER'];
+const SCREENING_CONFIGURATION_ROLES = ['ROLE_HEALTHCARE_OFFICER'];
 const SCREENING_REVIEW_ROLES = ['ROLE_HEALTHCARE_OFFICER'];
 
 function RoleHomeRedirect({ user }) {
@@ -210,6 +214,7 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={[CITIZEN_ROLE]} />}>
             <Route path="citizen" element={<CitizenDashboardPage />} />
+            <Route path="citizen/profile" element={<CitizenProfilePage />} />
             <Route path="screening" element={<CitizenScreeningCampaignsPage />} />
             <Route path="screening/campaigns/:campaignId" element={<CitizenScreeningPage />} />
             <Route path="screening/eligibility" element={<CitizenEligibilityPage />} />
@@ -228,6 +233,7 @@ export default function PortalRoutes() {
           <Route element={<ProtectedRoute allowedRoles={SCREENING_REVIEW_ROLES} />}>
             <Route path="staff/screening/reviews" element={<HealthcareOfficerScreeningReviewQueuePage />} />
             <Route path="staff/screening/reviews/:submissionId" element={<HealthcareOfficerScreeningReviewDetailsPage />} />
+            <Route path="staff/screening/history/:submissionId" element={<HealthcareOfficerScreeningHistoryDetailsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={[ADMIN_ROLE]} />}>
@@ -255,7 +261,11 @@ export default function PortalRoutes() {
             <Route path="checkin/queue" element={<CheckInManagementPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={SCREENING_ADMIN_ROLES} />}>
+          <Route element={<ProtectedRoute allowedRoles={INVENTORY_ROLES} />}>
+            <Route path="inventory" element={<InventoryManagementPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={SCREENING_CONFIGURATION_ROLES} />}>
             <Route path="screening/questions" element={<ScreeningQuestionsPage />} />
             <Route path="screening/questionnaires" element={<ScreeningQuestionnairesPage />} />
           </Route>

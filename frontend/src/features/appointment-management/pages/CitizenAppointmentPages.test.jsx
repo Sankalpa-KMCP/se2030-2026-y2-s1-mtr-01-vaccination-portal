@@ -43,12 +43,34 @@ describe('citizen appointment pages', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Book a Vaccination Appointment' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Back to Dashboard' }).getAttribute('href')).toBe('/app/citizen');
     expect(screen.getByRole('link', { name: 'View My Appointments' }).getAttribute('href')).toBe('/app/appointments/mine');
-    expect(screen.getByRole('spinbutton', { name: /Campaign ID/i })).toBeTruthy();
-    expect(screen.getByRole('spinbutton', { name: /Center ID/i })).toBeTruthy();
+    const campaignInput = screen.getByRole('spinbutton', { name: /Campaign ID/i });
+    const centerInput = screen.getByRole('spinbutton', { name: /Center ID/i });
+    expect(campaignInput).toBeTruthy();
+    expect(campaignInput.getAttribute('min')).toBe('1');
+    expect(centerInput).toBeTruthy();
+    expect(centerInput.getAttribute('min')).toBe('1');
     expect(screen.getByRole('button', { name: 'Search Sessions' })).toBeTruthy();
     expect(screen.getByText('How it works')).toBeTruthy();
     expect(container.querySelector('[aria-current], [data-completed]')).toBeNull();
     expect(screen.queryByText(/nearby|closest|distance/i)).toBeNull();
+  });
+
+  it('enforces positive numbers on Center ID and Campaign ID in availability search', () => {
+    show(<AppointmentBookingPage />);
+    const centerInput = screen.getByRole('spinbutton', { name: /Center ID/i });
+    const campaignInput = screen.getByRole('spinbutton', { name: /Campaign ID/i });
+
+    fireEvent.change(centerInput, { target: { value: '-9' } });
+    expect(centerInput.value).not.toBe('-9');
+
+    fireEvent.change(centerInput, { target: { value: '0' } });
+    expect(centerInput.value).not.toBe('0');
+
+    fireEvent.change(centerInput, { target: { value: '12' } });
+    expect(centerInput.value).toBe('12');
+
+    fireEvent.change(campaignInput, { target: { value: '-5' } });
+    expect(campaignInput.value).not.toBe('-5');
   });
 
   it('provides a supported action from the appointments empty state', async () => {

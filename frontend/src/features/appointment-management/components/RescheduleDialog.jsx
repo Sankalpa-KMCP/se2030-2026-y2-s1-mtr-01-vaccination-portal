@@ -181,8 +181,30 @@ export default function RescheduleDialog({ appointment, citizenId, onClose, onSu
                   id="newSlotIdInput"
                   className="form-control"
                   value={newSlotId}
-                  onChange={(e) => setNewSlotId(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setNewSlotId('');
+                      return;
+                    }
+                    const cleanVal = val.replace(/[^0-9]/g, '');
+                    if (cleanVal === '') {
+                      setNewSlotId('');
+                      return;
+                    }
+                    const num = parseInt(cleanVal, 10);
+                    if (num > 0) {
+                      setNewSlotId(String(num));
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                      e.preventDefault();
+                    }
+                  }}
                   placeholder="Enter or select slot ID"
+                  min="1"
+                  step="1"
                   required
                 />
               </div>

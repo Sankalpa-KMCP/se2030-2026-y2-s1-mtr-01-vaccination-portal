@@ -5,6 +5,8 @@ import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,6 +22,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  */
 @RestControllerAdvice(basePackages = "com.se2030.vaccinationportal.campaign.controller")
 public class GlobalCampaignExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalCampaignExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationException(
@@ -158,6 +162,7 @@ public class GlobalCampaignExceptionHandler {
             Exception ex,
             HttpServletRequest request
     ) {
+        log.error("Unhandled exception processing request {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ApiErrorResponse response = new ApiErrorResponse(
                 Instant.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),

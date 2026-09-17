@@ -18,9 +18,11 @@ import com.se2030.vaccinationportal.appointment.service.CheckInService;
 import com.se2030.vaccinationportal.appointment.service.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.service.TestSlotAvailabilityPortDouble;
 import com.se2030.vaccinationportal.appointment.service.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,10 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -105,6 +111,19 @@ class AppointmentControllerTests {
     @Autowired
     private TestSlotAvailabilityPortDouble availabilityPortDouble;
 
+    private void authenticate(Long userId, String role) {
+        UserPrincipal principal = new UserPrincipal(
+                userId,
+                "user" + userId + "@portal.test",
+                null,
+                true,
+                List.of(new SimpleGrantedAuthority(role))
+        );
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
+        );
+    }
+
     @BeforeEach
     void setUp() {
         waitlistRepository.deleteAllInBatch();
@@ -118,6 +137,7 @@ class AppointmentControllerTests {
                 bookingService, cancellationService, rescheduleService, checkInService, searchService, appointmentRepository);
         this.mockMvc = MockMvcBuilders.standaloneSetup(appointmentController)
                 .setControllerAdvice(new AppointmentExceptionHandler())
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
     }
 
@@ -127,6 +147,7 @@ class AppointmentControllerTests {
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
         availabilityPortDouble.clear();
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -135,6 +156,7 @@ class AppointmentControllerTests {
         Long campaignId = 2001L;
         Long slotId = 4010L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
 
@@ -154,6 +176,7 @@ class AppointmentControllerTests {
         Long centerId = 5001L;
         Instant now = Instant.now();
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         AvailableSessionSummary s1 = new AvailableSessionSummary(
                 6001L, 7001L, campaignId, centerId, "Center A", "123 Main St",
                 now.plusSeconds(3600), now.plusSeconds(7200), now.plusSeconds(1800), 5
@@ -174,11 +197,41 @@ class AppointmentControllerTests {
     }
 
     @Test
+    void searchAvailableAppointments_negativeCenterId_returns400BadRequest() throws Exception {
+        Long citizenId = 1001L;
+        authenticate(citizenId, "ROLE_CITIZEN");
+
+        mockMvc.perform(get("/api/v1/appointments/search")
+                        .param("citizenId", citizenId.toString())
+                        .param("campaignId", "8001")
+                        .param("centerId", "-9")
+                        .param("fromDate", LocalDate.now().toString())
+                        .param("toDate", LocalDate.now().plusDays(7).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("BAD_REQUEST")));
+    }
+
+    @Test
+    void searchAvailableAppointments_negativeCampaignId_returns400BadRequest() throws Exception {
+        Long citizenId = 1001L;
+        authenticate(citizenId, "ROLE_CITIZEN");
+
+        mockMvc.perform(get("/api/v1/appointments/search")
+                        .param("citizenId", citizenId.toString())
+                        .param("campaignId", "-1")
+                        .param("fromDate", LocalDate.now().toString())
+                        .param("toDate", LocalDate.now().plusDays(7).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("BAD_REQUEST")));
+    }
+
+    @Test
     void bookAppointment_success_returns201Created() throws Exception {
         Long citizenId = 1001L;
         Long campaignId = 2001L;
         Long slotId = 4001L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
 
@@ -198,6 +251,7 @@ class AppointmentControllerTests {
         Long campaignId = 2001L;
         Long slotId = 4001L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.NOT_ELIGIBLE);
 
         AppointmentBookingRequest request = new AppointmentBookingRequest(citizenId, campaignId, slotId);
@@ -216,6 +270,7 @@ class AppointmentControllerTests {
         Long campaignId = 2001L;
         Long slotId = 4001L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
 
@@ -239,6 +294,7 @@ class AppointmentControllerTests {
         Long campaignId = 2001L;
         Long slotId = 4002L;
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setAvailableCapacity(slotId, 0);
 
@@ -259,6 +315,7 @@ class AppointmentControllerTests {
         Instant now = Instant.now();
         Instant slotStart = now.plus(48, ChronoUnit.HOURS);
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
         slotCapacityPortDouble.setSlotStartTime(slotId, slotStart);
 
@@ -281,6 +338,7 @@ class AppointmentControllerTests {
         Instant now = Instant.now();
         Instant slotStart = now.plus(12, ChronoUnit.HOURS); // Inside 24h window
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
         slotCapacityPortDouble.setSlotStartTime(slotId, slotStart);
 
@@ -304,6 +362,7 @@ class AppointmentControllerTests {
         Instant now = Instant.now();
         Instant slotStart = now.plus(48, ChronoUnit.HOURS);
 
+        authenticate(citizenId, "ROLE_CITIZEN");
         slotCapacityPortDouble.setAvailableCapacity(oldSlot, 5);
         slotCapacityPortDouble.setAvailableCapacity(newSlot, 5);
         slotCapacityPortDouble.setSlotStartTime(oldSlot, slotStart);
@@ -327,6 +386,7 @@ class AppointmentControllerTests {
         Long slotId = 4007L;
         Instant now = Instant.now();
 
+        authenticate(999L, "ROLE_HEALTHCARE_OFFICER");
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
         slotCapacityPortDouble.setSlotStartTime(slotId, now);
 
@@ -346,6 +406,7 @@ class AppointmentControllerTests {
         Long slotId = 4008L;
         Instant now = Instant.now();
 
+        authenticate(999L, "ROLE_HEALTHCARE_OFFICER");
         slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
         slotCapacityPortDouble.setSlotStartTime(slotId, now);
 
@@ -361,6 +422,7 @@ class AppointmentControllerTests {
     void getVaccinatorQueue_returns200Ok() throws Exception {
         Long slotId = 4009L;
 
+        authenticate(999L, "ROLE_HEALTHCARE_OFFICER");
         mockMvc.perform(get("/api/v1/appointments/queue").param("slotId", slotId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
@@ -368,6 +430,7 @@ class AppointmentControllerTests {
 
     @Test
     void getAppointment_notFound_returns404NotFound() throws Exception {
+        authenticate(999L, "ROLE_HEALTHCARE_OFFICER");
         mockMvc.perform(post("/api/v1/appointments/999999/reverse-check-in"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error", is("NOT_FOUND")));

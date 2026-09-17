@@ -163,7 +163,8 @@ public class VaccinationSessionService {
     @Transactional(readOnly = true)
     public Optional<VaccinationSession> getSessionById(Long id) {
         requireId(id, "Session ID is required");
-        return sessionRepository.findById(id);
+        return sessionRepository.findByIdWithDetails(id)
+                .or(() -> sessionRepository.findById(id));
     }
 
     @Transactional(readOnly = true)
@@ -171,7 +172,8 @@ public class VaccinationSessionService {
         if (id == null) {
             throw new ResourceNotFoundException("Session ID is required");
         }
-        return sessionRepository.findById(id)
+        return sessionRepository.findByIdWithDetails(id)
+                .or(() -> sessionRepository.findById(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination session not found with ID: " + id));
     }
 

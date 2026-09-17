@@ -18,10 +18,21 @@ export default function StaffDashboardPage() {
       'Review citizen pre-vaccination screenings, request corrections, and record eligibility decisions.',
       '/app/staff/screening/reviews',
     ],
+    hasRole(user, 'ROLE_HEALTHCARE_OFFICER') && [
+      'Screening Questions',
+      'Create and maintain the clinical question and answer-option catalogue.',
+      '/app/screening/questions',
+    ],
+    hasRole(user, 'ROLE_HEALTHCARE_OFFICER') && [
+      'Screening Questionnaires',
+      'Author, publish, and manage screening questionnaire versions and eligibility rules.',
+      '/app/screening/questionnaires',
+    ],
     canViewCampaigns(user) && ['Campaigns', 'View vaccination campaigns available to your assigned role.', '/app/campaigns'],
     canViewCenters(user) && ['Center Operations', 'Access vaccination-center operational information.', '/app/center-operations'],
     canViewSessions(user) && ['Sessions', 'View and manage vaccination sessions permitted for your role.', '/app/sessions'],
     canViewAnalytics(user) && ['Operational Analytics', 'Review operational vaccination programme analytics.', '/app/analytics'],
+    (hasRole(user, 'ROLE_INVENTORY_OFFICER') || hasRole(user, 'ROLE_ADMIN')) && ['Inventory & Batches', 'Manage MF-04 manufacturers, vaccine batches, and center stock.', '/app/inventory'],
   ].filter(Boolean);
 
   return (

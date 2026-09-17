@@ -7,11 +7,14 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -22,6 +25,17 @@ import java.util.stream.Collectors;
  */
 @Component
 public class RoleAuthorizationInterceptor implements HandlerInterceptor {
+
+    private final RoleHierarchy roleHierarchy;
+
+    public RoleAuthorizationInterceptor() {
+        this(null);
+    }
+
+    @Autowired
+    public RoleAuthorizationInterceptor(@Autowired(required = false) RoleHierarchy roleHierarchy) {
+        this.roleHierarchy = roleHierarchy;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -48,7 +62,11 @@ public class RoleAuthorizationInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        Set<String> authenticatedRoles = authentication.getAuthorities().stream()
+        Collection<? extends GrantedAuthority> authorities = roleHierarchy != null
+                ? roleHierarchy.getReachableGrantedAuthorities(authentication.getAuthorities())
+                : authentication.getAuthorities();
+
+        Set<String> authenticatedRoles = authorities.stream()
                 .map(GrantedAuthority::getAuthority)
                 .map(RoleAuthorizationInterceptor::normalizeRole)
                 .filter(role -> !role.isEmpty())
