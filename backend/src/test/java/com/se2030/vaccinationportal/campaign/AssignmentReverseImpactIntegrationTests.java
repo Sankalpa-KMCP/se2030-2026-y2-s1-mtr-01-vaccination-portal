@@ -30,6 +30,7 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -126,7 +127,7 @@ class AssignmentReverseImpactIntegrationTests {
                         start,
                         end,
                         Instant.parse("2026-05-01T08:00:00Z"),
-                        Instant.parse("2026-12-31T18:00:00Z"),
+                        end.atTime(23, 59, 59).toInstant(ZoneOffset.UTC),
                         CampaignStatus.ACTIVE
                 )
         );

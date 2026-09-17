@@ -35,6 +35,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -111,7 +112,7 @@ class CampaignReverseImpactIntegrationTests {
                         start,
                         end,
                         Instant.now(clock).minusSeconds(3600),
-                        Instant.now(clock).plusSeconds(86400 * 180),
+                        Instant.now(clock).plusSeconds(3600),
                         CampaignStatus.ACTIVE
                 )
         );
@@ -382,7 +383,7 @@ class CampaignReverseImpactIntegrationTests {
                 originalStart,
                 originalEnd,
                 clock.instant().minusSeconds(3600),
-                clock.instant().plusSeconds(86400 * 180),
+                originalEnd.atTime(23, 59, 59).toInstant(ZoneOffset.UTC),
                 status
         ));
 
