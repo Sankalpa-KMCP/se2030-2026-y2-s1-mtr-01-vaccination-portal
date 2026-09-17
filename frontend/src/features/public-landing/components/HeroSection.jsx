@@ -19,8 +19,8 @@ export default function HeroSection() {
               Create citizen account
               <span aria-hidden="true">&rarr;</span>
             </Link>
-            <Link to="/login/citizen" className="home-text-link">
-              Sign in as a Citizen
+            <Link to="/login" className="home-text-link">
+              Sign in
             </Link>
           </div>
           <p className="home-hero__note">
@@ -57,7 +57,7 @@ export default function HeroSection() {
             <strong>For health teams</strong>
             <span>Campaigns, centers, sessions, and readiness.</span>
           </div>
-          <Link to="/login/staff" className="home-hero__staff-link">
+          <Link to="/login" className="home-hero__staff-link">
             Enter staff portal <span aria-hidden="true">&rarr;</span>
           </Link>
         </aside>

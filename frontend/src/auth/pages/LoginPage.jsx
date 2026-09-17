@@ -1,27 +1,8 @@
 import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getRoleHomePath } from '../utils/roleRedirect';
-import PortalAccessCard from '../components/PortalAccessCard';
-import { ArrowIcon, CitizenIcon, EyeIcon, StaffIcon } from '../components/AuthIcons';
-
-const LOGIN_CONTENT = {
-  citizen: {
-    eyebrow: 'Citizen portal',
-    heading: 'Citizen sign in',
-    description: 'Access appointments, eligibility, and your available vaccination services.',
-  },
-  staff: {
-    eyebrow: 'Staff portal',
-    heading: 'Staff sign in',
-    description: 'For approved clinical, campaign, center, inventory, administrative, and management accounts.',
-  },
-  generic: {
-    eyebrow: 'Vaccination Portal',
-    heading: 'Welcome back.',
-    description: 'Sign in with any active citizen or authorized staff account.',
-  },
-};
+import { ArrowIcon, EyeIcon } from '../components/AuthIcons';
 
 function LoginForm() {
   const { login, loginError, clearLoginError } = useAuth();
@@ -120,60 +101,30 @@ function LoginForm() {
   );
 }
 
-function UniversalAccessOptions() {
+function UniversalRegistrationLinks() {
   return (
-    <section className="auth-access-section" aria-labelledby="portal-options-heading">
-      <header>
-        <h2 id="portal-options-heading">Choose your portal</h2>
-        <p>The same secure sign-in, with guidance for your role.</p>
-      </header>
-      <div className="auth-access-grid">
-        <PortalAccessCard title="Citizen" purpose="Personal vaccination services" to="/login/citizen" ctaLabel="Continue as Citizen" icon={<CitizenIcon />} />
-        <PortalAccessCard title="Staff" purpose="Authorized health operations" to="/login/staff" ctaLabel="Continue as Staff" icon={<StaffIcon />} />
-      </div>
+    <div className="auth-registration-section" aria-label="Registration options">
       <div className="auth-registration-links">
         <span>New to the portal?</span>
         <Link to="/register/citizen">Register as Citizen</Link>
-        <Link to="/register/staff">Register as Staff</Link>
+        <Link to="/register/staff">Request Staff Access</Link>
       </div>
       <p className="auth-registration-note">Staff accounts require administrator approval before access.</p>
-    </section>
-  );
-}
-
-function DedicatedLoginLinks({ audience }) {
-  const isCitizen = audience === 'citizen';
-  return (
-    <div className="auth-next-step">
-      <div>
-        <span>{isCitizen ? 'New citizen?' : 'Need staff access?'}</span>
-        <Link to={isCitizen ? '/register/citizen' : '/register/staff'}>
-          {isCitizen ? 'Create Citizen Account' : 'Request a Staff Account'} <ArrowIcon />
-        </Link>
-      </div>
-      <nav aria-label="Switch access route">
-        <Link to="/login">All access options</Link>
-        <Link to={isCitizen ? '/login/staff' : '/login/citizen'}>{isCitizen ? 'Staff sign in' : 'Citizen sign in'}</Link>
-      </nav>
     </div>
   );
 }
 
-export default function LoginPage({ audience, onBackToLanding }) {
-  const { pathname } = useLocation();
-  const routeAudience = audience || (pathname === '/login/citizen' ? 'citizen' : pathname === '/login/staff' ? 'staff' : 'generic');
-  const content = LOGIN_CONTENT[routeAudience] || LOGIN_CONTENT.generic;
-
+export default function LoginPage({ onBackToLanding }) {
   return (
-    <article className={`auth-panel auth-panel--login auth-panel--${routeAudience}`}>
+    <article className="auth-panel auth-panel--login auth-panel--generic">
       {onBackToLanding && <button type="button" className="auth-standalone-back" onClick={onBackToLanding} aria-label="Back to portal home"><ArrowIcon direction="left" /> Back to portal home</button>}
       <header className="auth-panel__header">
-        <p className="auth-panel__eyebrow">{content.eyebrow}</p>
-        <h1 tabIndex="-1">{content.heading}</h1>
-        <p className="auth-panel__description">{content.description}</p>
+        <p className="auth-panel__eyebrow">Vaccination Portal</p>
+        <h1 tabIndex="-1">Welcome back</h1>
+        <p className="auth-panel__description">Sign in with your registered account to continue.</p>
       </header>
       <LoginForm />
-      {routeAudience === 'generic' ? <UniversalAccessOptions /> : <DedicatedLoginLinks audience={routeAudience} />}
+      <UniversalRegistrationLinks />
     </article>
   );
 }

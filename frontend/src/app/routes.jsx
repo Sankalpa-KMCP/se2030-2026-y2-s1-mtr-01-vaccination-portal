@@ -199,9 +199,9 @@ export default function PortalRoutes() {
         }
       />
       <Route element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <AuthExperience />}>
-        <Route path="/login" element={<LoginPage audience="generic" />} />
-        <Route path="/login/citizen" element={<LoginPage audience="citizen" />} />
-        <Route path="/login/staff" element={<LoginPage audience="staff" />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login/citizen" element={<Navigate to="/login" replace />} />
+        <Route path="/login/staff" element={<Navigate to="/login" replace />} />
         <Route path="/register/citizen" element={<CitizenRegistrationPage />} />
         <Route path="/register/staff" element={<StaffRegistrationRequestPage />} />
       </Route>

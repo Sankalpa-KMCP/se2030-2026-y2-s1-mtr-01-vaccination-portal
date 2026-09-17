@@ -17,7 +17,7 @@ function renderPage(path = '/login') {
   return render(<MemoryRouter initialEntries={[path]}><LoginPage /></MemoryRouter>);
 }
 
-describe('LoginPage entry experiences', () => {
+describe('LoginPage universal experience', () => {
   beforeEach(() => {
     authState.current = {
       login: vi.fn(),
@@ -28,24 +28,18 @@ describe('LoginPage entry experiences', () => {
 
   afterEach(cleanup);
 
-  it('renders the citizen login entry', () => {
-    renderPage('/login/citizen');
-    expect(screen.getByRole('heading', { name: 'Citizen sign in' })).toBeTruthy();
-    expect(screen.getByText('Access appointments, eligibility, and your available vaccination services.')).toBeTruthy();
-    expect(screen.getByText('New citizen?')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Create Citizen Account' }).getAttribute('href')).toBe('/register/citizen');
-  });
-
-  it('renders the staff login entry', () => {
-    renderPage('/login/staff');
-    expect(screen.getByRole('heading', { name: 'Staff sign in' })).toBeTruthy();
-    expect(screen.getByText('For approved clinical, campaign, center, inventory, administrative, and management accounts.')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Request a Staff Account' })).toBeTruthy();
-  });
-
-  it('preserves a generic login entry', () => {
+  it('renders the single universal login experience', () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeTruthy();
+    expect(screen.getByText('Sign in with your registered account to continue.')).toBeTruthy();
+    expect(screen.getByText('Vaccination Portal')).toBeTruthy();
+  });
+
+  it('does not display citizen or staff portal selection cards', () => {
+    renderPage();
+    expect(screen.queryByRole('heading', { name: /Choose your portal/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Continue as Citizen/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Continue as Staff/i })).toBeNull();
   });
 
   it.each([
@@ -54,48 +48,36 @@ describe('LoginPage entry experiences', () => {
     'Invalid email or password',
   ])('shows the authentication message: %s', (message) => {
     authState.current = { ...authState.current, loginError: message };
-    renderPage('/login/staff');
+    renderPage();
     expect(screen.getByRole('alert').textContent).toBe(message);
   });
 
-  it.each(['/login', '/login/citizen', '/login/staff'])(
-    'uses the shared login behavior on %s',
-    async (path) => {
-      authState.current.login.mockResolvedValue({ success: false });
-      renderPage(path);
+  it('submits credentials through the universal login form', async () => {
+    authState.current.login.mockResolvedValue({ success: false });
+    renderPage();
 
-      fireEvent.change(screen.getByLabelText('Email Address'), {
-        target: { value: 'person@example.gov' },
-      });
-      fireEvent.change(screen.getByLabelText('Password'), {
-        target: { value: 'Password123!' },
-      });
-      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.change(screen.getByLabelText('Email Address'), {
+      target: { value: 'person@example.gov' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'Password123!' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
-      await waitFor(() => {
-        expect(authState.current.login).toHaveBeenCalledWith('person@example.gov', 'Password123!');
-      });
-    },
-  );
-
-  it('exposes guided access cards on universal login', () => {
-    renderPage('/login');
-    expect(screen.getByRole('heading', { name: 'Choose your portal' })).toBeTruthy();
-    expect(screen.getByText('Citizen')).toBeTruthy();
-    expect(screen.getByText('Staff')).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Continue as Citizen/i }).getAttribute('href')).toBe('/login/citizen');
-    expect(screen.getByRole('link', { name: /Continue as Staff/i }).getAttribute('href')).toBe('/login/staff');
+    await waitFor(() => {
+      expect(authState.current.login).toHaveBeenCalledWith('person@example.gov', 'Password123!');
+    });
   });
 
-  it('exposes registration actions on universal login', () => {
-    renderPage('/login');
+  it('exposes registration actions for citizen and staff on universal login', () => {
+    renderPage();
     expect(screen.getByRole('link', { name: /Register as Citizen/i }).getAttribute('href')).toBe('/register/citizen');
-    expect(screen.getByRole('link', { name: /Register as Staff/i }).getAttribute('href')).toBe('/register/staff');
+    expect(screen.getByRole('link', { name: /Request Staff Access/i }).getAttribute('href')).toBe('/register/staff');
     expect(screen.getByText(/Staff accounts require administrator approval/i)).toBeTruthy();
   });
 
   it('toggles password visibility', () => {
-    renderPage('/login');
+    renderPage();
     const passwordInput = screen.getByLabelText('Password');
     const toggleButton = screen.getByRole('button', { name: 'Show password' });
 
@@ -122,7 +104,7 @@ describe('LoginPage entry experiences', () => {
   });
 
   it('displays client validation error for empty fields', () => {
-    renderPage('/login');
+    renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(screen.getByRole('alert').textContent).toBe('Email address is required.');

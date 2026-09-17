@@ -38,13 +38,13 @@ describe('LandingPage', () => {
     ).toBeTruthy();
   });
 
-  it('exposes all four authentication routes', () => {
+  it('exposes registration routes and universal login entry points', () => {
     renderLanding();
 
     expect(screen.getByRole('link', { name: /create citizen account/i }).getAttribute('href')).toBe('/register/citizen');
-    expect(screen.getByRole('link', { name: /sign in as a citizen/i }).getAttribute('href')).toBe('/login/citizen');
+    expect(screen.getByRole('link', { name: /^sign in$/i }).getAttribute('href')).toBe('/login');
     expect(screen.getByRole('link', { name: /request staff account/i }).getAttribute('href')).toBe('/register/staff');
-    expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login/staff');
+    expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login');
   });
 
   it('explains the selected capability and updates its connected outcome', () => {
