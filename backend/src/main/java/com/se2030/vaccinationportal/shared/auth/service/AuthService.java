@@ -201,7 +201,7 @@ public class AuthService {
         String rawToken = request.token();
         String tokenHash = authActionTokenService.hashToken(rawToken);
 
-        EmailVerificationToken token = emailVerificationTokenRepository.findByTokenHash(tokenHash)
+        EmailVerificationToken token = emailVerificationTokenRepository.findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(InvalidAuthActionTokenException::new);
 
         if (token.isConsumed()) {
@@ -290,7 +290,7 @@ public class AuthService {
         String rawToken = request.token();
         String tokenHash = authActionTokenService.hashToken(rawToken);
 
-        PasswordResetToken token = passwordResetTokenRepository.findByTokenHash(tokenHash)
+        PasswordResetToken token = passwordResetTokenRepository.findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(InvalidAuthActionTokenException::new);
 
         if (token.isConsumed()) {
