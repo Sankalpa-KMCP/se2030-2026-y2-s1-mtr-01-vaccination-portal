@@ -36,12 +36,11 @@ import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import PageHeader from '../../../components/common/PageHeader';
 import EmptyState from '../../../components/common/EmptyState';
 import { useAuth } from '../../../auth/context/AuthContext';
+import { canManageCenters } from '../../../auth/utils/roleUtils';
 
 export default function CenterOperationsPage() {
   const { user } = useAuth();
-  const isAuthorizedManager = Boolean(
-    user?.roles?.some((r) => r === 'ROLE_ADMIN' || r === 'ROLE_CENTER_MANAGER')
-  );
+  const isAuthorizedManager = canManageCenters(user);
 
   // Center Registry State
   const [centers, setCenters] = useState([]);
@@ -794,136 +793,137 @@ export default function CenterOperationsPage() {
               onEditClick={handleOpenEditStaffModal}
             />
           )}
+        </>
+      )}
 
-          {/* Create Center Modal */}
-          <CreateCenterModal
-            show={createCenterShow}
-            loading={createCenterLoading}
-            apiError={createCenterError}
-            onClose={() => setCreateCenterShow(false)}
-            onSubmit={handleCreateCenterSubmit}
-          />
+      {/* Create Center Modal - Mounted unconditionally so it opens even when registry is empty */}
+      <CreateCenterModal
+        show={createCenterShow}
+        loading={createCenterLoading}
+        apiError={createCenterError}
+        onClose={() => setCreateCenterShow(false)}
+        onSubmit={handleCreateCenterSubmit}
+      />
 
-          {/* Edit Center Modal */}
-          <EditCenterModal
-            show={editCenterShow}
-            center={effectiveCenter}
-            loading={editCenterLoading}
-            apiError={editCenterError}
-            onClose={() => setEditCenterShow(false)}
-            onSubmit={handleEditCenterSubmit}
-          />
+      {/* Edit Center Modal */}
+      <EditCenterModal
+        show={editCenterShow}
+        center={effectiveCenter}
+        loading={editCenterLoading}
+        apiError={editCenterError}
+        onClose={() => setEditCenterShow(false)}
+        onSubmit={handleEditCenterSubmit}
+      />
 
-          {/* Operating Hours Modal */}
-          <OperatingHoursModal
-            show={hoursModalShow}
-            mode={hoursModalMode}
-            center={effectiveCenter}
-            operatingHour={editingHour}
-            loading={hoursMutationLoading}
-            apiError={hoursMutationError}
-            onClose={() => setHoursModalShow(false)}
-            onSubmit={handleHoursModalSubmit}
-          />
+      {/* Operating Hours Modal */}
+      <OperatingHoursModal
+        show={hoursModalShow}
+        mode={hoursModalMode}
+        center={effectiveCenter}
+        operatingHour={editingHour}
+        loading={hoursMutationLoading}
+        apiError={hoursMutationError}
+        onClose={() => setHoursModalShow(false)}
+        onSubmit={handleHoursModalSubmit}
+      />
 
-          {/* Center Closure Modal */}
-          <CenterClosureModal
-            show={closureModalShow}
-            mode={closureModalMode}
-            center={effectiveCenter}
-            closure={editingClosure}
-            loading={closureMutationLoading}
-            apiError={closureMutationError}
-            onClose={() => setClosureModalShow(false)}
-            onSubmit={handleClosureModalSubmit}
-          />
+      {/* Center Closure Modal */}
+      <CenterClosureModal
+        show={closureModalShow}
+        mode={closureModalMode}
+        center={effectiveCenter}
+        closure={editingClosure}
+        loading={closureMutationLoading}
+        apiError={closureMutationError}
+        onClose={() => setClosureModalShow(false)}
+        onSubmit={handleClosureModalSubmit}
+      />
 
-          {/* Create / Edit Resource Modal */}
-          <OperationalResourceModal
-            show={resourceModalShow}
-            mode={resourceModalMode}
-            center={effectiveCenter}
-            resource={editingResource}
-            loading={resourceMutationLoading}
-            apiError={resourceMutationError}
-            onClose={() => setResourceModalShow(false)}
-            onSubmit={handleResourceModalSubmit}
-          />
+      {/* Create / Edit Resource Modal */}
+      <OperationalResourceModal
+        show={resourceModalShow}
+        mode={resourceModalMode}
+        center={effectiveCenter}
+        resource={editingResource}
+        loading={resourceMutationLoading}
+        apiError={resourceMutationError}
+        onClose={() => setResourceModalShow(false)}
+        onSubmit={handleResourceModalSubmit}
+      />
 
-          {/* Register / Edit Staff Modal */}
-          <StaffRosterModal
-            show={staffModalShow}
-            mode={staffModalMode}
-            center={effectiveCenter}
-            rosterEntry={editingStaff}
-            loading={staffMutationLoading}
-            error={staffMutationError}
-            onClose={() => setStaffModalShow(false)}
-            onSubmit={handleStaffModalSubmit}
-          />
+      {/* Register / Edit Staff Modal */}
+      <StaffRosterModal
+        show={staffModalShow}
+        mode={staffModalMode}
+        center={effectiveCenter}
+        rosterEntry={editingStaff}
+        loading={staffMutationLoading}
+        error={staffMutationError}
+        onClose={() => setStaffModalShow(false)}
+        onSubmit={handleStaffModalSubmit}
+      />
 
-          {/* Status Action Confirmation Modal */}
-          {statusConfirmAction && (
-            <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-              <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content shadow-lg border-0">
-                  <div className={`modal-header ${statusConfirmAction === 'DEACTIVATE' ? 'bg-danger' : 'bg-success'} text-white`}>
-                    <h5 className="modal-title">
-                      <i className={`bi ${statusConfirmAction === 'DEACTIVATE' ? 'bi-pause-circle' : 'bi-play-circle'} me-2`}></i>
-                      Confirm Center {statusConfirmAction === 'DEACTIVATE' ? 'Deactivation' : 'Activation'}
-                    </h5>
-                    <button
-                      type="button"
-                      className="btn-close btn-close-white"
-                      aria-label="Close"
-                      onClick={() => setStatusConfirmAction(null)}
-                      disabled={statusMutationLoading}
-                    ></button>
+      {/* Status Action Confirmation Modal */}
+      {statusConfirmAction && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content shadow-lg border-0">
+              <div className={`modal-header ${statusConfirmAction === 'DEACTIVATE' ? 'bg-danger' : 'bg-success'} text-white`}>
+                <h5 className="modal-title">
+                  <i className={`bi ${statusConfirmAction === 'DEACTIVATE' ? 'bi-pause-circle' : 'bi-play-circle'} me-2`}></i>
+                  Confirm Center {statusConfirmAction === 'DEACTIVATE' ? 'Deactivation' : 'Activation'}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  aria-label="Close"
+                  onClick={() => setStatusConfirmAction(null)}
+                  disabled={statusMutationLoading}
+                ></button>
+              </div>
+              <div className="modal-body p-4">
+                <ApiErrorAlert error={statusMutationError} onDismiss={() => setStatusMutationError(null)} />
+                <p className="mb-2 text-dark">
+                  Are you sure you want to {statusConfirmAction === 'DEACTIVATE' ? 'deactivate' : 'activate'} <strong>{effectiveCenter?.name}</strong> ({effectiveCenter?.code})?
+                </p>
+                {statusConfirmAction === 'DEACTIVATE' ? (
+                  <div className="alert alert-warning small border mb-0">
+                    <strong>Deactivation notice:</strong> Inactive centers cannot host active session occurrences or have new resources/staff registered. Existing schedules and history remain preserved.
                   </div>
-                  <div className="modal-body p-4">
-                    <p className="mb-2 text-dark">
-                      Are you sure you want to {statusConfirmAction === 'DEACTIVATE' ? 'deactivate' : 'activate'} <strong>{effectiveCenter?.name}</strong> ({effectiveCenter?.code})?
-                    </p>
-                    {statusConfirmAction === 'DEACTIVATE' ? (
-                      <div className="alert alert-warning small border mb-0">
-                        <strong>Deactivation notice:</strong> Inactive centers cannot host active session occurrences or have new resources/staff registered. Existing schedules and history remain preserved.
-                      </div>
-                    ) : (
-                      <div className="alert alert-info small border mb-0">
-                        <strong>Activation notice:</strong> Activating this center allows session scheduling and appointment booking within approved operating hours.
-                      </div>
-                    )}
+                ) : (
+                  <div className="alert alert-info small border mb-0">
+                    <strong>Activation notice:</strong> Activating this center allows session scheduling and appointment booking within approved operating hours.
                   </div>
-                  <div className="modal-footer bg-light">
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={() => setStatusConfirmAction(null)}
-                      disabled={statusMutationLoading}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-sm fw-semibold ${statusConfirmAction === 'DEACTIVATE' ? 'btn-danger' : 'btn-success'}`}
-                      onClick={handleStatusActionConfirm}
-                      disabled={statusMutationLoading}
-                    >
-                      {statusMutationLoading ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                          Processing...
-                        </>
-                      ) : (
-                        `Yes, ${statusConfirmAction === 'DEACTIVATE' ? 'Deactivate Center' : 'Activate Center'}`
-                      )}
-                    </button>
-                  </div>
-                </div>
+                )}
+              </div>
+              <div className="modal-footer bg-light">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => setStatusConfirmAction(null)}
+                  disabled={statusMutationLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm fw-semibold ${statusConfirmAction === 'DEACTIVATE' ? 'btn-danger' : 'btn-success'}`}
+                  onClick={handleStatusActionConfirm}
+                  disabled={statusMutationLoading}
+                >
+                  {statusMutationLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    `Yes, ${statusConfirmAction === 'DEACTIVATE' ? 'Deactivate Center' : 'Activate Center'}`
+                  )}
+                </button>
               </div>
             </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
     </div>
   );
