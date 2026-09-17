@@ -32,8 +32,10 @@ export default function PublicHeader({ onLoginClick }) {
       <div className="lp-container lp-header__inner">
         <Link to="/" className="lp-header__brand-group" aria-label="Vaccination Portal — home">
           <BrandGlyph />
-          <span className="lp-header__brand">Vaccination Portal</span>
-          <span className="lp-header__badge">Citizen &amp; Staff Portal</span>
+          <span className="lp-header__brand-lockup">
+            <span className="lp-header__brand">Vaccination Portal</span>
+            <span className="lp-header__brand-caption">Care, made connected</span>
+          </span>
         </Link>
 
         <nav className="lp-header__nav" aria-label="Main navigation">
@@ -55,6 +57,9 @@ export default function PublicHeader({ onLoginClick }) {
             onClick={onLoginClick}
           >
             Login
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 8h9m-3.5-3.5L12 8l-3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </nav>
       </div>

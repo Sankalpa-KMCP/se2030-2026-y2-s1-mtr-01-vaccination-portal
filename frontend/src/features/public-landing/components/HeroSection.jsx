@@ -7,12 +7,6 @@ export default function HeroSection() {
     <section className="home-hero" aria-labelledby="home-hero-title">
       <div className="lp-container home-hero__frame">
         <div className="home-hero__copy">
-          <p className="home-hero__overline">
-            <span className="home-hero__badge">
-              <span className="home-hero__badge-text--desktop">Citizen &amp; Staff Portal Access</span>
-              <span className="home-hero__badge-text--mobile">Portal Access</span>
-            </span>
-          </p>
           <h1 id="home-hero-title">
             A clear path from <em>campaign</em> to clinic appointment.
           </h1>
