@@ -9,6 +9,7 @@ import com.se2030.vaccinationportal.vaccination.dto.RevokeDigitalCertificateRequ
 import jakarta.validation.Valid;
 import java.util.List;
 import com.se2030.vaccinationportal.vaccination.mapper.DigitalCertificateMapper;
+import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.service.DigitalCertificateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,27 +41,33 @@ public class DigitalCertificateController {
     }
 
     @GetMapping("/certificates/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CITIZEN')")
-    public ResponseEntity<DigitalCertificateResponse> getCertificateById(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'SUPER_ADMIN', 'CITIZEN')")
+    public ResponseEntity<DigitalCertificateResponse> getCertificateById(
+            @PathVariable Long id,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        DigitalCertificate certificate = certificateService.getCertificateById(id);
+        certificateService.assertCertificateAccess(certificate, resolvePrincipal(authentication));
         return ResponseEntity.ok(
-                DigitalCertificateMapper.toResponse(certificateService.getCertificateById(id))
+                DigitalCertificateMapper.toResponse(certificate)
         );
     }
 
     @GetMapping("/certificates/reference/{certificateReference}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CITIZEN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'SUPER_ADMIN', 'CITIZEN')")
     public ResponseEntity<DigitalCertificateResponse> getCertificateByReference(
-            @PathVariable String certificateReference
+            @PathVariable String certificateReference,
+            org.springframework.security.core.Authentication authentication
     ) {
+        DigitalCertificate certificate = certificateService.getCertificateByReference(certificateReference);
+        certificateService.assertCertificateAccess(certificate, resolvePrincipal(authentication));
         return ResponseEntity.ok(
-                DigitalCertificateMapper.toResponse(
-                        certificateService.getCertificateByReference(certificateReference)
-                )
+                DigitalCertificateMapper.toResponse(certificate)
         );
     }
 
     @PostMapping("/certificates/{certificateId}/revoke")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'SUPER_ADMIN')")
     public ResponseEntity<DigitalCertificateResponse> revokeCertificate(
             @PathVariable Long certificateId,
             @Valid @RequestBody RevokeDigitalCertificateRequest request,
@@ -78,7 +85,7 @@ public class DigitalCertificateController {
     }
 
     @PostMapping("/records/{recordId}/certificates/reissue")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'SUPER_ADMIN')")
     public ResponseEntity<CertificateReissueResponse> reissueCertificate(
             @PathVariable Long recordId,
             @Valid @RequestBody ReissueDigitalCertificateRequest request,
@@ -94,19 +101,29 @@ public class DigitalCertificateController {
     }
 
     @GetMapping("/records/{recordId}/certificates")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'CITIZEN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'SUPER_ADMIN', 'CITIZEN')")
     public ResponseEntity<List<DigitalCertificateResponse>> getCertificateHistory(
-            @PathVariable Long recordId
+            @PathVariable Long recordId,
+            org.springframework.security.core.Authentication authentication
     ) {
+        certificateService.assertRecordAccess(recordId, resolvePrincipal(authentication));
         return ResponseEntity.ok(certificateService.getCertificateHistory(recordId));
     }
 
-    private Long resolveActorId(org.springframework.security.core.Authentication authentication, Long requestActorId) {
+    private UserPrincipal resolvePrincipal(org.springframework.security.core.Authentication authentication) {
         if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
-            return principal.getUserId();
+            return principal;
         }
         var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+            return principal;
+        }
+        return null;
+    }
+
+    private Long resolveActorId(org.springframework.security.core.Authentication authentication, Long requestActorId) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        if (principal != null) {
             return principal.getUserId();
         }
         return requestActorId != null ? requestActorId : 1L;

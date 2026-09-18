@@ -21,11 +21,13 @@ import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import java.time.Clock;
 import java.util.Locale;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -232,6 +234,43 @@ public class DigitalCertificateService {
                         "No digital certificate was found for the supplied verification token"
                 ));
         return DigitalCertificateMapper.toVerificationResponse(certificate);
+    }
+
+    @Transactional(readOnly = true)
+    public void assertCertificateAccess(DigitalCertificate certificate, UserPrincipal principal) {
+        if (principal == null || isStaff(principal)) {
+            return;
+        }
+        VaccinationRecord record = vaccinationRecordRepository.findById(certificate.getVaccinationRecordId())
+                .orElseThrow(() -> new VaccinationRecordNotFoundException(
+                        "Vaccination record not found with ID: " + certificate.getVaccinationRecordId()
+                ));
+        if (!record.getCitizenId().equals(principal.getUserId())) {
+            throw new AccessDeniedException("Citizens may only access their own digital certificates");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public void assertRecordAccess(Long vaccinationRecordId, UserPrincipal principal) {
+        if (principal == null || isStaff(principal)) {
+            return;
+        }
+        VaccinationRecord record = vaccinationRecordRepository.findById(vaccinationRecordId)
+                .orElseThrow(() -> new VaccinationRecordNotFoundException(
+                        "Vaccination record not found with ID: " + vaccinationRecordId
+                ));
+        if (!record.getCitizenId().equals(principal.getUserId())) {
+            throw new AccessDeniedException("Citizens may only access certificate history for their own vaccination records");
+        }
+    }
+
+    private boolean isStaff(UserPrincipal principal) {
+        return principal.hasRole("ROLE_ADMIN")
+                || principal.hasRole("ROLE_HEALTHCARE_OFFICER")
+                || principal.hasRole("ROLE_SUPER_ADMIN")
+                || principal.hasRole("ADMIN")
+                || principal.hasRole("HEALTHCARE_OFFICER")
+                || principal.hasRole("SUPER_ADMIN");
     }
 
     private String generateUniqueCertificateReference() {
