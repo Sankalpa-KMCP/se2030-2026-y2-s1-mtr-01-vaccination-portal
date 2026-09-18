@@ -24,6 +24,7 @@ const PRINCIPLES = [
 ];
 
 export default function TrustSection() {
+  const [activeVisual, setActiveVisual] = React.useState('coldchain');
   return (
     <section
       className="home-assurance"
@@ -40,24 +41,65 @@ export default function TrustSection() {
           </p>
 
           <div className="home-assurance__showcase">
+            <div className="assurance-tabs">
+              <button
+                type="button"
+                className={`assurance-tab ${activeVisual === 'coldchain' ? 'is-active' : ''}`}
+                onClick={() => setActiveVisual('coldchain')}
+              >
+                <i className="bi bi-thermometer-snow me-1" /> Active Cold Chain 4.1°C
+              </button>
+              <button
+                type="button"
+                className={`assurance-tab ${activeVisual === 'community' ? 'is-active' : ''}`}
+                onClick={() => setActiveVisual('community')}
+              >
+                <i className="bi bi-building-check me-1" /> Accessible Clinic Centers
+              </button>
+            </div>
+
             <div className="home-assurance__media">
-              <img
-                src="/images/vaccine-safety-coldchain.jpg"
-                alt="Hospital pharmaceutical cold-chain vaccine storage laboratory"
-                className="home-assurance__img"
-                loading="lazy"
-              />
-              <div className="home-assurance__caption">
-                <div className="d-flex align-items-center gap-2 mb-1">
-                  <span className="badge bg-white text-dark fw-bold">
-                    <i className="bi bi-thermometer-snow text-primary me-1" /> Active Cold Chain 4.1°C
-                  </span>
-                  <span className="badge bg-warning text-dark fw-bold">
-                    <i className="bi bi-shield-check me-1" /> Certified
-                  </span>
-                </div>
-                <p className="small text-white-50 mb-0">Pharmaceutical storage protocols and continuous telemetry ensure vaccine viability.</p>
-              </div>
+              {activeVisual === 'coldchain' ? (
+                <>
+                  <img
+                    src="/images/vaccine-safety-coldchain.jpg"
+                    alt="Hospital pharmaceutical cold-chain vaccine storage laboratory"
+                    className="home-assurance__img"
+                    loading="lazy"
+                  />
+                  <div className="home-assurance__caption">
+                    <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                      <span className="badge bg-white text-dark fw-bold">
+                        <i className="bi bi-thermometer-snow text-primary me-1" /> Active Cold Chain 4.1°C
+                      </span>
+                      <span className="badge bg-warning text-dark fw-bold">
+                        <i className="bi bi-shield-check me-1" /> Continuous Telemetry Certified
+                      </span>
+                    </div>
+                    <p className="small text-white-50 mb-0">Pharmaceutical storage protocols and continuous temperature telemetry ensure vaccine viability.</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img
+                    src="/images/community-vax-clinic.jpg"
+                    alt="Welcoming community clinic with friendly staff greeting senior citizen"
+                    className="home-assurance__img"
+                    loading="lazy"
+                  />
+                  <div className="home-assurance__caption">
+                    <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                      <span className="badge bg-success text-white fw-bold">
+                        <i className="bi bi-heart-pulse-fill me-1" /> Universal Age Accessibility
+                      </span>
+                      <span className="badge bg-info text-dark fw-bold">
+                        <i className="bi bi-person-wheelchair me-1" /> Step-Free Access
+                      </span>
+                    </div>
+                    <p className="small text-white-50 mb-0">Designed for everyone: wheelchair ramps, priority seating for seniors, and child-friendly bays.</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

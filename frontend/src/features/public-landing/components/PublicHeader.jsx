@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import portalCareMark from '../assets/portal-care-mark.svg';
 
@@ -17,6 +17,22 @@ const NAV_ITEMS = [
 ];
 
 export default function PublicHeader({ onLoginClick }) {
+  const [textSize, setTextSize] = useState(() => {
+    return localStorage.getItem('vax_text_size') || 'normal';
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.remove('vax-text-normal', 'vax-text-large', 'vax-text-xl');
+    if (textSize === 'large') {
+      document.documentElement.classList.add('vax-text-large');
+    } else if (textSize === 'xl') {
+      document.documentElement.classList.add('vax-text-xl');
+    } else {
+      document.documentElement.classList.add('vax-text-normal');
+    }
+    localStorage.setItem('vax_text_size', textSize);
+  }, [textSize]);
+
   return (
     <header className="lp-header">
       <div className="lp-container lp-header__inner">
@@ -24,6 +40,50 @@ export default function PublicHeader({ onLoginClick }) {
           <BrandGlyph />
           <span className="lp-header__brand">Vaccination Portal</span>
         </Link>
+
+        {/* Accessibility & Hotline Bar */}
+        <div className="lp-header__utility" aria-label="Accessibility and Support">
+          <div className="lp-header__access-ctrl" title="Change text size for easier reading">
+            <span className="lp-header__access-label">Text:</span>
+            <button
+              type="button"
+              className={`lp-header__font-btn ${textSize === 'normal' ? 'is-active' : ''}`}
+              onClick={() => setTextSize('normal')}
+              aria-label="Standard text size"
+              title="Standard text size"
+            >
+              A
+            </button>
+            <button
+              type="button"
+              className={`lp-header__font-btn ${textSize === 'large' ? 'is-active' : ''}`}
+              onClick={() => setTextSize('large')}
+              aria-label="Large text size for senior citizens"
+              title="Large text size"
+            >
+              A+
+            </button>
+            <button
+              type="button"
+              className={`lp-header__font-btn ${textSize === 'xl' ? 'is-active' : ''}`}
+              onClick={() => setTextSize('xl')}
+              aria-label="Extra large text size for high visibility"
+              title="Extra large text size"
+            >
+              A++
+            </button>
+          </div>
+
+          <a
+            href="tel:19008292273"
+            className="lp-header__helpline"
+            aria-label="24/7 Telephone Booking Helpline 1900-VAX-CARE"
+            title="Free Senior & Citizen Phone Support"
+          >
+            <i className="bi bi-telephone-fill me-1" />
+            <span>1900-VAX-CARE</span>
+          </a>
+        </div>
 
         <nav className="lp-header__nav" aria-label="Main navigation">
           {NAV_ITEMS.map((item) => (
