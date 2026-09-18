@@ -1,25 +1,25 @@
 .citizen-dashboard {
-  --citizen-ink: #102f3a;
-  --citizen-muted: #52676c;
-  --citizen-green: #206245;
-  --citizen-green-bright: #2f855f;
-  --citizen-green-soft: #eaf4eb;
-  --citizen-teal: #0b746d;
-  --citizen-paper: #fafbf7;
+  --citizen-ink: #1E293B;
+  --citizen-muted: #64748B;
+  --citizen-green: #0F6E5B;
+  --citizen-green-bright: #138771;
+  --citizen-green-soft: #e8f5f1;
+  --citizen-teal: #0F6E5B;
+  --citizen-paper: #F8FAFC;
   --citizen-surface: #ffffff;
-  --citizen-line: #d7e2dd;
-  --citizen-line-strong: #bcd5c4;
-  --citizen-warning: #8a5a12;
-  --citizen-warning-soft: #fff6dc;
+  --citizen-line: #E2E8F0;
+  --citizen-line-strong: #bfe5db;
+  --citizen-warning: #b45309;
+  --citizen-warning-soft: #fef3c7;
   --citizen-danger: #8b343b;
   --citizen-danger-soft: #fcf0f0;
-  --citizen-radius: 16px;
-  --citizen-radius-small: 10px;
+  --citizen-radius: 0.75rem;
+  --citizen-radius-small: 0.5rem;
   --citizen-ease: cubic-bezier(0.16, 1, 0.3, 1);
   display: grid;
   gap: clamp(1.25rem, 2.6vw, 2rem);
   color: var(--citizen-ink);
-  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans, "Inter", system-ui, -apple-system, sans-serif);
 }
 
 .citizen-dashboard *,
