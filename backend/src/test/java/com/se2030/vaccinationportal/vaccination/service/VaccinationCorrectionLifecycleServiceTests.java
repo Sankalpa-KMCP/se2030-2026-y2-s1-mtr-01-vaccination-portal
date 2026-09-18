@@ -54,14 +54,14 @@ class VaccinationCorrectionLifecycleServiceTests {
 
     @Test
     void nonCertificateImpactingCorrectionDoesNotCheckOrReissueCertificate() {
-        CreateVaccinationCorrectionRequest request = request("authorizedNotes", "Updated note");
         VaccinationCorrection correction = correction(VaccinationCorrectionField.AUTHORIZED_NOTES, "Original", "Updated note");
+        correction.approve(92L, Instant.now(), "Approved");
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Updated note"));
-        when(correctionService.createCorrection(101L, request)).thenReturn(correction);
+        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
 
-        VaccinationCorrectionLifecycleResponse result = lifecycleService.applyCorrection(101L, request);
+        VaccinationCorrectionLifecycleResponse result = lifecycleService.applyApprovedCorrection(101L, 1L, 92L);
 
         assertFalse(result.certificateImpacted());
         assertFalse(result.certificateReissued());
@@ -72,39 +72,39 @@ class VaccinationCorrectionLifecycleServiceTests {
 
     @Test
     void impactingCorrectionWithValidCertificateUsesControlledReissue() {
-        CreateVaccinationCorrectionRequest request = request("doseNumber", "2");
         VaccinationCorrection correction = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
+        correction.approve(92L, Instant.now(), "Approved");
         CertificateReissueResponse reissue = reissueResponse();
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
                 .thenReturn(snapshot(2, ADMINISTERED_AT, 56L, "Original"));
-        when(correctionService.createCorrection(101L, request)).thenReturn(correction);
+        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
         when(certificateService.hasCurrentValidCertificate(101L)).thenReturn(true);
         when(certificateService.reissueCertificate(eq(101L), any(ReissueDigitalCertificateRequest.class)))
                 .thenReturn(reissue);
 
-        VaccinationCorrectionLifecycleResponse result = lifecycleService.applyCorrection(101L, request);
+        VaccinationCorrectionLifecycleResponse result = lifecycleService.applyApprovedCorrection(101L, 1L, 92L);
 
         assertTrue(result.certificateImpacted());
         assertTrue(result.certificateReissued());
         assertSame(reissue, result.certificateReissue());
         verify(certificateService).reissueCertificate(
                 101L,
-                new ReissueDigitalCertificateRequest("Correction reason", 91L)
+                new ReissueDigitalCertificateRequest("Correction reason", 92L)
         );
     }
 
     @Test
     void impactingCorrectionWithoutValidCertificateDoesNotIssueInitialCertificate() {
-        CreateVaccinationCorrectionRequest request = request("vaccineBatchId", "78");
         VaccinationCorrection correction = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
+        correction.approve(92L, Instant.now(), "Approved");
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 78L, "Original"));
-        when(correctionService.createCorrection(101L, request)).thenReturn(correction);
+        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
         when(certificateService.hasCurrentValidCertificate(101L)).thenReturn(false);
 
-        VaccinationCorrectionLifecycleResponse result = lifecycleService.applyCorrection(101L, request);
+        VaccinationCorrectionLifecycleResponse result = lifecycleService.applyApprovedCorrection(101L, 1L, 92L);
 
         assertTrue(result.certificateImpacted());
         assertFalse(result.certificateReissued());
@@ -115,28 +115,36 @@ class VaccinationCorrectionLifecycleServiceTests {
 
     @Test
     void reissueFailureIsNotSuppressed() {
-        CreateVaccinationCorrectionRequest request = request("administrationTime", "2026-09-01T09:00:00Z");
         VaccinationCorrection correction = correction(
                 VaccinationCorrectionField.ADMINISTRATION_TIME,
                 ADMINISTERED_AT.toString(),
                 "2026-09-01T09:00:00Z"
         );
+        correction.approve(92L, Instant.now(), "Approved");
         RuntimeException failure = new RuntimeException("reissue failed");
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
                 .thenReturn(snapshot(1, Instant.parse("2026-09-01T09:00:00Z"), 56L, "Original"));
-        when(correctionService.createCorrection(101L, request)).thenReturn(correction);
+        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
         when(certificateService.hasCurrentValidCertificate(101L)).thenReturn(true);
         when(certificateService.reissueCertificate(eq(101L), any())).thenThrow(failure);
 
         assertSame(failure, assertThrows(
                 RuntimeException.class,
-                () -> lifecycleService.applyCorrection(101L, request)
+                () -> lifecycleService.applyApprovedCorrection(101L, 1L, 92L)
         ));
     }
 
-    private CreateVaccinationCorrectionRequest request(String field, String value) {
-        return new CreateVaccinationCorrectionRequest(field, value, "Correction reason", 91L);
+    @Test
+    void unapprovedCorrectionCannotBeApplied() {
+        VaccinationCorrection correction = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
+        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+
+        com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationCorrectionException ex = assertThrows(
+                com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationCorrectionException.class,
+                () -> lifecycleService.applyApprovedCorrection(101L, 1L, 92L)
+        );
+        assertTrue(ex.getMessage().contains("Only APPROVED corrections can be applied"));
     }
 
     private VaccinationCorrection correction(VaccinationCorrectionField field, String oldValue, String newValue) {

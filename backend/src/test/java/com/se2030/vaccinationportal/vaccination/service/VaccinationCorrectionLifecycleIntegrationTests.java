@@ -11,6 +11,7 @@ import com.se2030.vaccinationportal.vaccination.dto.RevokeDigitalCertificateRequ
 import com.se2030.vaccinationportal.vaccination.dto.VaccinationCorrectionLifecycleResponse;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationCorrectionRepository;
@@ -37,6 +38,9 @@ class VaccinationCorrectionLifecycleIntegrationTests {
     private VaccinationCorrectionLifecycleService lifecycleService;
 
     @Autowired
+    private VaccinationCorrectionService correctionService;
+
+    @Autowired
     private DigitalCertificateService certificateService;
 
     @Autowired
@@ -51,16 +55,31 @@ class VaccinationCorrectionLifecycleIntegrationTests {
     @Autowired
     private EntityManager entityManager;
 
+    private VaccinationCorrectionLifecycleResponse applyThroughCanonicalLifecycle(
+            Long recordId,
+            CreateVaccinationCorrectionRequest request
+    ) {
+        VaccinationCorrection pending = correctionService.createCorrection(recordId, request, request.correctedBy());
+        Long reviewerId = (request.correctedBy() != null ? request.correctedBy() : 91L) + 100L;
+        VaccinationCorrection approved = correctionService.approveCorrection(
+                recordId,
+                pending.getId(),
+                reviewerId,
+                "Approved in canonical test workflow"
+        );
+        return lifecycleService.applyApprovedCorrection(recordId, approved.getId(), reviewerId);
+    }
+
     @Test
     void notesAndNextDoseDateCorrectionsCommitWithoutReissue() {
         VaccinationRecord record = persistRecord(8101L);
         DigitalCertificate original = certificateService.issueCertificateForVaccinationRecord(record.getId());
 
-        VaccinationCorrectionLifecycleResponse notes = lifecycleService.applyCorrection(
+        VaccinationCorrectionLifecycleResponse notes = applyThroughCanonicalLifecycle(
                 record.getId(),
                 request("authorizedNotes", "Updated clinical note", "Clarify note")
         );
-        VaccinationCorrectionLifecycleResponse nextDose = lifecycleService.applyCorrection(
+        VaccinationCorrectionLifecycleResponse nextDose = applyThroughCanonicalLifecycle(
                 record.getId(),
                 request("nextDoseDate", "2026-11-01", "Correct next dose date")
         );
@@ -83,14 +102,14 @@ class VaccinationCorrectionLifecycleIntegrationTests {
         VaccinationRecord record = persistRecord(8102L);
         DigitalCertificate first = certificateService.issueCertificateForVaccinationRecord(record.getId());
 
-        VaccinationCorrectionLifecycleResponse dose = lifecycleService.applyCorrection(
+        VaccinationCorrectionLifecycleResponse dose = applyThroughCanonicalLifecycle(
                 record.getId(), request("doseNumber", "2", "Correct dose")
         );
-        VaccinationCorrectionLifecycleResponse administration = lifecycleService.applyCorrection(
+        VaccinationCorrectionLifecycleResponse administration = applyThroughCanonicalLifecycle(
                 record.getId(),
                 request("administrationTime", "2026-09-01T09:30:00Z", "Correct administration time")
         );
-        VaccinationCorrectionLifecycleResponse batch = lifecycleService.applyCorrection(
+        VaccinationCorrectionLifecycleResponse batch = applyThroughCanonicalLifecycle(
                 record.getId(), request("vaccineBatchId", "6001", "Correct batch")
         );
 
@@ -127,7 +146,7 @@ class VaccinationCorrectionLifecycleIntegrationTests {
     @Test
     void impactingCorrectionWithoutCurrentValidCertificateDoesNotIssueCertificate() {
         VaccinationRecord neverIssued = persistRecord(8103L);
-        VaccinationCorrectionLifecycleResponse noCertificate = lifecycleService.applyCorrection(
+        VaccinationCorrectionLifecycleResponse noCertificate = applyThroughCanonicalLifecycle(
                 neverIssued.getId(), request("doseNumber", "2", "Correct dose")
         );
 
@@ -141,7 +160,7 @@ class VaccinationCorrectionLifecycleIntegrationTests {
                 explicitReissue.issuedCertificate().id(),
                 new RevokeDigitalCertificateRequest("Administrative revocation", 91L)
         );
-        VaccinationCorrectionLifecycleResponse historicalOnly = lifecycleService.applyCorrection(
+        VaccinationCorrectionLifecycleResponse historicalOnly = applyThroughCanonicalLifecycle(
                 revokedRecord.getId(), request("doseNumber", "2", "Correct dose after revocation")
         );
 
@@ -162,9 +181,9 @@ class VaccinationCorrectionLifecycleIntegrationTests {
         VaccinationRecord record = persistRecord(8105L);
         certificateService.issueCertificateForVaccinationRecord(record.getId());
 
-        lifecycleService.applyCorrection(record.getId(), request("doseNumber", "2", "First correction"));
-        lifecycleService.applyCorrection(record.getId(), request("doseNumber", "3", "Second correction"));
-        VaccinationCorrectionLifecycleResponse restored = lifecycleService.applyCorrection(
+        applyThroughCanonicalLifecycle(record.getId(), request("doseNumber", "2", "First correction"));
+        applyThroughCanonicalLifecycle(record.getId(), request("doseNumber", "3", "Second correction"));
+        VaccinationCorrectionLifecycleResponse restored = applyThroughCanonicalLifecycle(
                 record.getId(), request("doseNumber", "1", "Restore original value")
         );
 
@@ -190,7 +209,7 @@ class VaccinationCorrectionLifecycleIntegrationTests {
         VaccinationRecord record = persistRecord(8106L);
         DigitalCertificate original = certificateService.issueCertificateForVaccinationRecord(record.getId());
 
-        VaccinationCorrectionLifecycleResponse response = lifecycleService.applyCorrection(
+        VaccinationCorrectionLifecycleResponse response = applyThroughCanonicalLifecycle(
                 record.getId(), request("doseNumber", "2", "Correct dose")
         );
         String json = new JsonMapper().writeValueAsString(response);

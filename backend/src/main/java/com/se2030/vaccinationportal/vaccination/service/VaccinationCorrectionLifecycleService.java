@@ -67,39 +67,6 @@ public class VaccinationCorrectionLifecycleService {
         return response(correction, true, reissue);
     }
 
-    @Transactional
-    public VaccinationCorrectionLifecycleResponse applyCorrection(
-            Long vaccinationRecordId,
-            CreateVaccinationCorrectionRequest request
-    ) {
-        EffectiveVaccinationRecordSnapshot beforeSnapshot =
-                effectiveRecordService.getEffectiveRecord(vaccinationRecordId);
-        VaccinationCorrection correction = correctionService.createCorrection(vaccinationRecordId, request);
-        if (correction.getStatus() == com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus.PENDING) {
-            Long approverId = request != null && request.correctedBy() != null ? request.correctedBy() + 1000L : 9999L;
-            correction.approve(approverId, java.time.Instant.now(), "Direct application");
-        }
-        if (correction.getStatus() == com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus.APPROVED) {
-            correction.apply();
-        }
-        EffectiveVaccinationRecordSnapshot afterSnapshot =
-                effectiveRecordService.getEffectiveRecord(vaccinationRecordId);
-
-        boolean certificateImpacted =
-                certificateImpactPolicy.hasCertificateVisibleChange(beforeSnapshot, afterSnapshot);
-        if (!certificateImpacted || !certificateService.hasCurrentValidCertificate(vaccinationRecordId)) {
-            return response(correction, certificateImpacted, null);
-        }
-
-        CertificateReissueResponse reissue = certificateService.reissueCertificate(
-                vaccinationRecordId,
-                new ReissueDigitalCertificateRequest(
-                        correction.getReason(),
-                        correction.getCorrectedBy()
-                )
-        );
-        return response(correction, true, reissue);
-    }
 
     private VaccinationCorrectionLifecycleResponse response(
             VaccinationCorrection correction,
