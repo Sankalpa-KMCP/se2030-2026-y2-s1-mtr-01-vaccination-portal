@@ -38,6 +38,28 @@ export default function TrustSection() {
             The portal makes responsibility visible where access, capacity,
             eligibility, and session readiness are managed.
           </p>
+
+          <div className="home-assurance__showcase">
+            <div className="home-assurance__media">
+              <img
+                src="/images/vaccine-safety-coldchain.jpg"
+                alt="Hospital pharmaceutical cold-chain vaccine storage laboratory"
+                className="home-assurance__img"
+                loading="lazy"
+              />
+              <div className="home-assurance__caption">
+                <div className="d-flex align-items-center gap-2 mb-1">
+                  <span className="badge bg-white text-dark fw-bold">
+                    <i className="bi bi-thermometer-snow text-primary me-1" /> Active Cold Chain 4.1°C
+                  </span>
+                  <span className="badge bg-warning text-dark fw-bold">
+                    <i className="bi bi-shield-check me-1" /> Certified
+                  </span>
+                </div>
+                <p className="small text-white-50 mb-0">Pharmaceutical storage protocols and continuous telemetry ensure vaccine viability.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <ol className="home-assurance__register" data-reveal="assurance">

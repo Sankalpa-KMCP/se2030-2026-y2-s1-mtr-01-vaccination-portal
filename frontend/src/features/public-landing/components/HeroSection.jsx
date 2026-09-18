@@ -31,6 +31,22 @@ export default function HeroSection() {
         </div>
 
         <div className="home-hero__visual" aria-hidden="true">
+          <div className="hospital-hero-card mb-3">
+            <div className="hospital-hero-card__media">
+              <img
+                src="/images/hero-hospital-care.jpg"
+                alt="Accredited hospital vaccination clinic with physician consultation"
+                className="hospital-hero-card__img"
+                loading="eager"
+              />
+              <div className="hospital-hero-badge hospital-hero-badge--top">
+                <i className="bi bi-shield-check" /> Accredited Hospital Standard
+              </div>
+              <div className="hospital-hero-badge hospital-hero-badge--bottom">
+                <span className="hospital-hero-badge__dot" /> Clinical Readiness Verified
+              </div>
+            </div>
+          </div>
           <div className="home-hero__visual-head">
             <span>Vaccination pathway</span>
             <span className="home-hero__visual-context">Citizen services</span>
