@@ -39,7 +39,7 @@ export default function CertificateVerificationForm({ initialCode = '' }) {
 
   return (
     <div className="card shadow border-0 overflow-hidden mb-4">
-      <div className="card-header bg-gradient-primary text-white p-3 d-flex align-items-center" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
+      <div className="card-header text-white p-3 d-flex align-items-center" style={{ background: 'linear-gradient(135deg, #09473b 0%, #0F6E5B 100%)' }}>
         <h3 className="h5 mb-0 fw-bold">
           <i className="bi bi-shield-lock-fill me-2"></i>Public Credential Verification
         </h3>

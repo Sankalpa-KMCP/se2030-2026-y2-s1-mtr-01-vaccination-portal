@@ -5,10 +5,10 @@
   --auth-muted: #687579;
   --auth-line: #d9dedc;
   --auth-paper: #fbfbf9;
-  --auth-canvas: #eef1ef;
-  --auth-navy: #0b1b22;
-  --auth-accent: var(--primary, #0e7490);
-  --auth-accent-dark: var(--primary-hover, #155e75);
+  --auth-canvas: #F8FAFC;
+  --auth-navy: #09473b;
+  --auth-accent: var(--primary, #0F6E5B);
+  --auth-accent-dark: var(--primary-hover, #0c5a4a);
   --auth-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --auth-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
   display: grid;
@@ -18,7 +18,7 @@
   overflow-x: clip;
   color: var(--auth-ink);
   background: var(--auth-canvas);
-  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans, "Inter", system-ui, -apple-system, sans-serif);
 }
 
 .auth-experience::selection { color: white; background: var(--auth-accent); }
@@ -30,10 +30,10 @@
   height: min(1080px, calc(100svh - 2rem));
   min-height: 640px;
   overflow: hidden;
-  border: 1px solid rgba(19, 33, 38, 0.1);
-  border-radius: 18px;
+  border: 1px solid rgba(19, 33, 38, 0.08);
+  border-radius: 1rem;
   background: var(--auth-paper);
-  box-shadow: 0 30px 80px rgba(22, 34, 38, 0.14);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 20px 60px rgba(15, 110, 91, 0.12);
 }
 
 /* Stable brand plane */

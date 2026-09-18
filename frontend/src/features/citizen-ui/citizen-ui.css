@@ -1,15 +1,15 @@
 .citizen-page-header {
-  --citizen-ui-ink: #102f3a;
-  --citizen-ui-muted: #52676c;
-  --citizen-ui-green: #206245;
-  --citizen-ui-green-deep: #174d36;
-  --citizen-ui-green-bright: #2f855f;
-  --citizen-ui-green-soft: #eaf4eb;
-  --citizen-ui-teal: #0b746d;
-  --citizen-ui-paper: #fafbf7;
-  --citizen-ui-line: #d7e2dd;
-  --citizen-ui-line-strong: #bcd5c4;
-  --citizen-ui-radius: 16px;
+  --citizen-ui-ink: #1E293B;
+  --citizen-ui-muted: #64748B;
+  --citizen-ui-green: #0F6E5B;
+  --citizen-ui-green-deep: #09473b;
+  --citizen-ui-green-bright: #138771;
+  --citizen-ui-green-soft: #e8f5f1;
+  --citizen-ui-teal: #0F6E5B;
+  --citizen-ui-paper: #F8FAFC;
+  --citizen-ui-line: #E2E8F0;
+  --citizen-ui-line-strong: #bfe5db;
+  --citizen-ui-radius: 0.75rem;
   --citizen-ui-ease: cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   min-width: 0;
@@ -19,10 +19,10 @@
   border: 1px solid var(--citizen-ui-line);
   border-radius: var(--citizen-ui-radius);
   background:
-    linear-gradient(105deg, rgba(234, 244, 235, 0.82), transparent 46%),
+    linear-gradient(105deg, rgba(232, 245, 241, 0.82), transparent 46%),
     var(--citizen-ui-paper);
-  box-shadow: 0 12px 30px rgba(16, 47, 58, 0.06);
-  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  font-family: var(--font-sans, "Inter", system-ui, -apple-system, sans-serif);
 }
 
 .citizen-page-header::before {
