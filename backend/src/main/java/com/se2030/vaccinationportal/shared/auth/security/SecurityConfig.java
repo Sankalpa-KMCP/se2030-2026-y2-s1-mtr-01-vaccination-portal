@@ -58,7 +58,8 @@ public class SecurityConfig {
                         "CENTER_MANAGER",
                         "HEALTHCARE_OFFICER",
                         "INVENTORY_OFFICER",
-                        "MANAGEMENT_USER"
+                        "MANAGEMENT_USER",
+                        "VACCINATOR"
                 )
                 .build();
     }
@@ -127,6 +128,9 @@ public class SecurityConfig {
 
                         // Protected Appointments and Waitlist Endpoints (MF-03)
                         .requestMatchers("/api/v1/appointments/**", "/api/v1/waitlist/**").authenticated()
+
+                        // Draft CRUD is vaccinator-only; enforce anonymous rejection at the HTTP boundary.
+                        .requestMatchers("/api/v1/vaccination/drafts", "/api/v1/vaccination/drafts/**").hasAnyRole("VACCINATOR", "SUPER_ADMIN")
 
                         // Functional REST endpoints delegate method-level security to @PreAuthorize
                         .requestMatchers("/api/v1/**").permitAll()

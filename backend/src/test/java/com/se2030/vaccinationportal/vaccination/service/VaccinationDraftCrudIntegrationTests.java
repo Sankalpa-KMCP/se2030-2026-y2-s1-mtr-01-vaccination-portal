@@ -13,6 +13,7 @@ import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationDraftRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.vaccination.repository.VaccinationCorrectionRepository;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,9 @@ class VaccinationDraftCrudIntegrationTests {
     @Autowired
     private DigitalCertificateRepository certificateRepository;
 
+    @Autowired
+    private VaccinationCorrectionRepository correctionRepository;
+
     @MockitoBean
     private AppointmentValidationPort appointmentValidationPort;
 
@@ -48,23 +52,22 @@ class VaccinationDraftCrudIntegrationTests {
                 .thenReturn(Optional.of(new AppointmentValidationSnapshot(99001L, true)));
         long recordCountBefore = recordRepository.count();
         long certificateCountBefore = certificateRepository.count();
+        long correctionCountBefore = correctionRepository.count();
 
         VaccinationDraft created = draftService.createDraft(new CreateVaccinationDraftRequest(
                 99001L,
-                99002L,
                 99003L,
                 1,
                 Instant.now().minusSeconds(60),
                 null,
-                "Temporary draft",
-                false
-        ));
+                "Temporary draft"
+        ), 99002L);
         assertTrue(draftRepository.existsById(created.getId()));
 
         VaccinationDraft updated = draftService.updateDraft(
                 created.getId(),
                 new UpdateVaccinationDraftRequest(
-                        null, null, 2, null, null, "Updated temporary draft", null
+                        null, 2, null, null, "Updated temporary draft"
                 )
         );
         assertEquals(2, updated.getDoseNumber());
@@ -75,5 +78,6 @@ class VaccinationDraftCrudIntegrationTests {
         assertFalse(draftRepository.existsById(created.getId()));
         assertEquals(recordCountBefore, recordRepository.count());
         assertEquals(certificateCountBefore, certificateRepository.count());
+        assertEquals(correctionCountBefore, correctionRepository.count());
     }
 }

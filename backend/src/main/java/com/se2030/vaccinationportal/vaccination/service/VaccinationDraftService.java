@@ -37,15 +37,22 @@ public class VaccinationDraftService {
         this.integrationValidator = integrationValidator;
     }
 
-    public VaccinationDraft createDraft(CreateVaccinationDraftRequest request) {
+    public VaccinationDraft createDraft(CreateVaccinationDraftRequest request, Long vaccinatorId) {
         if (request == null) {
             throw new InvalidVaccinationDraftException("Create vaccination draft request is required");
+        }
+        if (request.appointmentId() == null || request.appointmentId() <= 0) {
+            throw new InvalidVaccinationDraftException("Appointment ID must be positive");
+        }
+        if (vaccinatorId == null || vaccinatorId <= 0) {
+            throw new InvalidVaccinationDraftException("Authenticated vaccinator ID must be positive");
         }
         if (draftRepository.existsByAppointmentId(request.appointmentId())) {
             throw duplicateForAppointment(request.appointmentId(), null);
         }
 
         VaccinationDraft draft = VaccinationDraftMapper.fromCreateRequest(request);
+        draft.setVaccinatorId(vaccinatorId);
         validator.validateDraft(draft);
         integrationValidator.validateAppointment(draft.getAppointmentId());
 

@@ -68,6 +68,9 @@ public class VaccinationDraftValidator {
     }
 
     private void validateNextDoseDate(VaccinationDraft draft) {
+        if (draft.getNextDoseDate() != null && draft.getNextDoseDate().isBefore(LocalDate.now(clock))) {
+            throw new InvalidVaccinationDraftException("Next dose date cannot be in the past");
+        }
         if (draft.getNextDoseDate() == null || draft.getAdministrationTime() == null) {
             return;
         }

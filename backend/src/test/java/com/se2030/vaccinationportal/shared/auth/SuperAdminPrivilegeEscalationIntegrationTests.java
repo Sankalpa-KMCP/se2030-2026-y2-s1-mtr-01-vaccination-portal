@@ -59,6 +59,7 @@ class SuperAdminPrivilegeEscalationIntegrationTests {
                 new Role("ROLE_CENTER_MANAGER", "Center Manager"),
                 new Role("ROLE_CAMPAIGN_OFFICER", "Campaign Officer"),
                 new Role("ROLE_INVENTORY_OFFICER", "Inventory Officer"),
+                new Role("ROLE_VACCINATOR", "Vaccinator"),
                 new Role("ROLE_CITIZEN", "Citizen"),
                 new Role("ROLE_MANAGEMENT_USER", "Management User")
         ));

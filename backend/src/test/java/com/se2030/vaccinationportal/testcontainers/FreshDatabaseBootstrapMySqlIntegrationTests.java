@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Deterministic Fresh Database Bootstrap and Schema Migration Integration Test.
  *
  * <p>Verifies X3 / VP-002: A completely empty, clean MySQL database instance
- * bootstraps successfully through Flyway (V0-V16), seeds canonical static data,
+ * bootstraps successfully through Flyway (V0-V19), seeds canonical static data,
  * satisfies Hibernate schema validation ({@code ddl-auto=validate}), and proves
  * idempotent migration execution.</p>
  */
@@ -119,6 +119,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             "user_roles",
             "vaccination_campaigns",
             "vaccination_centers",
+            "vaccination_corrections",
             "vaccination_drafts",
             "vaccination_records",
             "vaccination_sessions",
@@ -127,7 +128,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             "waitlist_entry"
     );
 
-    private static final Set<String> EXPECTED_8_ROLES = Set.of(
+    private static final Set<String> EXPECTED_9_ROLES = Set.of(
             "ROLE_ADMIN",
             "ROLE_CENTER_MANAGER",
             "ROLE_HEALTHCARE_OFFICER",
@@ -135,7 +136,8 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             "ROLE_INVENTORY_OFFICER",
             "ROLE_CITIZEN",
             "ROLE_MANAGEMENT_USER",
-            "ROLE_SUPER_ADMIN"
+            "ROLE_SUPER_ADMIN",
+            "ROLE_VACCINATOR"
     );
 
     @Test
@@ -153,13 +155,13 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should apply all migration versions V0 through V17 with SUCCESS status")
+    @DisplayName("Should apply all migration versions V0 through V19 with SUCCESS status")
     void shouldApplyAllMigrationsSuccessfully() {
         assertNotNull(flyway, "Flyway bean must be configured and injected");
         MigrationInfo[] appliedMigrations = flyway.info().all();
-        assertEquals(18, appliedMigrations.length, "Expected exactly 18 migrations (V0-V17)");
+        assertEquals(20, appliedMigrations.length, "Expected exactly 20 migrations (V0-V19)");
 
-        for (int i = 0; i <= 17; i++) {
+        for (int i = 0; i <= 19; i++) {
             String expectedVersion = String.valueOf(i);
             MigrationInfo info = appliedMigrations[i];
             assertEquals(expectedVersion, info.getVersion().getVersion(), "Migration version mismatch at index " + i);
@@ -168,7 +170,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should verify presence of all 51 physical tables plus flyway schema history")
+    @DisplayName("Should verify presence of all 52 physical tables plus flyway schema history")
     void shouldVerifyAll44RequiredTablesExist() throws Exception {
         Set<String> actualTables = new HashSet<>();
         try (Connection connection = dataSource.getConnection()) {
@@ -193,11 +195,11 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
         long appTableCount = actualTables.stream()
                 .filter(t -> !t.equals("flyway_schema_history"))
                 .count();
-        assertEquals(51, appTableCount, "Database must contain exactly 51 application/runtime tables");
+        assertEquals(52, appTableCount, "Database must contain exactly 52 application/runtime tables");
     }
 
     @Test
-    @DisplayName("Should verify exactly 8 canonical static roles seeded by V4 and V16")
+    @DisplayName("Should verify exactly 9 canonical static roles seeded by V4, V16, and V19")
     void shouldVerifyCanonicalRolesSeeded() throws Exception {
         Set<String> seededRoles = new HashSet<>();
         try (Connection connection = dataSource.getConnection();
@@ -208,8 +210,8 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             }
         }
 
-        assertEquals(8, seededRoles.size(), "roles table must contain exactly 8 seeded roles");
-        assertEquals(EXPECTED_8_ROLES, seededRoles, "Seeded roles must exactly match canonical 8 roles");
+        assertEquals(9, seededRoles.size(), "roles table must contain exactly 9 seeded roles");
+        assertEquals(EXPECTED_9_ROLES, seededRoles, "Seeded roles must exactly match canonical 9 roles");
     }
 
     @Test

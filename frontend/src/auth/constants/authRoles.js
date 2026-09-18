@@ -13,9 +13,15 @@ export const REQUESTABLE_STAFF_ROLE_CODES = Object.freeze(
   REQUESTABLE_STAFF_ROLES.map(({ code }) => code),
 );
 
+export const APPROVABLE_STAFF_ROLES = Object.freeze([
+  ...REQUESTABLE_STAFF_ROLES,
+  { code: 'ROLE_VACCINATOR', label: 'Vaccinator' },
+]);
+
 export const STAFF_DASHBOARD_ROLES = Object.freeze([
   ...REQUESTABLE_STAFF_ROLE_CODES,
   'ROLE_MANAGEMENT_USER',
+  'ROLE_VACCINATOR',
   SUPER_ADMIN_ROLE,
 ]);
 
@@ -28,6 +34,7 @@ const ROLE_LABELS = Object.freeze({
   ROLE_CAMPAIGN_OFFICER: 'Campaign Officer',
   ROLE_INVENTORY_OFFICER: 'Inventory Officer',
   ROLE_MANAGEMENT_USER: 'Management User',
+  ROLE_VACCINATOR: 'Vaccinator',
 });
 
 export function getRoleLabel(roleCode) {

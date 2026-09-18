@@ -65,6 +65,7 @@ class RegistrationServiceIntegrationTests {
                 new Role("ROLE_HEALTHCARE_OFFICER", "Healthcare Officer"),
                 new Role("ROLE_CAMPAIGN_OFFICER", "Campaign Officer"),
                 new Role("ROLE_INVENTORY_OFFICER", "Inventory Officer"),
+                new Role("ROLE_VACCINATOR", "Vaccinator"),
                 new Role("ROLE_CITIZEN", "Citizen"),
                 new Role("ROLE_MANAGEMENT_USER", "Management User")
         ));
@@ -151,6 +152,7 @@ class RegistrationServiceIntegrationTests {
             "ROLE_MANAGEMENT_USER",
             "ROLE_SYSTEM_ADMINISTRATOR",
             "ROLE_RECEPTION_STAFF",
+            "ROLE_VACCINATOR",
             "UNKNOWN_ROLE"
     })
     void registerStaff_forbiddenOrUnknownRole_rejected(String requestedRoleCode) {

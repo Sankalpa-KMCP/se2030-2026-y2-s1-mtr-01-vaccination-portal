@@ -1,121 +1,86 @@
 package com.se2030.vaccinationportal.vaccination;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.se2030.vaccinationportal.VaccinationPortalApplication;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
+import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
+import com.se2030.vaccinationportal.vaccination.service.VaccinationDraftService;
 import java.util.List;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-/**
- * Spring Security integration tests for {@code /api/v1/vaccination/drafts} endpoints (MF-05).
- * Tests method security and HTTP boundary enforcement for allowed and denied roles.
- */
-@SpringBootTest(classes = VaccinationPortalApplication.class)
+@SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
-public class VaccinationDraftSecurityAuthorizationIntegrationTests {
+class VaccinationDraftSecurityAuthorizationIntegrationTests {
+    private static final String BASE = "/api/v1/vaccination/drafts";
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private JwtTokenService jwtTokenService;
+    @MockitoBean private VaccinationDraftService draftService;
 
-    @Autowired
-    private JwtTokenService jwtTokenService;
-
-    private String token(Long userId, String email, List<String> roles) {
-        return "Bearer " + jwtTokenService.generateToken(userId, email, roles);
+    private String token(String role) {
+        return "Bearer " + jwtTokenService.generateToken(201L, "staff@test.gov", List.of(role));
     }
 
-    @Nested
-    @DisplayName("Allowed Roles (ADMIN, HEALTHCARE_OFFICER)")
-    class AllowedRoles {
-
-        @Test
-        @DisplayName("ADMIN role is allowed to access GET /api/v1/vaccination/drafts")
-        void adminAllowed() throws Exception {
-            mockMvc.perform(get("/api/v1/vaccination/drafts")
-                            .header(HttpHeaders.AUTHORIZATION, token(1L, "admin@test.gov", List.of("ROLE_ADMIN")))
-                            .accept(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isOk());
-        }
-
-        @Test
-        @DisplayName("HEALTHCARE_OFFICER role is allowed to access GET /api/v1/vaccination/drafts")
-        void healthcareOfficerAllowed() throws Exception {
-            mockMvc.perform(get("/api/v1/vaccination/drafts")
-                            .header(HttpHeaders.AUTHORIZATION, token(2L, "hco@test.gov", List.of("ROLE_HEALTHCARE_OFFICER")))
-                            .accept(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isOk());
-        }
+    private List<MockHttpServletRequestBuilder> endpoints() {
+        return List.of(
+                MockMvcRequestBuilders.post(BASE).contentType(MediaType.APPLICATION_JSON).content("{\"appointmentId\":101}"),
+                MockMvcRequestBuilders.get(BASE),
+                MockMvcRequestBuilders.get(BASE + "/1"),
+                MockMvcRequestBuilders.patch(BASE + "/1").contentType(MediaType.APPLICATION_JSON).content("{\"doseNumber\":2}"),
+                MockMvcRequestBuilders.delete(BASE + "/1"));
     }
 
-    @Nested
-    @DisplayName("Denied Roles (CITIZEN, CENTER_MANAGER, CAMPAIGN_OFFICER, INVENTORY_OFFICER, MANAGEMENT_USER)")
-    class DeniedRoles {
-
-        @Test
-        @DisplayName("CITIZEN role is denied with 403 Forbidden on GET drafts")
-        void citizenDenied() throws Exception {
-            mockMvc.perform(get("/api/v1/vaccination/drafts")
-                            .header(HttpHeaders.AUTHORIZATION, token(3L, "citizen@test.gov", List.of("ROLE_CITIZEN")))
-                            .accept(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isForbidden());
-        }
-
-        @Test
-        @DisplayName("CENTER_MANAGER role is denied with 403 Forbidden on GET drafts")
-        void centerManagerDenied() throws Exception {
-            mockMvc.perform(get("/api/v1/vaccination/drafts")
-                            .header(HttpHeaders.AUTHORIZATION, token(4L, "cm@test.gov", List.of("ROLE_CENTER_MANAGER")))
-                            .accept(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isForbidden());
-        }
-
-        @Test
-        @DisplayName("CAMPAIGN_OFFICER role is denied with 403 Forbidden on POST draft")
-        void campaignOfficerDenied() throws Exception {
-            mockMvc.perform(post("/api/v1/vaccination/drafts")
-                            .header(HttpHeaders.AUTHORIZATION, token(5L, "co@test.gov", List.of("ROLE_CAMPAIGN_OFFICER")))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"appointmentId\":1}"))
+    @ParameterizedTest
+    @ValueSource(strings = {"ROLE_CITIZEN", "ROLE_HEALTHCARE_OFFICER", "ROLE_ADMIN", "ROLE_CENTER_MANAGER",
+            "ROLE_CAMPAIGN_OFFICER", "ROLE_INVENTORY_OFFICER", "ROLE_MANAGEMENT_USER"})
+    void otherRolesCannotAccessAnyCrudEndpoint(String role) throws Exception {
+        for (var endpoint : endpoints()) {
+            mockMvc.perform(endpoint.header(HttpHeaders.AUTHORIZATION, token(role)))
                     .andExpect(status().isForbidden());
         }
     }
 
-    @Nested
-    @DisplayName("Unauthenticated / Anonymous Requests")
-    class UnauthenticatedRequests {
-
-        @Test
-        @DisplayName("Anonymous request to GET /api/v1/vaccination/drafts returns 401/403")
-        void anonymousDraftsListRejected() throws Exception {
-            mockMvc.perform(get("/api/v1/vaccination/drafts")
-                            .accept(MediaType.APPLICATION_JSON))
-                    .andExpect(status().is4xxClientError());
+    @Test
+    void anonymousCannotAccessAnyCrudEndpoint() throws Exception {
+        for (var endpoint : endpoints()) {
+            mockMvc.perform(endpoint).andExpect(status().isUnauthorized());
         }
+    }
 
-        @Test
-        @DisplayName("Anonymous request to POST /api/v1/vaccination/drafts returns 401/403")
-        void anonymousDraftCreateRejected() throws Exception {
-            mockMvc.perform(post("/api/v1/vaccination/drafts")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"appointmentId\":1}"))
-                    .andExpect(status().is4xxClientError());
+    @Test
+    void vaccinatorCanAccessAllCrudEndpointsAndCreateUsesPrincipalId() throws Exception {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccinatorId(201L);
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L))).thenReturn(draft);
+        when(draftService.getAllDrafts()).thenReturn(List.of(draft));
+        when(draftService.getDraftById(1L)).thenReturn(draft);
+        when(draftService.updateDraft(eq(1L), any(UpdateVaccinationDraftRequest.class))).thenReturn(draft);
+        int[] statuses = {201, 200, 200, 200, 204};
+        int index = 0;
+        for (var endpoint : endpoints()) {
+            mockMvc.perform(endpoint.header(HttpHeaders.AUTHORIZATION, token("ROLE_VACCINATOR")))
+                    .andExpect(status().is(statuses[index++]));
         }
+        verify(draftService).createDraft(any(CreateVaccinationDraftRequest.class), eq(201L));
+        verify(draftService).deleteDraft(1L);
     }
 }

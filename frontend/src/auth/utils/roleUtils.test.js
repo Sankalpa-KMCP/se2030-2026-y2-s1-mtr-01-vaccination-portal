@@ -115,6 +115,7 @@ describe('super admin role hierarchy and citizen isolation', () => {
     expect(canViewSessionOperations(superAdmin)).toBe(true);
     expect(canManageSessionOperations(superAdmin)).toBe(true);
     expect(canOverrideSessionCapacity(superAdmin)).toBe(true);
+    expect(hasRole(superAdmin, 'ROLE_VACCINATOR')).toBe(true);
   });
 
   it('never implies citizen role', () => {
