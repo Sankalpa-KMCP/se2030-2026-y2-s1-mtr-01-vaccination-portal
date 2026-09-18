@@ -1,6 +1,11 @@
 package com.se2030.vaccinationportal.shared.auth.service;
 
 import com.se2030.vaccinationportal.shared.auth.exception.AuthEmailDeliveryException;
+import jakarta.mail.BodyPart;
+import jakarta.mail.Message;
+import jakarta.mail.Multipart;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,10 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-
-import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -31,6 +33,7 @@ class SmtpAuthLinkDeliveryServiceTests {
     @BeforeEach
     void setUp() {
         mailSender = mock(JavaMailSender.class);
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage((Session) null));
         deliveryService = new SmtpAuthLinkDeliveryService(
                 mailSender,
                 FRONTEND_BASE_URL,
@@ -41,26 +44,42 @@ class SmtpAuthLinkDeliveryServiceTests {
     }
 
     @Test
-    @DisplayName("Sends verification email with correct recipient, subject, link, sender, and expiration")
-    void sendEmailVerificationLink_success(CapturedOutput output) {
+    @DisplayName("Sends verification email with multipart HTML and plain text, correct headers, and no raw token in logs")
+    void sendEmailVerificationLink_success(CapturedOutput output) throws Exception {
         String recipient = "citizen@example.com";
         String rawToken = "SYNTHETIC_VERIFY_TOKEN_XYZ123";
 
         deliveryService.sendEmailVerificationLink(recipient, rawToken);
 
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender, times(1)).send(captor.capture());
 
-        SimpleMailMessage message = captor.getValue();
+        MimeMessage message = captor.getValue();
         assertNotNull(message);
-        assertArrayEquals(new String[]{recipient}, message.getTo());
-        assertEquals(MAIL_FROM, message.getFrom());
+        assertEquals(recipient, message.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertEquals(MAIL_FROM, message.getFrom()[0].toString());
         assertEquals("Vaccination Portal - Verify your email address", message.getSubject());
 
-        String body = Objects.requireNonNull(message.getText());
-        assertTrue(body.contains("http://localhost:5173/verify-email?token=SYNTHETIC_VERIFY_TOKEN_XYZ123"));
-        assertTrue(body.contains("24 hours"));
-        assertFalse(body.contains("hash"));
+        String plainText = getPartContent(message, "text/plain");
+        assertNotNull(plainText);
+        assertTrue(plainText.contains("http://localhost:5173/verify-email?token=SYNTHETIC_VERIFY_TOKEN_XYZ123"));
+        assertTrue(plainText.contains("24 hours"));
+        assertFalse(plainText.contains("hash"));
+
+        String html = getPartContent(message, "text/html");
+        assertNotNull(html);
+        assertTrue(html.contains("<!DOCTYPE html>"));
+        assertTrue(html.contains("<table role=\"presentation\""));
+        assertTrue(html.contains("Verify your email address"));
+        assertTrue(html.contains("Verify Email Address"));
+        assertTrue(html.contains("http://localhost:5173/verify-email?token=SYNTHETIC_VERIFY_TOKEN_XYZ123"));
+        assertTrue(html.contains("24 hours"));
+        assertTrue(html.contains("Security Notice"));
+        assertTrue(html.contains("#0B6E99"));
+        assertFalse(html.contains("<script"));
+        assertFalse(html.contains("<link"));
+        assertFalse(html.contains("<img"));
+        assertFalse(html.contains("hash"));
 
         String logs = output.getAll();
         assertFalse(logs.contains(rawToken), "Raw token must NEVER appear in logs in SMTP mode");
@@ -69,26 +88,42 @@ class SmtpAuthLinkDeliveryServiceTests {
     }
 
     @Test
-    @DisplayName("Sends password reset email with correct recipient, subject, link, sender, and expiration")
-    void sendPasswordResetLink_success(CapturedOutput output) {
+    @DisplayName("Sends password reset email with multipart HTML and plain text, correct headers, and no raw token in logs")
+    void sendPasswordResetLink_success(CapturedOutput output) throws Exception {
         String recipient = "user.recovery@example.com";
         String rawToken = "SYNTHETIC_RESET_TOKEN_ABC789";
 
         deliveryService.sendPasswordResetLink(recipient, rawToken);
 
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender, times(1)).send(captor.capture());
 
-        SimpleMailMessage message = captor.getValue();
+        MimeMessage message = captor.getValue();
         assertNotNull(message);
-        assertArrayEquals(new String[]{recipient}, message.getTo());
-        assertEquals(MAIL_FROM, message.getFrom());
+        assertEquals(recipient, message.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertEquals(MAIL_FROM, message.getFrom()[0].toString());
         assertEquals("Vaccination Portal - Password Reset Request", message.getSubject());
 
-        String body = Objects.requireNonNull(message.getText());
-        assertTrue(body.contains("http://localhost:5173/reset-password?token=SYNTHETIC_RESET_TOKEN_ABC789"));
-        assertTrue(body.contains("30 minutes"));
-        assertFalse(body.contains("hash"));
+        String plainText = getPartContent(message, "text/plain");
+        assertNotNull(plainText);
+        assertTrue(plainText.contains("http://localhost:5173/reset-password?token=SYNTHETIC_RESET_TOKEN_ABC789"));
+        assertTrue(plainText.contains("30 minutes"));
+        assertFalse(plainText.contains("hash"));
+
+        String html = getPartContent(message, "text/html");
+        assertNotNull(html);
+        assertTrue(html.contains("<!DOCTYPE html>"));
+        assertTrue(html.contains("<table role=\"presentation\""));
+        assertTrue(html.contains("Reset your password"));
+        assertTrue(html.contains("Reset Password"));
+        assertTrue(html.contains("http://localhost:5173/reset-password?token=SYNTHETIC_RESET_TOKEN_ABC789"));
+        assertTrue(html.contains("30 minutes"));
+        assertTrue(html.contains("Security Notice"));
+        assertTrue(html.contains("#0B6E99"));
+        assertFalse(html.contains("<script"));
+        assertFalse(html.contains("<link"));
+        assertFalse(html.contains("<img"));
+        assertFalse(html.contains("hash"));
 
         String logs = output.getAll();
         assertFalse(logs.contains(rawToken), "Raw token must NEVER appear in logs in SMTP mode");
@@ -103,7 +138,7 @@ class SmtpAuthLinkDeliveryServiceTests {
         String rawToken = "SYNTHETIC_FAIL_TOKEN";
 
         doThrow(new MailSendException("SMTP connection refused"))
-                .when(mailSender).send(any(SimpleMailMessage.class));
+                .when(mailSender).send(any(MimeMessage.class));
 
         AuthEmailDeliveryException exception = assertThrows(
                 AuthEmailDeliveryException.class,
@@ -124,7 +159,7 @@ class SmtpAuthLinkDeliveryServiceTests {
         String rawToken = "SYNTHETIC_FAIL_RESET_TOKEN";
 
         doThrow(new MailSendException("Mail server unavailable"))
-                .when(mailSender).send(any(SimpleMailMessage.class));
+                .when(mailSender).send(any(MimeMessage.class));
 
         AuthEmailDeliveryException exception = assertThrows(
                 AuthEmailDeliveryException.class,
@@ -164,5 +199,65 @@ class SmtpAuthLinkDeliveryServiceTests {
                 24,
                 30
         ));
+
+        SmtpAuthLinkDeliveryService serviceWithSlash = new SmtpAuthLinkDeliveryService(
+                mailSender,
+                "http://localhost:5173///",
+                MAIL_FROM,
+                24,
+                30
+        );
+        serviceWithSlash.sendEmailVerificationLink("user@example.com", "tok");
+        verify(mailSender, atLeastOnce()).send(any(MimeMessage.class));
+    }
+
+    @Test
+    @DisplayName("HTML body properly escapes special characters in action URLs")
+    void htmlEscapesSpecialCharactersInUrls() throws Exception {
+        String recipient = "test@example.com";
+        String rawToken = "TOKEN_WITH_<>&\"'_SPECIALS";
+
+        deliveryService.sendEmailVerificationLink(recipient, rawToken);
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender, atLeastOnce()).send(captor.capture());
+
+        MimeMessage message = captor.getValue();
+        String html = getPartContent(message, "text/html");
+        assertNotNull(html);
+        assertFalse(html.contains("<script"));
+        assertFalse(html.contains("<iframe"));
+    }
+
+    private String getPartContent(MimeMessage message, String mimeType) throws Exception {
+        Object content = message.getContent();
+        if (content instanceof Multipart multipart) {
+            return extractFromMultipart(multipart, mimeType);
+        } else if (message.isMimeType(mimeType)) {
+            return content.toString();
+        }
+        return null;
+    }
+
+    private String extractFromMultipart(Multipart multipart, String mimeType) throws Exception {
+        for (int i = 0; i < multipart.getCount(); i++) {
+            BodyPart part = multipart.getBodyPart(i);
+            Object content = part.getContent();
+            if (content instanceof Multipart nested) {
+                String nestedContent = extractFromMultipart(nested, mimeType);
+                if (nestedContent != null) {
+                    return nestedContent;
+                }
+            } else if (part.isMimeType(mimeType)) {
+                if (content instanceof String str) {
+                    return str;
+                } else if (content instanceof java.io.InputStream is) {
+                    return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                } else if (content != null) {
+                    return content.toString();
+                }
+            }
+        }
+        return null;
     }
 }
