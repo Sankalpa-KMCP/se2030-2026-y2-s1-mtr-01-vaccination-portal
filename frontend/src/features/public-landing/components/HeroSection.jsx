@@ -16,7 +16,7 @@ const HERO_GALLERY = [
   },
   {
     id: 'youth',
-    label: 'Youth & Fast Pass',
+    label: 'Youth Pass',
     icon: '⚡',
     image: '/images/youth-digital-pass.jpg',
     alt: 'Young adult holding phone showing verified digital vaccination pass',
@@ -27,7 +27,7 @@ const HERO_GALLERY = [
   },
   {
     id: 'hospital',
-    label: 'Hospital Standards',
+    label: 'Hospital',
     icon: '🏥',
     image: '/images/hero-hospital-care.jpg',
     alt: 'Accredited hospital vaccination clinic with physician consultation',
@@ -38,7 +38,7 @@ const HERO_GALLERY = [
   },
   {
     id: 'pathway',
-    label: 'Care Pathway',
+    label: 'Pathway',
     icon: '🗺️',
     isPathway: true,
   },
