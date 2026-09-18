@@ -127,4 +127,25 @@ describe('LandingPage', () => {
     });
     expect(document.getElementById('get-started')).toBeTruthy();
   });
+
+  it('exposes hero showcase controls without aria-hidden on interactive ancestors', () => {
+    renderLanding();
+
+    const showcase = screen.getByRole('tablist', { name: /visual showcase/i });
+    expect(showcase).toBeTruthy();
+    expect(showcase.closest('[aria-hidden="true"]')).toBeNull();
+
+    const tabs = within(showcase).getAllByRole('tab');
+    expect(tabs).toHaveLength(4);
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-label')).toBe('Senior Care');
+
+    tabs.forEach((tab) => {
+      expect(tab.closest('[aria-hidden="true"]')).toBeNull();
+    });
+
+    fireEvent.click(tabs[1]);
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
+  });
 });

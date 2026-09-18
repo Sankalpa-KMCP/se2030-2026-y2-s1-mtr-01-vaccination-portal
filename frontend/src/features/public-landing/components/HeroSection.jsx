@@ -98,7 +98,7 @@ export default function HeroSection() {
           </p>
         </div>
 
-        <div className="home-hero__visual" aria-hidden="true">
+        <div className="home-hero__visual">
           <div className="hospital-hero-card">
             {/* Multi-Photo & Pathway Switcher Bar */}
             <div className="hero-photo-tabs" role="tablist" aria-label="Visual showcase">
@@ -106,11 +106,13 @@ export default function HeroSection() {
                 <button
                   key={item.id}
                   type="button"
+                  role="tab"
+                  aria-selected={idx === activePhoto}
                   className={`hero-photo-tab ${idx === activePhoto ? 'is-active' : ''}`}
                   onClick={() => setActivePhoto(idx)}
                   aria-label={item.label}
                 >
-                  <span className="hero-photo-tab__icon">{item.icon}</span>
+                  <span className="hero-photo-tab__icon" aria-hidden="true">{item.icon}</span>
                   <span className="hero-photo-tab__label">{item.label}</span>
                 </button>
               ))}
