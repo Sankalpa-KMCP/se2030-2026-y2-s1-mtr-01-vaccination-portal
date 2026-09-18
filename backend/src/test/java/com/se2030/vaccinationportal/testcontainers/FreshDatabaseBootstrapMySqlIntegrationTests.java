@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Deterministic Fresh Database Bootstrap and Schema Migration Integration Test.
  *
  * <p>Verifies X3 / VP-002: A completely empty, clean MySQL database instance
- * bootstraps successfully through Flyway (V0-V19), seeds canonical static data,
+ * bootstraps successfully through Flyway (V0-V20), seeds canonical static data,
  * satisfies Hibernate schema validation ({@code ddl-auto=validate}), and proves
  * idempotent migration execution.</p>
  */
@@ -44,21 +44,32 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     private static final String MYSQL_IMAGE = "mysql:8.4.3";
 
     private static final MySQLContainer<?> FRESH_MYSQL_CONTAINER;
+    private static final String DISPOSABLE_URL = System.getenv("DISPOSABLE_MYSQL_URL");
 
     static {
-        FRESH_MYSQL_CONTAINER = new MySQLContainer<>(MYSQL_IMAGE)
-                .withDatabaseName("vaccination_portal_fresh")
-                .withUsername("test_fresh_user")
-                .withPassword("test_fresh_password")
-                .withReuse(false);
-        FRESH_MYSQL_CONTAINER.start();
+        if (DISPOSABLE_URL != null && !DISPOSABLE_URL.isBlank()) {
+            FRESH_MYSQL_CONTAINER = null;
+        } else {
+            FRESH_MYSQL_CONTAINER = new MySQLContainer<>(MYSQL_IMAGE)
+                    .withDatabaseName("vaccination_portal_fresh")
+                    .withUsername("test_fresh_user")
+                    .withPassword("test_fresh_password")
+                    .withReuse(false);
+            FRESH_MYSQL_CONTAINER.start();
+        }
     }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", FRESH_MYSQL_CONTAINER::getJdbcUrl);
-        registry.add("spring.datasource.username", FRESH_MYSQL_CONTAINER::getUsername);
-        registry.add("spring.datasource.password", FRESH_MYSQL_CONTAINER::getPassword);
+        if (FRESH_MYSQL_CONTAINER != null) {
+            registry.add("spring.datasource.url", FRESH_MYSQL_CONTAINER::getJdbcUrl);
+            registry.add("spring.datasource.username", FRESH_MYSQL_CONTAINER::getUsername);
+            registry.add("spring.datasource.password", FRESH_MYSQL_CONTAINER::getPassword);
+        } else {
+            registry.add("spring.datasource.url", () -> DISPOSABLE_URL);
+            registry.add("spring.datasource.username", () -> System.getenv().getOrDefault("DISPOSABLE_MYSQL_USER", "root"));
+            registry.add("spring.datasource.password", () -> System.getenv().getOrDefault("DISPOSABLE_MYSQL_PASSWORD", "disposable_root_pw"));
+        }
         registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.jpa.open-in-view", () -> "false");
@@ -120,6 +131,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             "vaccination_campaigns",
             "vaccination_centers",
             "vaccination_corrections",
+            "vaccination_draft_deletion_audits",
             "vaccination_drafts",
             "vaccination_records",
             "vaccination_sessions",
@@ -155,13 +167,13 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should apply all migration versions V0 through V19 with SUCCESS status")
+    @DisplayName("Should apply all migration versions V0 through V20 with SUCCESS status")
     void shouldApplyAllMigrationsSuccessfully() {
         assertNotNull(flyway, "Flyway bean must be configured and injected");
         MigrationInfo[] appliedMigrations = flyway.info().all();
-        assertEquals(20, appliedMigrations.length, "Expected exactly 20 migrations (V0-V19)");
+        assertEquals(21, appliedMigrations.length, "Expected exactly 21 migrations (V0-V20)");
 
-        for (int i = 0; i <= 19; i++) {
+        for (int i = 0; i <= 20; i++) {
             String expectedVersion = String.valueOf(i);
             MigrationInfo info = appliedMigrations[i];
             assertEquals(expectedVersion, info.getVersion().getVersion(), "Migration version mismatch at index " + i);
@@ -170,8 +182,8 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should verify presence of all 52 physical tables plus flyway schema history")
-    void shouldVerifyAll44RequiredTablesExist() throws Exception {
+    @DisplayName("Should verify presence of all 53 physical tables plus flyway schema history")
+    void shouldVerifyAllRequiredTablesExist() throws Exception {
         Set<String> actualTables = new HashSet<>();
         try (Connection connection = dataSource.getConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();
@@ -195,7 +207,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
         long appTableCount = actualTables.stream()
                 .filter(t -> !t.equals("flyway_schema_history"))
                 .count();
-        assertEquals(52, appTableCount, "Database must contain exactly 52 application/runtime tables");
+        assertEquals(53, appTableCount, "Database must contain exactly 53 application/runtime tables");
     }
 
     @Test
@@ -235,5 +247,39 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
         MigrateResult result = flyway.migrate();
         assertEquals(0, result.migrationsExecuted, "Second migration execution must execute 0 new migrations");
         assertTrue(result.success, "Second migration execution must report success");
+    }
+
+    @Test
+    @DisplayName("Should verify V20 schema additions: draft deletion audits table and correction review columns")
+    void shouldVerifyV20SchemaAdditions() throws Exception {
+        try (Connection connection = dataSource.getConnection()) {
+            DatabaseMetaData metaData = connection.getMetaData();
+
+            // Verify vaccination_draft_deletion_audits columns
+            Set<String> draftAuditColumns = new HashSet<>();
+            try (ResultSet rs = metaData.getColumns(connection.getCatalog(), null, "vaccination_draft_deletion_audits", "%")) {
+                while (rs.next()) {
+                    draftAuditColumns.add(rs.getString("COLUMN_NAME").toLowerCase());
+                }
+            }
+            assertTrue(draftAuditColumns.contains("id"), "id column must exist in draft deletion audits");
+            assertTrue(draftAuditColumns.contains("draft_id"), "draft_id column must exist in draft deletion audits");
+            assertTrue(draftAuditColumns.contains("appointment_id"), "appointment_id column must exist in draft deletion audits");
+            assertTrue(draftAuditColumns.contains("vaccinator_id"), "vaccinator_id column must exist in draft deletion audits");
+            assertTrue(draftAuditColumns.contains("deleted_by"), "deleted_by column must exist in draft deletion audits");
+            assertTrue(draftAuditColumns.contains("reason"), "reason column must exist in draft deletion audits");
+            assertTrue(draftAuditColumns.contains("deleted_at"), "deleted_at column must exist in draft deletion audits");
+
+            // Verify vaccination_corrections review columns
+            Set<String> correctionColumns = new HashSet<>();
+            try (ResultSet rs = metaData.getColumns(connection.getCatalog(), null, "vaccination_corrections", "%")) {
+                while (rs.next()) {
+                    correctionColumns.add(rs.getString("COLUMN_NAME").toLowerCase());
+                }
+            }
+            assertTrue(correctionColumns.contains("reviewed_by"), "reviewed_by column must exist in vaccination_corrections");
+            assertTrue(correctionColumns.contains("reviewed_at"), "reviewed_at column must exist in vaccination_corrections");
+            assertTrue(correctionColumns.contains("review_reason"), "review_reason column must exist in vaccination_corrections");
+        }
     }
 }
