@@ -52,12 +52,16 @@ class SharedAuthenticationMigrationMySqlIntegrationTests extends AbstractMySqlTe
             }
 
             try (Statement stmt = conn.createStatement()) {
-                // Drop V4-owned tables in dependency-safe order so test proves V4 creates schema independently of Hibernate auto-DDL
+                // Drop tables in dependency-safe order so test proves V4 creates schema independently of Hibernate auto-DDL
+                stmt.execute("SET FOREIGN_KEY_CHECKS = 0;");
+                stmt.execute("DROP TABLE IF EXISTS email_verification_tokens;");
+                stmt.execute("DROP TABLE IF EXISTS password_reset_tokens;");
                 stmt.execute("DROP TABLE IF EXISTS refresh_token_sessions;");
                 stmt.execute("DROP TABLE IF EXISTS user_roles;");
                 stmt.execute("DROP TABLE IF EXISTS citizen_profiles;");
                 stmt.execute("DROP TABLE IF EXISTS user_accounts;");
                 stmt.execute("DROP TABLE IF EXISTS roles;");
+                stmt.execute("SET FOREIGN_KEY_CHECKS = 1;");
 
                 // Execute statements in V4 migration script (strip SQL comments line-by-line first)
                 String[] lines = v4Sql.split("\\R");
