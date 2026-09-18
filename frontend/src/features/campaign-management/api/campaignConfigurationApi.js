@@ -136,6 +136,18 @@ export async function getQuestionnaireVersion(versionId) {
 }
 
 /**
+ * Fetch all published questionnaire versions available for campaign assignment from MF-01.
+ *
+ * @returns {Promise<Array>} List of PublishedQuestionnaireVersionResponse objects
+ */
+export async function getPublishedQuestionnaireVersions() {
+  const response = await apiRequest('/v1/screening/questionnaire-versions/published', {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
  * Fetch all center assignment history records for a vaccination campaign.
  *
  * @param {number|string} campaignId - Campaign identifier

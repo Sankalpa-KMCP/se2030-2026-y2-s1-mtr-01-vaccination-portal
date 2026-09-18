@@ -25,6 +25,8 @@ import {
   assignQuestionnaire,
   getScreeningQuestionnaires,
   getQuestionnaireVersions,
+  getPublishedQuestionnaireVersions,
+  getQuestionnaireVersion,
   getCenterAssignments,
   createCenterAssignment,
   updateCenterAssignment,
@@ -144,6 +146,48 @@ export default function CampaignDetailsModal({
 
   const fetchQuestionnaireCatalogue = useCallback(async () => {
     try {
+      let pubList = null;
+      if (typeof getPublishedQuestionnaireVersions === 'function') {
+        try {
+          pubList = await getPublishedQuestionnaireVersions();
+        } catch {
+          // fallback
+        }
+      }
+      if (pubList && pubList.length > 0) {
+        const map = {};
+        pubList.forEach((v) => {
+          map[v.id] = {
+            questionnaireId: v.questionnaireId,
+            questionnaireName: v.questionnaireName,
+            questionnaireCode: v.questionnaireCode,
+            versionNumber: v.versionNumber,
+            publishedAt: v.publishedAt,
+            status: v.status,
+          };
+        });
+        const assignedId = campaign?.questionnaireVersionId;
+        if (assignedId && !map[assignedId] && typeof getQuestionnaireVersion === 'function') {
+          try {
+            const v = await getQuestionnaireVersion(assignedId);
+            if (v) {
+              map[v.id] = {
+                questionnaireId: v.questionnaireId,
+                questionnaireName: v.questionnaireName || `Questionnaire #${v.questionnaireId}`,
+                questionnaireCode: v.questionnaireCode || '',
+                versionNumber: v.versionNumber,
+                publishedAt: v.publishedAt,
+                status: v.status,
+              };
+            }
+          } catch {
+            // Ignore individual lookup error
+          }
+        }
+        setVersionsMap(map);
+        return;
+      }
+
       const qList = await getScreeningQuestionnaires();
       if (qList && qList.length > 0) {
         const map = {};
@@ -173,7 +217,7 @@ export default function CampaignDetailsModal({
     } catch {
       // Ignore catalogue lookup error
     }
-  }, []);
+  }, [campaign?.questionnaireVersionId]);
 
   const fetchCenterAssignments = useCallback(async (campaignId) => {
     if (!campaignId) return;
@@ -221,7 +265,7 @@ export default function CampaignDetailsModal({
       if (canViewQuestionnaireAssignmentHistory) {
         fetchQuestionnaireAssignments(campaign.id);
       }
-      if (canManageQuestionnaireAssignment) {
+      if (canManageQuestionnaireAssignment || campaign?.questionnaireVersionId) {
         fetchQuestionnaireCatalogue();
       }
       fetchCenterAssignments(campaign.id);
@@ -230,6 +274,7 @@ export default function CampaignDetailsModal({
     }
   }, [
     campaign?.id,
+    campaign?.questionnaireVersionId,
     canManageQuestionnaireAssignment,
     canViewQuestionnaireAssignmentHistory,
     fetchDoseProgrammes,
@@ -321,6 +366,8 @@ export default function CampaignDetailsModal({
   const activeQuestionnaireAssignment = questionnaireAssignments.find(
     (a) => a.activeFrom <= todayIsoStr && (a.activeTo == null || a.activeTo > todayIsoStr)
   );
+  const assignedQVersionId = campaign?.questionnaireVersionId || activeQuestionnaireAssignment?.questionnaireVersionId;
+  const assignedQuestionnaireInfo = assignedQVersionId ? versionsMap[assignedQVersionId] : null;
   const currentCenterAssignments = centerAssignments.filter(
     (a) => a.status === 'ACTIVE' && a.activeFrom <= todayIsoStr && (a.activeTo == null || a.activeTo > todayIsoStr)
   );
@@ -464,7 +511,11 @@ export default function CampaignDetailsModal({
                         </span>
                         <span className="small text-muted">
                           Questionnaire:{' '}
-                          {activeQuestionnaireAssignment ? (
+                          {assignedQuestionnaireInfo ? (
+                            <span className="badge bg-success-subtle text-success border border-success-subtle">
+                              {assignedQuestionnaireInfo.questionnaireName} (v{assignedQuestionnaireInfo.versionNumber})
+                            </span>
+                          ) : campaign?.questionnaireVersionId || activeQuestionnaireAssignment ? (
                             <span className="badge bg-success-subtle text-success border border-success-subtle">
                               Linked
                             </span>
@@ -520,12 +571,24 @@ export default function CampaignDetailsModal({
                                 <span className="text-muted">N/A</span>
                               )}
                             </li>
-                            <li>
+                            <li className="mb-1">
                               <strong>Target Group: </strong>
                               {campaign.targetGroup ? (
                                 <span>{campaign.targetGroup.name} ({campaign.targetGroup.code})</span>
                               ) : (
                                 <span className="text-muted">N/A</span>
+                              )}
+                            </li>
+                            <li>
+                              <strong>Screening Questionnaire: </strong>
+                              {assignedQuestionnaireInfo ? (
+                                <span>
+                                  {assignedQuestionnaireInfo.questionnaireName} (v{assignedQuestionnaireInfo.versionNumber})
+                                </span>
+                              ) : campaign?.questionnaireVersionId ? (
+                                <span>Questionnaire Version #{campaign.questionnaireVersionId}</span>
+                              ) : (
+                                <span className="text-muted">Not assigned</span>
                               )}
                             </li>
                           </ul>

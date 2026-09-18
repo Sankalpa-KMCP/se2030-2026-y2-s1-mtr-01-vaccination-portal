@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.campaign.service;
 
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
+import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
@@ -96,6 +97,16 @@ public class CampaignQuestionnaireAssignmentService {
         if (currentOpenEndedOpt.isPresent()) {
             CampaignQuestionnaireAssignment current = currentOpenEndedOpt.get();
 
+            if (current.getQuestionnaireVersionId().equals(questionnaireVersionId)) {
+                return current;
+            }
+
+            if (publicationPort.hasCampaignSubmissions(campaignId)) {
+                throw new IllegalStateException(
+                        "Cannot change questionnaire assignment for a campaign with existing citizen screening submissions"
+                );
+            }
+
             if (!effectiveStartDate.isAfter(current.getActiveFrom())) {
                 throw new IllegalArgumentException(
                         "Effective start date (" + effectiveStartDate +
@@ -103,6 +114,12 @@ public class CampaignQuestionnaireAssignmentService {
                 );
             }
 
+        } else {
+            if (publicationPort.hasCampaignSubmissions(campaignId)) {
+                throw new IllegalStateException(
+                        "Cannot change questionnaire assignment for a campaign with existing citizen screening submissions"
+                );
+            }
         }
 
         CampaignQuestionnaireAssignment newAssignment = new CampaignQuestionnaireAssignment(

@@ -23,4 +23,6 @@ public interface ScreeningSubmissionRepository extends JpaRepository<ScreeningSu
     Optional<ScreeningSubmission> findActiveSubmission(@Param("citizenId") Long citizenId,
                                                         @Param("campaignId") Long campaignId,
                                                         @Param("activeStatuses") List<ScreeningSubmissionStatus> activeStatuses);
+
+    boolean existsByCampaignId(Long campaignId);
 }

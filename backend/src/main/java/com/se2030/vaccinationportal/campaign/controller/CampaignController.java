@@ -47,27 +47,40 @@ public class CampaignController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> createCampaign(@Valid @RequestBody CreateCampaignRequest request) {
-        VaccinationCampaign created = campaignService.createCampaign(
-                request.code(),
-                request.name(),
-                request.description(),
-                request.vaccineTypeId(),
-                request.targetGroupId(),
-                request.serviceStartDate(),
-                request.serviceEndDate(),
-                request.bookingOpenAt(),
-                request.bookingCloseAt()
-        );
+        VaccinationCampaign created = request.questionnaireVersionId() != null
+                ? campaignService.createCampaign(
+                        request.code(),
+                        request.name(),
+                        request.description(),
+                        request.vaccineTypeId(),
+                        request.targetGroupId(),
+                        request.serviceStartDate(),
+                        request.serviceEndDate(),
+                        request.bookingOpenAt(),
+                        request.bookingCloseAt(),
+                        request.questionnaireVersionId()
+                )
+                : campaignService.createCampaign(
+                        request.code(),
+                        request.name(),
+                        request.description(),
+                        request.vaccineTypeId(),
+                        request.targetGroupId(),
+                        request.serviceStartDate(),
+                        request.serviceEndDate(),
+                        request.bookingOpenAt(),
+                        request.bookingCloseAt()
+                );
 
         URI location = URI.create("/api/v1/campaigns/" + created.getId());
-        return ResponseEntity.created(location).body(CampaignDtoMapper.toResponse(created));
+        return ResponseEntity.created(location).body(toResponseWithQuestionnaire(created));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<CampaignResponse> getCampaignById(@PathVariable Long id) {
         VaccinationCampaign campaign = campaignService.getRequiredCampaignById(id);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(campaign));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(campaign));
     }
 
     @PutMapping("/{id}")
@@ -76,16 +89,35 @@ public class CampaignController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateCampaignRequest request
     ) {
-        VaccinationCampaign updated = campaignService.updateCampaign(
-                id,
-                request.name(),
-                request.description(),
-                request.serviceStartDate(),
-                request.serviceEndDate(),
-                request.bookingOpenAt(),
-                request.bookingCloseAt()
-        );
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(updated));
+        VaccinationCampaign updated = request.questionnaireVersionId() != null
+                ? campaignService.updateCampaign(
+                        id,
+                        request.name(),
+                        request.description(),
+                        request.serviceStartDate(),
+                        request.serviceEndDate(),
+                        request.bookingOpenAt(),
+                        request.bookingCloseAt(),
+                        request.questionnaireVersionId()
+                )
+                : campaignService.updateCampaign(
+                        id,
+                        request.name(),
+                        request.description(),
+                        request.serviceStartDate(),
+                        request.serviceEndDate(),
+                        request.bookingOpenAt(),
+                        request.bookingCloseAt()
+                );
+        return ResponseEntity.ok(toResponseWithQuestionnaire(updated));
+    }
+
+    private CampaignResponse toResponseWithQuestionnaire(VaccinationCampaign campaign) {
+        if (campaign == null) {
+            return null;
+        }
+        Long assignedVersionId = campaignService.getAssignedQuestionnaireVersionId(campaign.getId());
+        return CampaignDtoMapper.toResponse(campaign, assignedVersionId);
     }
 
     @GetMapping
@@ -114,21 +146,21 @@ public class CampaignController {
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> scheduleCampaign(@PathVariable Long id) {
         VaccinationCampaign scheduled = campaignService.scheduleCampaign(id);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(scheduled));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(scheduled));
     }
 
     @PostMapping("/{id}/publish")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> publishCampaign(@PathVariable Long id) {
         VaccinationCampaign published = campaignService.publishCampaign(id);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(published));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(published));
     }
 
     @PostMapping("/{id}/activate")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> activateCampaign(@PathVariable Long id) {
         VaccinationCampaign activated = campaignService.activateCampaign(id);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(activated));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(activated));
     }
 
     @PostMapping("/{id}/suspend")
@@ -140,7 +172,7 @@ public class CampaignController {
     ) {
         String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : request.actorId();
         VaccinationCampaign suspended = campaignService.suspendCampaign(id, request.reason(), trustedActorId);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(suspended));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(suspended));
     }
 
     @PostMapping("/{id}/resume")
@@ -152,7 +184,7 @@ public class CampaignController {
     ) {
         String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : request.actorId();
         VaccinationCampaign resumed = campaignService.resumeCampaign(id, request.reason(), trustedActorId);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(resumed));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(resumed));
     }
 
     @PostMapping("/{id}/complete")
@@ -164,7 +196,7 @@ public class CampaignController {
     ) {
         String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : "system";
         VaccinationCampaign completed = campaignService.completeCampaign(id, request.reason(), trustedActorId);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(completed));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(completed));
     }
 
     @PostMapping("/{id}/cancel")
@@ -176,7 +208,7 @@ public class CampaignController {
     ) {
         String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : "system";
         VaccinationCampaign cancelled = campaignService.cancelCampaign(id, request.reason(), trustedActorId);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(cancelled));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(cancelled));
     }
 
     @PostMapping("/{id}/archive")
@@ -188,6 +220,6 @@ public class CampaignController {
     ) {
         String trustedActorId = principal != null ? String.valueOf(principal.getUserId()) : "system";
         VaccinationCampaign archived = campaignService.archiveCampaign(id, request.reason(), trustedActorId);
-        return ResponseEntity.ok(CampaignDtoMapper.toResponse(archived));
+        return ResponseEntity.ok(toResponseWithQuestionnaire(archived));
     }
 }
