@@ -130,7 +130,16 @@ class EffectiveVaccinationRecordServiceTests {
             String newValue,
             Instant correctedAt
     ) {
-        return new VaccinationCorrection(RECORD_ID, field, oldValue, newValue, "Reason", 91L, correctedAt);
+        return new VaccinationCorrection(
+                RECORD_ID,
+                field,
+                oldValue,
+                newValue,
+                "Reason",
+                91L,
+                correctedAt,
+                com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus.APPLIED
+        );
     }
 
     private VaccinationRecord record() {

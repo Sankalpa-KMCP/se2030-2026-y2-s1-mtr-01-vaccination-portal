@@ -107,7 +107,7 @@ class Mf05CorrectionCertificateLifecycleMigrationMySqlIntegrationTests {
                 )
                 """);
         jdbcTemplate.update("""
-                INSERT INTO vaccination centers (
+                INSERT INTO vaccination_centers (
                     id, code, name, address, contact, timezone, center_status, safe_concurrent_occupancy
                 ) VALUES (
                     9101, 'MF05-MIG-CENTER', 'MF-05 Migration Center', 'Test address',

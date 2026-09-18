@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.vaccination.repository;
 
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -14,4 +15,8 @@ public interface VaccinationDraftRepository extends JpaRepository<VaccinationDra
     Optional<VaccinationDraft> findByAppointmentId(Long appointmentId);
 
     boolean existsByAppointmentId(Long appointmentId);
+
+    List<VaccinationDraft> findAllByVaccinatorIdOrderByCreatedAtDesc(Long vaccinatorId);
+
+    Optional<VaccinationDraft> findByIdAndVaccinatorId(Long id, Long vaccinatorId);
 }

@@ -85,11 +85,12 @@ public class DigitalCertificateService {
 
     public DigitalCertificate revokeCertificate(
             Long certificateId,
-            RevokeDigitalCertificateRequest request
+            String reason,
+            Long actorId
     ) {
         LifecycleRequest lifecycleRequest = validateLifecycleRequest(
-                request == null ? null : request.reason(),
-                request == null ? null : request.revokedBy(),
+                reason,
+                actorId,
                 "Revoked-by"
         );
         DigitalCertificate certificate = certificateRepository.findByIdForUpdate(certificateId)
@@ -111,17 +112,29 @@ public class DigitalCertificateService {
         return certificateRepository.saveAndFlush(certificate);
     }
 
+    public DigitalCertificate revokeCertificate(
+            Long certificateId,
+            RevokeDigitalCertificateRequest request
+    ) {
+        return revokeCertificate(
+                certificateId,
+                request == null ? null : request.reason(),
+                request == null ? null : request.revokedBy()
+        );
+    }
+
     public CertificateReissueResponse reissueCertificate(
             Long vaccinationRecordId,
-            ReissueDigitalCertificateRequest request
+            String reason,
+            Long actorId
     ) {
         VaccinationRecord record = vaccinationRecordRepository.findById(vaccinationRecordId)
                 .orElseThrow(() -> new VaccinationRecordNotFoundException(
                         "Vaccination record not found with ID: " + vaccinationRecordId
                 ));
         LifecycleRequest lifecycleRequest = validateLifecycleRequest(
-                request == null ? null : request.reason(),
-                request == null ? null : request.reissuedBy(),
+                reason,
+                actorId,
                 "Reissued-by"
         );
 
@@ -164,6 +177,17 @@ public class DigitalCertificateService {
         return new CertificateReissueResponse(
                 DigitalCertificateMapper.toResponse(previousCertificate),
                 DigitalCertificateMapper.toResponse(replacement)
+        );
+    }
+
+    public CertificateReissueResponse reissueCertificate(
+            Long vaccinationRecordId,
+            ReissueDigitalCertificateRequest request
+    ) {
+        return reissueCertificate(
+                vaccinationRecordId,
+                request == null ? null : request.reason(),
+                request == null ? null : request.reissuedBy()
         );
     }
 

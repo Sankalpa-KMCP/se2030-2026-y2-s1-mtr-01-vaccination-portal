@@ -172,7 +172,7 @@ class VaccinationDraftControllerTests {
 
     @Test
     void getAllDrafts_returnsArray() throws Exception {
-        when(draftService.getAllDrafts()).thenReturn(List.of(sampleDraft));
+        when(draftService.getAllDraftsByVaccinatorId(201L)).thenReturn(List.of(sampleDraft));
 
         mockMvc.perform(get("/api/v1/vaccination/drafts"))
                 .andExpect(status().isOk())
@@ -190,6 +190,15 @@ class VaccinationDraftControllerTests {
     }
 
     @Test
+    void getDraftById_otherVaccinator_returns403() throws Exception {
+        sampleDraft.setVaccinatorId(999L);
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(get("/api/v1/vaccination/drafts/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void getDraftById_unknownDraft_returns404() throws Exception {
         when(draftService.getDraftById(999L))
                 .thenThrow(new VaccinationDraftNotFoundException("Vaccination draft not found with ID: 999"));
@@ -203,6 +212,7 @@ class VaccinationDraftControllerTests {
     void updateDraft_permittedFields_returns200() throws Exception {
         sampleDraft.setDoseNumber(2);
         sampleDraft.setAuthorizedNotes("Updated notes");
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
         when(draftService.updateDraft(any(Long.class), any(UpdateVaccinationDraftRequest.class)))
                 .thenReturn(sampleDraft);
 
@@ -215,12 +225,54 @@ class VaccinationDraftControllerTests {
     }
 
     @Test
+    void updateDraft_otherVaccinator_returns403() throws Exception {
+        sampleDraft.setVaccinatorId(999L);
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(patch("/api/v1/vaccination/drafts/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"doseNumber\":2}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void updateDraft_invalidField_returns400() throws Exception {
         mockMvc.perform(patch("/api/v1/vaccination/drafts/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"doseNumber\":0}"))
+                        .content("{\"doseNumber\":-1}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status", is(400)));
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.message", containsString("Validation failed")));
+        org.mockito.Mockito.verifyNoInteractions(draftService);
+    }
+
+    @Test
+    void updateDraft_notEditableDraft_returns400() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(draftService.updateDraft(any(Long.class), any(UpdateVaccinationDraftRequest.class)))
+                .thenThrow(new com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException(
+                        "Vaccination draft is not editable: 1"
+                ));
+
+        mockMvc.perform(patch("/api/v1/vaccination/drafts/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"doseNumber\":2}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.message", containsString("not editable")));
+    }
+
+    @Test
+    void updateDraft_unknownDraft_returns404() throws Exception {
+        when(draftService.getDraftById(999L))
+                .thenThrow(new VaccinationDraftNotFoundException("Vaccination draft not found with ID: 999"));
+
+        mockMvc.perform(patch("/api/v1/vaccination/drafts/999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"doseNumber\":2}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.message", containsString("not found")));
     }
 
     @org.junit.jupiter.params.ParameterizedTest
@@ -258,18 +310,50 @@ class VaccinationDraftControllerTests {
 
     @Test
     void deleteDraft_existingDraft_returns204() throws Exception {
-        mockMvc.perform(delete("/api/v1/vaccination/drafts/1"))
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(delete("/api/v1/vaccination/drafts/1?reason=Patient+left"))
                 .andExpect(status().isNoContent());
 
-        verify(draftService).deleteDraft(1L);
+        verify(draftService).deleteDraft(1L, "Patient left", 201L);
+    }
+
+    @Test
+    void deleteDraft_withBody_returns204() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(delete("/api/v1/vaccination/drafts/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Duplicate entry entered in error\"}"))
+                .andExpect(status().isNoContent());
+
+        verify(draftService).deleteDraft(1L, "Duplicate entry entered in error", 201L);
+    }
+
+    @Test
+    void deleteDraft_missingReason_returns400() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(delete("/api/v1/vaccination/drafts/1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("reason is required")));
+    }
+
+    @Test
+    void deleteDraft_otherVaccinator_returns403() throws Exception {
+        sampleDraft.setVaccinatorId(999L);
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(delete("/api/v1/vaccination/drafts/1?reason=Cancelled"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     void deleteDraft_unknownDraft_returns404() throws Exception {
         doThrow(new VaccinationDraftNotFoundException("Vaccination draft not found with ID: 999"))
-                .when(draftService).deleteDraft(999L);
+                .when(draftService).getDraftById(999L);
 
-        mockMvc.perform(delete("/api/v1/vaccination/drafts/999"))
+        mockMvc.perform(delete("/api/v1/vaccination/drafts/999?reason=Cancelled"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("not found")));
     }

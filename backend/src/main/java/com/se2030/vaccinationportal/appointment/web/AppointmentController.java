@@ -278,7 +278,7 @@ public class AppointmentController {
     }
 
     @GetMapping("/queue")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'VACCINATOR')")
     public ResponseEntity<List<AppointmentResponse>> getVaccinatorQueue(@RequestParam("slotId") Long slotId) {
         List<Appointment> queue = checkInService.getVaccinatorQueueForSlot(slotId);
         List<AppointmentResponse> responseList = queue.stream()

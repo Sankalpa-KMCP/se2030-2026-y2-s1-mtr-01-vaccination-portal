@@ -75,6 +75,16 @@ public class AppointmentSecurityAuthorizationIntegrationTests {
                             .accept(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
         }
+
+        @Test
+        @DisplayName("VACCINATOR role is allowed to access GET /api/v1/appointments/queue")
+        void vaccinatorQueueAllowed() throws Exception {
+            mockMvc.perform(get("/api/v1/appointments/queue")
+                            .param("slotId", "1")
+                            .header(HttpHeaders.AUTHORIZATION, token(4L, "vac@test.gov", List.of("ROLE_VACCINATOR")))
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+        }
     }
 
     @Nested

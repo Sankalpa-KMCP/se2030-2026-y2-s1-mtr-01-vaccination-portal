@@ -91,7 +91,7 @@ class VaccinationCorrectionServiceTests {
         assertEquals("Wrong batch recorded", correction.getReason());
         assertEquals(91L, correction.getCorrectedBy());
         assertEquals(NOW, correction.getCorrectedAt());
-        assertEquals(VaccinationCorrectionStatus.APPLIED, correction.getStatus());
+        assertEquals(VaccinationCorrectionStatus.PENDING, correction.getStatus());
         assertEquals(56L, record.getVaccineBatchId());
         verify(vaccinationRecordRepository, never()).save(any(VaccinationRecord.class));
     }
@@ -355,7 +355,8 @@ class VaccinationCorrectionServiceTests {
                 newValue,
                 "Reason",
                 91L,
-                NOW
+                NOW,
+                VaccinationCorrectionStatus.APPLIED
         );
     }
 

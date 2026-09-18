@@ -57,15 +57,10 @@ class VaccinationCorrectionControllerTests {
     }
 
     @Test
-    void postCreatesAppendOnlyCorrectionAndReturnsSafeResponse() throws Exception {
+    void postCreatesPendingCorrectionAndReturnsSafeResponse() throws Exception {
         VaccinationCorrection correction = correction(301L, VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
-        when(lifecycleService.applyCorrection(eq(101L), any(CreateVaccinationCorrectionRequest.class)))
-                .thenReturn(new VaccinationCorrectionLifecycleResponse(
-                        VaccinationCorrectionMapper.toResponse(correction),
-                        true,
-                        false,
-                        null
-                ));
+        when(correctionService.createCorrection(eq(101L), any(CreateVaccinationCorrectionRequest.class), any()))
+                .thenReturn(correction);
 
         mockMvc.perform(post("/api/v1/vaccination/records/101/corrections")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -82,20 +77,67 @@ class VaccinationCorrectionControllerTests {
                         "Location",
                         "/api/v1/vaccination/records/101/corrections/301"
                 ))
-                .andExpect(jsonPath("$.correction.id", is(301)))
-                .andExpect(jsonPath("$.correction.vaccinationRecordId", is(101)))
-                .andExpect(jsonPath("$.correction.fieldName", is("doseNumber")))
-                .andExpect(jsonPath("$.correction.oldValue", is("1")))
-                .andExpect(jsonPath("$.correction.newValue", is("2")))
-                .andExpect(jsonPath("$.correction.status", is("APPLIED")))
-                .andExpect(jsonPath("$.correction.correctedBy", is(91)))
-                .andExpect(jsonPath("$.correction.correctedAt", is(CORRECTED_AT.toString())))
-                .andExpect(jsonPath("$.certificateImpacted", is(true)))
-                .andExpect(jsonPath("$.certificateReissued", is(false)))
-                .andExpect(jsonPath("$.certificateReissue").doesNotExist())
-                .andExpect(jsonPath("$.verificationToken").doesNotExist())
-                .andExpect(jsonPath("$.lockVersion").doesNotExist());
+                .andExpect(jsonPath("$.id", is(301)))
+                .andExpect(jsonPath("$.vaccinationRecordId", is(101)))
+                .andExpect(jsonPath("$.fieldName", is("doseNumber")))
+                .andExpect(jsonPath("$.oldValue", is("1")))
+                .andExpect(jsonPath("$.newValue", is("2")))
+                .andExpect(jsonPath("$.status", is("PENDING")))
+                .andExpect(jsonPath("$.correctedBy", is(91)))
+                .andExpect(jsonPath("$.correctedAt", is(CORRECTED_AT.toString())));
     }
+
+    @Test
+    void approveCorrectionReturnsApprovedStatus() throws Exception {
+        VaccinationCorrection correction = correction(301L, VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
+        correction.approve(501L, CORRECTED_AT, "Approved by reviewer");
+        when(correctionService.approveCorrection(eq(101L), eq(301L), any(), any()))
+                .thenReturn(correction);
+
+        mockMvc.perform(post("/api/v1/vaccination/records/101/corrections/301/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Approved by reviewer\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(301)))
+                .andExpect(jsonPath("$.status", is("APPROVED")));
+    }
+
+    @Test
+    void rejectCorrectionReturnsRejectedStatus() throws Exception {
+        VaccinationCorrection correction = correction(301L, VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
+        correction.reject(501L, CORRECTED_AT, "Rejected due to invalid dose");
+        when(correctionService.rejectCorrection(eq(101L), eq(301L), any(), any()))
+                .thenReturn(correction);
+
+        mockMvc.perform(post("/api/v1/vaccination/records/101/corrections/301/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Rejected due to invalid dose\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(301)))
+                .andExpect(jsonPath("$.status", is("REJECTED")));
+    }
+
+    @Test
+    void applyApprovedCorrectionReturnsLifecycleResponse() throws Exception {
+        VaccinationCorrection correction = correction(301L, VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
+        correction.approve(501L, CORRECTED_AT, "Approved");
+        correction.apply();
+        when(lifecycleService.applyApprovedCorrection(eq(101L), eq(301L), any()))
+                .thenReturn(new VaccinationCorrectionLifecycleResponse(
+                        VaccinationCorrectionMapper.toResponse(correction),
+                        true,
+                        false,
+                        null
+                ));
+
+        mockMvc.perform(post("/api/v1/vaccination/records/101/corrections/301/apply"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.correction.id", is(301)))
+                .andExpect(jsonPath("$.correction.status", is("APPLIED")))
+                .andExpect(jsonPath("$.certificateImpacted", is(true)))
+                .andExpect(jsonPath("$.certificateReissued", is(false)));
+    }
+
 
     @Test
     void getReturnsCorrectionHistory() throws Exception {
@@ -134,7 +176,7 @@ class VaccinationCorrectionControllerTests {
 
     @Test
     void unsupportedFieldReturnsStructured400() throws Exception {
-        when(lifecycleService.applyCorrection(eq(101L), any(CreateVaccinationCorrectionRequest.class)))
+        when(correctionService.createCorrection(eq(101L), any(CreateVaccinationCorrectionRequest.class), any()))
                 .thenThrow(new UnsupportedVaccinationCorrectionFieldException(
                         "Unsupported vaccination correction field: citizenId"
                 ));

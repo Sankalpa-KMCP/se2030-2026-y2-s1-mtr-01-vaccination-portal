@@ -7,9 +7,13 @@ import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraf
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
 import com.se2030.vaccinationportal.vaccination.mapper.VaccinationDraftMapper;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationDraftDeletionAudit;
+import com.se2030.vaccinationportal.vaccination.repository.VaccinationDraftDeletionAuditRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationDraftRepository;
 import com.se2030.vaccinationportal.vaccination.validation.VaccinationDraftIntegrationValidator;
 import com.se2030.vaccinationportal.vaccination.validation.VaccinationDraftValidator;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
@@ -24,17 +28,32 @@ import org.springframework.transaction.annotation.Transactional;
 public class VaccinationDraftService {
 
     private final VaccinationDraftRepository draftRepository;
+    private final VaccinationDraftDeletionAuditRepository draftDeletionAuditRepository;
     private final VaccinationDraftValidator validator;
     private final VaccinationDraftIntegrationValidator integrationValidator;
+    private final Clock clock;
 
     public VaccinationDraftService(
             VaccinationDraftRepository draftRepository,
             VaccinationDraftValidator validator,
             VaccinationDraftIntegrationValidator integrationValidator
     ) {
+        this(draftRepository, null, validator, integrationValidator, Clock.systemUTC());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public VaccinationDraftService(
+            VaccinationDraftRepository draftRepository,
+            VaccinationDraftDeletionAuditRepository draftDeletionAuditRepository,
+            VaccinationDraftValidator validator,
+            VaccinationDraftIntegrationValidator integrationValidator,
+            Clock clock
+    ) {
         this.draftRepository = draftRepository;
+        this.draftDeletionAuditRepository = draftDeletionAuditRepository;
         this.validator = validator;
         this.integrationValidator = integrationValidator;
+        this.clock = clock;
     }
 
     public VaccinationDraft createDraft(CreateVaccinationDraftRequest request, Long vaccinatorId) {
@@ -77,6 +96,14 @@ public class VaccinationDraftService {
         return draftRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
+    @Transactional(readOnly = true)
+    public List<VaccinationDraft> getAllDraftsByVaccinatorId(Long vaccinatorId) {
+        if (vaccinatorId == null || vaccinatorId <= 0) {
+            throw new InvalidVaccinationDraftException("Vaccinator ID must be positive");
+        }
+        return draftRepository.findAllByVaccinatorIdOrderByCreatedAtDesc(vaccinatorId);
+    }
+
     public VaccinationDraft updateDraft(Long id, UpdateVaccinationDraftRequest request) {
         validator.validateUpdateRequest(request);
         VaccinationDraft draft = getDraftById(id);
@@ -88,10 +115,36 @@ public class VaccinationDraftService {
         return draftRepository.save(draft);
     }
 
-    public void deleteDraft(Long id) {
+    public void deleteDraft(Long id, String reason, Long deletedBy) {
+        requirePositiveId(id);
+        if (deletedBy == null || deletedBy <= 0) {
+            throw new InvalidVaccinationDraftException("Deleted-by ID must be positive");
+        }
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new InvalidVaccinationDraftException("Draft deletion reason is required and cannot be blank");
+        }
+        if (reason.trim().length() > 1000) {
+            throw new InvalidVaccinationDraftException("Draft deletion reason must not exceed 1000 characters");
+        }
         VaccinationDraft draft = getDraftById(id);
         validator.validateEditable(draft);
+
+        if (draftDeletionAuditRepository != null) {
+            VaccinationDraftDeletionAudit audit = new VaccinationDraftDeletionAudit(
+                    draft.getId(),
+                    draft.getAppointmentId(),
+                    draft.getVaccinatorId() != null ? draft.getVaccinatorId() : deletedBy,
+                    deletedBy,
+                    reason.trim(),
+                    clock != null ? clock.instant() : Instant.now()
+            );
+            draftDeletionAuditRepository.save(audit);
+        }
         draftRepository.delete(draft);
+    }
+
+    public void deleteDraft(Long id) {
+        deleteDraft(id, "Administrative removal", 1L);
     }
 
     private void requirePositiveId(Long id) {

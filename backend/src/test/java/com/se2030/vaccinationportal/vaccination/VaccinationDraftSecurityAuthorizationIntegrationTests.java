@@ -36,8 +36,12 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
     @Autowired private JwtTokenService jwtTokenService;
     @MockitoBean private VaccinationDraftService draftService;
 
+    private String token(Long userId, String role) {
+        return "Bearer " + jwtTokenService.generateToken(userId, "staff" + userId + "@test.gov", List.of(role));
+    }
+
     private String token(String role) {
-        return "Bearer " + jwtTokenService.generateToken(201L, "staff@test.gov", List.of(role));
+        return token(201L, role);
     }
 
     private List<MockHttpServletRequestBuilder> endpoints() {
@@ -46,7 +50,7 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
                 MockMvcRequestBuilders.get(BASE),
                 MockMvcRequestBuilders.get(BASE + "/1"),
                 MockMvcRequestBuilders.patch(BASE + "/1").contentType(MediaType.APPLICATION_JSON).content("{\"doseNumber\":2}"),
-                MockMvcRequestBuilders.delete(BASE + "/1"));
+                MockMvcRequestBuilders.delete(BASE + "/1?reason=Removal"));
     }
 
     @ParameterizedTest
@@ -71,7 +75,7 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
         VaccinationDraft draft = new VaccinationDraft(101L);
         draft.setVaccinatorId(201L);
         when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L))).thenReturn(draft);
-        when(draftService.getAllDrafts()).thenReturn(List.of(draft));
+        when(draftService.getAllDraftsByVaccinatorId(201L)).thenReturn(List.of(draft));
         when(draftService.getDraftById(1L)).thenReturn(draft);
         when(draftService.updateDraft(eq(1L), any(UpdateVaccinationDraftRequest.class))).thenReturn(draft);
         int[] statuses = {201, 200, 200, 200, 204};
@@ -81,6 +85,57 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
                     .andExpect(status().is(statuses[index++]));
         }
         verify(draftService).createDraft(any(CreateVaccinationDraftRequest.class), eq(201L));
-        verify(draftService).deleteDraft(1L);
+        verify(draftService).deleteDraft(1L, "Removal", 201L);
+    }
+
+    @Test
+    void otherVaccinatorCannotReadUpdateOrDeleteDraft() throws Exception {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccinatorId(201L);
+        when(draftService.getDraftById(1L)).thenReturn(draft);
+
+        String otherVaccinator = token(202L, "ROLE_VACCINATOR");
+
+        mockMvc.perform(MockMvcRequestBuilders.get(BASE + "/1").header(HttpHeaders.AUTHORIZATION, otherVaccinator))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(MockMvcRequestBuilders.patch(BASE + "/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"doseNumber\":2}")
+                        .header(HttpHeaders.AUTHORIZATION, otherVaccinator))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(MockMvcRequestBuilders.delete(BASE + "/1?reason=Mistake")
+                        .header(HttpHeaders.AUTHORIZATION, otherVaccinator))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void superAdminCanAccessOtherVaccinatorsDraft() throws Exception {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccinatorId(201L);
+        when(draftService.getDraftById(1L)).thenReturn(draft);
+        when(draftService.getAllDrafts()).thenReturn(List.of(draft));
+        when(draftService.updateDraft(eq(1L), any(UpdateVaccinationDraftRequest.class))).thenReturn(draft);
+
+        String superAdmin = token(999L, "ROLE_SUPER_ADMIN");
+
+        mockMvc.perform(MockMvcRequestBuilders.get(BASE).header(HttpHeaders.AUTHORIZATION, superAdmin))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(MockMvcRequestBuilders.get(BASE + "/1").header(HttpHeaders.AUTHORIZATION, superAdmin))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(MockMvcRequestBuilders.patch(BASE + "/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"doseNumber\":2}")
+                        .header(HttpHeaders.AUTHORIZATION, superAdmin))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(MockMvcRequestBuilders.delete(BASE + "/1?reason=SuperAdmin+cleanup")
+                        .header(HttpHeaders.AUTHORIZATION, superAdmin))
+                .andExpect(status().isNoContent());
+
+        verify(draftService).deleteDraft(1L, "SuperAdmin cleanup", 999L);
     }
 }
