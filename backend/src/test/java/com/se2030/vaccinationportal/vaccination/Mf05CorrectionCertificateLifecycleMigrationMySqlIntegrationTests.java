@@ -3,7 +3,9 @@ package com.se2030.vaccinationportal.vaccination;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -12,7 +14,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -289,6 +291,18 @@ class Mf05CorrectionCertificateLifecycleMigrationMySqlIntegrationTests {
     }
 
     private void assertRejectedByDatabase(Runnable operation) {
-        assertThrows(DataIntegrityViolationException.class, operation::run);
+        DataAccessException exception = assertThrows(DataAccessException.class, operation::run);
+        boolean hasExpectedConstraintViolation = false;
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sqlException) {
+                int code = sqlException.getErrorCode();
+                if (code == 3819 || code == 1062) {
+                    hasExpectedConstraintViolation = true;
+                    break;
+                }
+            }
+        }
+        assertTrue(hasExpectedConstraintViolation,
+                () -> "Expected SQLException with MySQL error code 3819 or 1062 in cause chain, but got: " + exception);
     }
 }
