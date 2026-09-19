@@ -79,6 +79,10 @@ describe('role dashboards', () => {
     expect(screen.getByRole('heading', { name: 'Welcome, Center Manager' })).toBeTruthy();
     expect(screen.getByText('Center Manager', { selector: '.badge' })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: 'Open', exact: true }).length).toBeGreaterThan(0);
+    const checkInCard = screen.getByRole('heading', { name: 'Check-In & Queue Management' }).closest('.card');
+    expect(within(checkInCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
+    expect(within(checkInCard).getByText(/arrival check-ins/i)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Check-In Queue' })).toBeNull();
     expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
@@ -121,6 +125,7 @@ describe('role dashboards', () => {
 
     const queueCard = screen.getByRole('heading', { name: 'Check-In Queue' }).closest('.card');
     expect(within(queueCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
+    expect(screen.queryByRole('heading', { name: 'Check-In & Queue Management' })).toBeNull();
   });
 
   it('hides the vaccinator workspace for a Center Manager', () => {
@@ -134,6 +139,43 @@ describe('role dashboards', () => {
 
     expect(screen.queryByRole('region', { name: /vaccinator workspace/i })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'My Active Drafts' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Check-In & Queue Management' })).toBeTruthy();
+  });
+
+  it('renders the inventory card for an inventory officer and hides other operational modules', () => {
+    authState.current = { user: {
+      fullName: 'Ian Inventory',
+      email: 'ian@example.gov',
+      phoneNumber: '+94 77 900 1000',
+      roles: ['ROLE_INVENTORY_OFFICER'],
+    } };
+    renderPage(<StaffDashboardPage />);
+
+    expect(screen.getByRole('heading', { name: 'Welcome, Ian Inventory' })).toBeTruthy();
+    const inventoryCard = screen.getByRole('heading', { name: 'Inventory & Batches' }).closest('.card');
+    expect(within(inventoryCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/inventory');
+    expect(screen.queryByRole('heading', { name: 'Check-In & Queue Management' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Check-In Queue' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Campaigns' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Screening Review' })).toBeNull();
+    expect(screen.queryByRole('region', { name: /vaccinator workspace/i })).toBeNull();
+  });
+
+  it('renders Check-In & Queue Management and avoids duplicate queue cards for dual Center Manager and Vaccinator roles', () => {
+    authState.current = { user: {
+      fullName: 'Dual Role Staff',
+      email: 'dual@example.gov',
+      phoneNumber: '+94 77 555 1234',
+      roles: ['ROLE_CENTER_MANAGER', 'ROLE_VACCINATOR'],
+    } };
+    renderPage(<StaffDashboardPage />);
+
+    expect(screen.getByRole('heading', { name: 'Welcome, Dual Role Staff' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Check-In & Queue Management' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Check-In Queue' })).toBeNull();
+    const checkInLinks = screen.getAllByRole('link', { name: 'Open' })
+      .filter((link) => link.getAttribute('href') === '/app/checkin/queue');
+    expect(checkInLinks).toHaveLength(1);
   });
 
   it('shows the administrator profile and staff request entry without staff-dashboard modules', () => {
