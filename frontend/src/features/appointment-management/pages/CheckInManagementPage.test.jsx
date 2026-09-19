@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CheckInManagementPage from './CheckInManagementPage';
 
@@ -26,6 +26,16 @@ vi.mock('../../../auth/context/AuthContext', () => ({
 vi.mock('../api/checkInApi', () => checkInApiMocks);
 vi.mock('../../session-management/api/sessionApi', () => sessionApiMocks);
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -35,14 +45,6 @@ function renderPage() {
 }
 
 const sampleAppointments = [
-  {
-    id: 101,
-    citizenId: 501,
-    campaignId: 301,
-    slotId: 42,
-    status: 'CONFIRMED',
-    bookedAt: '2026-09-19T09:00:00Z',
-  },
   {
     id: 102,
     citizenId: 502,
@@ -94,9 +96,8 @@ describe('CheckInManagementPage', () => {
       expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith('42');
     });
 
-    // Both appointments should be visible
+    // Checked-in queue response should be visible
     await waitFor(() => {
-      expect(screen.getByText('Appointment #101')).toBeTruthy();
       expect(screen.getByText('Appointment #102')).toBeTruthy();
     });
 
@@ -106,10 +107,12 @@ describe('CheckInManagementPage', () => {
     expect(screen.queryByRole('button', { name: 'Mark No-Show' })).toBeNull();
   });
 
-  it('renders operational mutation controls and session lookup for ROLE_ADMIN and ROLE_CENTER_MANAGER', async () => {
+  it.each(['ROLE_ADMIN', 'ROLE_CENTER_MANAGER'])(
+    'preserves read/write controls and session lookup for %s',
+    async (role) => {
     authMock.user = {
-      fullName: 'Manager Mike',
-      roles: ['ROLE_CENTER_MANAGER'],
+      fullName: 'Authorized Operator',
+      roles: [role],
     };
     checkInApiMocks.getVaccinatorQueue.mockResolvedValue(sampleAppointments);
 
@@ -135,13 +138,14 @@ describe('CheckInManagementPage', () => {
       expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith('42');
     });
 
-    // Both mutation buttons must be present once loaded
+    // The production queue contains CHECKED_IN rows, so Reverse is the applicable mutation.
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Check In' })).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Mark No-Show' })).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Reverse Check-In' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Check In' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Mark No-Show' })).toBeNull();
     });
-  });
+    },
+  );
 
   it('displays error feedback when getVaccinatorQueue fails', async () => {
     authMock.user = {
@@ -158,6 +162,7 @@ describe('CheckInManagementPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Error Loading Queue')).toBeTruthy();
       expect(screen.getByText('Network error loading queue')).toBeTruthy();
+      expect(screen.queryByText('Queue is Empty')).toBeNull();
     });
   });
 
@@ -175,7 +180,68 @@ describe('CheckInManagementPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Queue is Empty')).toBeTruthy();
-      expect(screen.getByText(/No active confirmed or checked-in appointments found for Slot #15\./i)).toBeTruthy();
+      expect(screen.getByText(/No checked-in appointments found for Slot #15\./i)).toBeTruthy();
+    });
+  });
+
+  it('keeps the newest queue when an older slot success resolves afterward', async () => {
+    const slotFour = deferred();
+    const slotFortyTwo = deferred();
+    checkInApiMocks.getVaccinatorQueue
+      .mockReturnValueOnce(slotFour.promise)
+      .mockReturnValueOnce(slotFortyTwo.promise);
+
+    renderPage();
+    const slotInput = screen.getByLabelText(/Active Time Slot ID/i);
+    fireEvent.change(slotInput, { target: { value: '4' } });
+    fireEvent.change(slotInput, { target: { value: '42' } });
+
+    await waitFor(() => {
+      expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledTimes(2);
+    });
+    slotFortyTwo.resolve(sampleAppointments);
+    await waitFor(() => {
+      expect(screen.getByText('Vaccinator Queue for Slot #42')).toBeTruthy();
+      expect(screen.getByText('Appointment #102')).toBeTruthy();
+    });
+
+    await act(async () => {
+      slotFour.resolve([{ ...sampleAppointments[0], id: 4, slotId: 4 }]);
+      await slotFour.promise;
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Appointment #102')).toBeTruthy();
+      expect(screen.queryByText('Appointment #4')).toBeNull();
+    });
+  });
+
+  it('ignores an older queue failure after a newer slot succeeds', async () => {
+    const slotFour = deferred();
+    checkInApiMocks.getVaccinatorQueue
+      .mockReturnValueOnce(slotFour.promise)
+      .mockResolvedValueOnce(sampleAppointments);
+
+    renderPage();
+    const slotInput = screen.getByLabelText(/Active Time Slot ID/i);
+    fireEvent.change(slotInput, { target: { value: '4' } });
+    fireEvent.change(slotInput, { target: { value: '42' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Appointment #102')).toBeTruthy();
+    });
+    await act(async () => {
+      slotFour.reject(new Error('Old slot failed'));
+      try {
+        await slotFour.promise;
+      } catch {
+        // The component must ignore the obsolete rejection.
+      }
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Appointment #102')).toBeTruthy();
+      expect(screen.queryByText('Old slot failed')).toBeNull();
+      expect(screen.queryByText('Error Loading Queue')).toBeNull();
     });
   });
 });

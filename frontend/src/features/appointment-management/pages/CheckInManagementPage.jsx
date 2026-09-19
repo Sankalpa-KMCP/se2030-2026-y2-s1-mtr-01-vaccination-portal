@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import CheckInPanel from '../components/CheckInPanel';
 import PageHeader from '../../../components/common/PageHeader';
 import {
@@ -13,7 +13,8 @@ import { hasRole } from '../../../auth/utils/roleUtils';
 
 /**
  * Staff-facing Vaccinator Queue & Check-In Management Page.
- * Restricted to staff roles (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER).
+ * Restricted to ADMIN, CENTER_MANAGER, and VACCINATOR. Vaccinators receive
+ * read-only queue inspection while mutation controls remain manager-only.
  * Provides live queue inspection per time slot, arrival check-in with staff override,
  * check-in reversal, and mark no-show capabilities.
  *
@@ -25,7 +26,7 @@ import { hasRole } from '../../../auth/utils/roleUtils';
  * <p><b>Business Rules Handled in UI:</b>
  * <ul>
  *   <li>MF03-BR-09: Standard check-in window is 30 minutes before to 30 minutes after slot start; handles override reason prompts.</li>
- *   <li>MF03-BR-10: Check-in queue displays CONFIRMED appointments awaiting check-in and CHECKED_IN queue for vaccinators.</li>
+ *   <li>MF03-BR-10: The vaccinator queue contains CHECKED_IN appointments.</li>
  *   <li>MF03-BR-15: Reverse check-in resets erroneous check-in back to CONFIRMED.</li>
  * </ul>
  */
@@ -34,6 +35,7 @@ export default function CheckInManagementPage() {
   const canMutate = hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
 
   const [slotId, setSlotId] = useState('');
+  const [loadedSlotId, setLoadedSlotId] = useState(null);
   const [queue, setQueue] = useState(null);
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState(null);
@@ -43,24 +45,58 @@ export default function CheckInManagementPage() {
   const [lookupSessionId, setLookupSessionId] = useState('');
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const queueRequestRef = useRef(0);
+  const activeQueueRef = useRef({ slotId: null, appointments: [] });
+
+  const invalidateQueueContext = useCallback(() => {
+    queueRequestRef.current += 1;
+    activeQueueRef.current = { slotId: null, appointments: [] };
+    setLoadedSlotId(null);
+    setQueue(null);
+    setLoading(false);
+  }, []);
+
+  const updateSlotId = useCallback((nextSlotId) => {
+    invalidateQueueContext();
+    setFeedback(null);
+    setSlotId(nextSlotId);
+  }, [invalidateQueueContext]);
 
   const fetchQueue = useCallback(async (targetSlotId) => {
-    if (!targetSlotId) return;
+    const parsedSlotId = Number(targetSlotId);
+    if (!Number.isInteger(parsedSlotId) || parsedSlotId <= 0) return;
+
+    const normalizedSlotId = String(parsedSlotId);
+    const requestId = ++queueRequestRef.current;
     setLoading(true);
     setFeedback(null);
+    setQueue(null);
+    setLoadedSlotId(null);
+    activeQueueRef.current = { slotId: null, appointments: [] };
 
     try {
-      const data = await getVaccinatorQueue(targetSlotId);
-      setQueue(data || []);
+      const data = await getVaccinatorQueue(normalizedSlotId);
+      if (requestId === queueRequestRef.current) {
+        const appointments = Array.isArray(data) ? data : [];
+        setQueue(appointments);
+        setLoadedSlotId(normalizedSlotId);
+        activeQueueRef.current = { slotId: normalizedSlotId, appointments };
+      }
     } catch (err) {
-      setFeedback({
-        type: 'danger',
-        title: 'Error Loading Queue',
-        message: err.message || `Failed to fetch vaccinator queue for Slot #${targetSlotId}.`,
-      });
-      setQueue([]);
+      if (requestId === queueRequestRef.current) {
+        setFeedback({
+          type: 'danger',
+          title: 'Error Loading Queue',
+          message: err.message || `Failed to fetch vaccinator queue for Slot #${normalizedSlotId}.`,
+        });
+        setQueue(null);
+        setLoadedSlotId(null);
+        activeQueueRef.current = { slotId: null, appointments: [] };
+      }
     } finally {
-      setLoading(false);
+      if (requestId === queueRequestRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -84,7 +120,7 @@ export default function CheckInManagementPage() {
       const slots = await listTimeSlots(lookupSessionId);
       setAvailableSlots(slots || []);
       if (slots && slots.length > 0) {
-        setSlotId(String(slots[0].id));
+        updateSlotId(String(slots[0].id));
       }
     } catch (err) {
       setFeedback({
@@ -98,7 +134,25 @@ export default function CheckInManagementPage() {
     }
   };
 
+  const getCurrentMutationSlot = (appointmentId) => {
+    const current = activeQueueRef.current;
+    const belongsToCurrentQueue = current.slotId && current.appointments.some(
+      (appointment) => appointment.id === appointmentId && String(appointment.slotId) === current.slotId,
+    );
+    if (!belongsToCurrentQueue) {
+      setFeedback({
+        type: 'danger',
+        title: 'Queue Context Changed',
+        message: 'Reload the current slot before performing an appointment action.',
+      });
+      return null;
+    }
+    return current.slotId;
+  };
+
   const handleCheckIn = async (appointmentId, { isStaffOverride, staffReason }) => {
+    const actionSlotId = getCurrentMutationSlot(appointmentId);
+    if (!actionSlotId) return;
     setProcessingId(appointmentId);
     setFeedback(null);
 
@@ -109,7 +163,9 @@ export default function CheckInManagementPage() {
         title: 'Check-In Complete',
         message: `Appointment #${updated.id} for Citizen #${updated.citizenId} is successfully CHECKED_IN.`,
       });
-      fetchQueue(slotId);
+      if (activeQueueRef.current.slotId === actionSlotId) {
+        fetchQueue(actionSlotId);
+      }
     } catch (err) {
       let userMsg = err.message || 'Failed to complete check-in.';
       if (err.status === 400 && err.message && err.message.includes('window')) {
@@ -126,6 +182,8 @@ export default function CheckInManagementPage() {
   };
 
   const handleReverseCheckIn = async (appointmentId) => {
+    const actionSlotId = getCurrentMutationSlot(appointmentId);
+    if (!actionSlotId) return;
     setProcessingId(appointmentId);
     setFeedback(null);
 
@@ -136,7 +194,9 @@ export default function CheckInManagementPage() {
         title: 'Check-In Reversed',
         message: `Appointment #${updated.id} has been returned to CONFIRMED status.`,
       });
-      fetchQueue(slotId);
+      if (activeQueueRef.current.slotId === actionSlotId) {
+        fetchQueue(actionSlotId);
+      }
     } catch (err) {
       setFeedback({
         type: 'danger',
@@ -149,6 +209,8 @@ export default function CheckInManagementPage() {
   };
 
   const handleMarkNoShow = async (appointmentId) => {
+    const actionSlotId = getCurrentMutationSlot(appointmentId);
+    if (!actionSlotId) return;
     setProcessingId(appointmentId);
     setFeedback(null);
 
@@ -159,7 +221,9 @@ export default function CheckInManagementPage() {
         title: 'Marked No-Show',
         message: `Appointment #${updated.id} has been marked as NO_SHOW.`,
       });
-      fetchQueue(slotId);
+      if (activeQueueRef.current.slotId === actionSlotId) {
+        fetchQueue(actionSlotId);
+      }
     } catch (err) {
       let userMsg = err.message || 'Failed to mark appointment as no-show.';
       if (err.status === 400 && err.message && err.message.includes('window')) {
@@ -202,17 +266,17 @@ export default function CheckInManagementPage() {
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val === '') {
-                    setSlotId('');
+                    updateSlotId('');
                     return;
                   }
                   const cleanVal = val.replace(/[^0-9]/g, '');
                   if (cleanVal === '') {
-                    setSlotId('');
+                    updateSlotId('');
                     return;
                   }
                   const num = parseInt(cleanVal, 10);
                   if (num > 0) {
-                    setSlotId(String(num));
+                    updateSlotId(String(num));
                   }
                 }}
                 onKeyDown={(e) => {
@@ -295,7 +359,7 @@ export default function CheckInManagementPage() {
                       <select
                         className="form-select form-select-sm"
                         value={slotId}
-                        onChange={(e) => setSlotId(e.target.value)}
+                        onChange={(e) => updateSlotId(e.target.value)}
                       >
                         {availableSlots.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -340,11 +404,11 @@ export default function CheckInManagementPage() {
       )}
 
       {/* Queue Results List */}
-      {!loading && queue !== null && (
+      {!loading && loadedSlotId !== null && queue !== null && (
         <div className="queue-section">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h3 className="h5 fw-bold mb-0">
-              Vaccinator Queue for Slot #{slotId}
+              Vaccinator Queue for Slot #{loadedSlotId}
             </h3>
             <span className="badge bg-secondary fs-7">
               {queue.length} {queue.length === 1 ? 'Appointment' : 'Appointments'}
@@ -355,7 +419,7 @@ export default function CheckInManagementPage() {
             <div className="alert alert-info border-0 shadow-sm p-4 text-center">
               <h4 className="h6 alert-heading fw-bold mb-1">Queue is Empty</h4>
               <p className="mb-0 text-muted small">
-                No active confirmed or checked-in appointments found for Slot #{slotId}.
+                No checked-in appointments found for Slot #{loadedSlotId}.
               </p>
             </div>
           ) : (

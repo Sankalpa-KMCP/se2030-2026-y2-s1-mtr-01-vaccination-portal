@@ -123,7 +123,7 @@ describe('role dashboards', () => {
     expect(within(queueCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
   });
 
-  it('hides the vaccinator workspace for non-vaccinator staff personas', () => {
+  it('hides the vaccinator workspace for a Center Manager', () => {
     authState.current = { user: {
       fullName: 'Center Manager',
       email: 'manager@example.com',
@@ -136,7 +136,7 @@ describe('role dashboards', () => {
     expect(screen.queryByRole('heading', { name: 'My Active Drafts' })).toBeNull();
   });
 
-  it('hides the vaccinator workspace for non-vaccinator staff personas', () => {
+  it('shows the administrator profile and staff request entry without staff-dashboard modules', () => {
     authState.current = { user: {
       fullName: 'Portal Admin',
       email: 'admin@example.com',

@@ -40,6 +40,13 @@ function toLocalInputValue(isoString) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function getFocusableElements(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  ));
+}
+
 /**
  * Vaccinator operational workspace section rendered on the staff dashboard.
  *
@@ -64,7 +71,8 @@ export default function VaccinatorDashboardSection() {
   const [queue, setQueue] = useState(null);
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueError, setQueueError] = useState(null);
-  const [processingAppointmentId, setProcessingAppointmentId] = useState(null);
+  const [pendingAppointmentIds, setPendingAppointmentIds] = useState(() => new Set());
+  const pendingAppointmentIdsRef = useRef(new Set());
   const [feedback, setFeedback] = useState(null);
 
   // Monotonic queue request tracker to prevent out-of-order race conditions
@@ -74,10 +82,18 @@ export default function VaccinatorDashboardSection() {
   const [drafts, setDrafts] = useState(null);
   const [draftsLoading, setDraftsLoading] = useState(true);
   const [draftsError, setDraftsError] = useState(null);
+  const draftsRequestRef = useRef(0);
 
   // Single active dialog: null | { type: 'view'|'edit'|'discard', draftId, draft }
   const [activeDialog, setActiveDialog] = useState(null);
+  const activeDialogRef = useRef(null);
+  const dialogGenerationRef = useRef(0);
+  const detailRequestRef = useRef(0);
   const triggerButtonRef = useRef(null);
+  const dialogRef = useRef(null);
+  const viewCloseButtonRef = useRef(null);
+  const editFirstFieldRef = useRef(null);
+  const discardReasonRef = useRef(null);
 
   // View dialog state
   const [viewData, setViewData] = useState(null);
@@ -90,6 +106,7 @@ export default function VaccinatorDashboardSection() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const editFormReady = Boolean(editForm);
 
   // Discard dialog state
   const [discardReason, setDiscardReason] = useState('');
@@ -97,16 +114,26 @@ export default function VaccinatorDashboardSection() {
   const [discardSubmitting, setDiscardSubmitting] = useState(false);
 
   const refreshDrafts = useCallback(async () => {
+    const requestId = ++draftsRequestRef.current;
     setDraftsLoading(true);
     setDraftsError(null);
     try {
       const data = await listMyVaccinationDrafts();
-      setDrafts(Array.isArray(data) ? data : []);
+      if (requestId === draftsRequestRef.current) {
+        setDrafts(Array.isArray(data) ? data : []);
+      }
+      return { ok: true, stale: requestId !== draftsRequestRef.current };
     } catch (err) {
-      setDrafts(null);
-      setDraftsError(err.message || 'Unable to load your vaccination drafts.');
+      const message = err.message || 'Unable to load your vaccination drafts.';
+      if (requestId === draftsRequestRef.current) {
+        setDrafts(null);
+        setDraftsError(message);
+      }
+      return { ok: false, stale: requestId !== draftsRequestRef.current, message };
     } finally {
-      setDraftsLoading(false);
+      if (requestId === draftsRequestRef.current) {
+        setDraftsLoading(false);
+      }
     }
   }, []);
 
@@ -118,6 +145,8 @@ export default function VaccinatorDashboardSection() {
 
   // Handle closing any active dialog with focus restoration
   const closeActiveDialog = useCallback(() => {
+    detailRequestRef.current += 1;
+    activeDialogRef.current = null;
     setActiveDialog(null);
     setViewData(null);
     setViewError(null);
@@ -125,35 +154,82 @@ export default function VaccinatorDashboardSection() {
     setEditForm(null);
     setEditError(null);
     setDiscardError(null);
-    if (triggerButtonRef.current && typeof triggerButtonRef.current.focus === 'function') {
-      triggerButtonRef.current.focus();
-    }
+    const trigger = triggerButtonRef.current;
+    window.setTimeout(() => {
+      if (
+        activeDialogRef.current === null
+        && trigger
+        && typeof trigger.focus === 'function'
+        && trigger.isConnected
+      ) {
+        trigger.focus();
+      }
+    }, 0);
   }, []);
 
-  // Escape key handler to close dialog
+  const openDialog = useCallback((type, draftId, draft = null) => {
+    const dialog = {
+      type,
+      draftId,
+      draft,
+      instanceId: ++dialogGenerationRef.current,
+    };
+    activeDialogRef.current = dialog;
+    setActiveDialog(dialog);
+    return dialog;
+  }, []);
+
+  // Dialog keyboard handling: Escape plus a lightweight local focus trap.
   useEffect(() => {
     if (!activeDialog) return;
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         closeActiveDialog();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusableElements(dialogRef.current);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current?.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeDialog, closeActiveDialog]);
 
+  useEffect(() => {
+    if (!activeDialog) return;
+    const target = activeDialog.type === 'discard'
+      ? discardReasonRef.current
+      : activeDialog.type === 'edit'
+        ? editFirstFieldRef.current
+        : viewCloseButtonRef.current;
+    (target || dialogRef.current)?.focus();
+  }, [activeDialog, editFormReady]);
+
   // Slot input change immediately invalidates old queue to prevent stale context
   const handleSlotInputChange = (event) => {
     const rawVal = event.target.value;
     const cleanVal = rawVal.replace(/[^0-9]/g, '');
     setSlotInput(cleanVal);
-
-    // If input changed away from loadedSlotId, clear queue and context immediately
-    if (loadedSlotId !== null && cleanVal !== loadedSlotId) {
-      setQueue(null);
-      setLoadedSlotId(null);
-      setQueueError(null);
-    }
+    queueRequestRef.current += 1;
+    setQueueLoading(false);
+    setQueue(null);
+    setLoadedSlotId(null);
+    setQueueError(null);
   };
 
   // Submit slot to load queue with monotonic sequence ID
@@ -194,7 +270,12 @@ export default function VaccinatorDashboardSection() {
 
   const beginDraftFromAppointment = async (appointment) => {
     // Safety check: row must belong to currently loaded queue
-    if (!loadedSlotId || !queue || !queue.some((a) => a.id === appointment.id)) {
+    if (
+      !loadedSlotId
+      || String(appointment.slotId) !== loadedSlotId
+      || !queue
+      || !queue.some((a) => a.id === appointment.id && String(a.slotId) === loadedSlotId)
+    ) {
       setFeedback({
         type: 'danger',
         title: 'Context Mismatch',
@@ -203,16 +284,23 @@ export default function VaccinatorDashboardSection() {
       return;
     }
 
-    setProcessingAppointmentId(appointment.id);
+    if (pendingAppointmentIdsRef.current.has(appointment.id)) return;
+
+    const nextPending = new Set(pendingAppointmentIdsRef.current);
+    nextPending.add(appointment.id);
+    pendingAppointmentIdsRef.current = nextPending;
+    setPendingAppointmentIds(nextPending);
     setFeedback(null);
 
     try {
       await createVaccinationDraft({ appointmentId: appointment.id });
-      await refreshDrafts();
+      const refreshResult = await refreshDrafts();
       setFeedback({
-        type: 'success',
+        type: refreshResult.ok || refreshResult.stale ? 'success' : 'warning',
         title: 'Draft Started',
-        message: `A vaccination draft was started for Appointment #${appointment.id}. Find it under My Active Drafts.`,
+        message: refreshResult.ok || refreshResult.stale
+          ? `A vaccination draft was started for Appointment #${appointment.id}. Find it under My Active Drafts.`
+          : `Draft created for Appointment #${appointment.id}, but the active drafts list could not be refreshed. Use Retry to reload it.`,
       });
     } catch (err) {
       setFeedback({
@@ -221,51 +309,85 @@ export default function VaccinatorDashboardSection() {
         message: err.message || `Unable to start a vaccination draft for Appointment #${appointment.id}.`,
       });
     } finally {
-      setProcessingAppointmentId(null);
+      const remaining = new Set(pendingAppointmentIdsRef.current);
+      remaining.delete(appointment.id);
+      pendingAppointmentIdsRef.current = remaining;
+      setPendingAppointmentIds(remaining);
     }
   };
 
   // Open View dialog and fetch fresh draft
   const openViewDialog = async (draftId, event) => {
     triggerButtonRef.current = event?.currentTarget || null;
-    setActiveDialog({ type: 'view', draftId });
+    const dialog = openDialog('view', draftId);
+    const requestId = ++detailRequestRef.current;
     setViewLoading(true);
     setViewError(null);
     setViewData(null);
 
     try {
       const freshDraft = await getVaccinationDraft(draftId);
-      setViewData(freshDraft);
+      const current = activeDialogRef.current;
+      if (
+        requestId === detailRequestRef.current
+        && current?.instanceId === dialog.instanceId
+        && current.type === 'view'
+        && current.draftId === draftId
+      ) {
+        setViewData(freshDraft);
+      }
     } catch (err) {
-      setViewError(err.message || `Unable to load details for Draft #${draftId}.`);
+      const current = activeDialogRef.current;
+      if (requestId === detailRequestRef.current && current?.instanceId === dialog.instanceId) {
+        setViewError(err.message || `Unable to load details for Draft #${draftId}.`);
+      }
     } finally {
-      setViewLoading(false);
+      const current = activeDialogRef.current;
+      if (requestId === detailRequestRef.current && current?.instanceId === dialog.instanceId) {
+        setViewLoading(false);
+      }
     }
   };
 
   // Open Edit dialog and fetch fresh baseline
   const openEditDialog = async (draftId, event) => {
     triggerButtonRef.current = event?.currentTarget || null;
-    setActiveDialog({ type: 'edit', draftId });
+    const dialog = openDialog('edit', draftId);
+    const requestId = ++detailRequestRef.current;
     setEditLoading(true);
     setEditError(null);
     setEditBaseline(null);
     setEditForm(null);
+    setEditSubmitting(false);
 
     try {
       const freshDraft = await getVaccinationDraft(draftId);
-      setEditBaseline(freshDraft);
-      setEditForm({
-        vaccineBatchId: freshDraft.vaccineBatchId != null ? String(freshDraft.vaccineBatchId) : '',
-        doseNumber: freshDraft.doseNumber != null ? String(freshDraft.doseNumber) : '',
-        administrationTime: toLocalInputValue(freshDraft.administrationTime),
-        nextDoseDate: freshDraft.nextDoseDate || '',
-        authorizedNotes: freshDraft.authorizedNotes || '',
-      });
+      const current = activeDialogRef.current;
+      if (
+        requestId === detailRequestRef.current
+        && current?.instanceId === dialog.instanceId
+        && current.type === 'edit'
+        && current.draftId === draftId
+      ) {
+        setEditBaseline(freshDraft);
+        setEditForm({
+          vaccineBatchId: freshDraft.vaccineBatchId != null ? String(freshDraft.vaccineBatchId) : '',
+          doseNumber: freshDraft.doseNumber != null ? String(freshDraft.doseNumber) : '',
+          administrationTime: toLocalInputValue(freshDraft.administrationTime),
+          nextDoseDate: freshDraft.nextDoseDate || '',
+          authorizedNotes: freshDraft.authorizedNotes || '',
+        });
+      }
     } catch (err) {
-      setEditError(err.message || `Unable to load details for Draft #${draftId}.`);
+      const current = activeDialogRef.current;
+      if (requestId === detailRequestRef.current && current?.instanceId === dialog.instanceId) {
+        setEditError(err.message || `Unable to load details for Draft #${draftId}.`);
+      }
     } finally {
-      setEditLoading(false);
+      const current = activeDialogRef.current;
+      if (requestId === detailRequestRef.current && current?.instanceId === dialog.instanceId) {
+        setEditLoading(false);
+      }
     }
   };
 
@@ -280,6 +402,17 @@ export default function VaccinatorDashboardSection() {
     if (!editBaseline || !editForm) return;
 
     setEditError(null);
+    const dialog = activeDialogRef.current;
+    if (
+      !dialog
+      || dialog.type !== 'edit'
+      || dialog.draftId !== editBaseline.id
+      || activeDialog?.instanceId !== dialog.instanceId
+    ) {
+      setEditError('This draft context is stale. Close and reopen the draft before saving.');
+      return;
+    }
+    const targetDraftId = dialog.draftId;
 
     // 1. Validation: clearing existing non-empty values is not supported by backend PATCH
     const isClearingExisting = (
@@ -313,12 +446,9 @@ export default function VaccinatorDashboardSection() {
     }
 
     if (editForm.administrationTime.trim() !== '') {
-      const formIso = new Date(editForm.administrationTime).toISOString();
-      const baselineIso = editBaseline.administrationTime
-        ? new Date(editBaseline.administrationTime).toISOString()
-        : null;
-      if (formIso !== baselineIso) {
-        patchBody.administrationTime = formIso;
+      const displayedBaseline = toLocalInputValue(editBaseline.administrationTime);
+      if (editForm.administrationTime !== displayedBaseline) {
+        patchBody.administrationTime = new Date(editForm.administrationTime).toISOString();
       }
     }
 
@@ -342,25 +472,34 @@ export default function VaccinatorDashboardSection() {
 
     setEditSubmitting(true);
     try {
-      await updateVaccinationDraft(editBaseline.id, patchBody);
-      closeActiveDialog();
-      await refreshDrafts();
+      await updateVaccinationDraft(targetDraftId, patchBody);
+      const current = activeDialogRef.current;
+      if (current?.instanceId === dialog.instanceId) {
+        closeActiveDialog();
+      }
+      const refreshResult = await refreshDrafts();
       setFeedback({
-        type: 'success',
+        type: refreshResult.ok || refreshResult.stale ? 'success' : 'warning',
         title: 'Draft Updated',
-        message: `Draft #${editBaseline.id} was updated successfully.`,
+        message: refreshResult.ok || refreshResult.stale
+          ? `Draft #${targetDraftId} was updated successfully.`
+          : `Draft #${targetDraftId} was updated, but the active drafts list could not be refreshed. Use Retry to reload it.`,
       });
     } catch (err) {
-      setEditError(err.message || `Unable to update Draft #${editBaseline.id}.`);
+      if (activeDialogRef.current?.instanceId === dialog.instanceId) {
+        setEditError(err.message || `Unable to update Draft #${targetDraftId}.`);
+      }
     } finally {
-      setEditSubmitting(false);
+      if (activeDialogRef.current?.instanceId === dialog.instanceId) {
+        setEditSubmitting(false);
+      }
     }
   };
 
   // Open Discard dialog
   const openDiscardDialog = (draft, event) => {
     triggerButtonRef.current = event?.currentTarget || null;
-    setActiveDialog({ type: 'discard', draftId: draft.id, draft });
+    openDialog('discard', draft.id, draft);
     setDiscardReason('');
     setDiscardError(null);
     setDiscardSubmitting(false);
@@ -385,22 +524,31 @@ export default function VaccinatorDashboardSection() {
     setDiscardSubmitting(true);
     setDiscardError(null);
     const targetId = activeDialog.draftId;
+    const dialog = activeDialogRef.current;
 
     try {
       await discardVaccinationDraft(targetId, trimmedReason);
-      closeActiveDialog();
-      setDiscardReason('');
-      await refreshDrafts();
+      if (activeDialogRef.current?.instanceId === dialog?.instanceId) {
+        closeActiveDialog();
+        setDiscardReason('');
+      }
+      const refreshResult = await refreshDrafts();
       setFeedback({
-        type: 'success',
+        type: refreshResult.ok || refreshResult.stale ? 'success' : 'warning',
         title: 'Draft Discarded',
-        message: `Draft #${targetId} was discarded. The reason was recorded for audit.`,
+        message: refreshResult.ok || refreshResult.stale
+          ? `Draft #${targetId} was discarded. The reason was recorded for audit.`
+          : `Draft #${targetId} was discarded, but the active drafts list could not be refreshed. Use Retry to reload it.`,
       });
     } catch (err) {
       // Keep dialog open, keep discardReason intact for retry
-      setDiscardError(err.message || `Unable to discard Draft #${targetId}.`);
+      if (activeDialogRef.current?.instanceId === dialog?.instanceId) {
+        setDiscardError(err.message || `Unable to discard Draft #${targetId}.`);
+      }
     } finally {
-      setDiscardSubmitting(false);
+      if (activeDialogRef.current?.instanceId === dialog?.instanceId) {
+        setDiscardSubmitting(false);
+      }
     }
   };
 
@@ -523,10 +671,10 @@ export default function VaccinatorDashboardSection() {
                           type="button"
                           className="btn btn-primary btn-sm"
                           aria-label={`Begin vaccination draft for appointment ${appointment.id}`}
-                          disabled={processingAppointmentId === appointment.id}
+                          disabled={pendingAppointmentIds.has(appointment.id)}
                           onClick={() => beginDraftFromAppointment(appointment)}
                         >
-                          {processingAppointmentId === appointment.id ? (
+                          {pendingAppointmentIds.has(appointment.id) ? (
                             <>
                               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                               Starting…
@@ -645,6 +793,7 @@ export default function VaccinatorDashboardSection() {
       {/* Draft View Modal */}
       {activeDialog?.type === 'view' && (
         <div
+          ref={dialogRef}
           className="modal fade show d-block bg-dark bg-opacity-50"
           tabIndex="-1"
           role="dialog"
@@ -658,6 +807,7 @@ export default function VaccinatorDashboardSection() {
                   Draft #{activeDialog.draftId}
                 </h5>
                 <button
+                  ref={viewCloseButtonRef}
                   type="button"
                   className="btn-close"
                   aria-label="Close dialog"
@@ -717,6 +867,7 @@ export default function VaccinatorDashboardSection() {
       {/* Draft Edit Modal */}
       {activeDialog?.type === 'edit' && (
         <div
+          ref={dialogRef}
           className="modal fade show d-block bg-dark bg-opacity-50"
           tabIndex="-1"
           role="dialog"
@@ -760,6 +911,7 @@ export default function VaccinatorDashboardSection() {
                           Vaccine Batch ID
                         </label>
                         <input
+                          ref={editFirstFieldRef}
                           type="number"
                           id="draft-edit-batch"
                           className="form-control form-control-sm"
@@ -874,6 +1026,7 @@ export default function VaccinatorDashboardSection() {
       {/* Draft Discard Modal with mandatory audited reason */}
       {activeDialog?.type === 'discard' && (
         <div
+          ref={dialogRef}
           className="modal fade show d-block bg-dark bg-opacity-50"
           tabIndex="-1"
           role="dialog"
@@ -910,6 +1063,7 @@ export default function VaccinatorDashboardSection() {
                     Audit Reason <span className="text-danger">*</span>
                   </label>
                   <textarea
+                    ref={discardReasonRef}
                     id="draft-discard-reason"
                     className="form-control"
                     rows="3"
