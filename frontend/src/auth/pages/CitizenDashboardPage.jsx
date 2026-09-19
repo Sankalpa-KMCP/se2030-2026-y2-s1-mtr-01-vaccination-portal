@@ -1,39 +1,43 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import CitizenWelcome from '../../features/citizen-dashboard/components/CitizenWelcome';
-import NextActionPanel from '../../features/citizen-dashboard/components/NextActionPanel';
-import AppointmentOverview from '../../features/citizen-dashboard/components/AppointmentOverview';
+import VaccinationJourneyStepper from '../../features/citizen-dashboard/components/VaccinationJourneyStepper';
 import ScreeningOverview from '../../features/citizen-dashboard/components/ScreeningOverview';
+import AppointmentOverview from '../../features/citizen-dashboard/components/AppointmentOverview';
 import QuickActions from '../../features/citizen-dashboard/components/QuickActions';
-import AccountSummary from '../../features/citizen-dashboard/components/AccountSummary';
+import AvailableCampaigns from '../../features/citizen-dashboard/components/AvailableCampaigns';
+import RecentActivity from '../../features/citizen-dashboard/components/RecentActivity';
+import BottomHealthBanner from '../../features/citizen-dashboard/components/BottomHealthBanner';
 import useCitizenDashboardData from '../../features/citizen-dashboard/hooks/useCitizenDashboardData';
-import { getNextAction } from '../../features/citizen-dashboard/utils/citizenDashboardState';
 import '../../features/citizen-dashboard/citizen-dashboard.css';
 
 export default function CitizenDashboardPage() {
   const { user } = useAuth();
   const dashboardData = useCitizenDashboardData(user?.id);
-  const nextAction = getNextAction(dashboardData);
 
   return (
     <section className="citizen-dashboard" aria-labelledby="citizen-dashboard-title">
+      {/* 1. Greeting + Citizen Context + Healthcare Visual Banner */}
       <CitizenWelcome user={user} />
-      <NextActionPanel action={nextAction} />
-      <section className="citizen-dashboard__overview" aria-labelledby="citizen-overview-title">
-        <header className="citizen-section-heading">
-          <div>
-            <p className="citizen-dashboard__eyebrow">At a glance</p>
-            <h2 id="citizen-overview-title">Your service records</h2>
-          </div>
-          <p>Current information from your screening and appointment records.</p>
-        </header>
-        <div className="citizen-dashboard__status-grid">
-          <AppointmentOverview resource={dashboardData.appointments} />
-          <ScreeningOverview resource={dashboardData.screening} />
-        </div>
+
+      {/* 2. Main Status Row: Journey Card (45%) + Eligibility Card (27%) + Appointment Card (28%) */}
+      <section className="citizen-dashboard__status-row" aria-label="Vaccination status overview">
+        <VaccinationJourneyStepper dashboardData={dashboardData} />
+        <ScreeningOverview resource={dashboardData.screening} />
+        <AppointmentOverview resource={dashboardData.appointments} />
       </section>
+
+      {/* 3. Quick Actions: Full-Width White Card Row */}
       <QuickActions />
-      <AccountSummary user={user} />
+
+      {/* 4. Available Campaigns Section */}
+      <AvailableCampaigns dashboardData={dashboardData} />
+
+      {/* 5. Bottom Row: Recent Activity (Left) + Bottom Health Banner (Right) */}
+      <section className="citizen-dashboard__bottom-row" aria-label="Recent activity and healthcare awareness">
+        <RecentActivity dashboardData={dashboardData} />
+        <BottomHealthBanner />
+      </section>
     </section>
   );
 }

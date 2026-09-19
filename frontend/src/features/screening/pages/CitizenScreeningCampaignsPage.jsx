@@ -93,7 +93,9 @@ export default function CitizenScreeningCampaignsPage() {
                       <h3 id={`campaign-${campaign.id}-title`}>{campaign.name}</h3>
                       <p className="citizen-campaign-card__code">Campaign code: {campaign.code}</p>
                     </div>
-                    <CitizenStatusBadge tone="active">{campaign.status}</CitizenStatusBadge>
+                    <CitizenStatusBadge tone={campaign.currentlyAcceptingScreening ? 'positive' : 'neutral'}>
+                      {campaign.currentlyAcceptingScreening ? 'Screening available' : 'Screening closed'}
+                    </CitizenStatusBadge>
                   </div>
                   <dl className="citizen-data-grid">
                     <div><dt>Vaccine</dt><dd>{campaign.vaccineTypeCode || 'Not specified'}</dd></div>
