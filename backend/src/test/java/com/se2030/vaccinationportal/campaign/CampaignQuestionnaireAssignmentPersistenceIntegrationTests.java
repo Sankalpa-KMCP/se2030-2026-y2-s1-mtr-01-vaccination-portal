@@ -66,6 +66,8 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
     static class TestQuestionnaireVersionPublicationPort implements QuestionnaireVersionPublicationPort {
         private final Set<Long> publishedVersions = new HashSet<>();
 
+        private final Set<Long> campaignsWithSubmissions = new HashSet<>();
+
         public void setPublished(Long versionId, boolean published) {
             if (published) {
                 publishedVersions.add(versionId);
@@ -74,13 +76,27 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
             }
         }
 
+        public void setHasSubmissions(Long campaignId, boolean has) {
+            if (has) {
+                campaignsWithSubmissions.add(campaignId);
+            } else {
+                campaignsWithSubmissions.remove(campaignId);
+            }
+        }
+
         public void clear() {
             publishedVersions.clear();
+            campaignsWithSubmissions.clear();
         }
 
         @Override
         public boolean isPublished(Long questionnaireVersionId) {
             return questionnaireVersionId != null && publishedVersions.contains(questionnaireVersionId);
+        }
+
+        @Override
+        public boolean hasCampaignSubmissions(Long campaignId) {
+            return campaignId != null && campaignsWithSubmissions.contains(campaignId);
         }
     }
 

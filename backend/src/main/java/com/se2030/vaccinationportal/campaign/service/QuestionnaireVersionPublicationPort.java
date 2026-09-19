@@ -25,4 +25,12 @@ public interface QuestionnaireVersionPublicationPort {
      * @return {@code true} if the questionnaire version exists and is in {@code PUBLISHED} status; {@code false} otherwise
      */
     boolean isPublished(Long questionnaireVersionId);
+
+    /**
+     * Checks whether the specified campaign already has citizen screening submissions recorded in MF-01.
+     *
+     * @param campaignId Unique identifier of the VaccinationCampaign
+     * @return {@code true} if citizen screening submissions exist for this campaign; {@code false} otherwise
+     */
+    boolean hasCampaignSubmissions(Long campaignId);
 }
