@@ -117,7 +117,7 @@ export default function HeroSection() {
             </div>
 
             {current.isPathway ? (
-              <div className="hero-pathway-tab-content p-3">
+              <div className="hero-pathway-tab-content">
                 <div className="home-hero__visual-head">
                   <span>Vaccination pathway</span>
                   <span className="home-hero__visual-context">Citizen services</span>
