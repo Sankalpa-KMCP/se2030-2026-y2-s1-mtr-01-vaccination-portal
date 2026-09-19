@@ -544,4 +544,18 @@ describe('shared routing and role guards', () => {
       expect(screen.getByText(expectedContent)).toBeTruthy();
     });
   });
+
+  describe('check-in queue access', () => {
+    it('allows ROLE_VACCINATOR to open the check-in queue, matching backend authorization', () => {
+      setAuth({ roles: ['ROLE_VACCINATOR'] });
+      render(<MemoryRouter initialEntries={['/app/checkin/queue']}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Vaccinator Queue & Check-In' })).toBeTruthy();
+    });
+
+    it.each(['ROLE_CAMPAIGN_OFFICER', 'ROLE_MANAGEMENT_USER'])('denies %s on the check-in queue route', (role) => {
+      setAuth({ roles: [role] });
+      render(<MemoryRouter initialEntries={['/app/checkin/queue']}><PortalRoutes /></MemoryRouter>);
+      expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+    });
+  });
 });

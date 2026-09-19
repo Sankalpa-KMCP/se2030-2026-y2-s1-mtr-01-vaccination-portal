@@ -9,9 +9,11 @@ import {
   canViewSessions,
   hasRole,
 } from '../utils/roleUtils';
+import VaccinatorDashboardSection from '../../features/vaccination-administration/components/VaccinatorDashboardSection';
 
 export default function StaffDashboardPage() {
   const { user } = useAuth();
+  const isVaccinator = hasRole(user, 'ROLE_VACCINATOR');
   const services = [
     hasRole(user, 'ROLE_HEALTHCARE_OFFICER') && [
       'Screening Review',
@@ -33,6 +35,7 @@ export default function StaffDashboardPage() {
     canViewSessions(user) && ['Sessions', 'View and manage vaccination sessions permitted for your role.', '/app/sessions'],
     canViewAnalytics(user) && ['Operational Analytics', 'Review operational vaccination programme analytics.', '/app/analytics'],
     (hasRole(user, 'ROLE_INVENTORY_OFFICER') || hasRole(user, 'ROLE_ADMIN')) && ['Inventory & Batches', 'Manage MF-04 manufacturers, vaccine batches, and center stock.', '/app/inventory'],
+    isVaccinator && ['Check-In Queue', 'Load the checked-in queue for your active session slot.', '/app/checkin/queue'],
   ].filter(Boolean);
 
   return (
@@ -46,6 +49,8 @@ export default function StaffDashboardPage() {
       </div>
 
       <div className="mb-5"><DashboardProfileCard user={user} showRoles /></div>
+
+      {isVaccinator && <VaccinatorDashboardSection />}
 
       <h2 className="h3 mb-3">Available Portal Areas</h2>
       {services.length > 0 ? (

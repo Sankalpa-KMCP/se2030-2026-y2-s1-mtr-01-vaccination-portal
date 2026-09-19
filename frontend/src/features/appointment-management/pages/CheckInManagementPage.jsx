@@ -8,6 +8,8 @@ import {
   markNoShow,
 } from '../api/checkInApi';
 import { listTimeSlots } from '../../session-management/api/sessionApi';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { hasRole } from '../../../auth/utils/roleUtils';
 
 /**
  * Staff-facing Vaccinator Queue & Check-In Management Page.
@@ -28,7 +30,10 @@ import { listTimeSlots } from '../../session-management/api/sessionApi';
  * </ul>
  */
 export default function CheckInManagementPage() {
-  const [slotId, setSlotId] = useState('4001');
+  const { user } = useAuth();
+  const canMutate = hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
+
+  const [slotId, setSlotId] = useState('');
   const [queue, setQueue] = useState(null);
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState(null);
@@ -174,7 +179,11 @@ export default function CheckInManagementPage() {
     <div>
       <PageHeader
         title="Vaccinator Queue & Check-In"
-        subtitle="Monitor the on-site clinic queue, process arrival check-ins, apply authorized overrides, or record no-shows."
+        subtitle={
+          canMutate
+            ? 'Monitor the on-site clinic queue, process arrival check-ins, apply authorized overrides, or record no-shows.'
+            : 'Monitor the on-site clinic queue for your active session slot.'
+        }
       />
 
       {/* Primary Slot Selector Card */}
@@ -211,7 +220,7 @@ export default function CheckInManagementPage() {
                     e.preventDefault();
                   }
                 }}
-                placeholder="e.g. 4001"
+                placeholder="Enter the active Time Slot ID"
                 min="1"
                 step="1"
                 required
@@ -231,73 +240,75 @@ export default function CheckInManagementPage() {
             </div>
           </form>
 
-          {/* Quick lookup by Session ID helper */}
-          <div className="mt-3 pt-3 border-top">
-            <details>
-              <summary className="text-secondary small fw-semibold cursor-pointer">
-                <i className="bi bi-search me-1" aria-hidden="true"></i>
-                Don't know the Time Slot ID? Find slots by Session ID
-              </summary>
-              <div className="row g-2 align-items-center mt-2">
-                <div className="col-auto">
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    placeholder="Enter Session ID"
-                    value={lookupSessionId}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === '') {
-                        setLookupSessionId('');
-                        return;
-                      }
-                      const cleanVal = val.replace(/[^0-9]/g, '');
-                      if (cleanVal === '') {
-                        setLookupSessionId('');
-                        return;
-                      }
-                      const num = parseInt(cleanVal, 10);
-                      if (num > 0) {
-                        setLookupSessionId(String(num));
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
-                        e.preventDefault();
-                      }
-                    }}
-                    min="1"
-                    step="1"
-                  />
-                </div>
-                <div className="col-auto">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary btn-sm"
-                    disabled={loadingSlots || !lookupSessionId}
-                    onClick={handleLookupSessionSlots}
-                  >
-                    {loadingSlots ? 'Searching...' : 'Find Slots'}
-                  </button>
-                </div>
-                {availableSlots.length > 0 && (
+          {/* Quick lookup by Session ID helper - restricted to roles authorized for TimeSlot lookup */}
+          {canMutate && (
+            <div className="mt-3 pt-3 border-top">
+              <details>
+                <summary className="text-secondary small fw-semibold cursor-pointer">
+                  <i className="bi bi-search me-1" aria-hidden="true"></i>
+                  Don't know the Time Slot ID? Find slots by Session ID
+                </summary>
+                <div className="row g-2 align-items-center mt-2">
                   <div className="col-auto">
-                    <select
-                      className="form-select form-select-sm"
-                      value={slotId}
-                      onChange={(e) => setSlotId(e.target.value)}
-                    >
-                      {availableSlots.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          Slot #{s.id} ({s.startTime} - {s.endTime})
-                        </option>
-                      ))}
-                    </select>
+                    <input
+                      type="number"
+                      className="form-control form-control-sm"
+                      placeholder="Enter Session ID"
+                      value={lookupSessionId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') {
+                          setLookupSessionId('');
+                          return;
+                        }
+                        const cleanVal = val.replace(/[^0-9]/g, '');
+                        if (cleanVal === '') {
+                          setLookupSessionId('');
+                          return;
+                        }
+                        const num = parseInt(cleanVal, 10);
+                        if (num > 0) {
+                          setLookupSessionId(String(num));
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                          e.preventDefault();
+                        }
+                      }}
+                      min="1"
+                      step="1"
+                    />
                   </div>
-                )}
-              </div>
-            </details>
-          </div>
+                  <div className="col-auto">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary btn-sm"
+                      disabled={loadingSlots || !lookupSessionId}
+                      onClick={handleLookupSessionSlots}
+                    >
+                      {loadingSlots ? 'Searching...' : 'Find Slots'}
+                    </button>
+                  </div>
+                  {availableSlots.length > 0 && (
+                    <div className="col-auto">
+                      <select
+                        className="form-select form-select-sm"
+                        value={slotId}
+                        onChange={(e) => setSlotId(e.target.value)}
+                      >
+                        {availableSlots.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            Slot #{s.id} ({s.startTime} - {s.endTime})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </details>
+            </div>
+          )}
         </div>
       </div>
 
@@ -357,6 +368,7 @@ export default function CheckInManagementPage() {
                   onReverseCheckIn={handleReverseCheckIn}
                   onMarkNoShow={handleMarkNoShow}
                   isProcessing={processingId === appointment.id}
+                  canMutate={canMutate}
                 />
               ))}
             </div>

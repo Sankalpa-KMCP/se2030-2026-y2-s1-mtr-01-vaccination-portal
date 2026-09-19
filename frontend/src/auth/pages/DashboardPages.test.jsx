@@ -6,6 +6,30 @@ import CitizenDashboardPage from './CitizenDashboardPage';
 import StaffDashboardPage from './StaffDashboardPage';
 import AdminDashboardPage from './AdminDashboardPage';
 
+const draftApiState = vi.hoisted(() => ({
+  current: {
+    createVaccinationDraft: vi.fn(),
+    discardVaccinationDraft: vi.fn(),
+    listMyVaccinationDrafts: vi.fn(async () => []),
+    updateVaccinationDraft: vi.fn(),
+  },
+}));
+
+vi.mock('../../features/vaccination-administration/api/vaccinationDraftApi', () => ({
+  createVaccinationDraft: (...args) => draftApiState.current.createVaccinationDraft(...args),
+  discardVaccinationDraft: (...args) => draftApiState.current.discardVaccinationDraft(...args),
+  listMyVaccinationDrafts: (...args) => draftApiState.current.listMyVaccinationDrafts(...args),
+  updateVaccinationDraft: (...args) => draftApiState.current.updateVaccinationDraft(...args),
+}));
+
+vi.mock('../../features/appointment-management/api/checkInApi', () => ({
+  getVaccinatorQueue: vi.fn(async () => []),
+}));
+
+vi.mock('../../features/session-management/api/sessionApi', () => ({
+  listTimeSlots: vi.fn(async () => []),
+}));
+
 const authState = vi.hoisted(() => ({ current: null }));
 const dashboardState = vi.hoisted(() => ({
   current: {
@@ -80,7 +104,39 @@ describe('role dashboards', () => {
     expect(screen.queryByRole('heading', { name: 'Sessions' })).toBeNull();
   });
 
-  it('shows the administrator profile and staff request entry', () => {
+  it('renders the vaccinator workspace, queue card, and draft tools on the staff dashboard', () => {
+    authState.current = { user: {
+      fullName: 'Vera Vaccinator',
+      email: 'vera@example.gov',
+      phoneNumber: '+94 76 100 2000',
+      roles: ['ROLE_VACCINATOR'],
+    } };
+    renderPage(<StaffDashboardPage />);
+
+    expect(screen.getByRole('heading', { name: 'Welcome, Vera Vaccinator' })).toBeTruthy();
+    const workspace = screen.getByRole('region', { name: /vaccinator workspace/i });
+    expect(within(workspace).getByRole('heading', { name: 'Checked-In Queue' })).toBeTruthy();
+    expect(within(workspace).getByRole('heading', { name: 'My Active Drafts' })).toBeTruthy();
+    expect(within(workspace).queryByRole('button', { name: /finalize/i })).toBeNull();
+
+    const queueCard = screen.getByRole('heading', { name: 'Check-In Queue' }).closest('.card');
+    expect(within(queueCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
+  });
+
+  it('hides the vaccinator workspace for non-vaccinator staff personas', () => {
+    authState.current = { user: {
+      fullName: 'Center Manager',
+      email: 'manager@example.com',
+      phoneNumber: '+94 71 100 2000',
+      roles: ['ROLE_CENTER_MANAGER'],
+    } };
+    renderPage(<StaffDashboardPage />);
+
+    expect(screen.queryByRole('region', { name: /vaccinator workspace/i })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'My Active Drafts' })).toBeNull();
+  });
+
+  it('hides the vaccinator workspace for non-vaccinator staff personas', () => {
     authState.current = { user: {
       fullName: 'Portal Admin',
       email: 'admin@example.com',
