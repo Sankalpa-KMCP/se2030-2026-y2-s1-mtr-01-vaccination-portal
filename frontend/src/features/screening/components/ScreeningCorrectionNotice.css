@@ -1,0 +1,122 @@
+/* Scoped styles for screening correction notices (active and resolved) */
+
+.citizen-correction-notice {
+  margin-top: 1.25rem;
+  border-radius: 10px;
+  padding: 1.15rem 1.25rem;
+  font-family: inherit;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* 1. CURRENT ACTIVE CORRECTION: Prominent amber Action Required card */
+.citizen-correction-notice--active {
+  background: #FFFDF5;
+  border: 1px solid #F59E0B;
+  border-left: 5px solid #D97706;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.08);
+}
+
+.citizen-correction-notice--active .citizen-correction-notice__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.citizen-correction-notice--active .citizen-correction-notice__title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.citizen-correction-notice--active .citizen-correction-notice__icon {
+  color: #D97706;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.citizen-correction-notice--active .citizen-correction-notice__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #B45309;
+  margin: 0 0 0.15rem;
+}
+
+.citizen-correction-notice--active .citizen-correction-notice__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #92400E;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.citizen-correction-notice--active .citizen-correction-notice__instructions {
+  color: #78350F;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 0.6rem;
+  word-break: break-word;
+}
+
+.citizen-correction-notice--active .citizen-correction-notice__meta {
+  color: #B45309;
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.citizen-correction-notice--active .citizen-correction-notice__action {
+  margin-top: 1rem;
+}
+
+/* 2. RESOLVED / HISTORICAL CORRECTION: Low-emphasis neutral/soft mint card */
+.citizen-correction-notice--resolved {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-left: 4px solid rgba(15, 110, 91, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.citizen-correction-notice--resolved .citizen-correction-notice__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.citizen-correction-notice--resolved .citizen-correction-notice__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.citizen-correction-notice--resolved .citizen-correction-notice__icon {
+  color: #0F6E5B;
+  flex-shrink: 0;
+}
+
+.citizen-correction-notice--resolved .citizen-correction-notice__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.citizen-correction-notice--resolved .citizen-correction-notice__instructions {
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0 0 0.45rem;
+  word-break: break-word;
+}
+
+.citizen-correction-notice--resolved .citizen-correction-notice__meta {
+  color: #64748B;
+  font-size: 0.8rem;
+  margin: 0;
+}

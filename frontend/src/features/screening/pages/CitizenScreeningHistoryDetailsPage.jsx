@@ -96,15 +96,19 @@ function HistoryDetails({ submissionId }) {
             <div><dt>Questionnaire version</dt><dd>{details.questionnaireVersionNumber ?? 'Not available'}</dd></div>
           </dl>
           <p className="small text-muted mt-3 mb-0">A preliminary result is not a final eligibility decision.</p>
-          <ScreeningCorrectionNotice submission={details} />
-          {details.status === SCREENING_SUBMISSION_STATUS.CORRECTIONS_REQUIRED && (
-            <Link
-              className="btn btn-primary mt-3 citizen-action citizen-action--primary"
-              to={`/app/screening/history/${details.id ?? submissionId}/correct`}
-            >
-              Correct Screening
-            </Link>
-          )}
+          <ScreeningCorrectionNotice
+            submission={details}
+            action={
+              details.status === SCREENING_SUBMISSION_STATUS.CORRECTIONS_REQUIRED ? (
+                <Link
+                  className="btn btn-primary citizen-action citizen-action--primary"
+                  to={`/app/screening/history/${details.id ?? submissionId}/correct`}
+                >
+                  Correct Screening
+                </Link>
+              ) : null
+            }
+          />
           </div>
         </section>
         <section className="citizen-detail-panel" aria-labelledby="submitted-answers-title">
