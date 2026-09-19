@@ -23,6 +23,10 @@ vi.mock('../../../auth/context/AuthContext', () => ({
 
 vi.mock('../api/campaignApi', () => campaignApiMocks);
 
+vi.mock('../api/campaignConfigurationApi', () => ({
+  getPublishedQuestionnaireVersions: vi.fn().mockResolvedValue([]),
+}));
+
 describe('CampaignManagementPage — Campaign Update Flow', () => {
   const sampleCampaignSummary = {
     id: 10,
@@ -93,6 +97,7 @@ describe('CampaignManagementPage — Campaign Update Flow', () => {
     expect(await screen.findByRole('heading', { name: 'Edit Campaign' })).toBeTruthy();
 
     const nameInput = screen.getByLabelText(/Campaign Name/i);
+    expect(nameInput.value).toBe('Test Flu Campaign');
     fireEvent.change(nameInput, { target: { value: 'Updated Flu Campaign 2026' } });
 
     const saveChangesBtn = screen.getByRole('button', { name: /Save Changes/i });

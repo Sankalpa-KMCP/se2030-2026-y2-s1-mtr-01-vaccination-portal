@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import { listVaccineTypes, listTargetGroups } from '../api/campaignApi';
 import { getPublishedQuestionnaireVersions } from '../api/campaignConfigurationApi';
@@ -67,8 +67,14 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
     });
   };
 
+  const campaignKeyRef = useRef(
+    initialCampaign ? (initialCampaign.id ?? initialCampaign.code ?? 'initial') : null
+  );
+
   useEffect(() => {
-    if (initialCampaign) {
+    const key = initialCampaign ? (initialCampaign.id ?? initialCampaign.code ?? 'loaded') : null;
+    if (initialCampaign && key !== campaignKeyRef.current) {
+      campaignKeyRef.current = key;
       setCode(initialCampaign.code || '');
       setName(initialCampaign.name || '');
       setDescription(initialCampaign.description || '');
