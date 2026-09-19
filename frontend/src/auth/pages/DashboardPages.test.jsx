@@ -178,7 +178,7 @@ describe('role dashboards', () => {
     expect(checkInLinks).toHaveLength(1);
   });
 
-  it('shows the administrator profile and staff request entry without staff-dashboard modules', () => {
+  it('renders administrator profile, staff requests, and operational cards while excluding clinical screening', () => {
     authState.current = { user: {
       fullName: 'Portal Admin',
       email: 'admin@example.com',
@@ -187,10 +187,75 @@ describe('role dashboards', () => {
     } };
     renderPage(<AdminDashboardPage />);
     expect(screen.getByRole('heading', { name: 'Welcome, Portal Admin' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Staff Account Requests' })).toBeTruthy();
-    expect(screen.getAllByRole('link', { name: 'Open' }).some(
-      (link) => link.getAttribute('href') === '/app/admin/staff-requests',
-    )).toBe(true);
+    expect(screen.getAllByText('Administrator', { selector: '.badge' }).length).toBeGreaterThan(0);
+
+    const staffRequestsCard = screen.getByRole('heading', { name: 'Staff Account Requests' }).closest('.card');
+    expect(within(staffRequestsCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/admin/staff-requests');
+
+    const campaignCard = screen.getByRole('heading', { name: 'Campaign Management' }).closest('.card');
+    expect(within(campaignCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/campaigns');
+
+    const centerCard = screen.getByRole('heading', { name: 'Center Operations' }).closest('.card');
+    expect(within(centerCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/center-operations');
+
+    const sessionCard = screen.getByRole('heading', { name: 'Session Management' }).closest('.card');
+    expect(within(sessionCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/sessions');
+
+    const analyticsCard = screen.getByRole('heading', { name: 'Operational Analytics' }).closest('.card');
+    expect(within(analyticsCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/analytics');
+
+    const inventoryCard = screen.getByRole('heading', { name: 'Inventory & Batches' }).closest('.card');
+    expect(within(inventoryCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/inventory');
+
+    const checkInCard = screen.getByRole('heading', { name: 'Check-In & Queue Management' }).closest('.card');
+    expect(within(checkInCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
+
+    const openLinks = screen.getAllByRole('link', { name: 'Open' });
+    expect(openLinks).toHaveLength(7);
+
+    expect(screen.queryByRole('heading', { name: 'Screening Review Queue' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Screening Questions' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Screening Questionnaires' })).toBeNull();
+  });
+
+  it('renders super administrator profile, operational cards, and screening review queue', () => {
+    authState.current = { user: {
+      fullName: 'Super Admin User',
+      email: 'superadmin@example.com',
+      phoneNumber: '+94 70 999 8888',
+      roles: ['ROLE_SUPER_ADMIN'],
+    } };
+    renderPage(<AdminDashboardPage />);
+    expect(screen.getByRole('heading', { name: 'Welcome, Super Admin User' })).toBeTruthy();
+    expect(screen.getAllByText('Super Administrator', { selector: '.badge' }).length).toBeGreaterThan(0);
+
+    const staffRequestsCard = screen.getByRole('heading', { name: 'Staff Account Requests' }).closest('.card');
+    expect(within(staffRequestsCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/admin/staff-requests');
+
+    const campaignCard = screen.getByRole('heading', { name: 'Campaign Management' }).closest('.card');
+    expect(within(campaignCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/campaigns');
+
+    const centerCard = screen.getByRole('heading', { name: 'Center Operations' }).closest('.card');
+    expect(within(centerCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/center-operations');
+
+    const sessionCard = screen.getByRole('heading', { name: 'Session Management' }).closest('.card');
+    expect(within(sessionCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/sessions');
+
+    const analyticsCard = screen.getByRole('heading', { name: 'Operational Analytics' }).closest('.card');
+    expect(within(analyticsCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/analytics');
+
+    const inventoryCard = screen.getByRole('heading', { name: 'Inventory & Batches' }).closest('.card');
+    expect(within(inventoryCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/inventory');
+
+    const checkInCard = screen.getByRole('heading', { name: 'Check-In & Queue Management' }).closest('.card');
+    expect(within(checkInCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
+
+    const screeningCard = screen.getByRole('heading', { name: 'Screening Review Queue' }).closest('.card');
+    expect(within(screeningCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/staff/screening/reviews');
+
+    const openLinks = screen.getAllByRole('link', { name: 'Open' });
+    expect(openLinks).toHaveLength(8);
+
     expect(screen.queryByRole('heading', { name: 'Screening Questions' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Screening Questionnaires' })).toBeNull();
   });
