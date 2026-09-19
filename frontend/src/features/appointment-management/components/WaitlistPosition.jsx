@@ -1,7 +1,17 @@
 import React from 'react';
 
 /**
- * Component showing the citizen's current queue position in a waitlist (US-05).
+ * Component showing the citizen's current queue position in a waitlist.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist position transparency.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-06: Renders 1-based dynamic index calculated from FIFO arrival order.</li>
+ * </ul>
  *
  * @param {Object} props
  * @param {number|null} props.position - The 1-based index in the queue

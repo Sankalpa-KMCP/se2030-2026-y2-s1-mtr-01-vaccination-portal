@@ -43,7 +43,8 @@ export default function Header({ onLogout }) {
   const showCenters = canViewCenters(user);
   const showSessions = canViewSessions(user);
   const showAnalytics = canViewAnalytics(user);
-  const showCheckIn = hasRole(user, ADMIN_ROLE, 'ROLE_HEALTHCARE_OFFICER', 'ROLE_CENTER_MANAGER');
+  const showCheckIn = hasRole(user, ADMIN_ROLE, 'ROLE_CENTER_MANAGER', 'ROLE_VACCINATOR');
+  const showInventory = hasRole(user, ADMIN_ROLE, 'ROLE_INVENTORY_OFFICER');
   const showAdminNavigation = hasRole(user, ADMIN_ROLE);
   const showScreeningConfigurationNavigation = hasRole(
     user,
@@ -163,6 +164,14 @@ export default function Header({ onLogout }) {
                 <li className="nav-item">
                   <NavLink className={navigationClassName} to="/app/analytics" onClick={closeNav}>
                     Analytics
+                  </NavLink>
+                </li>
+              )}
+
+              {showInventory && (
+                <li className="nav-item">
+                  <NavLink className={navigationClassName} to="/app/inventory" onClick={closeNav}>
+                    Inventory
                   </NavLink>
                 </li>
               )}

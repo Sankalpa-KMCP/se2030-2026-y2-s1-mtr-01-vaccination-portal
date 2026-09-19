@@ -1,21 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import portalCareMark from '../assets/portal-care-mark.svg';
 
 function BrandGlyph() {
   return (
     <span className="lp-header__glyph" aria-hidden="true">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 2.5 4.5 5.4v5.3c0 4.7 3.1 8.9 7.5 10.3 4.4-1.4 7.5-5.6 7.5-10.3V5.4L12 2.5Z"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M8.6 12.1v2.6h1.9v-2.6h2.8v2.6h1.9v-2.6h1.6v-1.7H8.6v1.7Z"
-          fill="currentColor"
-        />
-      </svg>
+      <img src={portalCareMark} alt="" width="50" height="50" />
     </span>
   );
 }
@@ -27,14 +17,73 @@ const NAV_ITEMS = [
 ];
 
 export default function PublicHeader({ onLoginClick }) {
+  const [textSize, setTextSize] = useState(() => {
+    return localStorage.getItem('vax_text_size') || 'normal';
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.remove('vax-text-normal', 'vax-text-large', 'vax-text-xl');
+    if (textSize === 'large') {
+      document.documentElement.classList.add('vax-text-large');
+    } else if (textSize === 'xl') {
+      document.documentElement.classList.add('vax-text-xl');
+    } else {
+      document.documentElement.classList.add('vax-text-normal');
+    }
+    localStorage.setItem('vax_text_size', textSize);
+  }, [textSize]);
+
   return (
     <header className="lp-header">
       <div className="lp-container lp-header__inner">
         <Link to="/" className="lp-header__brand-group" aria-label="Vaccination Portal — home">
           <BrandGlyph />
           <span className="lp-header__brand">Vaccination Portal</span>
-          <span className="lp-header__badge">Citizen &amp; Staff Portal</span>
         </Link>
+
+        {/* Accessibility & Hotline Bar */}
+        <div className="lp-header__utility" aria-label="Accessibility and Support">
+          <div className="lp-header__access-ctrl" title="Change text size for easier reading">
+            <span className="lp-header__access-label">Text:</span>
+            <button
+              type="button"
+              className={`lp-header__font-btn ${textSize === 'normal' ? 'is-active' : ''}`}
+              onClick={() => setTextSize('normal')}
+              aria-label="Standard text size"
+              title="Standard text size"
+            >
+              A
+            </button>
+            <button
+              type="button"
+              className={`lp-header__font-btn ${textSize === 'large' ? 'is-active' : ''}`}
+              onClick={() => setTextSize('large')}
+              aria-label="Large text size for senior citizens"
+              title="Large text size"
+            >
+              A+
+            </button>
+            <button
+              type="button"
+              className={`lp-header__font-btn ${textSize === 'xl' ? 'is-active' : ''}`}
+              onClick={() => setTextSize('xl')}
+              aria-label="Extra large text size for high visibility"
+              title="Extra large text size"
+            >
+              A++
+            </button>
+          </div>
+
+          <a
+            href="tel:19008292273"
+            className="lp-header__helpline"
+            aria-label="24/7 Telephone Booking Helpline 1900-VAX-CARE"
+            title="Free Senior & Citizen Phone Support"
+          >
+            <i className="bi bi-telephone-fill me-1" />
+            <span>1900-VAX-CARE</span>
+          </a>
+        </div>
 
         <nav className="lp-header__nav" aria-label="Main navigation">
           {NAV_ITEMS.map((item) => (
@@ -55,6 +104,9 @@ export default function PublicHeader({ onLoginClick }) {
             onClick={onLoginClick}
           >
             Login
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 8h9m-3.5-3.5L12 8l-3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </nav>
       </div>

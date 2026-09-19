@@ -8,6 +8,8 @@ import com.se2030.vaccinationportal.screening.repository.QuestionnaireItemReposi
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireRepository;
 import com.se2030.vaccinationportal.screening.repository.QuestionnaireVersionRepository;
 import com.se2030.vaccinationportal.screening.repository.ScreeningQuestionRepository;
+import com.se2030.vaccinationportal.screening.repository.ScreeningSubmissionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
     private final QuestionnaireItemRepository itemRepository;
     private final EligibilityRuleRepository ruleRepository;
     private final ScreeningQuestionRepository questionRepository;
+    private final ScreeningSubmissionRepository submissionRepository;
     private final QuestionnaireMutabilityValidator mutabilityValidator;
 
     public QuestionnaireVersionService(
@@ -39,11 +42,25 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
             ScreeningQuestionRepository questionRepository,
             QuestionnaireMutabilityValidator mutabilityValidator
     ) {
+        this(questionnaireRepository, versionRepository, itemRepository, ruleRepository, questionRepository, null, mutabilityValidator);
+    }
+
+    @Autowired
+    public QuestionnaireVersionService(
+            QuestionnaireRepository questionnaireRepository,
+            QuestionnaireVersionRepository versionRepository,
+            QuestionnaireItemRepository itemRepository,
+            EligibilityRuleRepository ruleRepository,
+            ScreeningQuestionRepository questionRepository,
+            ScreeningSubmissionRepository submissionRepository,
+            QuestionnaireMutabilityValidator mutabilityValidator
+    ) {
         this.questionnaireRepository = questionnaireRepository;
         this.versionRepository = versionRepository;
         this.itemRepository = itemRepository;
         this.ruleRepository = ruleRepository;
         this.questionRepository = questionRepository;
+        this.submissionRepository = submissionRepository;
         this.mutabilityValidator = mutabilityValidator;
     }
 
@@ -54,6 +71,22 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
             return false;
         }
         return versionRepository.findByIdAndStatus(questionnaireVersionId, QuestionnaireVersionStatus.PUBLISHED).isPresent();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasCampaignSubmissions(Long campaignId) {
+        if (campaignId == null || submissionRepository == null) {
+            return false;
+        }
+        return submissionRepository.existsByCampaignId(campaignId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionnaireVersion> getPublishedVersions() {
+        List<QuestionnaireVersion> versions = versionRepository.findByStatus(QuestionnaireVersionStatus.PUBLISHED);
+        versions.forEach(this::initializeResponseRelations);
+        return versions;
     }
 
     @Transactional(readOnly = true)
@@ -88,6 +121,10 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
     public QuestionnaireItem addQuestionItem(Long versionId, Long questionId, int displayOrder, Boolean requiredOverride) {
         QuestionnaireVersion version = getVersionById(versionId);
         mutabilityValidator.assertVersionIsDraft(version);
+
+        if (displayOrder < 1) {
+            throw new IllegalArgumentException("Display order must be at least 1");
+        }
 
         ScreeningQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found with ID: " + questionId));
@@ -244,6 +281,10 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
     }
 
     private QuestionnaireVersion initializeResponseRelations(QuestionnaireVersion version) {
+        if (version.getQuestionnaire() != null) {
+            version.getQuestionnaire().getCode();
+            version.getQuestionnaire().getName();
+        }
         version.getItems().size();
         version.getRules().size();
         return version;

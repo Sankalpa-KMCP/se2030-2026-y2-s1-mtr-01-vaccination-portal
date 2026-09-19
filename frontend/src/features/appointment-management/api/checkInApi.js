@@ -1,9 +1,22 @@
 import { apiRequest } from '../../../services/apiClient';
 
 /**
- * API client methods for staff check-in, queue inspection, reversal, and no-show processing (US-04).
+ * API client methods for staff check-in, queue inspection, reversal, and no-show processing.
  * Interfaces with backend /api/v1/appointments endpoints protected by staff roles
  * (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-26: Vaccinator view of checked-in appointments and reception check-in management.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled:</b>
+ * <ul>
+ *   <li>MF03-BR-09: 30-minute arrival window; overrides require staff reason.</li>
+ *   <li>MF03-BR-10: Only CONFIRMED appointments can be checked in.</li>
+ *   <li>MF03-BR-11: COMPLETED appointments are immutable.</li>
+ *   <li>MF03-BR-15: CHECKED_IN can be reversed back to CONFIRMED.</li>
+ * </ul>
  */
 
 /**

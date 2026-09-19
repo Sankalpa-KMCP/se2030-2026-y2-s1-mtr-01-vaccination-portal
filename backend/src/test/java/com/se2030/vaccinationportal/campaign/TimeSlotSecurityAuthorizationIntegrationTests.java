@@ -134,13 +134,12 @@ public class TimeSlotSecurityAuthorizationIntegrationTests {
         }
 
         @Test
-        @DisplayName("ROLE_HEALTHCARE_OFFICER is authorized (200 OK)")
-        void healthcareOfficerCanListSlots() throws Exception {
+        @DisplayName("ROLE_HEALTHCARE_OFFICER is denied (403 Forbidden)")
+        void healthcareOfficerDeniedFromListingSlots() throws Exception {
             String auth = token(3L, "officer@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
             mockMvc.perform(get("/api/v1/sessions/" + session.getId() + "/time-slots")
                             .header(HttpHeaders.AUTHORIZATION, auth))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].id", is(slot.getId().intValue())));
+                    .andExpect(status().isForbidden());
         }
 
         @Test

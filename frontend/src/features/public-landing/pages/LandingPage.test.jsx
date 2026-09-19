@@ -19,7 +19,7 @@ describe('LandingPage', () => {
     renderLanding();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /a clear path from campaign to clinic appointment/i }),
+      screen.getByRole('heading', { level: 1, name: /your next step to a healthier tomorrow/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: /one service. two ways in/i }),
@@ -38,13 +38,14 @@ describe('LandingPage', () => {
     ).toBeTruthy();
   });
 
-  it('exposes all four authentication routes', () => {
+  it('exposes registration routes and universal login entry points', () => {
     renderLanding();
 
     expect(screen.getByRole('link', { name: /create citizen account/i }).getAttribute('href')).toBe('/register/citizen');
-    expect(screen.getByRole('link', { name: /sign in as a citizen/i }).getAttribute('href')).toBe('/login/citizen');
+    expect(screen.getByRole('link', { name: /^sign in$/i }).getAttribute('href')).toBe('/login');
     expect(screen.getByRole('link', { name: /request staff account/i }).getAttribute('href')).toBe('/register/staff');
-    expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login/staff');
+    expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login');
+    expect(screen.getByRole('link', { name: /manage your appointments/i }).getAttribute('href')).toBe('/login');
   });
 
   it('explains the selected capability and updates its connected outcome', () => {
@@ -125,5 +126,26 @@ describe('LandingPage', () => {
       expect(within(rail).getByRole('link', { name }).getAttribute('href')).toBe(href);
     });
     expect(document.getElementById('get-started')).toBeTruthy();
+  });
+
+  it('exposes hero showcase controls without aria-hidden on interactive ancestors', () => {
+    renderLanding();
+
+    const showcase = screen.getByRole('tablist', { name: /visual showcase/i });
+    expect(showcase).toBeTruthy();
+    expect(showcase.closest('[aria-hidden="true"]')).toBeNull();
+
+    const tabs = within(showcase).getAllByRole('tab');
+    expect(tabs).toHaveLength(4);
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-label')).toBe('Senior Care');
+
+    tabs.forEach((tab) => {
+      expect(tab.closest('[aria-hidden="true"]')).toBeNull();
+    });
+
+    fireEvent.click(tabs[1]);
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
   });
 });

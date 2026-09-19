@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -191,6 +192,92 @@ class CampaignControllerTests {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(jsonPath("$.message", containsString("VaccineType not found with ID: 999")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/campaigns returns 400 when service date ordering violates MF02-BR-01")
+    void createCampaignInvalidServiceDatesReturns400() throws Exception {
+        String jsonPayload = """
+                {
+                    "code": "CMP-2026-INVALID",
+                    "name": "Invalid Date Campaign",
+                    "description": "Invalid date order",
+                    "vaccineTypeId": 10,
+                    "targetGroupId": 20,
+                    "serviceStartDate": "2026-11-30",
+                    "serviceEndDate": "2026-09-01",
+                    "bookingOpenAt": "2026-08-15T08:00:00Z",
+                    "bookingCloseAt": "2026-08-30T18:00:00Z"
+                }
+                """;
+
+        when(campaignService.createCampaign(
+                any(), any(), any(), eq(10L), eq(20L), any(), any(), any(), any()
+        )).thenThrow(new IllegalArgumentException("Campaign service end date (2026-09-01) must be after service start date (2026-11-30) [MF02-BR-01]"));
+
+        mockMvc.perform(post("/api/v1/campaigns")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.message", containsString("must be after service start date")));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/campaigns/{id} updates campaign and returns 200")
+    void updateCampaignSuccess() throws Exception {
+        String updateJson = """
+                {
+                    "name": "Updated Campaign Name",
+                    "description": "Updated Description",
+                    "serviceStartDate": "2026-09-01",
+                    "serviceEndDate": "2026-11-30",
+                    "bookingOpenAt": "2026-08-15T08:00:00Z",
+                    "bookingCloseAt": "2026-11-29T18:00:00Z"
+                }
+                """;
+
+        when(campaignService.updateCampaign(
+                eq(100L),
+                eq("Updated Campaign Name"),
+                eq("Updated Description"),
+                eq(LocalDate.of(2026, 9, 1)),
+                eq(LocalDate.of(2026, 11, 30)),
+                eq(Instant.parse("2026-08-15T08:00:00Z")),
+                eq(Instant.parse("2026-11-29T18:00:00Z"))
+        )).thenReturn(sampleCampaign);
+
+        mockMvc.perform(put("/api/v1/campaigns/100")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(100)))
+                .andExpect(jsonPath("$.code", is("CMP-2026-AUTUMN")));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/campaigns/{id} returns 400 when date ordering is invalid")
+    void updateCampaignInvalidDatesReturns400() throws Exception {
+        String updateJson = """
+                {
+                    "name": "Updated Campaign",
+                    "description": "Desc",
+                    "serviceStartDate": "2026-11-30",
+                    "serviceEndDate": "2026-09-01",
+                    "bookingOpenAt": "2026-08-15T08:00:00Z",
+                    "bookingCloseAt": "2026-11-29T18:00:00Z"
+                }
+                """;
+
+        when(campaignService.updateCampaign(eq(100L), any(), any(), any(), any(), any(), any()))
+                .thenThrow(new IllegalArgumentException("Campaign service end date (2026-09-01) must be after service start date (2026-11-30)"));
+
+        mockMvc.perform(put("/api/v1/campaigns/100")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.message", containsString("must be after service start date")));
     }
 
     @Test

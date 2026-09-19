@@ -53,7 +53,7 @@ public class CenterStaffRosterController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<List<OperationalStaffRosterResponse>> listStaffRoster(
             @PathVariable("centerId") Long centerId,
             @RequestParam(value = "role", required = false) StaffRole role,
@@ -67,7 +67,7 @@ public class CenterStaffRosterController {
     }
 
     @GetMapping("/{rosterId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperationalStaffRosterResponse> getRosterEntry(
             @PathVariable("centerId") Long centerId,
             @PathVariable("rosterId") Long rosterId

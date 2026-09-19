@@ -53,7 +53,7 @@ public class CenterOperationalResourceController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<List<OperationalResourceResponse>> listResources(
             @PathVariable("centerId") Long centerId,
             @RequestParam(value = "resourceType", required = false) ResourceType resourceType
@@ -66,7 +66,7 @@ public class CenterOperationalResourceController {
     }
 
     @GetMapping("/{resourceId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<OperationalResourceResponse> getResource(
             @PathVariable("centerId") Long centerId,
             @PathVariable("resourceId") Long resourceId

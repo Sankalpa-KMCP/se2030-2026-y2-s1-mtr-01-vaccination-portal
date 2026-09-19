@@ -85,7 +85,7 @@ class VaccinationCorrectionIntegrationTests {
         assertEquals("Corrected clinical note", history.get(1).getNewValue());
         assertNotNull(history.get(0).getCorrectedAt());
         assertEquals(91L, history.get(0).getCorrectedBy());
-        assertEquals(VaccinationCorrectionStatus.APPLIED, history.get(0).getStatus());
+        assertEquals(VaccinationCorrectionStatus.PENDING, history.get(0).getStatus());
 
         assertEquals(recordCount, vaccinationRecordRepository.count());
         assertEquals(1, unchangedRecord.getDoseNumber());
@@ -102,15 +102,15 @@ class VaccinationCorrectionIntegrationTests {
     void sameFieldCorrectionsChainFromEffectiveValueAndPermitReturningToOriginal() {
         VaccinationRecord record = vaccinationRecordRepository.saveAndFlush(record());
 
-        VaccinationCorrection doseCorrection = correctionService.createCorrection(
+        VaccinationCorrection doseCorrection = createAndApplyCorrection(
                 record.getId(),
                 request("doseNumber", "2", "Independent dose correction")
         );
-        VaccinationCorrection first = correctionService.createCorrection(
+        VaccinationCorrection first = createAndApplyCorrection(
                 record.getId(),
                 request("vaccineBatchId", "78", "First batch correction")
         );
-        VaccinationCorrection second = correctionService.createCorrection(
+        VaccinationCorrection second = createAndApplyCorrection(
                 record.getId(),
                 request("vaccineBatchId", "90", "Second batch correction")
         );
@@ -123,15 +123,15 @@ class VaccinationCorrectionIntegrationTests {
                 )
         );
 
-        VaccinationCorrection restored = correctionService.createCorrection(
+        VaccinationCorrection restored = createAndApplyCorrection(
                 record.getId(),
                 request("vaccineBatchId", "56", "Restore original batch")
         );
-        VaccinationCorrection noteOne = correctionService.createCorrection(
+        VaccinationCorrection noteOne = createAndApplyCorrection(
                 record.getId(),
                 request("authorizedNotes", "First corrected note", "First note correction")
         );
-        VaccinationCorrection noteTwo = correctionService.createCorrection(
+        VaccinationCorrection noteTwo = createAndApplyCorrection(
                 record.getId(),
                 request("authorizedNotes", null, "Clear corrected note")
         );
@@ -161,6 +161,13 @@ class VaccinationCorrectionIntegrationTests {
 
     private CreateVaccinationCorrectionRequest request(String fieldName, String newValue, String reason) {
         return new CreateVaccinationCorrectionRequest(fieldName, newValue, reason, 91L);
+    }
+
+    private VaccinationCorrection createAndApplyCorrection(Long recordId, CreateVaccinationCorrectionRequest request) {
+        VaccinationCorrection c = correctionService.createCorrection(recordId, request);
+        c.approve(9999L, Instant.now(), "Approved for integration test");
+        c.apply();
+        return correctionRepository.saveAndFlush(c);
     }
 
     private VaccinationRecord record() {

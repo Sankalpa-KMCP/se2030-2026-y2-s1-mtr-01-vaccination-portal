@@ -11,6 +11,7 @@ import PublicServiceGuide from '../components/PublicServiceGuide';
 import '../public-landing.css';
 import '../premium-public.css';
 import '../clinical-public.css';
+import '../glass-header.css';
 
 const ROLES = [
   {

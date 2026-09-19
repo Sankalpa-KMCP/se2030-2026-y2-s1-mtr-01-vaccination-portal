@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.screening.dto.AddEligibilityRuleRequest;
 import com.se2030.vaccinationportal.screening.dto.AddQuestionItemRequest;
 import com.se2030.vaccinationportal.screening.dto.UpdateEligibilityRuleRequest;
 import com.se2030.vaccinationportal.screening.dto.response.EligibilityRuleResponse;
+import com.se2030.vaccinationportal.screening.dto.response.PublishedQuestionnaireVersionResponse;
 import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireItemResponse;
 import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireVersionResponse;
 import com.se2030.vaccinationportal.screening.mapper.QuestionnaireVersionMapper;
@@ -48,8 +49,25 @@ public class QuestionnaireController {
         return ResponseEntity.ok(versionMapper.toResponses(versionService.getVersionsForQuestionnaire(questionnaireId)));
     }
 
+    @GetMapping("/questionnaire-versions/published")
+    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER", "CAMPAIGN_OFFICER"})
+    public ResponseEntity<List<PublishedQuestionnaireVersionResponse>> getPublishedVersions() {
+        List<PublishedQuestionnaireVersionResponse> responses = versionService.getPublishedVersions().stream()
+                .map(v -> new PublishedQuestionnaireVersionResponse(
+                        v.getId(),
+                        v.getQuestionnaire().getId(),
+                        v.getQuestionnaire().getCode(),
+                        v.getQuestionnaire().getName(),
+                        v.getVersionNumber(),
+                        v.getStatus(),
+                        v.getPublishedAt()
+                ))
+                .toList();
+        return ResponseEntity.ok(responses);
+    }
+
     @GetMapping("/questionnaire-versions/{versionId}")
-    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER", "CITIZEN"})
+    @RequireRoles({"ADMIN", "SYSTEM_ADMINISTRATOR", "HEALTHCARE_OFFICER", "CITIZEN", "CAMPAIGN_OFFICER"})
     public ResponseEntity<QuestionnaireVersionResponse> getVersionById(@PathVariable("versionId") Long versionId) {
         return ResponseEntity.ok(versionMapper.toResponse(versionService.getVersionById(versionId)));
     }

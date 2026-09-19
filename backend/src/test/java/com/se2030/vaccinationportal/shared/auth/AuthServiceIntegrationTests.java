@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.shared.auth;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginResponse;
 import com.se2030.vaccinationportal.shared.auth.dto.UserProfileResponse;
+import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingVerificationException;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
@@ -105,12 +106,12 @@ class AuthServiceIntegrationTests {
     }
 
     @Test
-    @DisplayName("login with PENDING_VERIFICATION account throws DisabledException")
-    void login_pendingVerificationAccount_throwsDisabledException() {
+    @DisplayName("login with PENDING_VERIFICATION account throws AccountPendingVerificationException")
+    void login_pendingVerificationAccount_throwsAccountPendingVerificationException() {
         UserAccount account = new UserAccount("unverified@portal.gov", passwordEncoder.encode("Password123!"), AccountStatus.PENDING_VERIFICATION);
         userAccountRepository.save(account);
 
-        assertThrows(DisabledException.class, () ->
+        assertThrows(AccountPendingVerificationException.class, () ->
                 authService.login(new LoginRequest("unverified@portal.gov", "Password123!"))
         );
     }

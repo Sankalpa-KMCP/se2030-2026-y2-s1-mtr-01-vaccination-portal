@@ -207,8 +207,7 @@ public class SessionSecurityAuthorizationIntegrationTests {
             List<String> authorizedRoles = List.of(
                     "ROLE_ADMIN",
                     "ROLE_CENTER_MANAGER",
-                    "ROLE_CAMPAIGN_OFFICER",
-                    "ROLE_HEALTHCARE_OFFICER"
+                    "ROLE_CAMPAIGN_OFFICER"
             );
 
             long userId = 101L;
@@ -224,6 +223,15 @@ public class SessionSecurityAuthorizationIntegrationTests {
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.id", is(draftSession.getId().intValue())));
             }
+        }
+
+        @Test
+        @DisplayName("ROLE_HEALTHCARE_OFFICER GET /api/v1/sessions is denied 403")
+        void healthcareOfficerSessionsDenied() throws Exception {
+            String auth = token(301L, "hco@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+            mockMvc.perform(get("/api/v1/sessions")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
         }
     }
 
@@ -252,9 +260,18 @@ public class SessionSecurityAuthorizationIntegrationTests {
         }
 
         @Test
-        @DisplayName("ROLE_HEALTHCARE_OFFICER GET /readiness succeeds 200")
-        void healthcareOfficerReadinessSucceeds() throws Exception {
+        @DisplayName("ROLE_HEALTHCARE_OFFICER GET /readiness is denied 403")
+        void healthcareOfficerReadinessDenied() throws Exception {
             String auth = token(301L, "hco@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+            mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId() + "/readiness")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CENTER_MANAGER GET /readiness succeeds 200")
+        void centerManagerReadinessSucceeds() throws Exception {
+            String auth = token(102L, "manager@portal.gov", List.of("ROLE_CENTER_MANAGER"));
             mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId() + "/readiness")
                             .header(HttpHeaders.AUTHORIZATION, auth))
                     .andExpect(status().isOk());
@@ -264,6 +281,15 @@ public class SessionSecurityAuthorizationIntegrationTests {
         @DisplayName("Anonymous GET /change-events is denied 403")
         void anonymousChangeEventsDenied() throws Exception {
             mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId() + "/change-events"))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CITIZEN GET /change-events is denied 403")
+        void citizenChangeEventsDenied() throws Exception {
+            String auth = token(501L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+            mockMvc.perform(get("/api/v1/sessions/" + draftSession.getId() + "/change-events")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
                     .andExpect(status().isForbidden());
         }
 
@@ -278,12 +304,12 @@ public class SessionSecurityAuthorizationIntegrationTests {
     }
 
     // =========================================================================
-    // 3. SESSION EXECUTION MUTATIONS (START / COMPLETE)
+    // 3. EXECUTION LIFECYCLE (START / COMPLETE)
     // =========================================================================
 
     @Nested
-    @DisplayName("Session Execution Authorization")
-    class SessionExecutionAuthorization {
+    @DisplayName("Execution Lifecycle Authorization")
+    class ExecutionLifecycleAuthorization {
 
         @Test
         @DisplayName("Anonymous POST /start is denied 403")
@@ -293,7 +319,7 @@ public class SessionSecurityAuthorizationIntegrationTests {
         }
 
         @Test
-        @DisplayName("ROLE_CAMPAIGN_OFFICER POST /start is denied 403 (execution requires ADMIN/CENTER_MANAGER/HEALTHCARE_OFFICER)")
+        @DisplayName("ROLE_CAMPAIGN_OFFICER POST /start is denied 403 (execution requires ADMIN/CENTER_MANAGER)")
         void campaignOfficerStartDenied() throws Exception {
             String auth = token(201L, "officer@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
             mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/start")
@@ -302,9 +328,18 @@ public class SessionSecurityAuthorizationIntegrationTests {
         }
 
         @Test
-        @DisplayName("ROLE_HEALTHCARE_OFFICER POST /start succeeds 200")
-        void healthcareOfficerStartSucceeds() throws Exception {
+        @DisplayName("ROLE_HEALTHCARE_OFFICER POST /start is denied 403")
+        void healthcareOfficerStartDenied() throws Exception {
             String auth = token(301L, "hco@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+            mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/start")
+                            .header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CENTER_MANAGER POST /start succeeds 200")
+        void centerManagerStartSucceeds() throws Exception {
+            String auth = token(102L, "manager@portal.gov", List.of("ROLE_CENTER_MANAGER"));
             mockMvc.perform(post("/api/v1/sessions/" + scheduledSession.getId() + "/start")
                             .header(HttpHeaders.AUTHORIZATION, auth))
                     .andExpect(status().isOk())

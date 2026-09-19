@@ -6,6 +6,10 @@ describe('role-aware home redirect', () => {
     expect(getRoleHomePath({ roles: ['ROLE_ADMIN'] })).toBe('/app/admin');
   });
 
+  it('sends a super administrator to the admin dashboard', () => {
+    expect(getRoleHomePath({ roles: ['ROLE_SUPER_ADMIN'] })).toBe('/app/admin');
+  });
+
   it('sends canonical and management staff roles to the staff dashboard', () => {
     expect(getRoleHomePath({ roles: ['ROLE_HEALTHCARE_OFFICER'] })).toBe('/app/staff');
     expect(getRoleHomePath({ roles: ['ROLE_MANAGEMENT_USER'] })).toBe('/app/staff');

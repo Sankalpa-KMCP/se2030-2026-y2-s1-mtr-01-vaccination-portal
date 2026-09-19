@@ -4,6 +4,17 @@ import { searchAvailableAppointments } from '../api/availabilityApi';
 
 /**
  * Reschedule Dialog modal component allowing a citizen to select a new slot and reschedule an appointment (US-03).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-03: Search alternative sessions and execute atomic rescheduling of an appointment.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-04: Enforces 24-hour modification policy with staff override checkbox and reason input.</li>
+ *   <li>MF03-BR-05: Coordinates atomic reserve-before-release slot reallocation via the backend.</li>
+ * </ul>
  */
 export default function RescheduleDialog({ appointment, citizenId, onClose, onSuccess }) {
   const getTodayStr = () => new Date().toISOString().split('T')[0];
@@ -170,8 +181,30 @@ export default function RescheduleDialog({ appointment, citizenId, onClose, onSu
                   id="newSlotIdInput"
                   className="form-control"
                   value={newSlotId}
-                  onChange={(e) => setNewSlotId(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setNewSlotId('');
+                      return;
+                    }
+                    const cleanVal = val.replace(/[^0-9]/g, '');
+                    if (cleanVal === '') {
+                      setNewSlotId('');
+                      return;
+                    }
+                    const num = parseInt(cleanVal, 10);
+                    if (num > 0) {
+                      setNewSlotId(String(num));
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                      e.preventDefault();
+                    }
+                  }}
                   placeholder="Enter or select slot ID"
+                  min="1"
+                  step="1"
                   required
                 />
               </div>

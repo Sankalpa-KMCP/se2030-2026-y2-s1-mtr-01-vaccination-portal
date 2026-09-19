@@ -78,7 +78,8 @@ public class SessionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<SessionResponse> getSessionById(@PathVariable Long id) {
         VaccinationSession session = sessionService.getRequiredSessionById(id);
         SessionBookingStatus bookingStatus = bookingStatusService.deriveBookingStatus(session);
@@ -86,14 +87,15 @@ public class SessionController {
     }
 
     @GetMapping("/{id}/readiness")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<SessionOperationalReadinessResponse> getSessionReadiness(@PathVariable Long id) {
         SessionOperationalReadinessService.OperationalReadinessResult result = readinessService.evaluateReadiness(id);
         return ResponseEntity.ok(SessionDtoMapper.toReadinessResponse(result));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'CAMPAIGN_OFFICER')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<SessionSummaryResponse>> getSessions(
             @RequestParam(required = false) Long campaignId,
             @RequestParam(required = false) Long centerId,
@@ -116,7 +118,7 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/start")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<SessionResponse> startSession(@PathVariable Long id) {
         VaccinationSession started = sessionService.startSession(id);
         SessionBookingStatus bookingStatus = bookingStatusService.deriveBookingStatus(started);
@@ -124,7 +126,7 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/complete")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<SessionResponse> completeSession(@PathVariable Long id) {
         VaccinationSession completed = sessionService.completeSession(id);
         SessionBookingStatus bookingStatus = bookingStatusService.deriveBookingStatus(completed);

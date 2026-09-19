@@ -62,6 +62,7 @@ describe('Header', () => {
     expect(screen.queryByText('Staff Requests')).toBeNull();
     expect(screen.queryByText('Screening Questions')).toBeNull();
     expect(screen.queryByText('Screening Review')).toBeNull();
+    expect(screen.queryByText('Inventory')).toBeNull();
   });
 
   it('marks the active destination and keeps authorization visibility for an admin', () => {
@@ -75,6 +76,7 @@ describe('Header', () => {
     expect(screen.getByText('Sessions')).toBeTruthy();
     expect(screen.getByText('Check-In Queue')).toBeTruthy();
     expect(screen.getByText('Analytics')).toBeTruthy();
+    expect(screen.getByText('Inventory').getAttribute('href')).toBe('/app/inventory');
     expect(screen.getByText('Staff Requests').getAttribute('href')).toBe('/app/admin/staff-requests');
     expect(screen.queryByText('Screening Questions')).toBeNull();
     expect(screen.queryByText('Questionnaires')).toBeNull();
@@ -93,7 +95,7 @@ describe('Header', () => {
     expect(screen.queryByText('Campaigns')).toBeNull();
   });
 
-  it('shows the screening review link only for a healthcare officer and keeps existing links', () => {
+  it('shows only screening links in navbar for a healthcare officer and hides operational links', () => {
     mockUser({
       id: 3,
       fullName: 'Healthcare Officer',
@@ -102,17 +104,20 @@ describe('Header', () => {
     });
     renderHeader('/app/staff/screening/reviews');
 
+    expect(screen.getByText('Dashboard').getAttribute('href')).toBe('/app/staff');
     const reviewLink = screen.getByText('Screening Review');
     expect(reviewLink.getAttribute('href')).toBe('/app/staff/screening/reviews');
     expect(reviewLink.className).toContain('active');
     expect(screen.getByText('Screening Questions').getAttribute('href')).toBe('/app/screening/questions');
     expect(screen.getByText('Questionnaires').getAttribute('href')).toBe('/app/screening/questionnaires');
-    expect(screen.getByText('Campaigns')).toBeTruthy();
-    expect(screen.getByText('Center Operations')).toBeTruthy();
-    expect(screen.getByText('Sessions')).toBeTruthy();
+    expect(screen.queryByText('Campaigns')).toBeNull();
+    expect(screen.queryByText('Center Operations')).toBeNull();
+    expect(screen.queryByText('Sessions')).toBeNull();
+    expect(screen.queryByText('Check-In Queue')).toBeNull();
+    expect(screen.queryByText('Inventory')).toBeNull();
   });
 
-  it('does not show screening review to an unrelated staff role', () => {
+  it('shows inventory navigation and hides screening review for an inventory officer', () => {
     mockUser({
       id: 4,
       fullName: 'Inventory Officer',
@@ -121,7 +126,35 @@ describe('Header', () => {
     });
     renderHeader('/app/staff');
 
+    expect(screen.getByText('Inventory').getAttribute('href')).toBe('/app/inventory');
     expect(screen.queryByText('Screening Review')).toBeNull();
+    expect(screen.queryByText('Campaigns')).toBeNull();
+    expect(screen.queryByText('Check-In Queue')).toBeNull();
+  });
+
+  it('shows inventory navigation to a super administrator via implied roles', () => {
+    mockUser({
+      id: 5,
+      fullName: 'Super Administrator',
+      email: 'superadmin@test.local',
+      roles: ['ROLE_SUPER_ADMIN'],
+    });
+    renderHeader('/app/admin');
+
+    expect(screen.getByText('Inventory').getAttribute('href')).toBe('/app/inventory');
+  });
+
+  it('shows check-in queue but hides inventory navigation for a center manager', () => {
+    mockUser({
+      id: 6,
+      fullName: 'Center Manager',
+      email: 'manager@test.local',
+      roles: ['ROLE_CENTER_MANAGER'],
+    });
+    renderHeader('/app/staff');
+
+    expect(screen.getByText('Check-In Queue').getAttribute('href')).toBe('/app/checkin/queue');
+    expect(screen.queryByText('Inventory')).toBeNull();
   });
 
   it('opens the mobile menu from the collapsed state', () => {

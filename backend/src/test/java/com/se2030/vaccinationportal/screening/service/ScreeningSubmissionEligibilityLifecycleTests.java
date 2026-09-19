@@ -341,8 +341,8 @@ class ScreeningSubmissionEligibilityLifecycleTests {
                 null,
                 serviceEndDate.minusDays(30),
                 serviceEndDate,
-                NOW.minusSeconds(86_400),
-                NOW.plusSeconds(86_400)
+                serviceEndDate.minusDays(30).atStartOfDay(ZoneOffset.UTC).toInstant(),
+                serviceEndDate.atTime(23, 59, 59).toInstant(ZoneOffset.UTC)
         );
         lenient().when(campaignService.getRequiredCampaignById(CAMPAIGN_ID)).thenReturn(campaign);
     }

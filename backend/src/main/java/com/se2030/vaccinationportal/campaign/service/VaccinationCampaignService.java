@@ -31,6 +31,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.EnumSet;
 import java.util.List;
@@ -639,6 +640,31 @@ public class VaccinationCampaignService {
         if (targetGroup != null && !targetGroup.isActive()) {
             throw new IllegalArgumentException("Cannot create campaign with inactive TargetGroup: " + targetGroup.getCode());
         }
+        if (serviceStartDate == null) {
+            throw new IllegalArgumentException("Service start date is required");
+        }
+        if (serviceEndDate == null) {
+            throw new IllegalArgumentException("Service end date is required");
+        }
+        if (bookingOpenAt == null) {
+            throw new IllegalArgumentException("Booking open timestamp is required");
+        }
+        if (bookingCloseAt == null) {
+            throw new IllegalArgumentException("Booking close timestamp is required");
+        }
+        if (!serviceEndDate.isAfter(serviceStartDate)) {
+            throw new IllegalArgumentException("Campaign service end date (" + serviceEndDate +
+                    ") must be after service start date (" + serviceStartDate + ") [MF02-BR-01]");
+        }
+        if (!bookingCloseAt.isAfter(bookingOpenAt)) {
+            throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
+                    ") must be after booking open time (" + bookingOpenAt + ") [MF02-BR-01]");
+        }
+        LocalDate bookingCloseDate = bookingCloseAt.atZone(ZoneOffset.UTC).toLocalDate();
+        if (bookingCloseDate.isAfter(serviceEndDate)) {
+            throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
+                    ") must not be after campaign service end date (" + serviceEndDate + ") [MF02-BR-01]");
+        }
 
         String normalizedCode = code != null ? code.trim() : null;
         if (campaignRepository.existsByCode(normalizedCode)) {
@@ -674,11 +700,52 @@ public class VaccinationCampaignService {
             Instant bookingOpenAt,
             Instant bookingCloseAt
     ) {
+        return createCampaign(
+                code,
+                name,
+                description,
+                vaccineTypeId,
+                targetGroupId,
+                serviceStartDate,
+                serviceEndDate,
+                bookingOpenAt,
+                bookingCloseAt,
+                null
+        );
+    }
+
+    public VaccinationCampaign createCampaign(
+            String code,
+            String name,
+            String description,
+            Long vaccineTypeId,
+            Long targetGroupId,
+            LocalDate serviceStartDate,
+            LocalDate serviceEndDate,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            Long questionnaireVersionId
+    ) {
         if (vaccineTypeId == null) {
             throw new IllegalArgumentException("Vaccine type ID is required");
         }
         if (targetGroupId == null) {
             throw new IllegalArgumentException("Target group ID is required");
+        }
+        if (questionnaireVersionId != null) {
+            if (questionnaireVersionId <= 0) {
+                throw new IllegalArgumentException("Questionnaire version ID must be positive: " + questionnaireVersionId);
+            }
+            if (publicationPort == null) {
+                throw new IllegalStateException(
+                        "QuestionnaireVersionPublicationPort implementation is not registered. MF-01 integration pending."
+                );
+            }
+            if (!publicationPort.isPublished(questionnaireVersionId)) {
+                throw new IllegalArgumentException(
+                        "Questionnaire version " + questionnaireVersionId + " is not in PUBLISHED status in MF-01"
+                );
+            }
         }
 
         VaccineType vaccineType = vaccineTypeRepository.findById(vaccineTypeId)
@@ -686,7 +753,7 @@ public class VaccinationCampaignService {
         TargetGroup targetGroup = targetGroupRepository.findById(targetGroupId)
                 .orElseThrow(() -> new ResourceNotFoundException("TargetGroup not found with ID: " + targetGroupId));
 
-        return createCampaign(
+        VaccinationCampaign campaign = createCampaign(
                 code,
                 name,
                 description,
@@ -697,6 +764,19 @@ public class VaccinationCampaignService {
                 bookingOpenAt,
                 bookingCloseAt
         );
+
+        if (questionnaireVersionId != null) {
+            LocalDate today = LocalDate.now(clock);
+            LocalDate effectiveStartDate = serviceStartDate.isBefore(today) ? today : serviceStartDate;
+            questionnaireAssignmentRepository.save(new CampaignQuestionnaireAssignment(
+                    campaign,
+                    questionnaireVersionId,
+                    effectiveStartDate,
+                    null
+            ));
+        }
+
+        return campaign;
     }
 
     public VaccinationCampaign updateServiceDates(
@@ -729,6 +809,13 @@ public class VaccinationCampaignService {
         }
 
         campaign.validateDateConsistency();
+        if (campaign.getBookingCloseAt() != null) {
+            LocalDate bookingCloseDate = campaign.getBookingCloseAt().atZone(ZoneOffset.UTC).toLocalDate();
+            if (bookingCloseDate.isAfter(serviceEndDate)) {
+                throw new IllegalArgumentException("Campaign booking close time (" + campaign.getBookingCloseAt() +
+                        ") must not be after campaign service end date (" + serviceEndDate + ")");
+            }
+        }
         validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
 
         campaign.setServiceStartDate(serviceStartDate);
@@ -749,6 +836,28 @@ public class VaccinationCampaignService {
             LocalDate serviceEndDate,
             Instant bookingOpenAt,
             Instant bookingCloseAt
+    ) {
+        return updateCampaign(
+                campaignId,
+                name,
+                description,
+                serviceStartDate,
+                serviceEndDate,
+                bookingOpenAt,
+                bookingCloseAt,
+                null
+        );
+    }
+
+    public VaccinationCampaign updateCampaign(
+            Long campaignId,
+            String name,
+            String description,
+            LocalDate serviceStartDate,
+            LocalDate serviceEndDate,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            Long questionnaireVersionId
     ) {
         if (campaignId == null) {
             throw new IllegalArgumentException("Campaign ID is required");
@@ -777,6 +886,11 @@ public class VaccinationCampaignService {
             throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
                     ") must be after booking open time (" + bookingOpenAt + ")");
         }
+        LocalDate bookingCloseDate = bookingCloseAt.atZone(ZoneOffset.UTC).toLocalDate();
+        if (bookingCloseDate.isAfter(serviceEndDate)) {
+            throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
+                    ") must not be after campaign service end date (" + serviceEndDate + ")");
+        }
 
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
@@ -801,7 +915,69 @@ public class VaccinationCampaignService {
         campaign.setBookingCloseAt(bookingCloseAt);
         campaign.validateDateConsistency();
 
-        return campaignRepository.save(campaign);
+        VaccinationCampaign savedCampaign = campaignRepository.save(campaign);
+
+        if (questionnaireVersionId != null) {
+            if (questionnaireVersionId <= 0) {
+                throw new IllegalArgumentException("Questionnaire version ID must be positive: " + questionnaireVersionId);
+            }
+            Optional<CampaignQuestionnaireAssignment> currentOpenEndedOpt = questionnaireAssignmentRepository.findOpenEndedAssignment(campaignId);
+            Long currentAssignedId = currentOpenEndedOpt.map(CampaignQuestionnaireAssignment::getQuestionnaireVersionId).orElse(null);
+
+            if (!questionnaireVersionId.equals(currentAssignedId)) {
+                if (publicationPort == null) {
+                    throw new IllegalStateException(
+                            "QuestionnaireVersionPublicationPort implementation is not registered. MF-01 integration pending."
+                    );
+                }
+                if (!publicationPort.isPublished(questionnaireVersionId)) {
+                    throw new IllegalArgumentException(
+                            "Questionnaire version " + questionnaireVersionId + " is not in PUBLISHED status in MF-01"
+                    );
+                }
+                if (publicationPort.hasCampaignSubmissions(campaignId)) {
+                    throw new IllegalStateException(
+                            "Cannot change questionnaire assignment for a campaign with existing citizen screening submissions"
+                    );
+                }
+
+                LocalDate today = LocalDate.now(clock);
+                LocalDate effectiveStartDate = serviceStartDate.isBefore(today) ? today : serviceStartDate;
+
+                if (savedCampaign.getStatus() == CampaignStatus.DRAFT && currentOpenEndedOpt.isPresent()) {
+                    CampaignQuestionnaireAssignment current = currentOpenEndedOpt.get();
+                    current.setQuestionnaireVersionId(questionnaireVersionId);
+                    questionnaireAssignmentRepository.save(current);
+                } else {
+                    currentOpenEndedOpt.ifPresent(current -> {
+                        LocalDate closeDate = effectiveStartDate.isAfter(current.getActiveFrom()) ? effectiveStartDate : current.getActiveFrom().plusDays(1);
+                        current.closeAt(closeDate);
+                        questionnaireAssignmentRepository.save(current);
+                    });
+                    questionnaireAssignmentRepository.save(new CampaignQuestionnaireAssignment(
+                            savedCampaign,
+                            questionnaireVersionId,
+                            effectiveStartDate,
+                            null
+                    ));
+                }
+            }
+        }
+
+        return savedCampaign;
+    }
+
+    @Transactional(readOnly = true)
+    public Long getAssignedQuestionnaireVersionId(Long campaignId) {
+        if (campaignId == null) {
+            return null;
+        }
+        return questionnaireAssignmentRepository.findOpenEndedAssignment(campaignId)
+                .map(CampaignQuestionnaireAssignment::getQuestionnaireVersionId)
+                .orElseGet(() -> {
+                    List<CampaignQuestionnaireAssignment> history = questionnaireAssignmentRepository.findByCampaignIdOrderByActiveFromDescIdDesc(campaignId);
+                    return history.isEmpty() ? null : history.get(0).getQuestionnaireVersionId();
+                });
     }
 
     @Transactional(readOnly = true)

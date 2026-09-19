@@ -6,9 +6,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationCorrectionRequest;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrection;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationCorrectionRepository;
@@ -28,6 +32,9 @@ class VaccinationCorrectionLifecycleRollbackIntegrationTests {
 
     @Autowired
     private VaccinationCorrectionLifecycleService lifecycleService;
+
+    @Autowired
+    private VaccinationCorrectionService correctionService;
 
     @Autowired
     private VaccinationRecordRepository recordRepository;
@@ -70,17 +77,32 @@ class VaccinationCorrectionLifecycleRollbackIntegrationTests {
         when(certificateService.reissueCertificate(eq(record.getId()), any()))
                 .thenThrow(new IllegalStateException("Simulated certificate reissue failure"));
 
+        VaccinationCorrection pending = correctionService.createCorrection(
+                record.getId(),
+                new CreateVaccinationCorrectionRequest(
+                        "doseNumber", "2", "Correction requiring reissue", 91L
+                ),
+                91L
+        );
+        VaccinationCorrection approved = correctionService.approveCorrection(
+                record.getId(),
+                pending.getId(),
+                92L,
+                "Approved for application"
+        );
+
         assertThrows(
                 IllegalStateException.class,
-                () -> lifecycleService.applyCorrection(
+                () -> lifecycleService.applyApprovedCorrection(
                         record.getId(),
-                        new CreateVaccinationCorrectionRequest(
-                                "doseNumber", "2", "Correction requiring reissue", 91L
-                        )
+                        approved.getId(),
+                        92L
                 )
         );
 
-        assertEquals(0, correctionRepository.count());
+        assertEquals(1, correctionRepository.count());
+        VaccinationCorrection persistedCorrection = correctionRepository.findById(approved.getId()).orElseThrow();
+        assertEquals(VaccinationCorrectionStatus.APPROVED, persistedCorrection.getStatus());
         assertEquals(1, certificateRepository.count());
         DigitalCertificate persisted = certificateRepository.findById(original.getId()).orElseThrow();
         assertEquals(CertificateStatus.VALID, persisted.getStatus());

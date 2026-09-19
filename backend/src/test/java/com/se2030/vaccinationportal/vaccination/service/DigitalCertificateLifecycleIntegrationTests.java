@@ -59,6 +59,13 @@ class DigitalCertificateLifecycleIntegrationTests {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    private void applyDirectCorrection(Long recordId, CreateVaccinationCorrectionRequest request) {
+        var correction = correctionService.createCorrection(recordId, request);
+        correction.approve(9999L, Instant.now(), "Test approval");
+        correction.apply();
+        entityManager.flush();
+    }
+
     @Test
     void issuingForExistingRecordPersistsCertificateWithoutCreatingAnotherRecord() {
         VaccinationRecord record = persistRecord(1001L);
@@ -84,11 +91,11 @@ class DigitalCertificateLifecycleIntegrationTests {
     @Test
     void initialIssuanceCapturesCurrentEffectiveDoseAndAdministrationTime() {
         VaccinationRecord record = persistRecord(1016L);
-        correctionService.createCorrection(
+        applyDirectCorrection(
                 record.getId(),
                 new CreateVaccinationCorrectionRequest("doseNumber", "2", "Correct dose", 7006L)
         );
-        correctionService.createCorrection(
+        applyDirectCorrection(
                 record.getId(),
                 new CreateVaccinationCorrectionRequest(
                         "administrationTime",
@@ -309,11 +316,11 @@ class DigitalCertificateLifecycleIntegrationTests {
         VaccinationRecord record = persistRecord(1015L);
         DigitalCertificate original = certificateService.issueCertificateForVaccinationRecord(record.getId());
 
-        correctionService.createCorrection(
+        applyDirectCorrection(
                 record.getId(),
                 new CreateVaccinationCorrectionRequest("doseNumber", "2", "Correct dose", 7005L)
         );
-        correctionService.createCorrection(
+        applyDirectCorrection(
                 record.getId(),
                 new CreateVaccinationCorrectionRequest(
                         "administrationTime",
@@ -336,7 +343,7 @@ class DigitalCertificateLifecycleIntegrationTests {
                 result.issuedCertificate().issuedAdministrationTime()
         );
 
-        correctionService.createCorrection(
+        applyDirectCorrection(
                 record.getId(),
                 new CreateVaccinationCorrectionRequest("doseNumber", "3", "Later correction", 7005L)
         );

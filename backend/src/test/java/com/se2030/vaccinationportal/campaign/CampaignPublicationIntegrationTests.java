@@ -63,6 +63,11 @@ class CampaignPublicationIntegrationTests {
         public boolean isPublished(Long questionnaireVersionId) {
             return publishedIds.contains(questionnaireVersionId);
         }
+
+        @Override
+        public boolean hasCampaignSubmissions(Long campaignId) {
+            return false;
+        }
     }
 
     @Autowired private VaccinationCampaignService campaignService;

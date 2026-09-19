@@ -28,11 +28,15 @@ class SharedAuthRegistrationMigrationMySqlIntegrationTests extends AbstractMySql
              Statement statement = connection.createStatement()) {
             connection.setAutoCommit(true);
 
-            statement.execute("DROP TABLE IF EXISTS refresh_token_sessions");
-            statement.execute("DROP TABLE IF EXISTS user_roles");
-            statement.execute("DROP TABLE IF EXISTS citizen_profiles");
-            statement.execute("DROP TABLE IF EXISTS user_accounts");
-            statement.execute("DROP TABLE IF EXISTS roles");
+            statement.execute("SET FOREIGN_KEY_CHECKS = 0;");
+            statement.execute("DROP TABLE IF EXISTS email_verification_tokens;");
+            statement.execute("DROP TABLE IF EXISTS password_reset_tokens;");
+            statement.execute("DROP TABLE IF EXISTS refresh_token_sessions;");
+            statement.execute("DROP TABLE IF EXISTS user_roles;");
+            statement.execute("DROP TABLE IF EXISTS citizen_profiles;");
+            statement.execute("DROP TABLE IF EXISTS user_accounts;");
+            statement.execute("DROP TABLE IF EXISTS roles;");
+            statement.execute("SET FOREIGN_KEY_CHECKS = 1;");
 
             executeMigration(statement, "db/migration/V4__shared_authentication_foundation.sql");
             statement.executeUpdate("""

@@ -3,21 +3,25 @@ import { Link, useParams } from 'react-router-dom';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import PageHeader from '../../../components/common/PageHeader';
-import { getCampaignById } from '../../campaign-management/api/campaignApi';
+import { getCampaignById, listCampaigns } from '../../campaign-management/api/campaignApi';
 import {
   getScreeningReviewDetails,
+  listCitizenEligibilityAssessments,
+  listCitizenScreeningSubmissions,
   recordEligibilityDecision,
   requestScreeningCorrections,
   revokeAssessment,
 } from '../api/screeningApi';
 import {
+  CITIZEN_PRELIMINARY_RESULT_LABELS,
   ELIGIBILITY_ASSESSMENT_STATUS,
   ELIGIBILITY_ASSESSMENT_STATUS_LABELS,
   PRELIMINARY_SCREENING_RESULT,
+  PRELIMINARY_SCREENING_RESULT_LABELS,
   SCREENING_SUBMISSION_STATUS,
   SCREENING_SUBMISSION_STATUS_LABELS,
 } from '../constants/screeningConstants';
-import { formatScreeningTimestamp } from '../utils/screeningHistory';
+import { campaignName, formatScreeningTimestamp } from '../utils/screeningHistory';
 
 const QUEUE_PATH = '/app/staff/screening/reviews';
 
@@ -53,11 +57,24 @@ function staleError(error) {
   );
 }
 
+function sortNewestFirst(submissions) {
+  return [...submissions].sort((left, right) => {
+    const leftTime = Date.parse(left.submittedAt || left.createdAt) || 0;
+    const rightTime = Date.parse(right.submittedAt || right.createdAt) || 0;
+    const byTime = rightTime - leftTime;
+    return byTime || Number(right.id || 0) - Number(left.id || 0);
+  });
+}
+
 export default function HealthcareOfficerScreeningReviewDetailsPage() {
   const { submissionId } = useParams();
   const [details, setDetails] = useState(null);
   const [campaign, setCampaign] = useState(null);
   const [campaignWarning, setCampaignWarning] = useState(null);
+  const [previousSubmissions, setPreviousSubmissions] = useState([]);
+  const [citizenAssessments, setCitizenAssessments] = useState([]);
+  const [allCampaigns, setAllCampaigns] = useState([]);
+  const [historyError, setHistoryError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [mutationError, setMutationError] = useState(null);
@@ -78,13 +95,73 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
       setDetails(result);
       setCampaign(null);
       setCampaignWarning(null);
-      if (result?.campaignId !== undefined && result?.campaignId !== null) {
-        try {
-          setCampaign(await getCampaignById(result.campaignId));
-        } catch {
-          setCampaignWarning('Campaign details could not be loaded. The screening review remains available.');
+
+      const citizenId = result?.citizenId;
+      const campaignId = result?.campaignId;
+
+      const enrichmentPromises = [];
+
+      if (campaignId !== undefined && campaignId !== null) {
+        enrichmentPromises.push(
+          getCampaignById(campaignId)
+            .then((camp) => ({ type: 'campaign', value: camp }))
+            .catch((err) => ({ type: 'campaign', error: err })),
+        );
+      }
+
+      if (citizenId !== undefined && citizenId !== null) {
+        enrichmentPromises.push(
+          listCitizenScreeningSubmissions(citizenId)
+            .then((subs) => ({ type: 'submissions', value: subs }))
+            .catch((err) => ({ type: 'submissions', error: err })),
+        );
+        enrichmentPromises.push(
+          listCitizenEligibilityAssessments(citizenId)
+            .then((assess) => ({ type: 'assessments', value: assess }))
+            .catch((err) => ({ type: 'assessments', error: err })),
+        );
+        enrichmentPromises.push(
+          listCampaigns()
+            .then((camps) => ({ type: 'campaigns', value: camps }))
+            .catch((err) => ({ type: 'campaigns', error: err })),
+        );
+      }
+
+      const enrichmentResults = await Promise.all(enrichmentPromises);
+
+      let prevSubs = [];
+      let assessList = [];
+      let campsList = [];
+      let histErr = null;
+
+      for (const res of enrichmentResults) {
+        if (res.type === 'campaign') {
+          if (res.error) {
+            setCampaignWarning('Campaign details could not be loaded. The screening review remains available.');
+          } else {
+            setCampaign(res.value);
+          }
+        } else if (res.type === 'submissions') {
+          if (res.error) {
+            histErr = 'Previous screening history could not be loaded for this citizen.';
+          } else if (Array.isArray(res.value)) {
+            prevSubs = res.value.filter((sub) => String(sub.id) !== String(submissionId));
+          }
+        } else if (res.type === 'assessments') {
+          if (Array.isArray(res.value)) {
+            assessList = res.value;
+          }
+        } else if (res.type === 'campaigns') {
+          if (Array.isArray(res.value)) {
+            campsList = res.value;
+          }
         }
       }
+
+      setPreviousSubmissions(sortNewestFirst(prevSubs));
+      setCitizenAssessments(assessList);
+      setAllCampaigns(campsList);
+      setHistoryError(histErr);
     } catch (error) {
       setLoadError(error);
     } finally {
@@ -105,9 +182,23 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
       .sort((left, right) => left.evaluationOrder - right.evaluationOrder),
     [details?.triggeredRuleEvidence],
   );
+  const campaignsById = useMemo(
+    () => new Map(allCampaigns.map((c) => [String(c.id), c])),
+    [allCampaigns],
+  );
+  const assessmentsBySubId = useMemo(() => {
+    const map = new Map();
+    citizenAssessments.forEach((assessment) => {
+      if (assessment?.submissionId !== undefined && assessment?.submissionId !== null) {
+        map.set(String(assessment.submissionId), assessment);
+      }
+    });
+    return map;
+  }, [citizenAssessments]);
+
   const canMutate = details?.status === SCREENING_SUBMISSION_STATUS.PENDING_REVIEW;
   const canRevoke = details?.assessment?.status === ELIGIBILITY_ASSESSMENT_STATUS.ELIGIBLE;
-  const campaignName = campaign?.name || (details ? `Campaign #${details.campaignId}` : 'Campaign');
+  const displayedCampaignName = campaign?.name || (details ? `Campaign #${details.campaignId}` : 'Campaign');
 
   const openAction = (nextAction) => {
     setAction(nextAction);
@@ -226,7 +317,7 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
         id="screening-review-details-title"
         eyebrow="Healthcare Officer"
         title="Screening Review Details"
-        subtitle={`${campaignName} · ${details.citizenFullName || 'Name unavailable'} · Citizen ID: #${details.citizenId}`}
+        subtitle={`${displayedCampaignName} · ${details.citizenFullName || 'Name unavailable'} · Citizen ID: #${details.citizenId}`}
         actions={<Link className="btn btn-outline-primary" to={QUEUE_PATH}>Back to Review Queue</Link>}
       />
 
@@ -253,7 +344,7 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
             </div>
             <div className="col-md-4">
               <div className="small text-secondary">Campaign</div>
-              <div className="fw-semibold">{campaignName}</div>
+              <div className="fw-semibold">{displayedCampaignName}</div>
               {campaign?.code && <div className="small text-secondary">{campaign.code}</div>}
             </div>
             <div className="col-md-4"><div className="small text-secondary">Status</div><div className="fw-semibold">{SCREENING_SUBMISSION_STATUS_LABELS[details.status] || details.status}</div></div>
@@ -379,6 +470,103 @@ export default function HealthcareOfficerScreeningReviewDetailsPage() {
           </div>
         </div>
       )}
+
+      <div className="card border-0 shadow-sm mb-4">
+        <div className="card-body p-4">
+          <h2 className="h5 mb-3">Previous Screening &amp; Eligibility History</h2>
+          {historyError ? (
+            <div className="alert alert-warning mb-0" role="status">
+              {historyError}
+            </div>
+          ) : previousSubmissions.length === 0 ? (
+            <p className="text-secondary mb-0">
+              No previous screening history found for this citizen.
+            </p>
+          ) : (
+            <div className="vstack gap-3">
+              {previousSubmissions.map((sub) => {
+                const subCampaign = campaignsById.get(String(sub.campaignId));
+                const subCampaignName = campaignName(subCampaign, sub.campaignId);
+                const linkedAssessment = assessmentsBySubId.get(String(sub.id));
+                const prelimLabel = sub.preliminaryResult === PRELIMINARY_SCREENING_RESULT.PASS
+                  ? 'Preliminary pass'
+                  : sub.preliminaryResult === PRELIMINARY_SCREENING_RESULT.REVIEW_REQUIRED
+                    ? 'Healthcare review required'
+                    : (PRELIMINARY_SCREENING_RESULT_LABELS[sub.preliminaryResult] || sub.preliminaryResult || 'Unavailable');
+
+                return (
+                  <article className="border rounded p-3" key={sub.id}>
+                    <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                      <div>
+                        <div className="fw-semibold">{subCampaignName}</div>
+                        <div className="small text-secondary">
+                          Submission #{sub.id} · Submitted {formatScreeningTimestamp(sub.submittedAt || sub.createdAt)}
+                          {subCampaign?.code ? ` · ${subCampaign.code}` : ''}
+                        </div>
+                      </div>
+                      <span className="badge bg-secondary-subtle text-secondary-emphasis">
+                        {SCREENING_SUBMISSION_STATUS_LABELS[sub.status] || sub.status}
+                      </span>
+                    </div>
+
+                    <div className="row g-2 mt-1 mb-2">
+                      <div className="col-sm-6 col-md-3">
+                        <div className="small text-secondary">Preliminary result</div>
+                        <div className="fw-medium">{prelimLabel}</div>
+                      </div>
+                      <div className="col-sm-6 col-md-3">
+                        <div className="small text-secondary">Final recorded status</div>
+                        <div className="fw-medium">
+                          {linkedAssessment
+                            ? (ELIGIBILITY_ASSESSMENT_STATUS_LABELS[linkedAssessment.status] || linkedAssessment.status)
+                            : 'Not yet recorded'}
+                        </div>
+                      </div>
+                      {linkedAssessment?.reviewedAt && (
+                        <div className="col-sm-6 col-md-3">
+                          <div className="small text-secondary">Reviewed date</div>
+                          <div>{formatScreeningTimestamp(linkedAssessment.reviewedAt)}</div>
+                        </div>
+                      )}
+                      {linkedAssessment?.validUntil && (
+                        <div className="col-sm-6 col-md-3">
+                          <div className="small text-secondary">Valid until</div>
+                          <div>{formatScreeningTimestamp(linkedAssessment.validUntil)}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {linkedAssessment?.reason && (
+                      <div className="small mb-2">
+                        <span className="text-secondary">Decision reason: </span>
+                        <span className="text-break">{linkedAssessment.reason}</span>
+                      </div>
+                    )}
+
+                    {linkedAssessment?.revokedAt && (
+                      <div className="small text-danger mb-2">
+                        <span>Revoked on {formatScreeningTimestamp(linkedAssessment.revokedAt)}</span>
+                        {linkedAssessment.revocationReason && (
+                          <span className="text-break"> — {linkedAssessment.revocationReason}</span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-2 pt-2 border-top">
+                      <Link
+                        className="btn btn-sm btn-outline-primary"
+                        to={`/app/staff/screening/history/${sub.id}`}
+                      >
+                        View Previous Screening
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
       {canMutate && (
         <div className="card border-primary-subtle shadow-sm">

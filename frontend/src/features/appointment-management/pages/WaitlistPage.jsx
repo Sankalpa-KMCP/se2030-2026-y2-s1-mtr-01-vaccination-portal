@@ -12,6 +12,17 @@ import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGui
 /**
  * Citizen Waitlist Page (US-05).
  * Displays active waitlist queue position, entry details, and withdrawal controls.
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-05: Citizen waitlist tracking, queue position display, voluntary withdrawal, and promotion banner.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Handled in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-06: Displays dynamic FIFO queue position.</li>
+ *   <li>MF03-BR-08: Renders celebration alert and navigation link when status transitions to PROMOTED.</li>
+ * </ul>
  */
 export default function WaitlistPage() {
   const { user } = useAuth();
@@ -130,8 +141,30 @@ export default function WaitlistPage() {
                 id="campaignIdFilter"
                 className="form-control"
                 value={campaignId}
-                onChange={(e) => setCampaignId(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setCampaignId('');
+                    return;
+                  }
+                  const cleanVal = val.replace(/[^0-9]/g, '');
+                  if (cleanVal === '') {
+                    setCampaignId('');
+                    return;
+                  }
+                  const num = parseInt(cleanVal, 10);
+                  if (num > 0) {
+                    setCampaignId(String(num));
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="Enter Campaign ID"
+                min="1"
+                step="1"
                 required
               />
               <button type="submit" className="btn btn-primary fw-semibold" disabled={loading}>

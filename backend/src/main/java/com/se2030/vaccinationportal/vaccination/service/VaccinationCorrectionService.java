@@ -45,10 +45,11 @@ public class VaccinationCorrectionService {
 
     public VaccinationCorrection createCorrection(
             Long vaccinationRecordId,
-            CreateVaccinationCorrectionRequest request
+            CreateVaccinationCorrectionRequest request,
+            Long actorId
     ) {
         VaccinationRecord record = findRecord(vaccinationRecordId);
-        validateRequest(request);
+        validateRequest(request, actorId);
 
         VaccinationCorrectionField field = VaccinationCorrectionField.fromApiName(request.fieldName());
         if (field == null) {
@@ -66,14 +67,81 @@ public class VaccinationCorrectionService {
             );
         }
 
-        VaccinationCorrection correction = VaccinationCorrectionMapper.toEntity(
+        VaccinationCorrection correction = new VaccinationCorrection(
                 record.getId(),
                 field,
                 effectiveOldValue,
                 newValue,
-                request,
-                clock.instant()
+                request.reason(),
+                actorId,
+                clock.instant(),
+                com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus.PENDING
         );
+        return correctionRepository.save(correction);
+    }
+
+    public VaccinationCorrection createCorrection(
+            Long vaccinationRecordId,
+            CreateVaccinationCorrectionRequest request
+    ) {
+        Long actorId = request != null && request.correctedBy() != null ? request.correctedBy() : null;
+        return createCorrection(vaccinationRecordId, request, actorId);
+    }
+
+    @Transactional(readOnly = true)
+    public VaccinationCorrection getCorrectionById(Long vaccinationRecordId, Long correctionId) {
+        findRecord(vaccinationRecordId);
+        return correctionRepository.findByIdAndVaccinationRecordId(correctionId, vaccinationRecordId)
+                .orElseThrow(() -> new InvalidVaccinationCorrectionException(
+                        "Vaccination correction not found with ID: " + correctionId + " for record: " + vaccinationRecordId
+                ));
+    }
+
+    public VaccinationCorrection approveCorrection(
+            Long vaccinationRecordId,
+            Long correctionId,
+            Long reviewerId,
+            String reviewReason
+    ) {
+        if (reviewerId == null || reviewerId <= 0) {
+            throw new InvalidVaccinationCorrectionException("Reviewer ID must be positive");
+        }
+        VaccinationCorrection correction = getCorrectionById(vaccinationRecordId, correctionId);
+        if (Objects.equals(correction.getCorrectedBy(), reviewerId)) {
+            throw new InvalidVaccinationCorrectionException("Submitter cannot approve their own correction");
+        }
+        if (correction.getStatus() != com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus.PENDING) {
+            throw new InvalidVaccinationCorrectionException(
+                    "Only PENDING corrections can be approved; current status is: " + correction.getStatus()
+            );
+        }
+        correction.approve(reviewerId, clock.instant(), reviewReason);
+        return correctionRepository.save(correction);
+    }
+
+    public VaccinationCorrection rejectCorrection(
+            Long vaccinationRecordId,
+            Long correctionId,
+            Long reviewerId,
+            String rejectionReason
+    ) {
+        if (reviewerId == null || reviewerId <= 0) {
+            throw new InvalidVaccinationCorrectionException("Reviewer ID must be positive");
+        }
+        if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+            throw new InvalidVaccinationCorrectionException("Rejection reason is required and cannot be blank");
+        }
+        if (rejectionReason.trim().length() > 1000) {
+            throw new InvalidVaccinationCorrectionException("Rejection reason must not exceed 1000 characters");
+        }
+        VaccinationCorrection correction = getCorrectionById(vaccinationRecordId, correctionId);
+        if (correction.getStatus() != com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus.PENDING
+                && correction.getStatus() != com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionStatus.APPROVED) {
+            throw new InvalidVaccinationCorrectionException(
+                    "Only PENDING or APPROVED corrections can be rejected; current status is: " + correction.getStatus()
+            );
+        }
+        correction.reject(reviewerId, clock.instant(), rejectionReason);
         return correctionRepository.save(correction);
     }
 
@@ -90,7 +158,7 @@ public class VaccinationCorrectionService {
                 ));
     }
 
-    private void validateRequest(CreateVaccinationCorrectionRequest request) {
+    private void validateRequest(CreateVaccinationCorrectionRequest request, Long actorId) {
         if (request == null) {
             throw new InvalidVaccinationCorrectionException("Correction request is required");
         }
@@ -102,9 +170,8 @@ public class VaccinationCorrectionService {
                     "Correction reason must not exceed 1000 characters"
             );
         }
-        if (request.correctedBy() == null || request.correctedBy() <= 0) {
+        if (actorId == null || actorId <= 0) {
             throw new InvalidVaccinationCorrectionException("Corrected-by ID must be positive");
         }
     }
-
 }

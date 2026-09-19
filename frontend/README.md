@@ -78,11 +78,11 @@ The frontend uses React Router DOM with a centralized route tree defined in `src
 - `/` - Public home landing page with portal overview, hero artwork, readiness indicators, and trust metrics
 - `/how-it-works` - Citizen and provider workflow guide
 - `/about` - Public portal mission, architecture, and healthcare governance overview
-- `/login` - Generic authentication entry point
-- `/login/citizen` - Dedicated citizen authentication
-- `/login/staff` - Operational and healthcare staff authentication
+- `/login` - Universal authentication entry point for all roles (legacy `/login/citizen` and `/login/staff` routes redirect to `/login`)
 - `/register/citizen` - Citizen self-registration
 - `/register/staff` - Operational and medical staff account registration request
+
+All active citizen and staff accounts authenticate through `/login`. Upon authentication, users are redirected to their designated workspace according to their assigned role. Citizen registration (`/register/citizen`) and staff access requests (`/register/staff`) remain separate workflows.
 
 ### Protected Routes (`/app/*`)
 Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticated session. Users are automatically directed to their role-specific view:

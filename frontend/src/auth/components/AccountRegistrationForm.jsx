@@ -26,7 +26,7 @@ function validate(form, includeStaffRole) {
   if (!isValidPhoneNumber(form.phoneNumber)) return INVALID_PHONE_NUMBER_MESSAGE;
   if (includeStaffRole && !REQUESTABLE_STAFF_ROLES.some(({ code }) => code === form.requestedRoleCode)) return 'Please select a valid staff role.';
   if (!form.password) return 'Password is required.';
-  if (form.password.length > 128) return 'Password must not exceed 128 characters.';
+  if (form.password.length < 8 || form.password.length > 128) return 'Password must be between 8 and 128 characters.';
   if (form.password !== form.confirmPassword) return 'Passwords do not match.';
   return '';
 }

@@ -1,4 +1,4 @@
--- Flyway Database Migration V15: MF-05 Correction and Certificate Lifecycle
+-- Flyway Database Migration V18: MF-05 Correction and Certificate Lifecycle
 -- Evolves the V11 foundation without rewriting existing vaccination history.
 -- Database: MySQL 8.0.16+ / 8.4+ LTS
 
@@ -64,12 +64,21 @@ ALTER TABLE digital_certificates
     ADD CONSTRAINT chk_digital_certificate_status
         CHECK (status IN ('VALID', 'REVOKED', 'SUPERSEDED'));
 
--- 5. MySQL-compatible conditional uniqueness: historical rows produce NULL markers.
--- Remove the V11 cascading foreign key before adding a generated column that
--- depends on its base column; the final restrictive foreign key is restored below.
+-- 5. Replace the V11 one-certificate-ever rule and ON DELETE CASCADE with historical lifecycle support (RESTRICT).
+-- Dropping ON DELETE CASCADE before defining stored generated columns is required by MySQL InnoDB.
 ALTER TABLE digital_certificates
     DROP FOREIGN KEY fk_digital_certificate_record;
 
+ALTER TABLE digital_certificates
+    DROP INDEX uk_digital_certificate_record;
+
+ALTER TABLE digital_certificates
+    ADD CONSTRAINT fk_digital_certificate_record
+        FOREIGN KEY (vaccination_record_id)
+        REFERENCES vaccination_records (id)
+        ON DELETE RESTRICT;
+
+-- 6. MySQL-compatible conditional uniqueness: historical rows produce NULL markers.
 ALTER TABLE digital_certificates
     ADD COLUMN valid_vaccination_record_id BIGINT
         GENERATED ALWAYS AS (
@@ -81,7 +90,7 @@ ALTER TABLE digital_certificates
     ADD CONSTRAINT uk_digital_certificate_valid_record
         UNIQUE (valid_vaccination_record_id);
 
--- 6. Deterministic history and lifecycle-link indexes.
+-- 7. Deterministic history and lifecycle-link indexes.
 CREATE INDEX idx_digital_certificate_record_issued
     ON digital_certificates(vaccination_record_id, issued_at, id);
 
@@ -91,7 +100,7 @@ CREATE INDEX idx_digital_certificate_reissued_from
 CREATE INDEX idx_digital_certificate_superseded_by
     ON digital_certificates(superseded_by_certificate_id);
 
--- 7. Lifecycle links preserve history and never cascade-delete certificate rows.
+-- 8. Lifecycle links preserve history and never cascade-delete certificate rows.
 ALTER TABLE digital_certificates
     ADD CONSTRAINT fk_digital_certificate_reissued_from
         FOREIGN KEY (reissued_from_certificate_id)
@@ -100,14 +109,4 @@ ALTER TABLE digital_certificates
     ADD CONSTRAINT fk_digital_certificate_superseded_by
         FOREIGN KEY (superseded_by_certificate_id)
         REFERENCES digital_certificates (id)
-        ON DELETE RESTRICT;
-
--- 8. Replace the V11 one-certificate-ever rule with historical lifecycle support.
-ALTER TABLE digital_certificates
-    DROP INDEX uk_digital_certificate_record;
-
-ALTER TABLE digital_certificates
-    ADD CONSTRAINT fk_digital_certificate_record
-        FOREIGN KEY (vaccination_record_id)
-        REFERENCES vaccination_records (id)
         ON DELETE RESTRICT;

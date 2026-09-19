@@ -85,14 +85,14 @@ class RegistrationServiceIntegrationTests {
         assertEquals("nimal.perera@example.com", persisted.getEmail());
         assertEquals("Nimal Perera", persisted.getFullName());
         assertEquals("+94 77 123 4567", persisted.getPhoneNumber());
-        assertEquals(AccountStatus.ACTIVE, persisted.getAccountStatus());
+        assertEquals(AccountStatus.PENDING_VERIFICATION, persisted.getAccountStatus());
         assertEquals(List.of("ROLE_CITIZEN"), persisted.getRoles().stream().map(Role::getCode).sorted().toList());
         assertNull(persisted.getRequestedRole());
         assertNotEquals(RAW_PASSWORD, persisted.getPasswordHash());
         assertTrue(passwordEncoder.matches(RAW_PASSWORD, persisted.getPasswordHash()));
 
         assertEquals(persisted.getId(), response.id());
-        assertEquals(AccountStatus.ACTIVE, response.accountStatus());
+        assertEquals(AccountStatus.PENDING_VERIFICATION, response.accountStatus());
         assertEquals(List.of("ROLE_CITIZEN"), response.roles());
         assertNull(response.requestedRoleCode());
 
@@ -153,6 +153,7 @@ class RegistrationServiceIntegrationTests {
             "ROLE_MANAGEMENT_USER",
             "ROLE_SYSTEM_ADMINISTRATOR",
             "ROLE_RECEPTION_STAFF",
+            "ROLE_VACCINATOR",
             "UNKNOWN_ROLE"
     })
     void registerStaff_forbiddenOrUnknownRole_rejected(String requestedRoleCode) {

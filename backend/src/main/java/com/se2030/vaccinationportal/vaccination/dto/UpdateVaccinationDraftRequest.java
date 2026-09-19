@@ -1,7 +1,6 @@
 package com.se2030.vaccinationportal.vaccination.dto;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Positive;

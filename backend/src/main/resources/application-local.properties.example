@@ -36,3 +36,20 @@ app.bootstrap.admin.email=admin@local.test
 app.bootstrap.admin.password=Admin123!
 app.bootstrap.admin.full-name=Local Administrator
 app.bootstrap.admin.phone=0771234567
+
+# ------------------------------------------------------------
+# Authentication Delivery Mode (smtp / console / disabled)
+# ------------------------------------------------------------
+# Explicit Console Delivery Mode (Recommended for local evaluation & manual testing)
+# Outputs verification and password-reset links directly to backend console logs.
+app.security.auth.delivery-mode=console
+
+# Real SMTP Delivery Mode (Optional, uncomment and fill in for actual email dispatch)
+# app.security.auth.delivery-mode=smtp
+# app.security.auth.mail-from=noreply@example.com
+# spring.mail.host=smtp.example.com
+# spring.mail.port=587
+# spring.mail.username=YOUR_SMTP_USERNAME
+# spring.mail.password=YOUR_SMTP_PASSWORD
+# spring.mail.properties.mail.smtp.auth=true
+# spring.mail.properties.mail.smtp.starttls.enable=true

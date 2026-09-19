@@ -1,27 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getRoleHomePath } from '../utils/roleRedirect';
-import PortalAccessCard from '../components/PortalAccessCard';
-import { ArrowIcon, CitizenIcon, EyeIcon, StaffIcon } from '../components/AuthIcons';
-
-const LOGIN_CONTENT = {
-  citizen: {
-    eyebrow: 'Citizen portal',
-    heading: 'Citizen sign in',
-    description: 'Access appointments, eligibility, and your available vaccination services.',
-  },
-  staff: {
-    eyebrow: 'Staff portal',
-    heading: 'Staff sign in',
-    description: 'For approved clinical, campaign, center, inventory, administrative, and management accounts.',
-  },
-  generic: {
-    eyebrow: 'Vaccination Portal',
-    heading: 'Welcome back.',
-    description: 'Sign in with any active citizen or authorized staff account.',
-  },
-};
+import { resendVerification } from '../api/authApi';
+import { ArrowIcon, EyeIcon } from '../components/AuthIcons';
 
 function LoginForm() {
   const { login, loginError, clearLoginError } = useAuth();
@@ -31,16 +13,39 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [clientError, setClientError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState('');
 
   const clearErrors = () => {
     if (clientError) setClientError('');
     if (loginError) clearLoginError();
+    if (resendSuccess) setResendSuccess('');
+  };
+
+  const handleResendVerification = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setClientError('Please enter your email address to resend verification.');
+      return;
+    }
+    setIsResending(true);
+    try {
+      const response = await resendVerification(trimmedEmail);
+      setResendSuccess(
+        response?.message || 'If the account exists and is pending verification, a verification email has been sent.',
+      );
+    } catch (err) {
+      setClientError(err?.message || 'Failed to resend verification email.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setClientError('');
     clearLoginError();
+    setResendSuccess('');
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) return setClientError('Email address is required.');
@@ -62,10 +67,46 @@ function LoginForm() {
   };
 
   const activeError = clientError || loginError;
+  const isPendingVerification = Boolean(
+    activeError && (
+      activeError === 'Your email address still needs to be verified before you can sign in.' ||
+      activeError.includes('needs to be verified')
+    ),
+  );
 
   return (
     <>
-      {activeError && <div className="auth-alert" id="login-error" role="alert">{activeError}</div>}
+      {activeError && (
+        <div className="auth-alert" id="login-error" role="alert">
+          <div>{activeError}</div>
+          {isPendingVerification && (
+            <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(122, 48, 52, 0.2)' }}>
+              {resendSuccess ? (
+                <span style={{ fontSize: '0.74rem', color: '#166534', fontWeight: 600 }}>{resendSuccess}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="auth-resend-btn"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid currentColor',
+                    borderRadius: '4px',
+                    color: '#7a3034',
+                    fontSize: '0.72rem',
+                    padding: '0.25rem 0.55rem',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                >
+                  {isResending ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <form className="auth-form" onSubmit={handleSubmit} noValidate aria-label="Sign in credentials">
         <div className="auth-field">
           <label htmlFor="login-email">Email Address</label>
@@ -88,7 +129,15 @@ function LoginForm() {
         </div>
 
         <div className="auth-field">
-          <label htmlFor="login-password">Password</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.45rem' }}>
+            <label htmlFor="login-password" style={{ marginBottom: 0 }}>Password</label>
+            <Link
+              to="/forgot-password"
+              style={{ fontSize: '0.72rem', color: 'var(--auth-accent)', textDecoration: 'none', fontWeight: 600 }}
+            >
+              Forgot password?
+            </Link>
+          </div>
           <div className="auth-password">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -120,60 +169,30 @@ function LoginForm() {
   );
 }
 
-function UniversalAccessOptions() {
+function UniversalRegistrationLinks() {
   return (
-    <section className="auth-access-section" aria-labelledby="portal-options-heading">
-      <header>
-        <h2 id="portal-options-heading">Choose your portal</h2>
-        <p>The same secure sign-in, with guidance for your role.</p>
-      </header>
-      <div className="auth-access-grid">
-        <PortalAccessCard title="Citizen" purpose="Personal vaccination services" to="/login/citizen" ctaLabel="Continue as Citizen" icon={<CitizenIcon />} />
-        <PortalAccessCard title="Staff" purpose="Authorized health operations" to="/login/staff" ctaLabel="Continue as Staff" icon={<StaffIcon />} />
-      </div>
+    <div className="auth-registration-section" aria-label="Registration options">
       <div className="auth-registration-links">
         <span>New to the portal?</span>
         <Link to="/register/citizen">Register as Citizen</Link>
-        <Link to="/register/staff">Register as Staff</Link>
+        <Link to="/register/staff">Request Staff Access</Link>
       </div>
       <p className="auth-registration-note">Staff accounts require administrator approval before access.</p>
-    </section>
-  );
-}
-
-function DedicatedLoginLinks({ audience }) {
-  const isCitizen = audience === 'citizen';
-  return (
-    <div className="auth-next-step">
-      <div>
-        <span>{isCitizen ? 'New citizen?' : 'Need staff access?'}</span>
-        <Link to={isCitizen ? '/register/citizen' : '/register/staff'}>
-          {isCitizen ? 'Create Citizen Account' : 'Request a Staff Account'} <ArrowIcon />
-        </Link>
-      </div>
-      <nav aria-label="Switch access route">
-        <Link to="/login">All access options</Link>
-        <Link to={isCitizen ? '/login/staff' : '/login/citizen'}>{isCitizen ? 'Staff sign in' : 'Citizen sign in'}</Link>
-      </nav>
     </div>
   );
 }
 
-export default function LoginPage({ audience, onBackToLanding }) {
-  const { pathname } = useLocation();
-  const routeAudience = audience || (pathname === '/login/citizen' ? 'citizen' : pathname === '/login/staff' ? 'staff' : 'generic');
-  const content = LOGIN_CONTENT[routeAudience] || LOGIN_CONTENT.generic;
-
+export default function LoginPage({ onBackToLanding }) {
   return (
-    <article className={`auth-panel auth-panel--login auth-panel--${routeAudience}`}>
+    <article className="auth-panel auth-panel--login auth-panel--generic">
       {onBackToLanding && <button type="button" className="auth-standalone-back" onClick={onBackToLanding} aria-label="Back to portal home"><ArrowIcon direction="left" /> Back to portal home</button>}
       <header className="auth-panel__header">
-        <p className="auth-panel__eyebrow">{content.eyebrow}</p>
-        <h1 tabIndex="-1">{content.heading}</h1>
-        <p className="auth-panel__description">{content.description}</p>
+        <p className="auth-panel__eyebrow">Vaccination Portal</p>
+        <h1 tabIndex="-1">Welcome back</h1>
+        <p className="auth-panel__description">Sign in with your registered account to continue.</p>
       </header>
       <LoginForm />
-      {routeAudience === 'generic' ? <UniversalAccessOptions /> : <DedicatedLoginLinks audience={routeAudience} />}
+      <UniversalRegistrationLinks />
     </article>
   );
 }

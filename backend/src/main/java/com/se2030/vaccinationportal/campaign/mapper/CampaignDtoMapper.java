@@ -45,6 +45,10 @@ public final class CampaignDtoMapper {
     }
 
     public static CampaignResponse toResponse(VaccinationCampaign campaign) {
+        return toResponse(campaign, null);
+    }
+
+    public static CampaignResponse toResponse(VaccinationCampaign campaign, Long questionnaireVersionId) {
         if (campaign == null) {
             return null;
         }
@@ -61,7 +65,8 @@ public final class CampaignDtoMapper {
                 campaign.getBookingCloseAt(),
                 campaign.getStatus(),
                 campaign.getCreatedAt(),
-                campaign.getUpdatedAt()
+                campaign.getUpdatedAt(),
+                questionnaireVersionId
         );
     }
 

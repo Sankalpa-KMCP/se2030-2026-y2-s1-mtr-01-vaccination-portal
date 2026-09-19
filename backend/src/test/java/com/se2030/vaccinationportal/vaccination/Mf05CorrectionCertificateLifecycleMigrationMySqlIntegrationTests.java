@@ -3,7 +3,9 @@ package com.se2030.vaccinationportal.vaccination;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -12,14 +14,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/** Verifies V16 against real MySQL, including migration of existing V11 certificate data. */
+/** Verifies V18 against real MySQL, including migration of existing V11 certificate data. */
 @SpringBootTest
 @Testcontainers
 @Tag("mysql-testcontainers")
@@ -46,7 +48,7 @@ class Mf05CorrectionCertificateLifecycleMigrationMySqlIntegrationTests {
         registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.flyway.locations", () -> "classpath:db/migration");
         registry.add("spring.flyway.baseline-on-migrate", () -> "false");
-        registry.add("spring.flyway.target", () -> "15");
+        registry.add("spring.flyway.target", () -> "17");
     }
 
     @Autowired
@@ -59,20 +61,20 @@ class Mf05CorrectionCertificateLifecycleMigrationMySqlIntegrationTests {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void v16MigratesExistingDataAndEnforcesCorrectionAndCertificateLifecycleSchema() {
-        assertEquals("15", initialFlyway.info().current().getVersion().getVersion());
+    void v18MigratesExistingDataAndEnforcesCorrectionAndCertificateLifecycleSchema() {
+        assertEquals("17", initialFlyway.info().current().getVersion().getVersion());
         insertV11Fixture();
 
-        Flyway v16Flyway = Flyway.configure()
+        Flyway v18Flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
-                .target(MigrationVersion.fromVersion("16"))
+                .target(MigrationVersion.fromVersion("18"))
                 .load();
-        MigrateResult result = v16Flyway.migrate();
+        MigrateResult result = v18Flyway.migrate();
 
         assertEquals(1, result.migrationsExecuted);
-        assertEquals("16", v16Flyway.info().current().getVersion().getVersion());
-        assertEquals(17, v16Flyway.info().applied().length);
+        assertEquals("18", v18Flyway.info().current().getVersion().getVersion());
+        assertEquals(19, v18Flyway.info().applied().length);
         assertEquals(1, jdbcTemplate.queryForObject(
                 """
                 SELECT COUNT(*)
@@ -289,6 +291,18 @@ class Mf05CorrectionCertificateLifecycleMigrationMySqlIntegrationTests {
     }
 
     private void assertRejectedByDatabase(Runnable operation) {
-        assertThrows(DataIntegrityViolationException.class, operation::run);
+        DataAccessException exception = assertThrows(DataAccessException.class, operation::run);
+        boolean hasExpectedConstraintViolation = false;
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sqlException) {
+                int code = sqlException.getErrorCode();
+                if (code == 3819 || code == 1062) {
+                    hasExpectedConstraintViolation = true;
+                    break;
+                }
+            }
+        }
+        assertTrue(hasExpectedConstraintViolation,
+                () -> "Expected SQLException with MySQL error code 3819 or 1062 in cause chain, but got: " + exception);
     }
 }

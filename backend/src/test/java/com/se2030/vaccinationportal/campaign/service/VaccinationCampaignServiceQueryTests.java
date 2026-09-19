@@ -134,6 +134,78 @@ class VaccinationCampaignServiceQueryTests {
     }
 
     @Test
+    @DisplayName("createCampaign throws IllegalArgumentException when serviceEndDate is not after serviceStartDate")
+    void createCampaignInvalidServiceDatesThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                campaignService.createCampaign(
+                        "CMP-INVALID-SD",
+                        "Invalid Service Dates",
+                        null,
+                        vaccineType.getId(),
+                        targetGroup.getId(),
+                        LocalDate.of(2026, 11, 30),
+                        LocalDate.of(2026, 10, 1),
+                        Instant.parse("2026-09-01T08:00:00Z"),
+                        Instant.parse("2026-10-31T18:00:00Z")
+                )
+        );
+    }
+
+    @Test
+    @DisplayName("createCampaign throws IllegalArgumentException when bookingCloseAt is not after bookingOpenAt")
+    void createCampaignInvalidBookingWindowThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                campaignService.createCampaign(
+                        "CMP-INVALID-BW",
+                        "Invalid Booking Window",
+                        null,
+                        vaccineType.getId(),
+                        targetGroup.getId(),
+                        LocalDate.of(2026, 10, 1),
+                        LocalDate.of(2026, 11, 30),
+                        Instant.parse("2026-09-30T18:00:00Z"),
+                        Instant.parse("2026-09-01T08:00:00Z")
+                )
+        );
+    }
+
+    @Test
+    @DisplayName("createCampaign throws IllegalArgumentException when bookingCloseAt is after serviceEndDate")
+    void createCampaignBookingCloseAfterServiceEndThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                campaignService.createCampaign(
+                        "CMP-INVALID-BCSE",
+                        "Invalid Booking Close Service End",
+                        null,
+                        vaccineType.getId(),
+                        targetGroup.getId(),
+                        LocalDate.of(2026, 10, 1),
+                        LocalDate.of(2026, 10, 31),
+                        Instant.parse("2026-09-01T08:00:00Z"),
+                        Instant.parse("2026-11-15T18:00:00Z")
+                )
+        );
+    }
+
+    @Test
+    @DisplayName("createCampaign throws IllegalArgumentException when required dates are null")
+    void createCampaignNullDatesThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                campaignService.createCampaign(
+                        "CMP-NULL-DATES",
+                        "Null Dates",
+                        null,
+                        vaccineType.getId(),
+                        targetGroup.getId(),
+                        null,
+                        LocalDate.of(2026, 11, 30),
+                        Instant.parse("2026-09-01T08:00:00Z"),
+                        Instant.parse("2026-11-29T18:00:00Z")
+                )
+        );
+    }
+
+    @Test
     @DisplayName("getRequiredCampaignById returns campaign when present, throws ResourceNotFoundException when absent")
     void getRequiredCampaignByIdSemantics() {
         VaccinationCampaign found = campaignService.getRequiredCampaignById(campaign.getId());

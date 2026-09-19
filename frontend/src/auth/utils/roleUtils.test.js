@@ -3,8 +3,13 @@ import {
   canManageSessionOperations,
   canManageQuestionnaireAssignments,
   canOverrideSessionCapacity,
+  canViewCampaigns,
+  canViewCenters,
   canViewSessionOperations,
+  canViewSessions,
+  canViewTimeSlots,
   canViewQuestionnaireAssignments,
+  hasRole,
 } from './roleUtils';
 
 function userWith(role) {
@@ -43,10 +48,17 @@ describe('campaign questionnaire assignment authorization', () => {
 });
 
 describe('session operations authorization', () => {
-  it.each(['ROLE_ADMIN', 'ADMIN', 'ROLE_CENTER_MANAGER', 'CENTER_MANAGER', 'ROLE_HEALTHCARE_OFFICER', 'HEALTHCARE_OFFICER'])(
+  it.each(['ROLE_ADMIN', 'ADMIN', 'ROLE_CENTER_MANAGER', 'CENTER_MANAGER'])(
     'allows %s to view session operations',
     (role) => {
       expect(canViewSessionOperations(userWith(role))).toBe(true);
+    },
+  );
+
+  it.each(['ROLE_HEALTHCARE_OFFICER', 'HEALTHCARE_OFFICER', 'ROLE_CAMPAIGN_OFFICER', 'ROLE_CITIZEN'])(
+    'does not allow %s to view session operations',
+    (role) => {
+      expect(canViewSessionOperations(userWith(role))).toBe(false);
     },
   );
 
@@ -78,6 +90,10 @@ describe('session operations authorization', () => {
     },
   );
 
+  it('allows ROLE_SUPER_ADMIN to override session capacity', () => {
+    expect(canOverrideSessionCapacity(userWith('ROLE_SUPER_ADMIN'))).toBe(true);
+  });
+
   it('supports multi-role users while denying missing users safely', () => {
     const multiRoleUser = { roles: ['ROLE_ADMIN', 'ROLE_CENTER_MANAGER'] };
 
@@ -88,4 +104,44 @@ describe('session operations authorization', () => {
     expect(canManageSessionOperations(undefined)).toBe(false);
     expect(canOverrideSessionCapacity(null)).toBe(false);
   });
+});
+
+describe('super admin role hierarchy and citizen isolation', () => {
+  const superAdmin = userWith('ROLE_SUPER_ADMIN');
+
+  it('inherits all non-citizen staff authorities', () => {
+    expect(canViewQuestionnaireAssignments(superAdmin)).toBe(true);
+    expect(canManageQuestionnaireAssignments(superAdmin)).toBe(true);
+    expect(canViewSessionOperations(superAdmin)).toBe(true);
+    expect(canManageSessionOperations(superAdmin)).toBe(true);
+    expect(canOverrideSessionCapacity(superAdmin)).toBe(true);
+    expect(hasRole(superAdmin, 'ROLE_VACCINATOR')).toBe(true);
+  });
+
+  it('never implies citizen role', () => {
+    expect(hasRole(superAdmin, 'ROLE_CITIZEN')).toBe(false);
+    expect(hasRole(superAdmin, 'CITIZEN')).toBe(false);
+  });
+});
+
+describe('operational view helpers HCO boundary', () => {
+  const hcoUser = userWith('ROLE_HEALTHCARE_OFFICER');
+
+  it('denies ROLE_HEALTHCARE_OFFICER from operational modules', () => {
+    expect(canViewCampaigns(hcoUser)).toBe(false);
+    expect(canViewCenters(hcoUser)).toBe(false);
+    expect(canViewSessions(hcoUser)).toBe(false);
+    expect(canViewTimeSlots(hcoUser)).toBe(false);
+  });
+
+  it.each(['ROLE_ADMIN', 'ROLE_CENTER_MANAGER'])(
+    'preserves operational view permissions for %s',
+    (role) => {
+      const user = userWith(role);
+      expect(canViewCampaigns(user)).toBe(true);
+      expect(canViewCenters(user)).toBe(true);
+      expect(canViewSessions(user)).toBe(true);
+      expect(canViewTimeSlots(user)).toBe(true);
+    },
+  );
 });

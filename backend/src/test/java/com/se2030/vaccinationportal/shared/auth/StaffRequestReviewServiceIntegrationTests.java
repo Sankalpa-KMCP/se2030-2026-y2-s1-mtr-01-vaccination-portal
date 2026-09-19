@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class StaffRequestReviewServiceIntegrationTests {
 
-    private static final String RAW_PASSWORD = "ReviewPassword123!";
+    private static final String RAW_PASSWORD = "ValidPassword123!";
 
     @Autowired private StaffRequestReviewService reviewService;
     @Autowired private AuthService authService;

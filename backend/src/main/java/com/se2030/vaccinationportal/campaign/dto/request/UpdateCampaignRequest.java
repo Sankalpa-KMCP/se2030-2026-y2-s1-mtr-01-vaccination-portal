@@ -28,6 +28,8 @@ public record UpdateCampaignRequest(
         Instant bookingOpenAt,
 
         @NotNull(message = "Booking close timestamp is required")
-        Instant bookingCloseAt
+        Instant bookingCloseAt,
+
+        Long questionnaireVersionId
 ) {
 }

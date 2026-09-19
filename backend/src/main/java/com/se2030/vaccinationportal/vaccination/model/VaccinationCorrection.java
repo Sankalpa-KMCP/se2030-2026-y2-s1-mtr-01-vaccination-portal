@@ -68,8 +68,18 @@ public class VaccinationCorrection {
 
     @NotNull(message = "Correction status is required")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, updatable = false, length = 16)
+    @Column(name = "status", nullable = false, length = 16)
     private VaccinationCorrectionStatus status;
+
+    @Column(name = "reviewed_by")
+    private Long reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
+    @Size(max = 1000, message = "Review reason must not exceed 1000 characters")
+    @Column(name = "review_reason", length = 1000)
+    private String reviewReason;
 
     protected VaccinationCorrection() {
     }
@@ -82,6 +92,28 @@ public class VaccinationCorrection {
             String reason,
             Long correctedBy,
             Instant correctedAt
+    ) {
+        this(
+                vaccinationRecordId,
+                fieldName,
+                oldValue,
+                newValue,
+                reason,
+                correctedBy,
+                correctedAt,
+                VaccinationCorrectionStatus.PENDING
+        );
+    }
+
+    public VaccinationCorrection(
+            Long vaccinationRecordId,
+            VaccinationCorrectionField fieldName,
+            String oldValue,
+            String newValue,
+            String reason,
+            Long correctedBy,
+            Instant correctedAt,
+            VaccinationCorrectionStatus status
     ) {
         if (vaccinationRecordId == null || vaccinationRecordId <= 0) {
             throw new IllegalArgumentException("Vaccination record ID must be positive");
@@ -102,6 +134,48 @@ public class VaccinationCorrection {
         this.reason = requireText(reason, "Correction reason", 1000);
         this.correctedBy = correctedBy;
         this.correctedAt = correctedAt;
+        this.status = status != null ? status : VaccinationCorrectionStatus.PENDING;
+    }
+
+    public void approve(Long reviewerId, Instant reviewedAt, String reviewReason) {
+        if (this.status != VaccinationCorrectionStatus.PENDING) {
+            throw new IllegalStateException("Only PENDING corrections can be approved; current status is: " + this.status);
+        }
+        if (reviewerId == null || reviewerId <= 0) {
+            throw new IllegalArgumentException("Reviewer ID must be positive");
+        }
+        if (reviewedAt == null) {
+            throw new IllegalArgumentException("Review timestamp is required");
+        }
+        this.status = VaccinationCorrectionStatus.APPROVED;
+        this.reviewedBy = reviewerId;
+        this.reviewedAt = reviewedAt;
+        this.reviewReason = reviewReason != null ? reviewReason.trim() : null;
+    }
+
+    public void reject(Long reviewerId, Instant reviewedAt, String rejectionReason) {
+        if (this.status != VaccinationCorrectionStatus.PENDING && this.status != VaccinationCorrectionStatus.APPROVED) {
+            throw new IllegalStateException("Only PENDING or APPROVED corrections can be rejected; current status is: " + this.status);
+        }
+        if (reviewerId == null || reviewerId <= 0) {
+            throw new IllegalArgumentException("Reviewer ID must be positive");
+        }
+        if (reviewedAt == null) {
+            throw new IllegalArgumentException("Review timestamp is required");
+        }
+        if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Rejection reason is required");
+        }
+        this.status = VaccinationCorrectionStatus.REJECTED;
+        this.reviewedBy = reviewerId;
+        this.reviewedAt = reviewedAt;
+        this.reviewReason = rejectionReason.trim();
+    }
+
+    public void apply() {
+        if (this.status != VaccinationCorrectionStatus.APPROVED) {
+            throw new IllegalStateException("Only APPROVED corrections can be applied; current status is: " + this.status);
+        }
         this.status = VaccinationCorrectionStatus.APPLIED;
     }
 
@@ -153,5 +227,17 @@ public class VaccinationCorrection {
 
     public VaccinationCorrectionStatus getStatus() {
         return status;
+    }
+
+    public Long getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public Instant getReviewedAt() {
+        return reviewedAt;
+    }
+
+    public String getReviewReason() {
+        return reviewReason;
     }
 }

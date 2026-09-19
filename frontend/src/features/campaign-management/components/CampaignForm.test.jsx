@@ -6,11 +6,16 @@ import CampaignForm from './CampaignForm';
 const apiMocks = vi.hoisted(() => ({
   listVaccineTypes: vi.fn(),
   listTargetGroups: vi.fn(),
+  getPublishedQuestionnaireVersions: vi.fn(),
 }));
 
 vi.mock('../api/campaignApi', () => ({
   listVaccineTypes: apiMocks.listVaccineTypes,
   listTargetGroups: apiMocks.listTargetGroups,
+}));
+
+vi.mock('../api/campaignConfigurationApi', () => ({
+  getPublishedQuestionnaireVersions: apiMocks.getPublishedQuestionnaireVersions,
 }));
 
 describe('CampaignForm — Create and Edit Modes', () => {
@@ -37,6 +42,26 @@ describe('CampaignForm — Create and Edit Modes', () => {
     ]);
     apiMocks.listTargetGroups.mockResolvedValue([
       { id: 2, code: 'TG-01', description: 'Target One' },
+    ]);
+    apiMocks.getPublishedQuestionnaireVersions.mockResolvedValue([
+      {
+        id: 101,
+        questionnaireId: 1,
+        questionnaireCode: 'COVID-SCREEN',
+        questionnaireName: 'COVID-19 Screening',
+        versionNumber: 1,
+        status: 'PUBLISHED',
+        publishedAt: '2026-09-01T10:00:00Z',
+      },
+      {
+        id: 102,
+        questionnaireId: 2,
+        questionnaireCode: 'FLU-SCREEN',
+        questionnaireName: 'Influenza Screening',
+        versionNumber: 2,
+        status: 'PUBLISHED',
+        publishedAt: '2026-09-02T10:00:00Z',
+      },
     ]);
   });
 
@@ -102,7 +127,7 @@ describe('CampaignForm — Create and Edit Modes', () => {
     expect(payload.id).toBeUndefined();
   });
 
-  it('edit mode enforces date validation without submitting', () => {
+  it('edit mode rejects service end date before service start date with inline feedback', () => {
     const onSubmit = vi.fn();
     render(
       <CampaignForm
@@ -120,7 +145,137 @@ describe('CampaignForm — Create and Edit Modes', () => {
     fireEvent.click(submitBtn);
 
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.getByText(/Service start date must not be after service end date/i)).toBeTruthy();
+    expect(screen.getByText('Service end date cannot be before the service start date.')).toBeTruthy();
+    expect(endDateInput.classList.contains('is-invalid')).toBe(true);
+  });
+
+  it('edit mode rejects service end date equal to service start date (same-day campaign disallowed)', () => {
+    const onSubmit = vi.fn();
+    render(
+      <CampaignForm
+        initialCampaign={sampleCampaign}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    const endDateInput = screen.getByLabelText(/Service End Date/i);
+    fireEvent.change(endDateInput, { target: { value: '2026-10-01' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText('Service end date must be after the service start date.')).toBeTruthy();
+  });
+
+  it('edit mode rejects booking close timestamp equal to booking open timestamp', () => {
+    const onSubmit = vi.fn();
+    render(
+      <CampaignForm
+        initialCampaign={sampleCampaign}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    const bookingCloseInput = screen.getByLabelText(/Citizen Booking Close Timestamp/i);
+    // sampleCampaign bookingOpenAt is '2026-09-01T09:00:00.000Z'
+    const bookingOpenInput = screen.getByLabelText(/Citizen Booking Open Timestamp/i);
+    fireEvent.change(bookingCloseInput, { target: { value: bookingOpenInput.value } });
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText('Booking close time must be after the booking open time.')).toBeTruthy();
+    expect(bookingCloseInput.classList.contains('is-invalid')).toBe(true);
+  });
+
+  it('edit mode rejects booking close timestamp before booking open timestamp', () => {
+    const onSubmit = vi.fn();
+    render(
+      <CampaignForm
+        initialCampaign={sampleCampaign}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    const bookingCloseInput = screen.getByLabelText(/Citizen Booking Close Timestamp/i);
+    fireEvent.change(bookingCloseInput, { target: { value: '2026-08-01T09:00' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText('Booking close time must be after the booking open time.')).toBeTruthy();
+  });
+
+  it('edit mode rejects booking close timestamp after service end date', () => {
+    const onSubmit = vi.fn();
+    render(
+      <CampaignForm
+        initialCampaign={sampleCampaign}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    // serviceEndDate is '2026-10-31', set booking close to '2026-11-01T10:00'
+    const bookingCloseInput = screen.getByLabelText(/Citizen Booking Close Timestamp/i);
+    fireEvent.change(bookingCloseInput, { target: { value: '2026-11-01T10:00' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText('Booking must close no later than the allowed campaign service window.')).toBeTruthy();
+  });
+
+  it('clears inline validation error as user corrects the invalid value', () => {
+    render(
+      <CampaignForm
+        initialCampaign={sampleCampaign}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    const endDateInput = screen.getByLabelText(/Service End Date/i);
+    fireEvent.change(endDateInput, { target: { value: '2026-09-01' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    expect(screen.getByText('Service end date cannot be before the service start date.')).toBeTruthy();
+
+    // User corrects value
+    fireEvent.change(endDateInput, { target: { value: '2026-11-15' } });
+    expect(screen.queryByText('Service end date cannot be before the service start date.')).toBeNull();
+  });
+
+  it('create mode flags empty required date fields with inline validation', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <CampaignForm
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Vaccine Type/i).disabled).toBe(false);
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /Save Campaign/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText('Service start date is required.')).toBeTruthy();
+    expect(screen.getByText('Service end date is required.')).toBeTruthy();
+    expect(screen.getByText('Citizen booking open timestamp is required.')).toBeTruthy();
+    expect(screen.getByText('Citizen booking close timestamp is required.')).toBeTruthy();
   });
 
   it('create mode remains functional and submits complete payload with master data', async () => {
@@ -158,5 +313,84 @@ describe('CampaignForm — Create and Edit Modes', () => {
     expect(payload.targetGroupId).toBe(2);
     expect(payload.serviceStartDate).toBe('2026-11-01');
     expect(payload.serviceEndDate).toBe('2026-11-30');
+    expect(payload.questionnaireVersionId).toBeNull();
+  });
+
+  it('create mode starts with empty questionnaire selection and does not auto-select', async () => {
+    render(
+      <CampaignForm
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Screening Questionnaire/i)).toBeTruthy();
+    });
+
+    const questionnaireSelect = screen.getByLabelText(/Screening Questionnaire/i);
+    // Initial value must be blank and display the placeholder option
+    expect(questionnaireSelect.value).toBe('');
+    expect(screen.getByRole('option', { name: /-- Select a published questionnaire --/i })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /COVID-19 Screening/i })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /Influenza Screening/i })).toBeTruthy();
+  });
+
+  it('create mode allows explicit selection of a published questionnaire version', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <CampaignForm
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Vaccine Type/i).disabled).toBe(false);
+    });
+
+    fireEvent.change(screen.getByLabelText(/Campaign Code/i), { target: { value: 'CMP-WITH-Q' } });
+    fireEvent.change(screen.getByLabelText(/Campaign Name/i), { target: { value: 'Campaign with Questionnaire' } });
+    fireEvent.change(screen.getByLabelText(/Service Start Date/i), { target: { value: '2026-11-01' } });
+    fireEvent.change(screen.getByLabelText(/Service End Date/i), { target: { value: '2026-11-30' } });
+    fireEvent.change(screen.getByLabelText(/Citizen Booking Open Timestamp/i), { target: { value: '2026-10-01T08:00' } });
+    fireEvent.change(screen.getByLabelText(/Citizen Booking Close Timestamp/i), { target: { value: '2026-10-31T18:00' } });
+
+    // Explicitly select Version 102
+    const questionnaireSelect = screen.getByLabelText(/Screening Questionnaire/i);
+    fireEvent.change(questionnaireSelect, { target: { value: '102' } });
+    expect(questionnaireSelect.value).toBe('102');
+
+    const submitBtn = screen.getByRole('button', { name: /Save Campaign/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const payload = onSubmit.mock.calls[0][0];
+    expect(payload.questionnaireVersionId).toBe(102);
+  });
+
+  it('edit mode prefills existing questionnaireVersionId and submits it', async () => {
+    const onSubmit = vi.fn();
+    const campaignWithQ = {
+      ...sampleCampaign,
+      questionnaireVersionId: 101,
+    };
+    render(
+      <CampaignForm
+        initialCampaign={campaignWithQ}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    const questionnaireSelect = screen.getByLabelText(/Screening Questionnaire/i);
+    expect(questionnaireSelect.value).toBe('101');
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const payload = onSubmit.mock.calls[0][0];
+    expect(payload.questionnaireVersionId).toBe(101);
   });
 });

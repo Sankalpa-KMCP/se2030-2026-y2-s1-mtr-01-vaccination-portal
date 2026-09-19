@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
 import HeroSection from '../components/HeroSection';
+import GenerationalCarePaths from '../components/GenerationalCarePaths';
 import PortalAccessSection from '../components/PortalAccessSection';
 import CapabilitiesSection from '../components/CapabilitiesSection';
 import HowItWorksSection from '../components/HowItWorksSection';
@@ -18,6 +19,9 @@ import '../premium-public.css';
 import '../clinical-public.css';
 import '../landing-motion.css';
 import '../care-experience.css';
+import '../glass-header.css';
+import '../hero-identity.css';
+import '../hospital-home.css';
 
 /**
  * "Continue exploring" band — connects Home to the two interior pages
@@ -68,6 +72,44 @@ export default function LandingPage({ onLoginClick }) {
       <PublicHeader onLoginClick={onLoginClick} />
       <main id="lp-main" tabIndex={-1}>
         <HeroSection />
+        <section className="hospital-shortcuts" aria-label="Quick access to vaccination services">
+          <div className="lp-container hospital-shortcuts__grid">
+            <Link to="/register/citizen" className="hospital-shortcut hospital-shortcut--register">
+              <span className="hospital-shortcut__icon hospital-shortcut__icon--green" aria-hidden="true">
+                <i className="bi bi-person-plus-fill" />
+              </span>
+              <span>
+                <strong>Begin your vaccination journey</strong>
+                <small>Create an account and explore campaigns</small>
+              </span>
+              <span className="hospital-shortcut__arrow" aria-hidden="true">↗</span>
+            </Link>
+            <Link to="/login" className="hospital-shortcut hospital-shortcut--booking">
+              <span className="hospital-shortcut__icon hospital-shortcut__icon--blue" aria-hidden="true">
+                <i className="bi bi-calendar2-check-fill" />
+              </span>
+              <span>
+                <strong>Manage your appointments</strong>
+                <small>Sign in to view or change your booking</small>
+              </span>
+              <span className="hospital-shortcut__arrow" aria-hidden="true">↗</span>
+            </Link>
+            <Link to="/how-it-works" className="hospital-shortcut hospital-shortcut--guide">
+              <span className="hospital-shortcut__icon hospital-shortcut__icon--amber" aria-hidden="true">
+                <i className="bi bi-heart-pulse-fill" />
+              </span>
+              <span>
+                <strong>Know your next step</strong>
+                <small>Understand screening, booking and arrival</small>
+              </span>
+              <span className="hospital-shortcut__arrow" aria-hidden="true">↗</span>
+            </Link>
+          </div>
+        </section>
+
+        {/* Tailored Pathways with Rich Photography */}
+        <GenerationalCarePaths />
+
         <PublicServiceGuide />
         <PortalAccessSection />
         <CapabilitiesSection />

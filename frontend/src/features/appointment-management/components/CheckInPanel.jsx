@@ -3,7 +3,19 @@ import AppointmentStatusBadge from './AppointmentStatusBadge';
 
 /**
  * Panel component displaying details of a queued appointment and providing
- * operational controls for staff (Check-In, Reverse Check-In, Mark No-Show) (US-04).
+ * operational controls for staff (Check-In, Reverse Check-In, Mark No-Show).
+ *
+ * <p><b>User Story:</b>
+ * <ul>
+ *   <li>US-26: View checked-in queue and perform clinic arrival check-in, reversal, and no-show processing.</li>
+ * </ul>
+ *
+ * <p><b>Business Rules Enforced in UI:</b>
+ * <ul>
+ *   <li>MF03-BR-09: Check-in modal allows staff override checkbox and requires override reason if outside 30-minute window.</li>
+ *   <li>MF03-BR-10: Shows "Check In" button strictly when status is CONFIRMED.</li>
+ *   <li>MF03-BR-15: Shows "Reverse Check-In" button strictly when status is CHECKED_IN.</li>
+ * </ul>
  *
  * @param {Object} props
  * @param {Object} props.appointment - AppointmentResponse object
@@ -18,6 +30,7 @@ export default function CheckInPanel({
   onReverseCheckIn,
   onMarkNoShow,
   isProcessing = false,
+  canMutate = true,
 }) {
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [isStaffOverride, setIsStaffOverride] = useState(false);
@@ -99,22 +112,42 @@ export default function CheckInPanel({
         )}
 
         {/* Operational Actions */}
-        <div className="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
-          {isConfirmed && (
-            <>
+        {canMutate && (
+          <div className="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+            {isConfirmed && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm px-3 fw-semibold"
+                  disabled={isProcessing}
+                  onClick={() => setShowNoShowModal(true)}
+                >
+                  Mark No-Show
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success btn-sm px-4 fw-bold shadow-sm"
+                  disabled={isProcessing}
+                  onClick={() => setShowCheckInModal(true)}
+                >
+                  {isProcessing ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    'Check In'
+                  )}
+                </button>
+              </>
+            )}
+
+            {isCheckedIn && (
               <button
                 type="button"
-                className="btn btn-outline-danger btn-sm px-3 fw-semibold"
+                className="btn btn-outline-warning btn-sm px-3 fw-semibold text-dark"
                 disabled={isProcessing}
-                onClick={() => setShowNoShowModal(true)}
-              >
-                Mark No-Show
-              </button>
-              <button
-                type="button"
-                className="btn btn-success btn-sm px-4 fw-bold shadow-sm"
-                disabled={isProcessing}
-                onClick={() => setShowCheckInModal(true)}
+                onClick={() => setShowReverseModal(true)}
               >
                 {isProcessing ? (
                   <>
@@ -122,34 +155,16 @@ export default function CheckInPanel({
                     Processing...
                   </>
                 ) : (
-                  'Check In'
+                  'Reverse Check-In'
                 )}
               </button>
-            </>
-          )}
-
-          {isCheckedIn && (
-            <button
-              type="button"
-              className="btn btn-outline-warning btn-sm px-3 fw-semibold text-dark"
-              disabled={isProcessing}
-              onClick={() => setShowReverseModal(true)}
-            >
-              {isProcessing ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Processing...
-                </>
-              ) : (
-                'Reverse Check-In'
-              )}
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Check-In Modal with optional Staff Override */}
-      {showCheckInModal && (
+      {canMutate && showCheckInModal && (
         <div className="modal fade show d-block bg-dark bg-opacity-50" tabIndex="-1" role="dialog" aria-modal="true">
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content border-0 shadow">
@@ -217,7 +232,7 @@ export default function CheckInPanel({
       )}
 
       {/* Reverse Check-In Confirmation Modal */}
-      {showReverseModal && (
+      {canMutate && showReverseModal && (
         <div className="modal fade show d-block bg-dark bg-opacity-50" tabIndex="-1" role="dialog" aria-modal="true">
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content border-0 shadow">
@@ -258,7 +273,7 @@ export default function CheckInPanel({
       )}
 
       {/* Mark No-Show Confirmation Modal */}
-      {showNoShowModal && (
+      {canMutate && showNoShowModal && (
         <div className="modal fade show d-block bg-dark bg-opacity-50" tabIndex="-1" role="dialog" aria-modal="true">
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content border-0 shadow">

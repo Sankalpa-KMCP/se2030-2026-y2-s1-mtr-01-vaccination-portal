@@ -2,6 +2,12 @@ import React from 'react';
 
 /**
  * Reusable badge component mapping AppointmentStatus enum values to semantic Bootstrap colors.
+ *
+ * <p><b>User Stories:</b>
+ * <ul>
+ *   <li>US-03: Citizen visual feedback on booking and modification statuses (CONFIRMED, CANCELLED).</li>
+ *   <li>US-26: Clinical and reception visual distinction for arrivals (CHECKED_IN, COMPLETED, NO_SHOW).</li>
+ * </ul>
  */
 export default function AppointmentStatusBadge({ status }) {
   if (!status) return null;
