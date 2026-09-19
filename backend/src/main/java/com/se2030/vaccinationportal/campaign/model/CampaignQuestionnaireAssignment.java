@@ -148,6 +148,11 @@ public class CampaignQuestionnaireAssignment {
         return questionnaireVersionId;
     }
 
+    public void setQuestionnaireVersionId(Long questionnaireVersionId) {
+        this.questionnaireVersionId = questionnaireVersionId;
+        validateConstraints();
+    }
+
     public LocalDate getActiveFrom() {
         return activeFrom;
     }

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import { listVaccineTypes, listTargetGroups } from '../api/campaignApi';
+import { getPublishedQuestionnaireVersions } from '../api/campaignConfigurationApi';
 
 /**
  * Formats a Date instance, ISO-8601 string, or local string into YYYY-MM-DDTHH:mm for datetime-local inputs.
@@ -37,6 +38,12 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
   const [serviceEndDate, setServiceEndDate] = useState(initialCampaign?.serviceEndDate || '');
   const [bookingOpenAt, setBookingOpenAt] = useState(formatForDateTimeLocal(initialCampaign?.bookingOpenAt));
   const [bookingCloseAt, setBookingCloseAt] = useState(formatForDateTimeLocal(initialCampaign?.bookingCloseAt));
+  const [questionnaireVersionId, setQuestionnaireVersionId] = useState(
+    initialCampaign?.questionnaireVersionId ? String(initialCampaign.questionnaireVersionId) : ''
+  );
+  const [publishedQuestionnaires, setPublishedQuestionnaires] = useState([]);
+  const [questionnairesLoading, setQuestionnairesLoading] = useState(false);
+  const [questionnairesError, setQuestionnairesError] = useState(null);
   const [clientError, setClientError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -60,8 +67,14 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
     });
   };
 
+  const campaignKeyRef = useRef(
+    initialCampaign ? (initialCampaign.id ?? initialCampaign.code ?? 'initial') : null
+  );
+
   useEffect(() => {
-    if (initialCampaign) {
+    const key = initialCampaign ? (initialCampaign.id ?? initialCampaign.code ?? 'loaded') : null;
+    if (initialCampaign && key !== campaignKeyRef.current) {
+      campaignKeyRef.current = key;
       setCode(initialCampaign.code || '');
       setName(initialCampaign.name || '');
       setDescription(initialCampaign.description || '');
@@ -71,10 +84,36 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       setServiceEndDate(initialCampaign.serviceEndDate || '');
       setBookingOpenAt(formatForDateTimeLocal(initialCampaign.bookingOpenAt));
       setBookingCloseAt(formatForDateTimeLocal(initialCampaign.bookingCloseAt));
+      setQuestionnaireVersionId(
+        initialCampaign.questionnaireVersionId ? String(initialCampaign.questionnaireVersionId) : ''
+      );
       setFieldErrors({});
       setClientError(null);
     }
   }, [initialCampaign]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (typeof getPublishedQuestionnaireVersions === 'function') {
+      setQuestionnairesLoading(true);
+      setQuestionnairesError(null);
+      getPublishedQuestionnaireVersions()
+        .then((data) => {
+          if (!isMounted) return;
+          setPublishedQuestionnaires(Array.isArray(data) ? data : []);
+        })
+        .catch((err) => {
+          if (!isMounted) return;
+          setQuestionnairesError(err?.message || 'Failed to load published questionnaires.');
+        })
+        .finally(() => {
+          if (isMounted) setQuestionnairesLoading(false);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (isEditMode) {
@@ -194,6 +233,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
         serviceEndDate,
         bookingOpenAt: new Date(bookingOpenAt).toISOString(),
         bookingCloseAt: new Date(bookingCloseAt).toISOString(),
+        questionnaireVersionId: questionnaireVersionId ? Number(questionnaireVersionId) : null,
       };
 
       onSubmit(payload);
@@ -211,6 +251,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       serviceEndDate,
       bookingOpenAt: new Date(bookingOpenAt).toISOString(),
       bookingCloseAt: new Date(bookingCloseAt).toISOString(),
+      questionnaireVersionId: questionnaireVersionId ? Number(questionnaireVersionId) : null,
     };
 
     onSubmit(payload);
@@ -228,7 +269,13 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
         <h5 className="mb-0 fw-bold">{isEditMode ? 'Edit Campaign' : 'Create New Vaccination Campaign'}</h5>
       </div>
       <div className="card-body p-4">
-        <ApiErrorAlert error={clientError || (!isEditMode ? masterDataError : null) || error} onDismiss={() => setClientError(null)} />
+        <ApiErrorAlert
+          error={clientError || (!isEditMode ? masterDataError : null) || questionnairesError || error}
+          onDismiss={() => {
+            setClientError(null);
+            setQuestionnairesError(null);
+          }}
+        />
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="row g-3">
@@ -393,6 +440,37 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                   <div className="form-text small">Select an eligible active target demographic group.</div>
                 </>
               )}
+            </div>
+
+            {/* Screening Questionnaire Selection */}
+            <div className="col-12">
+              <label htmlFor="questionnaireVersionId" className="form-label fw-semibold text-secondary small">
+                Screening Questionnaire
+              </label>
+              <select
+                id="questionnaireVersionId"
+                className="form-select"
+                value={questionnaireVersionId}
+                onChange={(e) => setQuestionnaireVersionId(e.target.value)}
+                disabled={questionnairesLoading}
+              >
+                <option value="">-- Select a published questionnaire --</option>
+                {isEditMode &&
+                  questionnaireVersionId &&
+                  !publishedQuestionnaires.some((qv) => String(qv.id) === String(questionnaireVersionId)) && (
+                    <option value={questionnaireVersionId}>
+                      Assigned Version #{questionnaireVersionId} (Current)
+                    </option>
+                  )}
+                {publishedQuestionnaires.map((qv) => (
+                  <option key={qv.id} value={qv.id}>
+                    {qv.questionnaireName} (v{qv.versionNumber}) - {qv.questionnaireCode}
+                  </option>
+                ))}
+              </select>
+              <div className="form-text small">
+                Select an active published clinical screening questionnaire version for this campaign.
+              </div>
             </div>
 
             {/* Service Period */}

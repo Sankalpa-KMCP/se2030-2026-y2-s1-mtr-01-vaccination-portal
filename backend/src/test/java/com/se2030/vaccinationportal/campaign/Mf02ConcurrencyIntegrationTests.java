@@ -81,7 +81,17 @@ class Mf02ConcurrencyIntegrationTests {
         @Primary
         QuestionnaireVersionPublicationPort questionnaireVersionPublicationPort() {
             Set<Long> published = Set.of(100L, 101L, 102L);
-            return published::contains;
+            return new QuestionnaireVersionPublicationPort() {
+                @Override
+                public boolean isPublished(Long questionnaireVersionId) {
+                    return questionnaireVersionId != null && published.contains(questionnaireVersionId);
+                }
+
+                @Override
+                public boolean hasCampaignSubmissions(Long campaignId) {
+                    return false;
+                }
+            };
         }
     }
 

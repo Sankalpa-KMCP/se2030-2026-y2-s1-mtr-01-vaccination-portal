@@ -54,7 +54,17 @@ class CampaignSchedulingConcurrencyIntegrationTests {
         @Bean
         @Primary
         public QuestionnaireVersionPublicationPort testPublicationPort() {
-            return versionId -> versionId != null && versionId > 0;
+            return new QuestionnaireVersionPublicationPort() {
+                @Override
+                public boolean isPublished(Long questionnaireVersionId) {
+                    return questionnaireVersionId != null && questionnaireVersionId > 0;
+                }
+
+                @Override
+                public boolean hasCampaignSubmissions(Long campaignId) {
+                    return false;
+                }
+            };
         }
     }
 

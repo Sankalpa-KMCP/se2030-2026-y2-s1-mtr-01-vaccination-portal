@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -175,6 +176,37 @@ class QuestionnaireControllerTests {
                 .andExpect(status().isBadRequest());
 
         verify(versionService, never()).addQuestionItem(anyLong(), anyLong(), anyInt(), any());
+    }
+
+    @Test
+    void getPublishedVersionsResolvesDedicatedEndpoint() throws Exception {
+        when(versionService.getPublishedVersions()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/screening/questionnaire-versions/published"))
+                .andExpect(status().isOk());
+
+        verify(versionService).getPublishedVersions();
+        verify(versionService, never()).getVersionById(anyLong());
+    }
+
+    @Test
+    void getVersionByIdWithNumericIdResolvesCorrectly() throws Exception {
+        when(versionService.getVersionById(20L)).thenReturn(version);
+
+        mockMvc.perform(get("/api/v1/screening/questionnaire-versions/{versionId}", 20L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(20L));
+
+        verify(versionService).getVersionById(20L);
+    }
+
+    @Test
+    void getVersionByIdWithInvalidTextReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/screening/questionnaire-versions/{versionId}", "not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid value for parameter 'versionId'"));
+
+        verify(versionService, never()).getVersionById(anyLong());
     }
 
     private void authenticateAs(String role) {

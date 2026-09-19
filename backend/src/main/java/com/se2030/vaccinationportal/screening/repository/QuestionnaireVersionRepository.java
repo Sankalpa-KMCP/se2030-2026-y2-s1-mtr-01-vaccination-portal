@@ -21,4 +21,7 @@ public interface QuestionnaireVersionRepository extends JpaRepository<Questionna
 
     @Query("SELECT COUNT(s) > 0 FROM ScreeningSubmission s WHERE s.questionnaireVersion.id = :versionId")
     boolean hasSubmissions(@Param("versionId") Long versionId);
+
+    @Query("SELECT qv FROM QuestionnaireVersion qv JOIN FETCH qv.questionnaire WHERE qv.status = :status")
+    List<QuestionnaireVersion> findByStatus(@Param("status") QuestionnaireVersionStatus status);
 }
