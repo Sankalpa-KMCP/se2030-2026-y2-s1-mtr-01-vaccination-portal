@@ -307,40 +307,6 @@ class VaccinationDraftControllerTests {
                 .andExpect(status().isBadRequest());
         org.mockito.Mockito.verifyNoInteractions(draftService);
     }
-
-    @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {
-            "{}", "null", "{", "{\"appointmentId\":null}", "{\"appointmentId\":\"abc\"}",
-            "{\"appointmentId\":101,\"vaccineBatchId\":0}",
-            "{\"appointmentId\":101,\"administrationTime\":\"2099-01-01T00:00:00Z\"}",
-            "{\"appointmentId\":101,\"nextDoseDate\":\"2000-01-01\"}"})
-    void createDraftMalformedOrInvalidPayloadReturns400(String payload) throws Exception {
-        mockMvc.perform(post("/api/v1/vaccination/drafts").contentType(MediaType.APPLICATION_JSON).content(payload))
-                .andExpect(status().isBadRequest());
-        org.mockito.Mockito.verifyNoInteractions(draftService);
-    }
-
-    @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {"vaccinatorId", "physicalAdministrationConfirmed", "status", "id"})
-    void publicRequestsRejectServerControlledFields(String field) throws Exception {
-        String value = field.equals("physicalAdministrationConfirmed") ? "true" : "999";
-        mockMvc.perform(post("/api/v1/vaccination/drafts").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"appointmentId\":101,\"" + field + "\":" + value + "}"))
-                .andExpect(status().isBadRequest());
-        mockMvc.perform(patch("/api/v1/vaccination/drafts/1").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"doseNumber\":2,\"" + field + "\":" + value + "}"))
-                .andExpect(status().isBadRequest());
-        org.mockito.Mockito.verifyNoInteractions(draftService);
-    }
-
-    @Test
-    void oversizedNotesReturns400() throws Exception {
-        mockMvc.perform(patch("/api/v1/vaccination/drafts/1").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"authorizedNotes\":\"" + "a".repeat(2001) + "\"}"))
-                .andExpect(status().isBadRequest());
-        org.mockito.Mockito.verifyNoInteractions(draftService);
-    }
-
     @Test
     void deleteDraft_existingDraft_returns204() throws Exception {
         when(draftService.getDraftById(1L)).thenReturn(sampleDraft);

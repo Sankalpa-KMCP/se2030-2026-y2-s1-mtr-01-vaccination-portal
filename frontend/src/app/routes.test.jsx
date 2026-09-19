@@ -125,7 +125,7 @@ describe('shared routing and role guards', () => {
 
   it('requires login for draft CRUD', () => {
     render(<MemoryRouter initialEntries={['/app/staff/vaccination-drafts']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Welcome back/i })).toBeTruthy();
     expect(screen.queryByText('Vaccination Drafts Test Page')).toBeNull();
   });
 
