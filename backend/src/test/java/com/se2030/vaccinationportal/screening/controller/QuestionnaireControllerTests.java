@@ -31,8 +31,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -198,6 +200,56 @@ class QuestionnaireControllerTests {
                 .andExpect(jsonPath("$.id").value(20L));
 
         verify(versionService).getVersionById(20L);
+    }
+
+    @Test
+    void removeQuestionItemCallsServiceAndReturnsNoContent() throws Exception {
+        mockMvc.perform(delete("/api/v1/screening/questionnaire-versions/{versionId}/items/{itemId}", 20L, 100L))
+                .andExpect(status().isNoContent());
+
+        verify(versionService).removeQuestionItem(20L, 100L);
+    }
+
+    @Test
+    void replaceQuestionItemCallsServiceAndReturnsUpdatedItem() throws Exception {
+        QuestionnaireItem item = new QuestionnaireItem(version, question, 1, false);
+        item.setId(100L);
+        when(versionService.replaceQuestionItem(20L, 100L, 30L, false)).thenReturn(item);
+
+        mockMvc.perform(put("/api/v1/screening/questionnaire-versions/{versionId}/items/{itemId}", 20L, 100L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "questionId": 30,
+                                  "requiredOverride": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(100L))
+                .andExpect(jsonPath("$.questionId").value(30L))
+                .andExpect(jsonPath("$.requiredOverride").value(false));
+
+        verify(versionService).replaceQuestionItem(20L, 100L, 30L, false);
+    }
+
+    @Test
+    void reorderQuestionItemsCallsServiceAndReturnsUpdatedList() throws Exception {
+        QuestionnaireItem item1 = new QuestionnaireItem(version, question, 1, null);
+        item1.setId(101L);
+        when(versionService.reorderQuestionItems(20L, List.of(101L))).thenReturn(List.of(item1));
+
+        mockMvc.perform(put("/api/v1/screening/questionnaire-versions/{versionId}/items/reorder", 20L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "itemIds": [101]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(101L))
+                .andExpect(jsonPath("$[0].displayOrder").value(1));
+
+        verify(versionService).reorderQuestionItems(20L, List.of(101L));
     }
 
     @Test

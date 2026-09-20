@@ -96,6 +96,26 @@ export function addQuestionnaireItem(versionId, payload) {
   });
 }
 
+export function removeQuestionnaireItem(versionId, itemId) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/items/${itemId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function updateQuestionnaireItem(versionId, itemId, payload) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/items/${itemId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function reorderQuestionnaireItems(versionId, itemIds) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/items/reorder`, {
+    method: 'PUT',
+    body: JSON.stringify({ itemIds }),
+  });
+}
+
 export function publishQuestionnaireVersion(versionId) {
   return screeningRequest(`/questionnaire-versions/${versionId}/publish`, { method: 'POST' });
 }

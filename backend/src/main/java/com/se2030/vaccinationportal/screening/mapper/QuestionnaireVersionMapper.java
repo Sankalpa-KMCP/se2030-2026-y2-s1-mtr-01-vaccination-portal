@@ -43,6 +43,10 @@ public class QuestionnaireVersionMapper {
         );
     }
 
+    public List<QuestionnaireItemResponse> toItemResponses(List<QuestionnaireItem> items) {
+        return items.stream().map(this::toResponse).toList();
+    }
+
     public EligibilityRuleResponse toResponse(EligibilityRule rule) {
         return new EligibilityRuleResponse(
                 rule.getId(),

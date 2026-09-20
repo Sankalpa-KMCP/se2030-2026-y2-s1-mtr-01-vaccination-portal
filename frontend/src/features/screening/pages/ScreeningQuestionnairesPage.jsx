@@ -22,13 +22,18 @@ import {
   listQuestionnaireVersions,
   listQuestions,
   publishQuestionnaireVersion,
+  removeQuestionnaireItem,
+  reorderQuestionnaireItems,
   retireQuestionnaireVersion,
   updateEligibilityRule,
+  updateQuestionnaireItem,
 } from '../api/screeningApi';
 import AddQuestionnaireItemModal from '../components/AddQuestionnaireItemModal';
+import ChangeQuestionnaireItemModal from '../components/ChangeQuestionnaireItemModal';
 import EligibilityRuleFormModal from '../components/EligibilityRuleFormModal';
 import QuestionnaireActionModal from '../components/QuestionnaireActionModal';
 import QuestionnaireFormModal from '../components/QuestionnaireFormModal';
+import { parseEligibilityRuleExpression } from '../utils/eligibilityRuleExpression';
 import {
   PRELIMINARY_SCREENING_RESULT_LABELS,
   QUESTIONNAIRE_VERSION_STATUS,
@@ -62,10 +67,12 @@ export default function ScreeningQuestionnairesPage() {
 
   const [questionnaireFormOpen, setQuestionnaireFormOpen] = useState(false);
   const [itemFormOpen, setItemFormOpen] = useState(false);
+  const [changeItemTarget, setChangeItemTarget] = useState(null);
   const [creationProgress, setCreationProgress] = useState(null);
   const [ruleFormTarget, setRuleFormTarget] = useState(undefined);
   const [formError, setFormError] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
 
   useEffect(() => {
@@ -206,6 +213,76 @@ export default function ScreeningQuestionnairesPage() {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleReplaceItem = async (payload) => {
+    if (!selectedVersion || !changeItemTarget) return;
+    setProcessing(true);
+    setFormError(null);
+    try {
+      await updateQuestionnaireItem(selectedVersion.id, changeItemTarget.id, payload);
+      await loadVersion(selectedVersion.id);
+      setChangeItemTarget(null);
+      setSuccessMessage('Question updated in draft version.');
+    } catch (error) {
+      setFormError(error);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleMoveItem = async (currentIndex, targetIndex) => {
+    if (!selectedVersion || !isDraft || reordering || processing) return;
+    const items = sortItems(selectedVersion.items || []);
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+
+    const itemIds = items.map((i) => i.id);
+    const temp = itemIds[currentIndex];
+    itemIds[currentIndex] = itemIds[targetIndex];
+    itemIds[targetIndex] = temp;
+
+    setReordering(true);
+    setBuilderError(null);
+    try {
+      const updatedItems = await reorderQuestionnaireItems(selectedVersion.id, itemIds);
+      replaceVersion({
+        ...selectedVersion,
+        items: sortItems(updatedItems),
+      });
+      setSuccessMessage('Questionnaire item order updated.');
+    } catch (error) {
+      setBuilderError(error);
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const handleInitiateRemoveItem = (item) => {
+    if (!selectedVersion || !isDraft) return;
+    const question = questionById.get(item.questionId);
+    const targetCode = question?.code?.trim().toUpperCase();
+
+    const referencingRule = (selectedVersion.rules || []).find((rule) => {
+      const parsed = parseEligibilityRuleExpression(rule.conditionExpression);
+      return parsed?.questionCode?.toUpperCase() === targetCode;
+    });
+
+    if (referencingRule) {
+      setBuilderError(new Error(
+        `This question is currently used by an eligibility rule ('${referencingRule.ruleName}'). Update or remove that rule before removing the question.`
+      ));
+      return;
+    }
+
+    setFormError(null);
+    setConfirmation({
+      kind: 'remove-item',
+      target: item,
+      title: 'Remove question?',
+      message: `Are you sure you want to remove '${question?.text || question?.code || 'this question'}' from Version ${selectedVersion.versionNumber}?`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
   };
 
   const finishCreateAndAttach = async (question, attachedItem = null) => {
@@ -395,6 +472,10 @@ export default function ScreeningQuestionnairesPage() {
           rules: (selectedVersion.rules || []).filter((rule) => rule.id !== confirmation.target.id),
         });
         setSuccessMessage('Eligibility rule deleted.');
+      } else if (confirmation.kind === 'remove-item') {
+        await removeQuestionnaireItem(selectedVersion.id, confirmation.target.id);
+        await loadVersion(selectedVersion.id);
+        setSuccessMessage('Question removed from draft version.');
       }
       setConfirmation(null);
     } catch (error) {
@@ -529,24 +610,89 @@ export default function ScreeningQuestionnairesPage() {
                       ) : (
                         <div className="table-responsive mb-4">
                           <table className="table table-sm table-hover align-middle mb-0">
-                            <thead className="table-light"><tr><th scope="col">Order</th><th scope="col">Code</th><th scope="col">Question</th><th scope="col">Type</th><th scope="col">Required</th></tr></thead>
+                            <thead className="table-light">
+                              <tr>
+                                <th scope="col" style={{ width: isDraft ? '110px' : '70px' }}>Order</th>
+                                <th scope="col">Code</th>
+                                <th scope="col">Question</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Required</th>
+                                {isDraft && <th scope="col" className="text-end">Actions</th>}
+                              </tr>
+                            </thead>
                             <tbody>
-                              {sortedVersionItems.map((item) => {
+                              {sortedVersionItems.map((item, index) => {
                                 const question = questionById.get(item.questionId);
                                 const required = item.requiredOverride ?? question?.defaultRequired;
                                 return (
                                   <tr key={item.id}>
-                                    <td>{item.displayOrder}</td>
+                                    <td>
+                                      <div className="d-flex align-items-center gap-1">
+                                        <span className="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-2 py-1 fw-bold">
+                                          {item.displayOrder}
+                                        </span>
+                                        {isDraft && (
+                                          <div className="btn-group-vertical btn-group-sm ms-1" role="group" aria-label={`Reorder ${question?.code || item.displayOrder}`}>
+                                            <button
+                                              type="button"
+                                              className="btn btn-outline-secondary py-0 px-1"
+                                              title="Move Up"
+                                              aria-label={`Move up ${question?.code || item.displayOrder}`}
+                                              disabled={index === 0 || reordering || processing}
+                                              onClick={() => handleMoveItem(index, index - 1)}
+                                            >
+                                              ▲
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className="btn btn-outline-secondary py-0 px-1"
+                                              title="Move Down"
+                                              aria-label={`Move down ${question?.code || item.displayOrder}`}
+                                              disabled={index === sortedVersionItems.length - 1 || reordering || processing}
+                                              onClick={() => handleMoveItem(index, index + 1)}
+                                            >
+                                              ▼
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </td>
                                     <td className="font-monospace fw-semibold">{question?.code || `#${item.questionId}`}</td>
                                     <td>{question?.text || 'Question details unavailable'}</td>
                                     <td>{QUESTION_TYPE_LABELS[question?.questionType] || question?.questionType || '—'}</td>
                                     <td>{required ? 'Required' : 'Optional'}{item.requiredOverride == null && <span className="small text-muted"> (default)</span>}</td>
+                                    {isDraft && (
+                                      <td className="text-end">
+                                        <div className="d-inline-flex gap-1">
+                                          <button
+                                            type="button"
+                                            className="btn btn-outline-primary btn-sm"
+                                            aria-label={`Change question ${question?.code || item.displayOrder}`}
+                                            disabled={processing || reordering}
+                                            onClick={() => {
+                                              setFormError(null);
+                                              setChangeItemTarget(item);
+                                            }}
+                                          >
+                                            Change
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="btn btn-outline-danger btn-sm"
+                                            aria-label={`Remove question ${question?.code || item.displayOrder}`}
+                                            disabled={processing || reordering}
+                                            onClick={() => handleInitiateRemoveItem(item)}
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                      </td>
+                                    )}
                                   </tr>
                                 );
                               })}
                             </tbody>
                           </table>
-                          <div className="small text-muted mt-2">Item order is persisted when each item is added. This backend has no edit, remove, or reorder endpoint.</div>
                         </div>
                       )}
 
@@ -611,6 +757,17 @@ export default function ScreeningQuestionnairesPage() {
       />
       <EligibilityRuleFormModal show={ruleFormTarget !== undefined} rule={ruleFormTarget || null} questions={attachedQuestions} processing={processing} apiError={formError} onClose={() => !processing && setRuleFormTarget(undefined)} onSubmit={handleSaveRule} />
       <QuestionnaireActionModal action={confirmation} processing={processing} error={formError} onClose={() => !processing && setConfirmation(null)} onConfirm={handleConfirmedAction} />
+      <ChangeQuestionnaireItemModal
+        show={changeItemTarget !== null}
+        item={changeItemTarget}
+        currentQuestion={changeItemTarget ? questionById.get(changeItemTarget.questionId) : null}
+        availableQuestions={availableQuestions}
+        rules={selectedVersion?.rules || []}
+        processing={processing}
+        apiError={formError}
+        onClose={() => !processing && setChangeItemTarget(null)}
+        onSubmit={handleReplaceItem}
+      />
     </section>
   );
 }
