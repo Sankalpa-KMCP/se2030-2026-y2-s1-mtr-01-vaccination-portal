@@ -2,7 +2,9 @@ package com.se2030.vaccinationportal.screening.controller;
 
 import com.se2030.vaccinationportal.screening.dto.AddEligibilityRuleRequest;
 import com.se2030.vaccinationportal.screening.dto.AddQuestionItemRequest;
+import com.se2030.vaccinationportal.screening.dto.ReorderQuestionItemsRequest;
 import com.se2030.vaccinationportal.screening.dto.UpdateEligibilityRuleRequest;
+import com.se2030.vaccinationportal.screening.dto.UpdateQuestionItemRequest;
 import com.se2030.vaccinationportal.screening.dto.response.EligibilityRuleResponse;
 import com.se2030.vaccinationportal.screening.dto.response.PublishedQuestionnaireVersionResponse;
 import com.se2030.vaccinationportal.screening.dto.response.QuestionnaireItemResponse;
@@ -94,6 +96,42 @@ public class QuestionnaireController {
                 request.requiredOverride()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(versionMapper.toResponse(item));
+    }
+
+    @DeleteMapping("/questionnaire-versions/{versionId}/items/{itemId}")
+    @RequireRoles({"HEALTHCARE_OFFICER"})
+    public ResponseEntity<Void> removeQuestionItem(
+            @PathVariable("versionId") Long versionId,
+            @PathVariable("itemId") Long itemId
+    ) {
+        versionService.removeQuestionItem(versionId, itemId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/questionnaire-versions/{versionId}/items/{itemId}")
+    @RequireRoles({"HEALTHCARE_OFFICER"})
+    public ResponseEntity<QuestionnaireItemResponse> replaceQuestionItem(
+            @PathVariable("versionId") Long versionId,
+            @PathVariable("itemId") Long itemId,
+            @Valid @RequestBody UpdateQuestionItemRequest request
+    ) {
+        QuestionnaireItem item = versionService.replaceQuestionItem(
+                versionId,
+                itemId,
+                request.questionId(),
+                request.requiredOverride()
+        );
+        return ResponseEntity.ok(versionMapper.toResponse(item));
+    }
+
+    @PutMapping("/questionnaire-versions/{versionId}/items/reorder")
+    @RequireRoles({"HEALTHCARE_OFFICER"})
+    public ResponseEntity<List<QuestionnaireItemResponse>> reorderQuestionItems(
+            @PathVariable("versionId") Long versionId,
+            @Valid @RequestBody ReorderQuestionItemsRequest request
+    ) {
+        List<QuestionnaireItem> items = versionService.reorderQuestionItems(versionId, request.itemIds());
+        return ResponseEntity.ok(versionMapper.toItemResponses(items));
     }
 
     @PostMapping("/questionnaire-versions/{versionId}/rules")

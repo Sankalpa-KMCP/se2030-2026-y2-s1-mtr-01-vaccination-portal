@@ -14,8 +14,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Service managing QuestionnaireVersion lifecycle (DRAFT -> PUBLISHED -> RETIRED).
@@ -143,6 +150,170 @@ public class QuestionnaireVersionService implements QuestionnaireVersionPublicat
 
         QuestionnaireItem item = new QuestionnaireItem(version, question, displayOrder, requiredOverride);
         return itemRepository.save(item);
+    }
+
+    public void removeQuestionItem(Long versionId, Long itemId) {
+        if (versionId == null) {
+            throw new IllegalArgumentException("Version ID cannot be null");
+        }
+        if (itemId == null) {
+            throw new IllegalArgumentException("Item ID cannot be null");
+        }
+
+        QuestionnaireVersion version = getVersionById(versionId);
+        mutabilityValidator.assertVersionIsDraft(version);
+
+        QuestionnaireItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Questionnaire item not found with ID: " + itemId));
+
+        if (!item.getQuestionnaireVersion().getId().equals(versionId)) {
+            throw new IllegalArgumentException("Questionnaire item " + itemId + " does not belong to version " + versionId);
+        }
+
+        assertQuestionNotReferencedByRules(version, item.getQuestion());
+
+        version.removeItem(item);
+        itemRepository.delete(item);
+        itemRepository.flush();
+
+        List<QuestionnaireItem> remaining = itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(versionId);
+        if (!remaining.isEmpty()) {
+            int currentMax = remaining.stream().mapToInt(QuestionnaireItem::getDisplayOrder).max().orElse(0);
+            int tempBase = currentMax + remaining.size() + 100;
+
+            // Phase 1: assign temporary unique values safely above currentMax to prevent unique constraint collisions
+            for (int i = 0; i < remaining.size(); i++) {
+                remaining.get(i).setDisplayOrder(tempBase + i);
+            }
+            itemRepository.saveAllAndFlush(remaining);
+
+            // Phase 2: assign contiguous 1..N
+            for (int i = 0; i < remaining.size(); i++) {
+                remaining.get(i).setDisplayOrder(i + 1);
+            }
+            itemRepository.saveAllAndFlush(remaining);
+        }
+    }
+
+    public QuestionnaireItem replaceQuestionItem(Long versionId, Long itemId, Long newQuestionId, Boolean requiredOverride) {
+        if (versionId == null) {
+            throw new IllegalArgumentException("Version ID cannot be null");
+        }
+        if (itemId == null) {
+            throw new IllegalArgumentException("Item ID cannot be null");
+        }
+        if (newQuestionId == null) {
+            throw new IllegalArgumentException("Question ID cannot be null");
+        }
+
+        QuestionnaireVersion version = getVersionById(versionId);
+        mutabilityValidator.assertVersionIsDraft(version);
+
+        QuestionnaireItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Questionnaire item not found with ID: " + itemId));
+
+        if (!item.getQuestionnaireVersion().getId().equals(versionId)) {
+            throw new IllegalArgumentException("Questionnaire item " + itemId + " does not belong to version " + versionId);
+        }
+
+        ScreeningQuestion newQuestion = questionRepository.findById(newQuestionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Question not found with ID: " + newQuestionId));
+
+        if (!newQuestion.isActive()) {
+            throw new IllegalStateException("Cannot add inactive question to a questionnaire version");
+        }
+
+        if (!item.getQuestion().getId().equals(newQuestionId)) {
+            if (itemRepository.existsByQuestionnaireVersionIdAndQuestionId(versionId, newQuestionId)) {
+                throw new IllegalStateException("This question is already included in this questionnaire version.");
+            }
+            assertQuestionNotReferencedByRules(version, item.getQuestion());
+            item.setQuestion(newQuestion);
+        }
+
+        if (requiredOverride != null) {
+            item.setRequiredOverride(requiredOverride);
+        }
+
+        return itemRepository.save(item);
+    }
+
+    public List<QuestionnaireItem> reorderQuestionItems(Long versionId, List<Long> itemIds) {
+        if (versionId == null) {
+            throw new IllegalArgumentException("Version ID cannot be null");
+        }
+        if (itemIds == null || itemIds.isEmpty()) {
+            throw new IllegalArgumentException("Item IDs list cannot be empty");
+        }
+
+        QuestionnaireVersion version = getVersionById(versionId);
+        mutabilityValidator.assertVersionIsDraft(version);
+
+        List<QuestionnaireItem> existingItems = itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(versionId);
+        if (itemIds.size() != existingItems.size()) {
+            throw new IllegalArgumentException("Reorder request must include all questionnaire items for this version exactly once.");
+        }
+
+        Set<Long> uniqueRequestedIds = new HashSet<>(itemIds);
+        if (uniqueRequestedIds.size() != itemIds.size()) {
+            throw new IllegalArgumentException("Reorder request contains duplicate item IDs.");
+        }
+
+        Map<Long, QuestionnaireItem> itemsById = existingItems.stream()
+                .collect(Collectors.toMap(QuestionnaireItem::getId, Function.identity()));
+
+        for (Long id : itemIds) {
+            if (!itemsById.containsKey(id)) {
+                throw new IllegalArgumentException("Reorder request contains item ID " + id + " which does not belong to version " + versionId);
+            }
+        }
+
+        int currentMax = existingItems.stream().mapToInt(QuestionnaireItem::getDisplayOrder).max().orElse(0);
+        int tempBase = currentMax + existingItems.size() + 100;
+
+        // Phase 1: assign temporary unique values safely above currentMax to prevent unique constraint collisions
+        for (int i = 0; i < itemIds.size(); i++) {
+            itemsById.get(itemIds.get(i)).setDisplayOrder(tempBase + i);
+        }
+        itemRepository.saveAllAndFlush(existingItems);
+
+        // Phase 2: assign contiguous 1..N in requested order
+        for (int i = 0; i < itemIds.size(); i++) {
+            itemsById.get(itemIds.get(i)).setDisplayOrder(i + 1);
+        }
+        itemRepository.saveAllAndFlush(existingItems);
+
+        return itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(versionId);
+    }
+
+    private void assertQuestionNotReferencedByRules(QuestionnaireVersion version, ScreeningQuestion question) {
+        if (version.getRules() == null || version.getRules().isEmpty() || question == null) {
+            return;
+        }
+        String targetCode = question.getCode().trim();
+        for (EligibilityRule rule : version.getRules()) {
+            String referencedCode = extractReferencedQuestionCode(rule.getConditionExpression());
+            if (referencedCode != null && referencedCode.equalsIgnoreCase(targetCode)) {
+                throw new IllegalStateException(
+                        "Question '" + targetCode + "' is used by an eligibility rule ('" + rule.getRuleCode() + "'). Update or remove that rule first."
+                );
+            }
+        }
+    }
+
+    private static final Pattern CONDITION_EXPRESSION_TOKEN_PATTERN =
+            Pattern.compile("^\\s*([A-Za-z0-9_]+)\\s*(?:==|!=|(?i)CONTAINS\\b)");
+
+    public static String extractReferencedQuestionCode(String conditionExpression) {
+        if (conditionExpression == null || conditionExpression.trim().isEmpty()) {
+            return null;
+        }
+        String expr = conditionExpression.trim();
+        Matcher matcher = CONDITION_EXPRESSION_TOKEN_PATTERN.matcher(expr);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+        return null;
     }
 
     public EligibilityRule addEligibilityRule(Long versionId, String ruleCode, String ruleName, String conditionExpression,
