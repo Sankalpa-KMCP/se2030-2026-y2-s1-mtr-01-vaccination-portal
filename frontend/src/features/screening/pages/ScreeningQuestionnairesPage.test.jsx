@@ -24,6 +24,9 @@ const apiMocks = vi.hoisted(() => ({
   publishQuestionnaireVersion: vi.fn(),
   retireQuestionnaireVersion: vi.fn(),
   deleteQuestionnaireVersion: vi.fn(),
+  removeQuestionnaireItem: vi.fn(),
+  updateQuestionnaireItem: vi.fn(),
+  reorderQuestionnaireItems: vi.fn(),
   listEligibilityRules: vi.fn(),
   getEligibilityRule: vi.fn(),
   createEligibilityRule: vi.fn(),
@@ -179,9 +182,8 @@ describe('ScreeningQuestionnairesPage', () => {
     const orderTable = screen.getByRole('columnheader', { name: 'Order' }).closest('table');
     const rows = within(orderTable).getAllByRole('row');
     expect(within(rows[1]).getByText('What is your age?')).toBeTruthy();
-    expect(within(rows[2]).getByText('Have you travelled recently?')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Remove Question/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Reorder/i })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Change question AGE' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove question AGE' })).toBeTruthy();
   });
 
   it('creates a bodyless draft version for the selected questionnaire', async () => {
@@ -454,6 +456,10 @@ describe('ScreeningQuestionnairesPage', () => {
     expect(screen.queryByRole('button', { name: 'Add Question' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Create Rule' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit rule AGE_REVIEW' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Change question/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Remove question/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Move up/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Move down/i })).toBeNull();
     expect(screen.getByRole('button', { name: 'Retire' })).toBeTruthy();
   });
 
@@ -468,5 +474,80 @@ describe('ScreeningQuestionnairesPage', () => {
 
     await waitFor(() => expect(apiMocks.publishQuestionnaireVersion).toHaveBeenCalledWith(12));
     expect(await screen.findByText(/contents are now immutable/i)).toBeTruthy();
+  });
+
+  it('supports removing an unreferenced question with confirmation', async () => {
+    apiMocks.removeQuestionnaireItem.mockResolvedValue(null);
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove question TRAVEL' }));
+    const dialog = screen.getByRole('dialog', { name: 'Remove question?' });
+    expect(within(dialog).getByText(/Are you sure you want to remove 'Have you travelled recently\?' from Version 2\?/)).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+
+    await waitFor(() => expect(apiMocks.removeQuestionnaireItem).toHaveBeenCalledWith(12, 102));
+    expect(await screen.findByText('Question removed from draft version.')).toBeTruthy();
+  });
+
+  it('blocks removing a question referenced by an eligibility rule and displays friendly error', async () => {
+    apiMocks.removeQuestionnaireItem.mockResolvedValue(null);
+    await openDraft();
+
+    // AGE is referenced by AGE_REVIEW rule (conditionExpression: 'AGE == 18')
+    fireEvent.click(screen.getByRole('button', { name: 'Remove question AGE' }));
+
+    expect(apiMocks.removeQuestionnaireItem).not.toHaveBeenCalled();
+    expect(await screen.findByText(/This question is currently used by an eligibility rule \('Age review'\)\. Update or remove that rule before removing the question\./)).toBeTruthy();
+  });
+
+  it('supports replacing an attached question in a draft questionnaire', async () => {
+    const reactionQuestion = {
+      id: 3,
+      code: 'REACTION',
+      text: 'Have you had a previous vaccine reaction?',
+      questionType: 'BOOLEAN',
+      defaultRequired: false,
+      active: true,
+    };
+    apiMocks.listQuestions.mockResolvedValue([ageQuestion, travelQuestion, reactionQuestion]);
+    apiMocks.updateQuestionnaireItem.mockResolvedValue({
+      id: 102,
+      questionnaireVersionId: 12,
+      questionId: 3,
+      displayOrder: 2,
+      requiredOverride: true,
+    });
+
+    await openDraft();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change question TRAVEL' }));
+    const dialog = screen.getByRole('dialog', { name: 'Change Question' });
+    expect(within(dialog).getByText(/Current Question \(Position #2\)/)).toBeTruthy();
+
+    fireEvent.change(within(dialog).getByLabelText(/Replacement Question/), { target: { value: '3' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Change Question' }));
+
+    await waitFor(() => expect(apiMocks.updateQuestionnaireItem).toHaveBeenCalledWith(12, 102, {
+      questionId: 3,
+      requiredOverride: true,
+    }));
+    expect(await screen.findByText('Question updated in draft version.')).toBeTruthy();
+  });
+
+  it('supports reordering draft questionnaire items using Move Up and Move Down', async () => {
+    apiMocks.reorderQuestionnaireItems.mockResolvedValue([
+      { id: 102, questionnaireVersionId: 12, questionId: 2, displayOrder: 1, requiredOverride: true },
+      { id: 101, questionnaireVersionId: 12, questionId: 1, displayOrder: 2, requiredOverride: null },
+    ]);
+
+    await openDraft();
+
+    // In draftVersion: AGE is index 0 (order 1), TRAVEL is index 1 (order 2)
+    // Move AGE down (swaps index 0 and index 1 => [102, 101])
+    fireEvent.click(screen.getByRole('button', { name: 'Move down AGE' }));
+
+    await waitFor(() => expect(apiMocks.reorderQuestionnaireItems).toHaveBeenCalledWith(12, [102, 101]));
+    expect(await screen.findByText('Questionnaire item order updated.')).toBeTruthy();
   });
 });
