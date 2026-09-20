@@ -807,10 +807,137 @@ html.vax-text-xl .hero-photo-tab {
   box-sizing: border-box !important;
 }
 
+/* --------------------------------------------------------------------------
+   Hero Pathway Showcase Tab - High-Contrast & Accessible Design
+   -------------------------------------------------------------------------- */
 .hero-pathway-tab-content {
-  padding: 0.85rem;
-  max-height: 310px;
-  overflow-y: auto;
+  padding: 0.75rem 1rem 0.85rem !important;
+  max-height: none !important;
+  overflow: visible !important;
+  background: #ffffff;
+}
+
+.hero-pathway-tab-content .home-hero__visual-head {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0 0 0.5rem 0 !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  color: #0F6E5B !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.hero-pathway-tab-content .home-hero__visual-context {
+  color: #0369a1 !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  background: #e0f2fe !important;
+  padding: 0.15rem 0.65rem !important;
+  border-radius: 999px !important;
+}
+
+.hero-pathway-tab-content .home-hero__visual-title {
+  padding: 0.65rem 0 0.35rem 0 !important;
+}
+
+.hero-pathway-tab-content .home-hero__visual-title > span {
+  font-size: 1.35rem !important;
+  font-weight: 750 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.02em !important;
+  display: block !important;
+  line-height: 1.25 !important;
+}
+
+.hero-pathway-tab-content .home-hero__visual-title p {
+  margin: 0.25rem 0 0 0 !important;
+  color: #334155 !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+}
+
+.hero-pathway-tab-content .home-hero__visual-screen {
+  padding: 0.35rem 0 !important;
+}
+
+/* High-Contrast SVG Pathway Elements on Light Background */
+.hero-pathway-tab-content .home-pathway__node-label {
+  fill: #0f172a !important;
+  font-size: 13.5px !important;
+  font-weight: 750 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.hero-pathway-tab-content .home-pathway__node-number {
+  fill: #0F6E5B !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.hero-pathway-tab-content .home-pathway__route {
+  stroke: #cbd5e1 !important;
+  stroke-width: 2.5 !important;
+  opacity: 1 !important;
+}
+
+.hero-pathway-tab-content .home-pathway__route-progress {
+  stroke: #0F6E5B !important;
+  stroke-width: 3 !important;
+}
+
+.hero-pathway-tab-content .home-pathway__staff-pill rect {
+  fill: #0d2825 !important;
+  stroke: #0F6E5B !important;
+  stroke-width: 1.5 !important;
+}
+
+.hero-pathway-tab-content .home-pathway__staff-pill text {
+  fill: #ffffff !important;
+  font-weight: 650 !important;
+}
+
+.hero-pathway-tab-content .home-pathway__staff-pill .home-pathway__pill-note {
+  fill: #99f6e4 !important;
+  font-weight: 500 !important;
+}
+
+.hero-pathway-tab-content .home-pathway__staff-connector {
+  stroke: #0F6E5B !important;
+  stroke-width: 1.75 !important;
+}
+
+.hero-pathway-tab-content .home-hero__visual-foot {
+  padding: 0.5rem 0 0.15rem 0 !important;
+  border-top: 1px solid #e2e8f0 !important;
+  margin-top: 0.25rem !important;
+}
+
+.hero-pathway-tab-content .home-hero__visual-foot p {
+  margin: 0 !important;
+  color: #475569 !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+}
+
+/* Mobile high-contrast pathway support */
+.hero-pathway-tab-content .home-pathway--mobile .home-pathway__node-label {
+  fill: #0f172a !important;
+  font-size: 15px !important;
+  font-weight: 750 !important;
+}
+
+.hero-pathway-tab-content .home-pathway--mobile .home-pathway__node-number {
+  fill: #0F6E5B !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.hero-pathway-tab-content .home-pathway--mobile .home-pathway__mobile-note {
+  fill: #475569 !important;
+  font-weight: 500 !important;
 }
 
 .hero-photo-tab:hover {
