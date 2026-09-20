@@ -528,7 +528,7 @@ describe('shared routing and role guards', () => {
     });
 
     it.each([
-      ['/app/staff', 'Staff Dashboard'],
+      ['/app/staff', 'Healthcare Officer Dashboard'],
       ['/app/staff/screening/reviews', 'HCO Screening Review Queue Test Page'],
       ['/app/staff/screening/reviews/42', 'HCO Screening Review Details Test Page'],
       ['/app/staff/screening/history/42', 'HCO Screening History Details Test Page'],
