@@ -254,7 +254,7 @@ export default function CheckInManagementPage() {
       <div className="card shadow-sm border-0 mb-4">
         <div className="card-body p-4">
           <form onSubmit={handleSlotSubmit} className="row g-3 align-items-end">
-            <div className="col-md-4">
+            <div className="col-md-6 col-lg-5">
               <label htmlFor="slotIdInput" className="form-label fw-bold">
                 Active Time Slot ID <span className="text-danger">*</span>
               </label>
@@ -290,7 +290,7 @@ export default function CheckInManagementPage() {
                 required
               />
             </div>
-            <div className="col-md-3">
+            <div className="col-md-4 col-lg-3">
               <button
                 type="submit"
                 className="btn btn-primary px-4 fw-bold shadow-sm w-100"
@@ -298,9 +298,6 @@ export default function CheckInManagementPage() {
               >
                 {loading ? 'Loading Queue...' : 'Load Queue'}
               </button>
-            </div>
-            <div className="col-md-5 text-md-end text-muted small">
-              Queue queries endpoint: <code>GET /api/v1/appointments/queue?slotId={slotId || '{slotId}'}</code>
             </div>
           </form>
 
@@ -314,8 +311,10 @@ export default function CheckInManagementPage() {
                 </summary>
                 <div className="row g-2 align-items-center mt-2">
                   <div className="col-auto">
+                    <label htmlFor="lookupSessionIdInput" className="visually-hidden">Session ID</label>
                     <input
                       type="number"
+                      id="lookupSessionIdInput"
                       className="form-control form-control-sm"
                       placeholder="Enter Session ID"
                       value={lookupSessionId}
@@ -356,7 +355,9 @@ export default function CheckInManagementPage() {
                   </div>
                   {availableSlots.length > 0 && (
                     <div className="col-auto">
+                      <label htmlFor="availableTimeSlotSelect" className="visually-hidden">Available Time Slot</label>
                       <select
+                        id="availableTimeSlotSelect"
                         className="form-select form-select-sm"
                         value={slotId}
                         onChange={(e) => updateSlotId(e.target.value)}
@@ -382,7 +383,7 @@ export default function CheckInManagementPage() {
           className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm mb-4`}
           role="alert"
         >
-          <h4 className="h6 alert-heading fw-bold mb-1">{feedback.title}</h4>
+          <p className="h6 alert-heading fw-bold mb-1">{feedback.title}</p>
           <p className="mb-0">{feedback.message}</p>
           <button
             type="button"
@@ -395,21 +396,22 @@ export default function CheckInManagementPage() {
 
       {/* Loading Spinner */}
       {loading && (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
+        <div className="text-center py-5" role="status" aria-live="polite" aria-atomic="true">
+          <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} aria-hidden="true"></div>
           <p className="text-muted mt-2 fw-semibold">Loading queue for Slot #{slotId}...</p>
         </div>
       )}
 
       {/* Queue Results List */}
       {!loading && loadedSlotId !== null && queue !== null && (
-        <div className="queue-section">
+        <section className="queue-section" aria-labelledby="check-in-queue-title">
+          <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+            Queue loaded for Slot #{loadedSlotId}. {queue.length} {queue.length === 1 ? 'appointment' : 'appointments'} found.
+          </div>
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h3 className="h5 fw-bold mb-0">
+            <h2 id="check-in-queue-title" className="h5 fw-bold mb-0">
               Vaccinator Queue for Slot #{loadedSlotId}
-            </h3>
+            </h2>
             <span className="badge bg-secondary fs-7">
               {queue.length} {queue.length === 1 ? 'Appointment' : 'Appointments'}
             </span>
@@ -417,7 +419,7 @@ export default function CheckInManagementPage() {
 
           {queue.length === 0 ? (
             <div className="alert alert-info border-0 shadow-sm p-4 text-center">
-              <h4 className="h6 alert-heading fw-bold mb-1">Queue is Empty</h4>
+              <h3 className="h6 alert-heading fw-bold mb-1">Queue is Empty</h3>
               <p className="mb-0 text-muted small">
                 No checked-in appointments found for Slot #{loadedSlotId}.
               </p>
@@ -437,7 +439,7 @@ export default function CheckInManagementPage() {
               ))}
             </div>
           )}
-        </div>
+        </section>
       )}
     </div>
   );
