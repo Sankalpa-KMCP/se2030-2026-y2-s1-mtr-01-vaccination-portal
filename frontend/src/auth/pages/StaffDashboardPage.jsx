@@ -10,11 +10,21 @@ import {
   hasRole,
 } from '../utils/roleUtils';
 import VaccinatorDashboardSection from '../../features/vaccination-administration/components/VaccinatorDashboardSection';
+import HcoDashboardView from '../../features/screening/components/dashboard/HcoDashboardView';
 
 export default function StaffDashboardPage() {
   const { user } = useAuth();
   const isVaccinator = hasRole(user, 'ROLE_VACCINATOR');
   const canManageCheckIn = hasRole(user, 'ROLE_CENTER_MANAGER', 'ROLE_ADMIN');
+  const isInventoryOfficer = hasRole(user, 'ROLE_INVENTORY_OFFICER');
+  const isHealthcareOfficer = hasRole(user, 'ROLE_HEALTHCARE_OFFICER')
+    && !isVaccinator
+    && !canManageCheckIn
+    && !isInventoryOfficer;
+
+  if (isHealthcareOfficer) {
+    return <HcoDashboardView user={user} />;
+  }
   const services = [
     hasRole(user, 'ROLE_HEALTHCARE_OFFICER') && [
       'Screening Review',
