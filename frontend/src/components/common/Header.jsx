@@ -109,6 +109,11 @@ export default function Header({ onLogout }) {
                       Waitlist
                     </NavLink>
                   </li>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/citizen/vaccinations" onClick={closeNav}>
+                      My Vaccinations
+                    </NavLink>
+                  </li>
                 </>
               )}
 
