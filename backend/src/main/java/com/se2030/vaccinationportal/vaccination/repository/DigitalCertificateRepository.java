@@ -52,4 +52,13 @@ public interface DigitalCertificateRepository extends JpaRepository<DigitalCerti
     Optional<DigitalCertificate> findByCertificateReference(String certificateReference);
 
     Optional<DigitalCertificate> findByVerificationToken(String verificationToken);
+
+    @Query("""
+            select certificate
+            from DigitalCertificate certificate, VaccinationRecord record
+            where certificate.vaccinationRecordId = record.id
+              and record.citizenId = :citizenId
+            order by certificate.issuedAt desc, certificate.id desc
+            """)
+    List<DigitalCertificate> findByCitizenIdOrderByIssuedAtDesc(@Param("citizenId") Long citizenId);
 }

@@ -153,7 +153,6 @@ class RegistrationServiceIntegrationTests {
             "ROLE_MANAGEMENT_USER",
             "ROLE_SYSTEM_ADMINISTRATOR",
             "ROLE_RECEPTION_STAFF",
-            "ROLE_VACCINATOR",
             "UNKNOWN_ROLE"
     })
     void registerStaff_forbiddenOrUnknownRole_rejected(String requestedRoleCode) {

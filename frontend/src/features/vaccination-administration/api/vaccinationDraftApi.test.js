@@ -8,8 +8,10 @@ const clientMocks = vi.hoisted(() => ({
 vi.mock('../../../services/apiClient', () => clientMocks);
 
 import {
+  confirmPhysicalAdministration,
   createVaccinationDraft,
   discardVaccinationDraft,
+  finalizeVaccinationDraft,
   getVaccinationDraft,
   listMyVaccinationDrafts,
   updateVaccinationDraft,
@@ -77,6 +79,22 @@ describe('vaccinationDraftApi', () => {
     expect(clientMocks.apiRequest).not.toHaveBeenCalled();
   });
 
+  it('confirms physical administration via POST to /confirm-administration', async () => {
+    await confirmPhysicalAdministration(15);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith('/v1/vaccination/drafts/15/confirm-administration', {
+      method: 'POST',
+    });
+  });
+
+  it('finalizes draft via POST to /finalize', async () => {
+    await finalizeVaccinationDraft(15);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith('/v1/vaccination/drafts/15/finalize', {
+      method: 'POST',
+    });
+  });
+
   describe('object-style vaccinationDraftApi helper', () => {
     it('supports list, get, and default reason deletion', async () => {
       await vaccinationDraftApi.list();
@@ -117,6 +135,18 @@ describe('vaccinationDraftApi', () => {
       expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/vaccination/drafts/10', {
         method: 'PATCH',
         body: JSON.stringify({ doseNumber: 2, authorizedNotes: 'Updated note' }),
+      });
+    });
+
+    it('delegates confirmAdministration and finalize to correct endpoints', async () => {
+      await vaccinationDraftApi.confirmAdministration(10);
+      expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/vaccination/drafts/10/confirm-administration', {
+        method: 'POST',
+      });
+
+      await vaccinationDraftApi.finalize(10);
+      expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/vaccination/drafts/10/finalize', {
+        method: 'POST',
       });
     });
   });

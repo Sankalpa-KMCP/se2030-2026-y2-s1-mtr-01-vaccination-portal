@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +28,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.se2030.vaccinationportal.vaccination.dto.FinalizeVaccinationResponse;
+import com.se2030.vaccinationportal.vaccination.service.VaccinationFinalizationService;
+
 /**
  * REST endpoints for temporary vaccination draft CRUD with ownership isolation and audited deletion.
  */
@@ -36,9 +40,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class VaccinationDraftController {
 
     private final VaccinationDraftService draftService;
+    private final VaccinationFinalizationService finalizationService;
 
     public VaccinationDraftController(VaccinationDraftService draftService) {
+        this(draftService, null);
+    }
+
+    @Autowired
+    public VaccinationDraftController(
+            VaccinationDraftService draftService,
+            VaccinationFinalizationService finalizationService
+    ) {
         this.draftService = draftService;
+        this.finalizationService = finalizationService;
     }
 
     @PostMapping
@@ -46,7 +60,10 @@ public class VaccinationDraftController {
             @Valid @RequestBody CreateVaccinationDraftRequest request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long vaccinatorId = principal != null ? principal.getUserId() : 1L;
+        Long vaccinatorId = principal != null ? principal.getUserId() : null;
+        if (vaccinatorId == null) {
+            throw new AccessDeniedException("Authenticated vaccinator ID is required");
+        }
         VaccinationDraft created = draftService.createDraft(request, vaccinatorId);
         URI location = URI.create("/api/v1/vaccination/drafts/" + created.getId());
         return ResponseEntity.created(location).body(VaccinationDraftMapper.toResponse(created));
@@ -117,9 +134,41 @@ public class VaccinationDraftController {
         if (resolvedReason == null || resolvedReason.isEmpty()) {
             throw new InvalidVaccinationDraftException("Draft deletion reason is required and cannot be blank");
         }
-        Long actorId = principal != null ? principal.getUserId() : 1L;
+        Long actorId = principal != null ? principal.getUserId() : null;
+        if (actorId == null) {
+            throw new AccessDeniedException("Authenticated actor ID is required");
+        }
         draftService.deleteDraft(id, resolvedReason, actorId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/confirm-administration")
+    public ResponseEntity<VaccinationDraftResponse> confirmAdministration(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        VaccinationDraft existing = draftService.getDraftById(id);
+        assertDraftOwnership(existing, principal);
+        VaccinationDraft confirmed = draftService.confirmPhysicalAdministration(id);
+        return ResponseEntity.ok(VaccinationDraftMapper.toResponse(confirmed));
+    }
+
+    @PostMapping("/{id}/finalize")
+    public ResponseEntity<FinalizeVaccinationResponse> finalizeDraft(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        VaccinationDraft existing = draftService.getDraftById(id);
+        assertDraftOwnership(existing, principal);
+        Long vaccinatorId = principal != null ? principal.getUserId() : existing.getVaccinatorId();
+        if (vaccinatorId == null) {
+            throw new AccessDeniedException("Authenticated vaccinator ID is required");
+        }
+        if (finalizationService == null) {
+            throw new IllegalStateException("Vaccination finalization service is not configured");
+        }
+        FinalizeVaccinationResponse response = finalizationService.finalizeDraft(id, vaccinatorId);
+        return ResponseEntity.ok(response);
     }
 
     private void assertDraftOwnership(VaccinationDraft draft, UserPrincipal principal) {

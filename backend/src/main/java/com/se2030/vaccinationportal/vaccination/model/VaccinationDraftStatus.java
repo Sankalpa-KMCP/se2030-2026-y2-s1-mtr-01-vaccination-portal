@@ -5,5 +5,6 @@ package com.se2030.vaccinationportal.vaccination.model;
  */
 public enum VaccinationDraftStatus {
     IN_PROGRESS,
-    READY_FOR_FINALIZATION
+    READY_FOR_FINALIZATION,
+    FINALIZED
 }

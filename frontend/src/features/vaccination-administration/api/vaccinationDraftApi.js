@@ -81,6 +81,32 @@ export async function discardVaccinationDraft(draftId, reason) {
   });
 }
 
+/**
+ * Confirms the physical administration of a vaccination draft.
+ * Transitions draft status to READY_FOR_FINALIZATION.
+ *
+ * @param {number|string} draftId
+ * @returns {Promise<Object>} VaccinationDraftResponse
+ */
+export function confirmPhysicalAdministration(draftId) {
+  return draftRequest(`/${draftId}/confirm-administration`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Finalizes a vaccination draft: creates immutable record, deducts inventory dose,
+ * completes appointment, issues digital certificate, and marks draft FINALIZED.
+ *
+ * @param {number|string} draftId
+ * @returns {Promise<Object>} FinalizeVaccinationResponse
+ */
+export function finalizeVaccinationDraft(draftId) {
+  return draftRequest(`/${draftId}/finalize`, {
+    method: 'POST',
+  });
+}
+
 function filterFields(fields, payload) {
   if (!payload || typeof payload !== 'object') return payload;
   return Object.fromEntries(fields
@@ -97,5 +123,7 @@ export const vaccinationDraftApi = {
   create: (payload) => createVaccinationDraft(filterFields(['appointmentId', ...EDITABLE_FIELDS], payload)),
   update: (id, payload) => updateVaccinationDraft(id, filterFields(EDITABLE_FIELDS, payload)),
   remove: (id, reason = 'Discarded by vaccinator') => discardVaccinationDraft(id, reason),
+  confirmAdministration: (id) => confirmPhysicalAdministration(id),
+  finalize: (id) => finalizeVaccinationDraft(id),
 };
 

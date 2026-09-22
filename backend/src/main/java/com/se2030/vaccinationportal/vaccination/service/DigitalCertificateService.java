@@ -2,6 +2,8 @@ package com.se2030.vaccinationportal.vaccination.service;
 
 import com.se2030.vaccinationportal.vaccination.dto.CertificateVerificationResponse;
 import com.se2030.vaccinationportal.vaccination.dto.CertificateReissueResponse;
+import com.se2030.vaccinationportal.vaccination.dto.CitizenCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.dto.CitizenVaccinationRecordResponse;
 import com.se2030.vaccinationportal.vaccination.dto.DigitalCertificateResponse;
 import com.se2030.vaccinationportal.vaccination.dto.ReissueDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.dto.RevokeDigitalCertificateRequest;
@@ -26,6 +28,7 @@ import java.time.Clock;
 import java.util.Locale;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -44,6 +47,7 @@ public class DigitalCertificateService {
     private final DigitalCertificateRepository certificateRepository;
     private final EffectiveVaccinationRecordService effectiveRecordService;
     private final Clock clock;
+    private final CertificatePdfService certificatePdfService;
 
     public DigitalCertificateService(
             VaccinationRecordRepository vaccinationRecordRepository,
@@ -51,10 +55,22 @@ public class DigitalCertificateService {
             EffectiveVaccinationRecordService effectiveRecordService,
             Clock clock
     ) {
+        this(vaccinationRecordRepository, certificateRepository, effectiveRecordService, clock, new CertificatePdfService());
+    }
+
+    @Autowired
+    public DigitalCertificateService(
+            VaccinationRecordRepository vaccinationRecordRepository,
+            DigitalCertificateRepository certificateRepository,
+            EffectiveVaccinationRecordService effectiveRecordService,
+            Clock clock,
+            CertificatePdfService certificatePdfService
+    ) {
         this.vaccinationRecordRepository = vaccinationRecordRepository;
         this.certificateRepository = certificateRepository;
         this.effectiveRecordService = effectiveRecordService;
         this.clock = clock;
+        this.certificatePdfService = certificatePdfService != null ? certificatePdfService : new CertificatePdfService();
     }
 
     public DigitalCertificate issueCertificateForVaccinationRecord(Long vaccinationRecordId) {
@@ -262,6 +278,76 @@ public class DigitalCertificateService {
         if (!record.getCitizenId().equals(principal.getUserId())) {
             throw new AccessDeniedException("Citizens may only access certificate history for their own vaccination records");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<CitizenVaccinationRecordResponse> getCitizenVaccinationHistory(Long citizenId) {
+        if (citizenId == null) {
+            return List.of();
+        }
+        List<VaccinationRecord> records = vaccinationRecordRepository.findByCitizenIdOrderByAdministrationTimeDesc(citizenId);
+        return records.stream().map(record -> {
+            var validCert = certificateRepository.findFirstByVaccinationRecordIdAndStatusOrderByIssuedAtDescIdDesc(
+                    record.getId(), CertificateStatus.VALID
+            );
+            var fallbackCert = certificateRepository.findByVaccinationRecordIdOrderByIssuedAtAscIdAsc(record.getId())
+                    .stream()
+                    .reduce((first, second) -> second);
+            var certOpt = validCert.isPresent() ? validCert : fallbackCert;
+
+            Long certId = certOpt.map(DigitalCertificate::getId).orElse(null);
+            String certRef = certOpt.map(DigitalCertificate::getCertificateReference).orElse(null);
+            CertificateStatus status = certOpt.map(DigitalCertificate::getStatus).orElse(null);
+
+            return new CitizenVaccinationRecordResponse(
+                    record.getId(),
+                    record.getAppointmentId(),
+                    record.getCitizenId(),
+                    record.getCampaignId(),
+                    record.getCenterId(),
+                    record.getVaccineBatchId(),
+                    record.getDoseNumber(),
+                    record.getAdministrationTime(),
+                    record.getNextDoseDate(),
+                    record.getAuthorizedNotes(),
+                    record.getFinalizedAt(),
+                    certId,
+                    certRef,
+                    status
+            );
+        }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CitizenCertificateResponse> getCitizenCertificates(Long citizenId) {
+        if (citizenId == null) {
+            return List.of();
+        }
+        List<DigitalCertificate> certificates = certificateRepository.findByCitizenIdOrderByIssuedAtDesc(citizenId);
+        return certificates.stream().map(cert -> new CitizenCertificateResponse(
+                cert.getId(),
+                cert.getVaccinationRecordId(),
+                cert.getCertificateReference(),
+                cert.getIssuedAt(),
+                cert.getStatus(),
+                cert.getIssuedDoseNumber(),
+                cert.getIssuedAdministrationTime(),
+                cert.getIssuedVaccineBatchId(),
+                cert.getVerificationToken(),
+                cert.getRevokedAt(),
+                cert.getRevocationReason(),
+                cert.getReissuedFromCertificateId(),
+                cert.getSupersededByCertificateId()
+        )).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateCertificatePdf(Long certificateId, UserPrincipal principal) {
+        DigitalCertificate certificate = getCertificateById(certificateId);
+        assertCertificateAccess(certificate, principal);
+        VaccinationRecord record = vaccinationRecordRepository.findById(certificate.getVaccinationRecordId())
+                .orElse(null);
+        return certificatePdfService.generateCertificatePdf(certificate, record);
     }
 
     private boolean isStaff(UserPrincipal principal) {

@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraf
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
 import com.se2030.vaccinationportal.vaccination.mapper.VaccinationDraftMapper;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationDraftStatus;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraftDeletionAudit;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationDraftDeletionAuditRepository;
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationDraftRepository;
@@ -108,10 +109,46 @@ public class VaccinationDraftService {
         validator.validateUpdateRequest(request);
         VaccinationDraft draft = getDraftById(id);
         validator.validateEditable(draft);
+        if (draft.isPhysicalAdministrationConfirmed()) {
+            throw new InvalidVaccinationDraftException(
+                    "Vaccination draft cannot be edited after physical administration has been confirmed"
+            );
+        }
 
         VaccinationDraftMapper.applyUpdate(request, draft);
         validator.validateDraft(draft);
         integrationValidator.validateAppointment(draft.getAppointmentId());
+        return draftRepository.save(draft);
+    }
+
+    public VaccinationDraft confirmPhysicalAdministration(Long id) {
+        requirePositiveId(id);
+        VaccinationDraft draft = getDraftById(id);
+        validator.validateEditable(draft);
+
+        if (draft.isPhysicalAdministrationConfirmed()) {
+            return draft;
+        }
+
+        if (draft.getVaccineBatchId() == null || draft.getVaccineBatchId() <= 0) {
+            throw new InvalidVaccinationDraftException(
+                    "Vaccine batch ID is required before confirming physical administration"
+            );
+        }
+        if (draft.getDoseNumber() == null || draft.getDoseNumber() <= 0) {
+            throw new InvalidVaccinationDraftException(
+                    "Dose number is required before confirming physical administration"
+            );
+        }
+
+        integrationValidator.validateAppointment(draft.getAppointmentId());
+
+        draft.setPhysicalAdministrationConfirmed(true);
+        if (draft.getAdministrationTime() == null) {
+            draft.setAdministrationTime(clock != null ? clock.instant() : Instant.now());
+        }
+        draft.setStatus(VaccinationDraftStatus.READY_FOR_FINALIZATION);
+        validator.validateDraft(draft);
         return draftRepository.save(draft);
     }
 
@@ -128,6 +165,11 @@ public class VaccinationDraftService {
         }
         VaccinationDraft draft = getDraftById(id);
         validator.validateEditable(draft);
+        if (draft.isPhysicalAdministrationConfirmed()) {
+            throw new InvalidVaccinationDraftException(
+                    "Vaccination draft cannot be deleted after physical administration has been confirmed"
+            );
+        }
 
         if (draftDeletionAuditRepository != null) {
             VaccinationDraftDeletionAudit audit = new VaccinationDraftDeletionAudit(

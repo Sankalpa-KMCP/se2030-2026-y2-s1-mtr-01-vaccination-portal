@@ -52,10 +52,20 @@ class VaccinationDraftValidatorTests {
     }
 
     @ParameterizedTest
-    @EnumSource(VaccinationDraftStatus.class)
+    @EnumSource(value = VaccinationDraftStatus.class, names = {"IN_PROGRESS", "READY_FOR_FINALIZATION"})
     void existingUnfinalizedStatesRemainEditable(VaccinationDraftStatus status) {
         VaccinationDraft draft = new VaccinationDraft(101L);
         draft.setStatus(status);
         assertDoesNotThrow(() -> validator.validateEditable(draft));
+    }
+
+    @Test
+    void finalizedStateIsNotEditable() {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setStatus(VaccinationDraftStatus.FINALIZED);
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException.class,
+                () -> validator.validateEditable(draft)
+        );
     }
 }

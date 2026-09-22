@@ -47,11 +47,18 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import tools.jackson.databind.json.JsonMapper;
 
+import com.se2030.vaccinationportal.vaccination.dto.FinalizeVaccinationResponse;
+import com.se2030.vaccinationportal.vaccination.model.VaccinationDraftStatus;
+import com.se2030.vaccinationportal.vaccination.service.VaccinationFinalizationService;
+
 @ExtendWith(MockitoExtension.class)
 class VaccinationDraftControllerTests {
 
     @Mock
     private VaccinationDraftService draftService;
+
+    @Mock
+    private VaccinationFinalizationService finalizationService;
 
     private MockMvc mockMvc;
     private JsonMapper objectMapper;
@@ -62,7 +69,7 @@ class VaccinationDraftControllerTests {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         objectMapper = new JsonMapper();
-        mockMvc = MockMvcBuilders.standaloneSetup(new VaccinationDraftController(draftService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new VaccinationDraftController(draftService, finalizationService))
                 .setControllerAdvice(new VaccinationExceptionHandler())
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
                     public boolean supportsParameter(MethodParameter parameter) {
@@ -355,5 +362,58 @@ class VaccinationDraftControllerTests {
         mockMvc.perform(delete("/api/v1/vaccination/drafts/999?reason=Cancelled"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("not found")));
+    }
+
+    @Test
+    void confirmAdministration_validDraft_returns200() throws Exception {
+        sampleDraft.setStatus(VaccinationDraftStatus.READY_FOR_FINALIZATION);
+        sampleDraft.setPhysicalAdministrationConfirmed(true);
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(draftService.confirmPhysicalAdministration(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/confirm-administration"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.physicalAdministrationConfirmed", is(true)))
+                .andExpect(jsonPath("$.status", is("READY_FOR_FINALIZATION")));
+
+        verify(draftService).confirmPhysicalAdministration(1L);
+    }
+
+    @Test
+    void confirmAdministration_otherVaccinator_returns403() throws Exception {
+        sampleDraft.setVaccinatorId(999L);
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/confirm-administration"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void finalizeDraft_validDraft_returns200WithCertificate() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        FinalizeVaccinationResponse response = new FinalizeVaccinationResponse(
+                1L, 777L, 101L, 501L, 301L, 1, sampleDraft.getAdministrationTime(),
+                "CERT-2026-XYZ", "tok_verify_123", null
+        );
+        when(finalizationService.finalizeDraft(1L, 201L)).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/finalize"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.draftId", is(1)))
+                .andExpect(jsonPath("$.vaccinationRecordId", is(777)))
+                .andExpect(jsonPath("$.certificateReference", is("CERT-2026-XYZ")))
+                .andExpect(jsonPath("$.verificationToken", is("tok_verify_123")));
+
+        verify(finalizationService).finalizeDraft(1L, 201L);
+    }
+
+    @Test
+    void finalizeDraft_otherVaccinator_returns403() throws Exception {
+        sampleDraft.setVaccinatorId(999L);
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/finalize"))
+                .andExpect(status().isForbidden());
     }
 }
