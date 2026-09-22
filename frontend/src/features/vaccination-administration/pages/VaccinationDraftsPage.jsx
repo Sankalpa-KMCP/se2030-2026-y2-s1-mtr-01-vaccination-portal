@@ -1,19 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { vaccinationDraftApi } from '../api/vaccinationDraftApi';
-
-function todayDate() {
-  return new Date().toLocaleDateString('en-CA');
-}
+import { formatLocalDateOnly, getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
 
 const emptyForm = {
   appointmentId: '',
   vaccineBatchId: '',
   doseNumber: '',
-  administrationTime: todayDate(),
+  administrationTime: getLocalCalendarToday(),
   nextDoseDate: '',
   authorizedNotes: '',
 };
-const editableStatuses = ['IN_PROGRESS', 'READY_FOR_FINALIZATION'];
+const editableStatuses = ['IN_PROGRESS'];
 const fields = [
   ['appointmentId', 'Appointment ID', 'number'],
   ['vaccineBatchId', 'Vaccine batch ID', 'number'],
@@ -22,17 +19,12 @@ const fields = [
   ['nextDoseDate', 'Next dose date', 'date'],
 ];
 
-function localDate(value) {
-  if (!value) return '';
-  return String(value).slice(0, 10);
-}
-
 function draftForm(draft) {
   return {
     appointmentId: String(draft.appointmentId),
     vaccineBatchId: draft.vaccineBatchId == null ? '' : String(draft.vaccineBatchId),
     doseNumber: draft.doseNumber == null ? '' : String(draft.doseNumber),
-    administrationTime: localDate(draft.administrationTime),
+    administrationTime: formatLocalDateOnly(draft.administrationTime) || getLocalCalendarToday(),
     nextDoseDate: draft.nextDoseDate || '',
     authorizedNotes: draft.authorizedNotes || '',
   };
@@ -42,6 +34,7 @@ export default function VaccinationDraftsPage() {
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState('active');
   const [form, setForm] = useState(null);
   const [initialForm, setInitialForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -62,6 +55,7 @@ export default function VaccinationDraftsPage() {
   useEffect(() => { load(); }, [load]);
 
   const resetForm = () => { setForm(null); setEditingId(null); };
+
   const view = async (id) => {
     setBusy(true);
     setError(null);
@@ -71,10 +65,11 @@ export default function VaccinationDraftsPage() {
     } catch (exception) { setError(exception); }
     finally { setBusy(false); }
   };
+
   const create = () => {
     const values = {
       ...emptyForm,
-      administrationTime: todayDate(),
+      administrationTime: getLocalCalendarToday(),
     };
 
     setForm(values);
@@ -83,6 +78,7 @@ export default function VaccinationDraftsPage() {
     setError(null);
     setMessage('');
   };
+
   const edit = async (id) => {
     setBusy(true); setError(null); setMessage('');
     try {
@@ -110,7 +106,7 @@ export default function VaccinationDraftsPage() {
         payload[field] = ['appointmentId', 'vaccineBatchId', 'doseNumber'].includes(field)
           ? Number(value)
           : field === 'administrationTime'
-            ? `${value}T00:00:00Z`
+            ? toApiIsoDate(value)
             : value;
       }
       if (editingId !== null && Object.keys(payload).length === 0) throw new Error('Change at least one editable field.');
@@ -123,17 +119,45 @@ export default function VaccinationDraftsPage() {
     finally { setBusy(false); }
   };
 
-  const remove = async (id) => {
-    if (!window.confirm(`Delete vaccination draft ${id}? This deletes only the draft.`)) return;
+  const discard = async (id) => {
+    if (!window.confirm(`Discard vaccination draft ${id}? This action cannot be undone.`)) return;
     setBusy(true); setError(null); setMessage('');
     try {
       await vaccinationDraftApi.remove(id);
       if (editingId === id) resetForm();
-      setMessage('Draft deleted successfully.');
+      setMessage('Draft discarded successfully.');
       await load();
     } catch (exception) { setError(exception); }
     finally { setBusy(false); }
   };
+
+  const confirm = async (id) => {
+    if (!window.confirm(`Confirm physical administration for vaccination draft ${id}?`)) return;
+    setBusy(true); setError(null); setMessage('');
+    try {
+      await vaccinationDraftApi.confirmAdministration(id);
+      setMessage('Physical administration confirmed successfully.');
+      await load();
+    } catch (exception) { setError(exception); }
+    finally { setBusy(false); }
+  };
+
+  const finalize = async (id) => {
+    if (!window.confirm(`Finalize vaccination draft ${id}? This creates an immutable permanent record, deducts inventory, completes the appointment, and issues a digital certificate.`)) return;
+    setBusy(true); setError(null); setMessage('');
+    try {
+      const response = await vaccinationDraftApi.finalize(id);
+      setMessage(`Vaccination finalized successfully. Certificate reference: ${response?.certificateReference || 'Issued'}.`);
+      await load();
+    } catch (exception) { setError(exception); }
+    finally { setBusy(false); }
+  };
+
+  const activeDrafts = drafts.filter(
+    (draft) => draft.status === 'IN_PROGRESS' || draft.status === 'READY_FOR_FINALIZATION',
+  );
+  const historyDrafts = drafts.filter((draft) => draft.status === 'FINALIZED');
+  const displayedDrafts = activeTab === 'active' ? activeDrafts : historyDrafts;
 
   return (
     <section aria-labelledby="vaccination-drafts-title">
@@ -141,7 +165,7 @@ export default function VaccinationDraftsPage() {
         <div>
           <span className="badge text-bg-primary mb-2">MF-05</span>
           <h1 id="vaccination-drafts-title" className="h2">Vaccination Drafts</h1>
-          <p className="text-muted mb-0">Manage unfinalized drafts for checked-in appointments. This page does not finalize vaccinations.</p>
+          <p className="text-muted mb-0">Manage vaccination drafts from creation through physical administration confirmation and finalization.</p>
         </div>
         <div className="d-flex gap-2">
           <button type="button" className="btn btn-outline-primary" disabled={loading || busy}
@@ -169,7 +193,7 @@ export default function VaccinationDraftsPage() {
           <dt className="col-sm-4">Appointment ID</dt><dd className="col-sm-8">{viewingDraft.appointmentId}</dd>
           <dt className="col-sm-4">Vaccine Batch ID</dt><dd className="col-sm-8">{viewingDraft.vaccineBatchId ?? '—'}</dd>
           <dt className="col-sm-4">Dose Number</dt><dd className="col-sm-8">{viewingDraft.doseNumber ?? '—'}</dd>
-          <dt className="col-sm-4">Administration Date</dt><dd className="col-sm-8">{localDate(viewingDraft.administrationTime) || '—'}</dd>
+          <dt className="col-sm-4">Administration Date</dt><dd className="col-sm-8">{formatLocalDateOnly(viewingDraft.administrationTime) || '—'}</dd>
           <dt className="col-sm-4">Next Dose Date</dt><dd className="col-sm-8">{viewingDraft.nextDoseDate || '—'}</dd>
           <dt className="col-sm-4">Authorized Notes</dt><dd className="col-sm-8 text-break">{viewingDraft.authorizedNotes || '—'}</dd>
           <dt className="col-sm-4">Status</dt><dd className="col-sm-8">{viewingDraft.status}</dd>
@@ -209,24 +233,67 @@ export default function VaccinationDraftsPage() {
         </form>
       </div></div>}
 
-      {loading ? <p role="status">Loading drafts…</p> : drafts.length === 0 ? (
-        !error && <div className="alert alert-info">No vaccination drafts yet. Create a draft for a checked-in appointment.</div>
+      <ul className="nav nav-tabs mb-3" role="tablist">
+        <li className="nav-item" role="presentation">
+          <button
+            type="button"
+            className={`nav-link ${activeTab === 'active' ? 'active' : ''}`}
+            id="active-drafts-tab"
+            role="tab"
+            aria-selected={activeTab === 'active'}
+            onClick={() => setActiveTab('active')}
+          >
+            Active Drafts ({activeDrafts.length})
+          </button>
+        </li>
+        <li className="nav-item" role="presentation">
+          <button
+            type="button"
+            className={`nav-link ${activeTab === 'history' ? 'active' : ''}`}
+            id="draft-history-tab"
+            role="tab"
+            aria-selected={activeTab === 'history'}
+            onClick={() => setActiveTab('history')}
+          >
+            Draft History ({historyDrafts.length})
+          </button>
+        </li>
+      </ul>
+
+      {loading ? <p role="status">Loading drafts…</p> : displayedDrafts.length === 0 ? (
+        !error && (
+          <div className="alert alert-info">
+            {activeTab === 'active'
+              ? 'No active vaccination drafts yet. Create a draft for a checked-in appointment.'
+              : 'No finalized draft history yet.'}
+          </div>
+        )
       ) : <div className="table-responsive"><table className="table table-striped align-middle">
-        <caption>Vaccination drafts</caption>
+        <caption>{activeTab === 'active' ? 'Active vaccination drafts' : 'Finalized vaccination draft history'}</caption>
         <thead><tr>{['ID', 'Appointment ID', 'Vaccine batch ID', 'Dose number', 'Administration date', 'Next dose date', 'Authorized notes', 'Status', 'Physical confirmation (read-only)', 'Actions']
           .map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
-        <tbody>{drafts.map((draft) => <tr key={draft.id}>
+        <tbody>{displayedDrafts.map((draft) => <tr key={draft.id}>
           <td>{draft.id}</td><td>{draft.appointmentId}</td><td>{draft.vaccineBatchId ?? '—'}</td><td>{draft.doseNumber ?? '—'}</td>
-          <td>{draft.administrationTime ? String(draft.administrationTime).slice(0, 10) : '—'}</td>
+          <td>{formatLocalDateOnly(draft.administrationTime) || '—'}</td>
           <td>{draft.nextDoseDate || '—'}</td><td className="text-break">{draft.authorizedNotes || '—'}</td><td>{draft.status}</td>
           <td>{draft.physicalAdministrationConfirmed ? 'Confirmed' : 'Not confirmed'}</td>
           <td className="text-nowrap">
             <button type="button" className="btn btn-sm btn-outline-secondary me-2" aria-label={`View draft ${draft.id}`}
               disabled={busy} onClick={() => view(draft.id)}>View</button>
-            <button type="button" className="btn btn-sm btn-outline-primary me-2" aria-label={`Edit draft ${draft.id}`}
-              disabled={busy || !editableStatuses.includes(draft.status)} onClick={() => edit(draft.id)}>Edit</button>
-            <button type="button" className="btn btn-sm btn-outline-danger" aria-label={`Delete draft ${draft.id}`}
-              disabled={busy || !editableStatuses.includes(draft.status)} onClick={() => remove(draft.id)}>Delete</button>
+            {draft.status === 'IN_PROGRESS' && (
+              <>
+                <button type="button" className="btn btn-sm btn-outline-primary me-2" aria-label={`Edit draft ${draft.id}`}
+                  disabled={busy} onClick={() => edit(draft.id)}>Edit</button>
+                <button type="button" className="btn btn-sm btn-outline-danger me-2" aria-label={`Discard draft ${draft.id}`}
+                  disabled={busy} onClick={() => discard(draft.id)}>Discard Draft</button>
+                <button type="button" className="btn btn-sm btn-outline-success me-2" aria-label={`Confirm administration for draft ${draft.id}`}
+                  disabled={busy} onClick={() => confirm(draft.id)}>Confirm Administration</button>
+              </>
+            )}
+            {draft.status === 'READY_FOR_FINALIZATION' && (
+              <button type="button" className="btn btn-sm btn-success" aria-label={`Finalize draft ${draft.id}`}
+                disabled={busy} onClick={() => finalize(draft.id)}>Finalize</button>
+            )}
           </td>
         </tr>)}</tbody>
       </table></div>}
