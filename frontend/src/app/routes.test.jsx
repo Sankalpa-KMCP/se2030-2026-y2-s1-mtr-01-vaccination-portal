@@ -41,6 +41,10 @@ import Header from '../components/common/Header';
 import ProtectedRoute from './ProtectedRoute';
 import PortalRoutes from './routes';
 
+vi.mock('../features/vaccination-administration/pages/VaccinationDraftsPage', () => ({
+  default: () => 'Vaccination Drafts Test Page',
+}));
+
 vi.mock('../features/screening/pages/CitizenEligibilityPage', () => ({ default: () => 'Citizen Eligibility Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningHistoryPage', () => ({ default: () => 'Citizen History Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningHistoryDetailsPage', () => ({ default: () => 'Citizen History Details Test Page' }));
@@ -96,6 +100,33 @@ describe('shared routing and role guards', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  it('routes a Vaccinator to staff and shows draft navigation', () => {
+    setAuth({ roles: ['ROLE_VACCINATOR'] });
+    render(<MemoryRouter initialEntries={['/app']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByText('Staff Dashboard')).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /Vaccination Drafts/ }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Staff Requests' })).toBeNull();
+  });
+
+  it('allows a Vaccinator to open draft CRUD', () => {
+    setAuth({ roles: ['ROLE_VACCINATOR'] });
+    render(<MemoryRouter initialEntries={['/app/staff/vaccination-drafts']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByText('Vaccination Drafts Test Page')).toBeTruthy();
+  });
+
+  it.each(['ROLE_CITIZEN', 'ROLE_ADMIN', 'ROLE_HEALTHCARE_OFFICER'])('denies draft CRUD to %s', (role) => {
+    setAuth({ roles: [role] });
+    render(<MemoryRouter initialEntries={['/app/staff/vaccination-drafts']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+    expect(screen.queryByText('Vaccination Drafts Test Page')).toBeNull();
+  });
+
+  it('requires login for draft CRUD', () => {
+    render(<MemoryRouter initialEntries={['/app/staff/vaccination-drafts']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: /Welcome back/i })).toBeTruthy();
+    expect(screen.queryByText('Vaccination Drafts Test Page')).toBeNull();
   });
 
   it('redirects an unauthenticated protected route to login', () => {

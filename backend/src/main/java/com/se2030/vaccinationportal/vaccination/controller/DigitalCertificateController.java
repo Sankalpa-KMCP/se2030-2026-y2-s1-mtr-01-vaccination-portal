@@ -3,6 +3,8 @@ package com.se2030.vaccinationportal.vaccination.controller;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.vaccination.dto.CertificateVerificationResponse;
 import com.se2030.vaccinationportal.vaccination.dto.CertificateReissueResponse;
+import com.se2030.vaccinationportal.vaccination.dto.CitizenCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.dto.CitizenVaccinationRecordResponse;
 import com.se2030.vaccinationportal.vaccination.dto.DigitalCertificateResponse;
 import com.se2030.vaccinationportal.vaccination.dto.ReissueDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.dto.RevokeDigitalCertificateRequest;
@@ -11,7 +13,10 @@ import java.util.List;
 import com.se2030.vaccinationportal.vaccination.mapper.DigitalCertificateMapper;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.service.DigitalCertificateService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -108,6 +113,47 @@ public class DigitalCertificateController {
     ) {
         certificateService.assertRecordAccess(recordId, resolvePrincipal(authentication));
         return ResponseEntity.ok(certificateService.getCertificateHistory(recordId));
+    }
+
+    @GetMapping({"/records/mine", "/history/mine"})
+    @PreAuthorize("hasRole('CITIZEN')")
+    public ResponseEntity<List<CitizenVaccinationRecordResponse>> getMyVaccinationHistory(
+            org.springframework.security.core.Authentication authentication
+    ) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        if (principal == null) {
+            throw new AccessDeniedException("Citizen authentication is required to access vaccination history");
+        }
+        return ResponseEntity.ok(certificateService.getCitizenVaccinationHistory(principal.getUserId()));
+    }
+
+    @GetMapping("/certificates/mine")
+    @PreAuthorize("hasRole('CITIZEN')")
+    public ResponseEntity<List<CitizenCertificateResponse>> getMyCertificates(
+            org.springframework.security.core.Authentication authentication
+    ) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        if (principal == null) {
+            throw new AccessDeniedException("Citizen authentication is required to access digital certificates");
+        }
+        return ResponseEntity.ok(certificateService.getCitizenCertificates(principal.getUserId()));
+    }
+
+    @GetMapping("/certificates/{id}/download")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER', 'SUPER_ADMIN', 'CITIZEN')")
+    public ResponseEntity<byte[]> downloadCertificate(
+            @PathVariable Long id,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        DigitalCertificate certificate = certificateService.getCertificateById(id);
+        certificateService.assertCertificateAccess(certificate, principal);
+        byte[] pdfContent = certificateService.generateCertificatePdf(id, principal);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificate-" + certificate.getCertificateReference() + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfContent);
     }
 
     private UserPrincipal resolvePrincipal(org.springframework.security.core.Authentication authentication) {

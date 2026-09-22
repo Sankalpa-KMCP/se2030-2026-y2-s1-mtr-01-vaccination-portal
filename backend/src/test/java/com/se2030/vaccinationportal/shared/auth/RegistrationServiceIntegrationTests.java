@@ -120,7 +120,8 @@ class RegistrationServiceIntegrationTests {
             "ROLE_HEALTHCARE_OFFICER",
             "ROLE_CENTER_MANAGER",
             "ROLE_CAMPAIGN_OFFICER",
-            "ROLE_INVENTORY_OFFICER"
+            "ROLE_INVENTORY_OFFICER",
+            "ROLE_VACCINATOR"
     })
     void registerStaff_allowedRole_persistsPendingRequestWithoutAuthority(String requestedRoleCode) {
         String email = requestedRoleCode.toLowerCase() + "@example.com";
@@ -152,7 +153,6 @@ class RegistrationServiceIntegrationTests {
             "ROLE_MANAGEMENT_USER",
             "ROLE_SYSTEM_ADMINISTRATOR",
             "ROLE_RECEPTION_STAFF",
-            "ROLE_VACCINATOR",
             "UNKNOWN_ROLE"
     })
     void registerStaff_forbiddenOrUnknownRole_rejected(String requestedRoleCode) {

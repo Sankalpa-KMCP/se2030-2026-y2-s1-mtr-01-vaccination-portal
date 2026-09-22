@@ -17,4 +17,12 @@ public interface AppointmentValidationPort {
      * @return the appointment validation snapshot, or {@link Optional#empty()} when it does not exist
      */
     Optional<AppointmentValidationSnapshot> findByAppointmentId(Long appointmentId);
+
+    /**
+     * Transitions the appointment to COMPLETED state upon vaccination finalization.
+     *
+     * @param appointmentId identifier of the appointment to complete
+     */
+    default void completeAppointment(Long appointmentId) {
+    }
 }

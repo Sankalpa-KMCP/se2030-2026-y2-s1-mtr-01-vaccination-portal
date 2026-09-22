@@ -20,6 +20,7 @@ export default function PublicFooter() {
             <Link to="/" className="lp-footer__link">Home</Link>
             <Link to="/how-it-works" className="lp-footer__link">How it works</Link>
             <Link to="/about" className="lp-footer__link">About</Link>
+            <Link to="/verify-certificate" className="lp-footer__link">Verify Certificate</Link>
           </nav>
         </div>
 

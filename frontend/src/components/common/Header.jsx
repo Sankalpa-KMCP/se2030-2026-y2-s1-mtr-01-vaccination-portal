@@ -109,6 +109,11 @@ export default function Header({ onLogout }) {
                       Waitlist
                     </NavLink>
                   </li>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/citizen/vaccinations" onClick={closeNav}>
+                      My Vaccinations
+                    </NavLink>
+                  </li>
                 </>
               )}
 
@@ -116,6 +121,14 @@ export default function Header({ onLogout }) {
                 <li className="nav-item">
                   <NavLink className={navigationClassName} to="/app/staff/screening/reviews" onClick={closeNav}>
                     Screening Review
+                  </NavLink>
+                </li>
+              )}
+
+              {hasRole(user, 'ROLE_VACCINATOR') && (
+                <li className="nav-item">
+                  <NavLink className={navigationClassName} to="/app/staff/vaccination-drafts" onClick={closeNav}>
+                    Vaccination Drafts
                   </NavLink>
                 </li>
               )}

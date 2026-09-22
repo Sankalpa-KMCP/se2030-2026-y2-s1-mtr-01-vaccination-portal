@@ -66,7 +66,8 @@ public class AuthService {
             "ROLE_HEALTHCARE_OFFICER",
             "ROLE_CENTER_MANAGER",
             "ROLE_CAMPAIGN_OFFICER",
-            "ROLE_INVENTORY_OFFICER"
+            "ROLE_INVENTORY_OFFICER",
+            "ROLE_VACCINATOR"
     );
 
     private final UserAccountRepository userAccountRepository;

@@ -257,4 +257,28 @@ public class CheckInService {
         }
         return appointmentRepository.findBySlotIdInAndStatusIn(slotIds, List.of(AppointmentStatus.CHECKED_IN));
     }
+
+    /**
+     * Completes an appointment upon vaccination finalization (MF-05 handover).
+     *
+     * @param appointmentId Identifier of the appointment
+     * @return Updated {@link Appointment} in COMPLETED status
+     */
+    public Appointment completeAppointment(Long appointmentId) {
+        if (appointmentId == null) {
+            throw new IllegalArgumentException("Appointment ID is required");
+        }
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new AppointmentNotFoundException("Appointment not found with ID: " + appointmentId));
+
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new AppointmentAlreadyCompletedException("Completed appointment " + appointmentId + " cannot be completed again");
+        }
+        if (appointment.getStatus() != AppointmentStatus.CHECKED_IN) {
+            throw new InvalidAppointmentStateException("Appointment " + appointmentId + " must be in CHECKED_IN status to complete, but was " + appointment.getStatus());
+        }
+
+        appointment.complete();
+        return appointmentRepository.save(appointment);
+    }
 }

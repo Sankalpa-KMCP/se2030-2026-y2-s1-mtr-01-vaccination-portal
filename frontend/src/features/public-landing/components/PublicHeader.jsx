@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Home', end: true },
   { to: '/how-it-works', label: 'How it works', end: false },
   { to: '/about', label: 'About', end: false },
+  { to: '/verify-certificate', label: 'Verify Certificate', end: false },
 ];
 
 export default function PublicHeader({ onLoginClick }) {

@@ -48,6 +48,9 @@ import MyAppointmentsPage from '../features/appointment-management/pages/MyAppoi
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
 import InventoryManagementPage from '../features/inventory-management/pages/InventoryManagementPage';
+import VaccinationDraftsPage from '../features/vaccination-administration/pages/VaccinationDraftsPage';
+import CitizenVaccinationsPage from '../features/vaccination-administration/pages/CitizenVaccinationsPage';
+import PublicCertificateVerificationPage from '../features/vaccination-administration/pages/PublicCertificateVerificationPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -199,6 +202,10 @@ export default function PortalRoutes() {
             : <AboutPage onLoginClick={() => navigate('/login')} />
         }
       />
+      <Route
+        path="/verify-certificate"
+        element={<PublicCertificateVerificationPage onLoginClick={() => navigate('/login')} />}
+      />
       <Route element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <AuthExperience />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/citizen" element={<Navigate to="/login" replace />} />
@@ -219,6 +226,8 @@ export default function PortalRoutes() {
           <Route element={<ProtectedRoute allowedRoles={[CITIZEN_ROLE]} />}>
             <Route path="citizen" element={<CitizenDashboardPage />} />
             <Route path="citizen/profile" element={<CitizenProfilePage />} />
+            <Route path="citizen/vaccinations" element={<CitizenVaccinationsPage />} />
+            <Route path="vaccinations" element={<CitizenVaccinationsPage />} />
             <Route path="screening" element={<CitizenScreeningCampaignsPage />} />
             <Route path="screening/campaigns/:campaignId" element={<CitizenScreeningPage />} />
             <Route path="screening/eligibility" element={<CitizenEligibilityPage />} />
@@ -232,6 +241,10 @@ export default function PortalRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={STAFF_DASHBOARD_ROLES} />}>
             <Route path="staff" element={<StaffDashboardPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={['ROLE_VACCINATOR']} />}>
+            <Route path="staff/vaccination-drafts" element={<VaccinationDraftsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={SCREENING_REVIEW_ROLES} />}>

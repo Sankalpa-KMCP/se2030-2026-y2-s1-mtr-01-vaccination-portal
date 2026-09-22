@@ -1,22 +1,13 @@
 import { apiRequest, parseApiResponse } from '../../../services/apiClient';
 
 const DRAFTS_BASE_PATH = '/v1/vaccination/drafts';
+const EDITABLE_FIELDS = ['vaccineBatchId', 'doseNumber', 'administrationTime', 'nextDoseDate', 'authorizedNotes'];
 
 /**
  * API client for the temporary vaccination draft CRUD (MF-05).
  * Interfaces with the backend VaccinationDraftController at
  * /api/v1/vaccination/drafts, which is restricted to VACCINATOR and SUPER_ADMIN
  * and enforces draft ownership isolation on the server.
- *
- * <p><b>Business Rules Handled:</b>
- * <ul>
- *   <li>Draft ownership isolation: the backend only returns and exposes the
- *       authenticated vaccinator's own drafts (SUPER_ADMIN may read all).</li>
- *   <li>Audited deletion: discarding a draft always requires a non-blank reason,
- *       which is recorded in the backend audit trail.</li>
- *   <li>Partial updates: PATCH bodies should only contain the mutable fields the
- *       vaccinator actually provided (the backend rejects unsupported fields).</li>
- * </ul>
  */
 
 async function draftRequest(endpoint, options = {}) {
@@ -28,12 +19,6 @@ async function draftRequest(endpoint, options = {}) {
  * Creates a new temporary vaccination draft for a checked-in appointment.
  *
  * @param {Object} payload - CreateVaccinationDraftRequest body
- * @param {number|string} payload.appointmentId - Required appointment identifier
- * @param {number|string} [payload.vaccineBatchId]
- * @param {number|string} [payload.doseNumber]
- * @param {string} [payload.administrationTime] - ISO-8601 instant
- * @param {string} [payload.nextDoseDate] - ISO local date (YYYY-MM-DD)
- * @param {string} [payload.authorizedNotes] - Max 2000 characters
  * @returns {Promise<Object>} VaccinationDraftResponse
  */
 export function createVaccinationDraft(payload) {
@@ -66,9 +51,7 @@ export function getVaccinationDraft(draftId) {
  * Updates the provided mutable fields of a vaccination draft (partial update).
  *
  * @param {number|string} draftId
- * @param {Object} payload - UpdateVaccinationDraftRequest body; only include
- *   fields that should change (vaccineBatchId, doseNumber, administrationTime,
- *   nextDoseDate, authorizedNotes).
+ * @param {Object} payload - UpdateVaccinationDraftRequest body
  * @returns {Promise<Object>} Updated VaccinationDraftResponse
  */
 export function updateVaccinationDraft(draftId, payload) {
@@ -97,3 +80,50 @@ export async function discardVaccinationDraft(draftId, reason) {
     method: 'DELETE',
   });
 }
+
+/**
+ * Confirms the physical administration of a vaccination draft.
+ * Transitions draft status to READY_FOR_FINALIZATION.
+ *
+ * @param {number|string} draftId
+ * @returns {Promise<Object>} VaccinationDraftResponse
+ */
+export function confirmPhysicalAdministration(draftId) {
+  return draftRequest(`/${draftId}/confirm-administration`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Finalizes a vaccination draft: creates immutable record, deducts inventory dose,
+ * completes appointment, issues digital certificate, and marks draft FINALIZED.
+ *
+ * @param {number|string} draftId
+ * @returns {Promise<Object>} FinalizeVaccinationResponse
+ */
+export function finalizeVaccinationDraft(draftId) {
+  return draftRequest(`/${draftId}/finalize`, {
+    method: 'POST',
+  });
+}
+
+function filterFields(fields, payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  return Object.fromEntries(fields
+    .filter((field) => payload[field] !== undefined)
+    .map((field) => [field, payload[field]]));
+}
+
+/**
+ * Object-style export compatible with VaccinationDraftsPage.
+ */
+export const vaccinationDraftApi = {
+  list: () => listMyVaccinationDrafts(),
+  get: (id) => getVaccinationDraft(id),
+  create: (payload) => createVaccinationDraft(filterFields(['appointmentId', ...EDITABLE_FIELDS], payload)),
+  update: (id, payload) => updateVaccinationDraft(id, filterFields(EDITABLE_FIELDS, payload)),
+  remove: (id, reason = 'Discarded by vaccinator') => discardVaccinationDraft(id, reason),
+  confirmAdministration: (id) => confirmPhysicalAdministration(id),
+  finalize: (id) => finalizeVaccinationDraft(id),
+};
+

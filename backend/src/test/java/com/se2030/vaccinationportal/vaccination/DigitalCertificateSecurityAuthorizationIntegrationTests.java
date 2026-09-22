@@ -259,4 +259,46 @@ class DigitalCertificateSecurityAuthorizationIntegrationTests {
                         .header(HttpHeaders.AUTHORIZATION, bearer(CITIZEN_A_ID, "ROLE_CITIZEN")))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("Citizen A can retrieve their own vaccination history via /records/mine")
+    void citizenCanRetrieveOwnVaccinationHistory() throws Exception {
+        mockMvc.perform(get(BASE + "/records/mine")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(CITIZEN_A_ID, "ROLE_CITIZEN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].citizenId", is(CITIZEN_A_ID.intValue())))
+                .andExpect(jsonPath("$[0].certificateReference", is("CERT-CITIZEN-A")))
+                .andExpect(jsonPath("$[0].certificateStatus", is("VALID")));
+    }
+
+    @Test
+    @DisplayName("Citizen A can retrieve their own certificates via /certificates/mine")
+    void citizenCanRetrieveOwnCertificates() throws Exception {
+        mockMvc.perform(get(BASE + "/certificates/mine")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(CITIZEN_A_ID, "ROLE_CITIZEN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].certificateReference", is("CERT-CITIZEN-A")))
+                .andExpect(jsonPath("$[0].status", is("VALID")));
+    }
+
+    @Test
+    @DisplayName("Citizen A can download their own certificate PDF")
+    void citizenCanDownloadOwnCertificatePdf() throws Exception {
+        mockMvc.perform(get(BASE + "/certificates/{id}/download", certA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(CITIZEN_A_ID, "ROLE_CITIZEN")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string(
+                        HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificate-CERT-CITIZEN-A.pdf\""))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentType(org.springframework.http.MediaType.APPLICATION_PDF));
+    }
+
+    @Test
+    @DisplayName("Citizen B cannot download Citizen A's certificate PDF (IDOR forbidden)")
+    void citizenCannotDownloadOtherCitizenCertificatePdf() throws Exception {
+        mockMvc.perform(get(BASE + "/certificates/{id}/download", certA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(CITIZEN_B_ID, "ROLE_CITIZEN")))
+                .andExpect(status().isForbidden());
+    }
 }
