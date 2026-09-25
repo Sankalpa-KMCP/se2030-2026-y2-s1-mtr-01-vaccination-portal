@@ -32,8 +32,30 @@ public class AssistantController {
     }
 
     @GetMapping("/status")
+    public ResponseEntity<AssistantStatusResponse> getStatus(HttpServletRequest httpRequest) {
+        String authHeader = httpRequest != null ? httpRequest.getHeader(HttpHeaders.AUTHORIZATION) : null;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // If an Authorization header is supplied, verify that authentication succeeded.
+        // Never silently downgrade an invalid/expired token to anonymous.
+        if (authHeader != null && !authHeader.isBlank()) {
+            if (!authHeader.startsWith("Bearer ")
+                    || authentication == null
+                    || !authentication.isAuthenticated()
+                    || !(authentication.getPrincipal() instanceof UserPrincipal)) {
+                throw new InvalidAssistantAuthenticationException("Invalid or expired authentication token");
+            }
+        }
+
+        UserPrincipal principal = (authentication != null && authentication.getPrincipal() instanceof UserPrincipal up)
+                ? up
+                : null;
+
+        return ResponseEntity.ok(assistantService.getStatus(principal));
+    }
+
     public ResponseEntity<AssistantStatusResponse> getStatus() {
-        return ResponseEntity.ok(assistantService.getStatus());
+        return getStatus((HttpServletRequest) null);
     }
 
     @PostMapping("/messages")

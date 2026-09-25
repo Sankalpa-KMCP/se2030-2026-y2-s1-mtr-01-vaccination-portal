@@ -22,4 +22,8 @@ public record AssistantStatusResponse(
     public static AssistantStatusResponse of(boolean available) {
         return new AssistantStatusResponse(available, false, DEFAULT_DISCLAIMER);
     }
+
+    public static AssistantStatusResponse of(boolean available, boolean personalizedFeaturesAvailable) {
+        return new AssistantStatusResponse(available, personalizedFeaturesAvailable, DEFAULT_DISCLAIMER);
+    }
 }

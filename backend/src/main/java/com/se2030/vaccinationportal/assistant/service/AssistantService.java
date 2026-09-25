@@ -42,6 +42,11 @@ import java.util.stream.Collectors;
  * the client network origin (configured via trusted reverse proxy / container valves). Forwarded
  * headers are not trusted directly to prevent IP spoofing attacks against rate limits.
  */
+import com.se2030.vaccinationportal.assistant.tool.AssistantPersonalizedContextBuilder;
+import com.se2030.vaccinationportal.assistant.tool.AssistantToolContext;
+import com.se2030.vaccinationportal.assistant.tool.AssistantToolRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
+
 @Service
 public class AssistantService {
 
@@ -49,14 +54,47 @@ public class AssistantService {
 
     private final AiResponseProvider aiResponseProvider;
     private final AssistantRateLimiter rateLimiter;
+    private final AssistantPersonalizedContextBuilder personalizedContextBuilder;
+    private final AssistantToolRegistry toolRegistry;
 
-    public AssistantService(AiResponseProvider aiResponseProvider, AssistantRateLimiter rateLimiter) {
+    @Autowired
+    public AssistantService(
+            AiResponseProvider aiResponseProvider,
+            AssistantRateLimiter rateLimiter,
+            AssistantPersonalizedContextBuilder personalizedContextBuilder,
+            AssistantToolRegistry toolRegistry
+    ) {
         this.aiResponseProvider = aiResponseProvider;
         this.rateLimiter = rateLimiter;
+        this.personalizedContextBuilder = personalizedContextBuilder;
+        this.toolRegistry = toolRegistry;
+    }
+
+    public AssistantService(AiResponseProvider aiResponseProvider, AssistantRateLimiter rateLimiter) {
+        this(
+                aiResponseProvider,
+                rateLimiter,
+                new AssistantPersonalizedContextBuilder(new AssistantToolRegistry(Collections.emptyList())),
+                new AssistantToolRegistry(Collections.emptyList())
+        );
+    }
+
+    public AssistantStatusResponse getStatus(UserPrincipal principal) {
+        boolean available = aiResponseProvider.isAvailable();
+        if (!available) {
+            return AssistantStatusResponse.of(false, false);
+        }
+        boolean personalizedAvailable = false;
+        if (principal != null && principal.getAuthorities() != null) {
+            boolean isCitizen = principal.getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_CITIZEN".equals(a.getAuthority()));
+            personalizedAvailable = isCitizen && toolRegistry.hasToolsAvailable();
+        }
+        return AssistantStatusResponse.of(true, personalizedAvailable);
     }
 
     public AssistantStatusResponse getStatus() {
-        return AssistantStatusResponse.of(aiResponseProvider.isAvailable());
+        return getStatus(null);
     }
 
     public AssistantChatResponse processMessage(
@@ -111,6 +149,15 @@ public class AssistantService {
             return policyRefusal.get();
         }
 
+        // Authorized citizen read-only personalized tool execution
+        String personalizedContext = null;
+        if (isAuthenticated && callerAuthorities.contains("ROLE_CITIZEN")) {
+            AssistantToolContext toolContext = new AssistantToolContext(requestId, principal, callerAuthorities);
+            personalizedContext = personalizedContextBuilder
+                    .buildPersonalizedContext(request.message(), toolContext)
+                    .orElse(null);
+        }
+
         // Deterministic role-aware knowledge catalogue retrieval
         List<AssistantKnowledgeEntry> knowledgeEntries = AssistantKnowledgeCatalog.findRelevantEntries(
                 request.message(), callerAuthorities, 3);
@@ -118,7 +165,7 @@ public class AssistantService {
                 knowledgeEntries, callerAuthorities);
 
         String systemInstruction = AssistantSystemPolicy.buildSystemInstruction(
-                request.currentPath(), callerAuthorities, knowledgeContext);
+                request.currentPath(), callerAuthorities, knowledgeContext, personalizedContext);
 
         try {
             AssistantChatResponse response = aiResponseProvider.generateResponse(request, systemInstruction, requestId, callerAuthorities);

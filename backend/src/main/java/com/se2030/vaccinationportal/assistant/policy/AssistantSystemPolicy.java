@@ -67,7 +67,8 @@ public final class AssistantSystemPolicy {
     public static String buildSystemInstruction(
             String currentPath,
             java.util.Set<String> authorities,
-            String knowledgeContext
+            String knowledgeContext,
+            String personalizedContext
     ) {
         StringBuilder sb = new StringBuilder(BASE_SYSTEM_INSTRUCTIONS);
         if (currentPath != null && !currentPath.isBlank()) {
@@ -84,11 +85,22 @@ public final class AssistantSystemPolicy {
         if (knowledgeContext != null && !knowledgeContext.isBlank()) {
             sb.append("\n").append(knowledgeContext.trim()).append("\n");
         }
+        if (personalizedContext != null && !personalizedContext.isBlank()) {
+            sb.append("\n").append(personalizedContext.trim()).append("\n");
+        }
         return sb.toString();
     }
 
+    public static String buildSystemInstruction(
+            String currentPath,
+            java.util.Set<String> authorities,
+            String knowledgeContext
+    ) {
+        return buildSystemInstruction(currentPath, authorities, knowledgeContext, null);
+    }
+
     public static String buildSystemInstruction(String currentPath, java.util.Set<String> authorities) {
-        return buildSystemInstruction(currentPath, authorities, null);
+        return buildSystemInstruction(currentPath, authorities, null, null);
     }
 
 
