@@ -94,13 +94,55 @@ export JWT_SECRET=your_secure_random_jwt_secret_key
 
 *Note: Never commit `.env` or configuration files containing real passwords or keys to version control.*
 
-### Project-Wide AI Assistant Configuration (Phase 1)
+### Project-Wide AI Assistant
 
-The backend includes a secure, rate-limited conversational assistant endpoint (`/api/v1/assistant/chat`).
+The backend provides a secure, rate-limited, read-only conversational assistant integrated with a floating React widget across both public and authenticated pages.
 
-- **Disabled by default**: `AI_ASSISTANT_ENABLED` defaults to `false`. The portal starts, serves public endpoints, and operates completely normally when the AI assistant is unavailable or unconfigured.
-- **Backend-only secret**: `OPENAI_API_KEY` belongs **only** on the backend environment. Never place it in frontend `VITE_*` variables, and never commit a populated API key to version control.
+#### Assistant Endpoints
+
+- **`GET /api/v1/assistant/status`**: Public status endpoint returning provider availability, personalized capability flags, and clinical disclaimer.
+- **`POST /api/v1/assistant/messages`**: Conversational guidance endpoint returning structured answers, allowlisted role-filtered route actions, and request correlation IDs.
+
+```json
+// Status Response (GET /api/v1/assistant/status)
+{
+  "available": true,
+  "personalizedFeaturesAvailable": false,
+  "disclaimer": "This assistant explains portal services. It does not provide medical advice or emergency care."
+}
+
+// Message Request (POST /api/v1/assistant/messages)
+{
+  "message": "How do I book an appointment?",
+  "history": [],
+  "currentPath": "/"
+}
+
+// Message Response (POST /api/v1/assistant/messages)
+{
+  "answer": "Plain text answer",
+  "suggestedActions": [
+    {
+      "label": "Book Appointment",
+      "path": "/app/appointments/book"
+    }
+  ],
+  "requestId": "generated-request-id"
+}
+```
+
+#### Core Capabilities & Boundaries
+
+- **Disabled by default**: `AI_ASSISTANT_ENABLED` defaults to `false`. The portal starts and operates completely normally when the AI assistant is disabled.
+- **Backend-only secret**: `OPENAI_API_KEY` is strictly server-side. It is never exposed to the frontend or committed to version control.
 - **Test isolation**: Automated test suites use a deterministic fake provider (`DeterministicFakeAiResponseProvider`) and **never make live requests to OpenAI**.
+- **Deterministic safety policy**: Pre-evaluates clinical and mutation boundaries, immediately refusing medical diagnosis, prescription advice, and database modification requests.
+- **Authorized read-only citizen tools**:
+  1. `CitizenAppointmentTool`: Retrieves appointment history, scheduled dates, and statuses for the logged-in citizen.
+  2. `CitizenEligibilityTool`: Retrieves recorded screening outcomes and eligibility assessments for the logged-in citizen.
+  3. `CitizenCertificateTool`: Retrieves administered vaccination records and digital certificate status for the logged-in citizen.
+  *(All tools are strictly scoped to the verified `principal.getUserId()`; arbitrary citizen IDs in user prompts are ignored).*
+- **Setup & Evaluation Guide**: See [docs/AI_ASSISTANT_SETUP_AND_DEMO.md](../docs/AI_ASSISTANT_SETUP_AND_DEMO.md) for full architecture, macOS setup, cURL examples, and evaluation walkthroughs.
 
 #### Environment Variables
 
@@ -115,6 +157,7 @@ The backend includes a secure, rate-limited conversational assistant endpoint (`
 | `AI_ASSISTANT_MAX_OUTPUT_TOKENS` | `500` | Maximum response token limit for model completions. |
 | `AI_ASSISTANT_ANONYMOUS_RPM` | `5` | Rate limit requests per minute for unauthenticated clients. |
 | `AI_ASSISTANT_AUTHENTICATED_RPM` | `15` | Rate limit requests per minute for authenticated callers. |
+
 
 
 ## Available Commands

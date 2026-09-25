@@ -33,6 +33,7 @@ The backend follows an explicit hexagonal architecture (ports and adapters) unde
 | **MF-05: Vaccination Administration & Records** | `vaccination` | `src/features/vaccination-administration/` | **Partial** | **Backend Implemented**: Vaccination draft CRUD, finalization integration, and digital certificate issuance/verification. **Frontend Partial**: Digital certificate verification component is available; full clinical administration workflow UI is pending. |
 | **Operational Analytics** | `campaign` | `src/features/analytics/` | **Implemented** | Interactive operational analytics view with filterable vaccination program metrics. |
 | **Public Landing & Information** | N/A | `src/features/public-landing/` | **Implemented** | Responsive public landing experience, accessible navigation, workflow guide (`/how-it-works`), and mission overview (`/about`). |
+| **Project-Wide AI Assistant** | `assistant` | `src/features/assistant/` | **Implemented** | Secure, read-only conversational guidance, role-aware route suggestions, deterministic safety policy, and personalized citizen lookups. See [AI Assistant Setup & Demo Guide](docs/AI_ASSISTANT_SETUP_AND_DEMO.md). |
 
 ## Public Application Routes
 
@@ -170,5 +171,6 @@ GitHub Actions workflows validate pull requests and merged commits targeting `de
 
 - [AI Canonical Project Specification](docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md) - Authoritative normative source of truth (version 3.3-AI, revision 2026-08-14-R9)
 - [MF-02 Module Handoff Specification](docs/MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff.md)
+- [AI Assistant Setup & Evaluation Guide](docs/AI_ASSISTANT_SETUP_AND_DEMO.md) - Architecture, environment configuration, cURL commands, and evaluation walkthrough
 - [Database Configuration Guide](database/README.md)
 - [Contribution Guidelines](CONTRIBUTING.md)
