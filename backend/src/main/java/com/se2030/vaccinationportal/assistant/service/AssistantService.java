@@ -17,12 +17,22 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
 import java.util.HexFormat;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service coordinating assistant requests, privacy-conscious rate limiting,
- * system policy prompts, and structured response delivery.
+ * caller authority resolution, system policy prompts, and structured response delivery.
+ *
+ * <p>Deployment Assumptions:
+ * Assumes a servlet environment where HttpServletRequest.getRemoteAddr() accurately reflects
+ * the client network origin (configured via trusted reverse proxy / container valves). Forwarded
+ * headers are not trusted directly to prevent IP spoofing attacks against rate limits.
  */
 @Service
 public class AssistantService {
@@ -72,19 +82,21 @@ public class AssistantService {
             throw new AssistantDisabledException("The AI assistant is currently disabled or unavailable.");
         }
 
-        // Derive user role context
-        String actorRole = null;
+        // Derive normalized, immutable authority set
+        Set<String> callerAuthorities = Collections.emptySet();
         if (isAuthenticated && principal.getAuthorities() != null) {
-            actorRole = principal.getAuthorities().stream()
+            callerAuthorities = principal.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
-                    .findFirst()
-                    .orElse(null);
+                    .filter(Objects::nonNull)
+                    .map(String::trim)
+                    .collect(Collectors.toCollection(TreeSet::new));
+            callerAuthorities = Collections.unmodifiableSet(callerAuthorities);
         }
 
-        String systemInstruction = AssistantSystemPolicy.buildSystemInstruction(request.currentPath(), actorRole);
+        String systemInstruction = AssistantSystemPolicy.buildSystemInstruction(request.currentPath(), callerAuthorities);
 
         try {
-            AssistantChatResponse response = aiResponseProvider.generateResponse(request, systemInstruction, requestId);
+            AssistantChatResponse response = aiResponseProvider.generateResponse(request, systemInstruction, requestId, callerAuthorities);
 
             long latencyMs = System.currentTimeMillis() - startTime;
             log.info("Assistant request completed: requestId={}, category={}, actorId={}, status=200, latencyMs={}, inputLength={}, historyCount={}",
@@ -104,14 +116,25 @@ public class AssistantService {
             return "auth:" + principal.getUserId();
         }
 
-        // Privacy-conscious client IP strategy for anonymous users:
-        // Hash remote address so raw IP addresses are not retained in memory or logs.
-        String remoteAddr = httpRequest != null ? httpRequest.getRemoteAddr() : "unknown-remote";
-        if (remoteAddr == null || remoteAddr.isBlank()) {
-            remoteAddr = "unknown-remote";
+        // Deployment Assumptions for Anonymous Rate Limiting:
+        // 1. Direct servlet request remote address is used via HttpServletRequest.getRemoteAddr().
+        // 2. X-Forwarded-For and Forwarded headers are intentionally not trusted directly by application code
+        //    to prevent header spoofing attacks. If deployed behind a reverse proxy (e.g. AWS ALB, NGINX, or Cloudflare),
+        //    the reverse proxy must sanitize headers and Spring Boot must be configured with
+        //    `server.forward-headers-strategy=framework` or `native` with trusted-proxies configured at the container level.
+        // 3. If remoteAddr is unavailable (null or blank), the system fails closed rather than sharing an unmetered or
+        //    shared "unknown-remote" bucket, preventing denial-of-service / quota exhaustion across separate visitors.
+        // 4. Raw IP addresses are NEVER logged or retained in plaintext; only a 16-character SHA-256 digest is stored.
+        if (httpRequest == null) {
+            throw new AssistantRateLimitExceededException("Unable to determine client origin for rate limiting. Request rejected.");
         }
 
-        return "anon:" + hashSha256(remoteAddr);
+        String remoteAddr = httpRequest.getRemoteAddr();
+        if (remoteAddr == null || remoteAddr.isBlank()) {
+            throw new AssistantRateLimitExceededException("Unable to determine client origin for rate limiting. Request rejected.");
+        }
+
+        return "anon:" + hashSha256(remoteAddr.trim());
     }
 
     private String hashSha256(String input) {

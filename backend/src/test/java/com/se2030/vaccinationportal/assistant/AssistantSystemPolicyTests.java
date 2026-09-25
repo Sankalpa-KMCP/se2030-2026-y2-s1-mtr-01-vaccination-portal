@@ -32,7 +32,7 @@ class AssistantSystemPolicyTests {
     @Test
     @DisplayName("buildSystemInstruction includes user context without exposing secrets")
     void testBuildInstructionWithContext() {
-        String anonymousInstruction = AssistantSystemPolicy.buildSystemInstruction("/app/citizen", null);
+        String anonymousInstruction = AssistantSystemPolicy.buildSystemInstruction("/app/citizen", (java.util.Set<String>) null);
         assertTrue(anonymousInstruction.contains("Anonymous visitor"));
         assertTrue(anonymousInstruction.contains("/app/citizen"));
 
@@ -40,5 +40,9 @@ class AssistantSystemPolicyTests {
         assertTrue(authenticatedInstruction.contains("ROLE_CITIZEN"));
         assertTrue(authenticatedInstruction.contains("/app/screening"));
         assertFalse(authenticatedInstruction.contains("sk-"));
+
+        String multiRoleInstruction = AssistantSystemPolicy.buildSystemInstruction("/app/staff", java.util.Set.of("ROLE_ADMIN", "ROLE_INVENTORY_OFFICER"));
+        assertTrue(multiRoleInstruction.contains("ROLE_ADMIN"));
+        assertTrue(multiRoleInstruction.contains("ROLE_INVENTORY_OFFICER"));
     }
 }

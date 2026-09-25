@@ -13,7 +13,8 @@ public class DisabledAiResponseProvider implements AiResponseProvider {
     public AssistantChatResponse generateResponse(
             AssistantChatRequest request,
             String systemInstruction,
-            String requestId
+            String requestId,
+            java.util.Set<String> callerAuthorities
     ) {
         throw new AssistantDisabledException("The AI assistant is currently disabled or unavailable.");
     }

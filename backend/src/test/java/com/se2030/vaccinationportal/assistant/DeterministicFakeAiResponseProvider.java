@@ -6,11 +6,13 @@ import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
 import com.se2030.vaccinationportal.assistant.exception.AssistantDisabledException;
 import com.se2030.vaccinationportal.assistant.exception.AssistantProviderException;
 import com.se2030.vaccinationportal.assistant.exception.AssistantTimeoutException;
+import com.se2030.vaccinationportal.assistant.policy.AssistantRouteCatalog;
 import com.se2030.vaccinationportal.assistant.provider.AiResponseProvider;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Deterministic fake provider strictly used in test suites.
@@ -29,12 +31,14 @@ public class DeterministicFakeAiResponseProvider implements AiResponseProvider {
 
     private final List<AssistantChatRequest> recordedRequests = new ArrayList<>();
     private final List<String> recordedSystemInstructions = new ArrayList<>();
+    private final List<Set<String>> recordedCallerAuthorities = new ArrayList<>();
 
     @Override
     public AssistantChatResponse generateResponse(
             AssistantChatRequest request,
             String systemInstruction,
-            String requestId
+            String requestId,
+            Set<String> callerAuthorities
     ) {
         if (!available) {
             throw new AssistantDisabledException("The AI assistant is currently disabled or unavailable.");
@@ -48,8 +52,19 @@ public class DeterministicFakeAiResponseProvider implements AiResponseProvider {
 
         recordedRequests.add(request);
         recordedSystemInstructions.add(systemInstruction);
+        recordedCallerAuthorities.add(callerAuthorities);
 
-        return new AssistantChatResponse(cannedAnswer, cannedActions, requestId);
+        // Filter suggested actions through caller authorization
+        List<AssistantActionDto> authorizedActions = new ArrayList<>();
+        if (cannedActions != null) {
+            for (AssistantActionDto action : cannedActions) {
+                if (AssistantRouteCatalog.isAuthorizedRoute(action.path(), callerAuthorities)) {
+                    authorizedActions.add(action);
+                }
+            }
+        }
+
+        return new AssistantChatResponse(cannedAnswer, authorizedActions, requestId);
     }
 
     @Override
@@ -85,9 +100,14 @@ public class DeterministicFakeAiResponseProvider implements AiResponseProvider {
         return recordedSystemInstructions;
     }
 
+    public List<Set<String>> getRecordedCallerAuthorities() {
+        return recordedCallerAuthorities;
+    }
+
     public void reset() {
         recordedRequests.clear();
         recordedSystemInstructions.clear();
+        recordedCallerAuthorities.clear();
         available = true;
         simulateTimeout = false;
         simulateProviderError = false;

@@ -64,17 +64,26 @@ public final class AssistantSystemPolicy {
             If no specific navigation action is relevant, provide an empty list for "suggestedActions".
             """;
 
-    public static String buildSystemInstruction(String currentPath, String actorRole) {
+    public static String buildSystemInstruction(String currentPath, java.util.Set<String> authorities) {
         StringBuilder sb = new StringBuilder(BASE_SYSTEM_INSTRUCTIONS);
         if (currentPath != null && !currentPath.isBlank()) {
             sb.append("\nCURRENT USER CONTEXT:\n");
             sb.append("- Current portal path: ").append(currentPath.trim()).append("\n");
         }
-        if (actorRole != null && !actorRole.isBlank()) {
-            sb.append("- User authenticated role: ").append(actorRole.trim()).append("\n");
+        if (authorities != null && !authorities.isEmpty()) {
+            java.util.List<String> sortedRoles = new java.util.ArrayList<>(authorities);
+            java.util.Collections.sort(sortedRoles);
+            sb.append("- User authenticated roles: ").append(sortedRoles).append("\n");
         } else {
             sb.append("- User context: Anonymous visitor (no personalized records or account context available)\n");
         }
         return sb.toString();
+    }
+
+    public static String buildSystemInstruction(String currentPath, String actorRole) {
+        java.util.Set<String> roles = (actorRole != null && !actorRole.isBlank())
+                ? java.util.Collections.singleton(actorRole.trim())
+                : java.util.Collections.emptySet();
+        return buildSystemInstruction(currentPath, roles);
     }
 }

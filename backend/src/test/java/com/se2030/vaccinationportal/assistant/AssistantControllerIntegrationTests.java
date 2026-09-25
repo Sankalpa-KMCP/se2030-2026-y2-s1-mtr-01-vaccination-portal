@@ -4,25 +4,28 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
 import com.se2030.vaccinationportal.assistant.controller.AssistantController;
 import com.se2030.vaccinationportal.assistant.controller.AssistantExceptionHandler;
+import com.se2030.vaccinationportal.assistant.dto.AssistantActionDto;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatRequest;
 import com.se2030.vaccinationportal.assistant.dto.AssistantMessageDto;
 import com.se2030.vaccinationportal.assistant.service.AssistantService;
 import com.se2030.vaccinationportal.assistant.service.InMemoryAssistantRateLimiter;
-import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -90,15 +93,19 @@ class AssistantControllerIntegrationTests {
     }
 
     @Test
-    @DisplayName("POST /api/v1/assistant/messages allows anonymous query and returns safe response")
+    @DisplayName("POST /api/v1/assistant/messages allows anonymous query and returns only authorized public action")
     void testAnonymousQuerySuccess() throws Exception {
+        fakeProvider.setCannedActions(List.of(
+                new AssistantActionDto("How It Works", "/how-it-works")
+        ));
+
         AssistantChatRequest request = new AssistantChatRequest(
-                "How do I book an appointment?",
+                "How do I know more about this portal?",
                 List.of(
                         new AssistantMessageDto("user", "Hello"),
                         new AssistantMessageDto("assistant", "Welcome to the portal.")
                 ),
-                "/app/citizen"
+                "/how-it-works"
         );
 
         mockMvc.perform(post("/api/v1/assistant/messages")
@@ -107,8 +114,8 @@ class AssistantControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answer").value("This is a deterministic assistant answer explaining portal navigation."))
                 .andExpect(jsonPath("$.suggestedActions", hasSize(1)))
-                .andExpect(jsonPath("$.suggestedActions[0].label").value("Open appointment booking"))
-                .andExpect(jsonPath("$.suggestedActions[0].path").value("/app/appointments/book"))
+                .andExpect(jsonPath("$.suggestedActions[0].label").value("How It Works"))
+                .andExpect(jsonPath("$.suggestedActions[0].path").value("/how-it-works"))
                 .andExpect(jsonPath("$.requestId").isNotEmpty())
                 .andExpect(jsonPath("$.provider").doesNotExist())
                 .andExpect(jsonPath("$.model").doesNotExist())
@@ -121,12 +128,37 @@ class AssistantControllerIntegrationTests {
     }
 
     @Test
-    @DisplayName("POST /api/v1/assistant/messages with authenticated principal derives user context")
+    @DisplayName("POST /api/v1/assistant/messages filters out citizen and staff links for anonymous users")
+    void testAnonymousCannotReceiveCitizenOrStaffLinks() throws Exception {
+        // Model attempts to suggest a citizen booking link and an admin link to anonymous user
+        fakeProvider.setCannedActions(List.of(
+                new AssistantActionDto("Book appointment", "/app/appointments/book"),
+                new AssistantActionDto("Staff Requests", "/app/admin/staff-requests"),
+                new AssistantActionDto("About", "/about")
+        ));
+
+        AssistantChatRequest request = new AssistantChatRequest("Help me", Collections.emptyList(), "/about");
+
+        mockMvc.perform(post("/api/v1/assistant/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestedActions", hasSize(1)))
+                .andExpect(jsonPath("$.suggestedActions[0].path").value("/about"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/assistant/messages with authenticated principal derives user context and citizen actions")
     void testAuthenticatedQuerySuccess() throws Exception {
         UserPrincipal principal = UserPrincipal.fromClaims(42L, "citizen@example.com", List.of("ROLE_CITIZEN"));
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        fakeProvider.setCannedActions(List.of(
+                new AssistantActionDto("Book appointment", "/app/appointments/book"),
+                new AssistantActionDto("Admin dashboard", "/app/admin")
+        ));
 
         AssistantChatRequest request = new AssistantChatRequest(
                 "Where can I see my appointments?",
@@ -140,7 +172,10 @@ class AssistantControllerIntegrationTests {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answer").isNotEmpty())
-                .andExpect(jsonPath("$.requestId").isNotEmpty());
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
+                // Citizen receives booking action, but admin action is strictly filtered out!
+                .andExpect(jsonPath("$.suggestedActions", hasSize(1)))
+                .andExpect(jsonPath("$.suggestedActions[0].path").value("/app/appointments/book"));
 
         // Verify that instruction includes role context
         assertEquals(1, fakeProvider.getRecordedSystemInstructions().size());
@@ -148,9 +183,43 @@ class AssistantControllerIntegrationTests {
     }
 
     @Test
+    @DisplayName("POST /api/v1/assistant/messages derives all authorities for multi-role users deterministically")
+    void testMultiRoleAuthenticatedUser() throws Exception {
+        UserPrincipal principal = UserPrincipal.fromClaims(88L, "multirole@example.com",
+                List.of("ROLE_INVENTORY_OFFICER", "ROLE_CAMPAIGN_OFFICER"));
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        fakeProvider.setCannedActions(List.of(
+                new AssistantActionDto("Campaigns", "/app/campaigns"),
+                new AssistantActionDto("Inventory", "/app/inventory"),
+                new AssistantActionDto("Admin", "/app/admin")
+        ));
+
+        AssistantChatRequest request = new AssistantChatRequest(
+                "Show operational routes",
+                Collections.emptyList(),
+                "/app/staff"
+        );
+
+        mockMvc.perform(post("/api/v1/assistant/messages")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer valid.jwt.token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                // Multi-role user receives campaign and inventory actions, but NOT admin
+                .andExpect(jsonPath("$.suggestedActions", hasSize(2)))
+                .andExpect(jsonPath("$.suggestedActions[*].path", containsInAnyOrder("/app/campaigns", "/app/inventory")));
+
+        Set<String> authorities = fakeProvider.getRecordedCallerAuthorities().get(0);
+        assertTrue(authorities.contains("ROLE_INVENTORY_OFFICER"));
+        assertTrue(authorities.contains("ROLE_CAMPAIGN_OFFICER"));
+    }
+
+    @Test
     @DisplayName("POST /api/v1/assistant/messages rejects invalid or unauthenticated Bearer token with 401")
     void testInvalidJwtRejected() throws Exception {
-        // Authorization header supplied, but SecurityContext has NO authenticated UserPrincipal
         AssistantChatRequest request = new AssistantChatRequest(
                 "How do I book?",
                 Collections.emptyList(),
@@ -165,6 +234,25 @@ class AssistantControllerIntegrationTests {
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.message").value(containsString("Invalid or expired authentication token")));
+    }
+
+    @Test
+    @DisplayName("Anonymous request fails closed when remote address is unavailable")
+    void testAnonymousFailsClosedWhenRemoteAddrMissing() throws Exception {
+        AssistantChatRequest request = new AssistantChatRequest("Help", Collections.emptyList(), null);
+
+        RequestPostProcessor emptyRemoteAddrProcessor = req -> {
+            ((MockHttpServletRequest) req).setRemoteAddr("");
+            return req;
+        };
+
+        mockMvc.perform(post("/api/v1/assistant/messages")
+                        .with(emptyRemoteAddrProcessor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.code").value("RATE_LIMIT_EXCEEDED"));
     }
 
     @Test
@@ -247,7 +335,8 @@ class AssistantControllerIntegrationTests {
     @Test
     @DisplayName("POST /api/v1/assistant/messages enforces rate limiting with HTTP 429")
     void testRateLimitExceeded() throws Exception {
-        AssistantChatRequest request = new AssistantChatRequest("Help", Collections.emptyList(), null);
+        fakeProvider.setCannedActions(List.of(new AssistantActionDto("About", "/about")));
+        AssistantChatRequest request = new AssistantChatRequest("Help", Collections.emptyList(), "/about");
 
         // Anonymous quota is 3 per minute
         for (int i = 0; i < 3; i++) {

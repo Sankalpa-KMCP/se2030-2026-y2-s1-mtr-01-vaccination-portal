@@ -94,6 +94,29 @@ export JWT_SECRET=your_secure_random_jwt_secret_key
 
 *Note: Never commit `.env` or configuration files containing real passwords or keys to version control.*
 
+### Project-Wide AI Assistant Configuration (Phase 1)
+
+The backend includes a secure, rate-limited conversational assistant endpoint (`/api/v1/assistant/chat`).
+
+- **Disabled by default**: `AI_ASSISTANT_ENABLED` defaults to `false`. The portal starts, serves public endpoints, and operates completely normally when the AI assistant is unavailable or unconfigured.
+- **Backend-only secret**: `OPENAI_API_KEY` belongs **only** on the backend environment. Never place it in frontend `VITE_*` variables, and never commit a populated API key to version control.
+- **Test isolation**: Automated test suites use a deterministic fake provider (`DeterministicFakeAiResponseProvider`) and **never make live requests to OpenAI**.
+
+#### Environment Variables
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `AI_ASSISTANT_ENABLED` | `false` | Enables the AI assistant (`true` or `false`). |
+| `OPENAI_API_KEY` | *(empty)* | Official OpenAI API secret key. Must remain server-side. |
+| `OPENAI_MODEL` | *(empty)* | Configured OpenAI model (e.g., `gpt-4o-mini`). |
+| `AI_ASSISTANT_TIMEOUT` | `15s` | Provider HTTP request timeout. |
+| `AI_ASSISTANT_MAX_INPUT_CHARACTERS` | `1500` | Maximum allowed character length for incoming chat messages. |
+| `AI_ASSISTANT_MAX_HISTORY_MESSAGES` | `10` | Maximum conversation history turns processed. |
+| `AI_ASSISTANT_MAX_OUTPUT_TOKENS` | `500` | Maximum response token limit for model completions. |
+| `AI_ASSISTANT_ANONYMOUS_RPM` | `5` | Rate limit requests per minute for unauthenticated clients. |
+| `AI_ASSISTANT_AUTHENTICATED_RPM` | `15` | Rate limit requests per minute for authenticated callers. |
+
+
 ## Available Commands
 
 Execute commands from the `backend/` directory using the embedded Maven Wrapper:

@@ -25,11 +25,11 @@ public class AssistantConfig {
         }
 
         if (properties.getApiKey().isBlank() || properties.getModel().isBlank()) {
-            log.warn("AI Assistant is enabled but OPENAI_API_KEY or OPENAI_MODEL is missing. Registered DisabledAiResponseProvider.");
+            log.warn("AI Assistant is enabled but configuration is incomplete. Registered DisabledAiResponseProvider.");
             return new DisabledAiResponseProvider();
         }
 
-        log.info("AI Assistant initialized with live Responses provider for model: {}", properties.getModel());
+        log.info("AI Assistant initialized with live Responses provider.");
         return new OpenAiResponsesProvider(properties);
     }
 }

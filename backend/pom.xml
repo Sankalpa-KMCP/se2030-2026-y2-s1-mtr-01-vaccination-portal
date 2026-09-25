@@ -17,6 +17,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<testcontainers.version>1.20.4</testcontainers.version>
+		<openai-java.version>4.69.2</openai-java.version>
 	</properties>
 
 	<dependencyManagement>
@@ -95,7 +96,7 @@
 		<dependency>
 			<groupId>com.openai</groupId>
 			<artifactId>openai-java</artifactId>
-			<version>4.69.2</version>
+			<version>${openai-java.version}</version>
 		</dependency>
 
 		<dependency>

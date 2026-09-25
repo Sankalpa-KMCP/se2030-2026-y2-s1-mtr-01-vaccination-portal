@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.errors.OpenAIException;
-import com.openai.models.ResponseFormatJsonObject;
+import com.openai.core.JsonValue;
 import com.openai.models.responses.EasyInputMessage;
 import com.openai.models.responses.Response;
 import com.openai.models.responses.ResponseCreateParams;
 import com.openai.models.responses.ResponseFormatTextConfig;
+import com.openai.models.responses.ResponseFormatTextJsonSchemaConfig;
 import com.openai.models.responses.ResponseInputItem;
 import com.openai.models.responses.ResponseOutputItem;
 import com.openai.models.responses.ResponseOutputMessage;
@@ -29,19 +29,34 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * Live OpenAI implementation utilizing the official OpenAI Java SDK and Responses API (/v1/responses).
+ * Enforces strict structured output with JSON schema and caller-aware route authorization.
  * Never exposes credentials, prompts, or upstream diagnostics to callers.
  */
 public class OpenAiResponsesProvider implements AiResponseProvider {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiResponsesProvider.class);
 
+    public static final int MAX_ANSWER_CHARACTERS = 2000;
+    public static final int MAX_SUGGESTED_ACTIONS = 3;
+    public static final int MAX_ACTION_LABEL_LENGTH = 100;
+
+    public static final String SAFE_REFUSAL_MESSAGE =
+            "I cannot assist with this request. Please contact an authorized healthcare professional or local emergency service.";
+
+    public static final String SAFE_UNSTRUCTURED_FALLBACK =
+            "I am currently unable to provide an answer. Please contact an authorized healthcare professional or local emergency service.";
+
     private final AssistantProperties properties;
     private final OpenAIClient openAiClient;
     private final ObjectMapper objectMapper;
+    private final ResponseFormatTextConfig structuredFormatConfig;
 
     public OpenAiResponsesProvider(AssistantProperties properties) {
         this(properties, createDefaultClient(properties), new ObjectMapper());
@@ -51,6 +66,7 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
         this.properties = properties;
         this.openAiClient = openAiClient;
         this.objectMapper = objectMapper;
+        this.structuredFormatConfig = createStrictJsonSchemaFormat();
     }
 
     private static OpenAIClient createDefaultClient(AssistantProperties properties) {
@@ -60,11 +76,54 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
                 .build();
     }
 
+    private static ResponseFormatTextConfig createStrictJsonSchemaFormat() {
+        Map<String, Object> schemaMap = Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "answer", Map.of(
+                                "type", "string",
+                                "description", "Plain text response to the user."
+                        ),
+                        "suggestedActions", Map.of(
+                                "type", "array",
+                                "description", "List of allowed internal navigation routes.",
+                                "items", Map.of(
+                                        "type", "object",
+                                        "properties", Map.of(
+                                                "label", Map.of("type", "string"),
+                                                "path", Map.of("type", "string")
+                                        ),
+                                        "required", List.of("label", "path"),
+                                        "additionalProperties", false
+                                )
+                        )
+                ),
+                "required", List.of("answer", "suggestedActions"),
+                "additionalProperties", false
+        );
+
+        Map<String, JsonValue> jsonValueMap = schemaMap.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> JsonValue.from(e.getValue())));
+
+        ResponseFormatTextJsonSchemaConfig.Schema schema = ResponseFormatTextJsonSchemaConfig.Schema.builder()
+                .putAllAdditionalProperties(jsonValueMap)
+                .build();
+
+        ResponseFormatTextJsonSchemaConfig jsonSchemaConfig = ResponseFormatTextJsonSchemaConfig.builder()
+                .name("assistant_response")
+                .strict(true)
+                .schema(schema)
+                .build();
+
+        return ResponseFormatTextConfig.ofJsonSchema(jsonSchemaConfig);
+    }
+
     @Override
     public AssistantChatResponse generateResponse(
             AssistantChatRequest request,
             String systemInstruction,
-            String requestId
+            String requestId,
+            Set<String> callerAuthorities
     ) {
         List<ResponseInputItem> inputItems = new ArrayList<>();
 
@@ -98,13 +157,13 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
                 .maxOutputTokens((long) properties.getMaxOutputTokens())
                 .store(false)
                 .text(ResponseTextConfig.builder()
-                        .format(ResponseFormatTextConfig.ofJsonObject(ResponseFormatJsonObject.builder().build()))
+                        .format(structuredFormatConfig)
                         .build())
                 .build();
 
         try {
             Response response = openAiClient.responses().create(createParams);
-            return parseResponse(response, requestId);
+            return parseResponse(response, requestId, callerAuthorities);
         } catch (Exception ex) {
             if (isTimeout(ex)) {
                 log.warn("Upstream assistant provider timeout occurred for requestId: {}", requestId);
@@ -120,63 +179,89 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
         return properties.isConfiguredForLiveProvider();
     }
 
-    private AssistantChatResponse parseResponse(Response response, String requestId) {
+    /**
+     * Parses the response from OpenAI with strict validation and caller authorization.
+     */
+    public AssistantChatResponse parseResponse(Response response, String requestId, Set<String> callerAuthorities) {
         String rawOutput = "";
-        if (response.output() != null) {
+        boolean isRefusal = false;
+
+        if (response != null && response.output() != null) {
             for (ResponseOutputItem item : response.output()) {
                 if (item.message().isPresent()) {
                     ResponseOutputMessage message = item.message().get();
                     if (message.content() != null) {
                         for (ResponseOutputMessage.Content content : message.content()) {
-                            if (content.isOutputText()) {
-                                rawOutput = content.asOutputText().text();
+                            if (content.isRefusal()) {
+                                isRefusal = true;
                                 break;
-                            } else if (content.isRefusal()) {
-                                rawOutput = content.asRefusal().refusal();
+                            } else if (content.isOutputText()) {
+                                rawOutput = content.asOutputText().text();
                                 break;
                             }
                         }
                     }
                 }
-                if (!rawOutput.isEmpty()) {
+                if (isRefusal || !rawOutput.isEmpty()) {
                     break;
                 }
             }
         }
 
-        if (rawOutput.isBlank()) {
-            return new AssistantChatResponse(
-                    "I am currently unable to provide an answer. Please contact an authorized healthcare professional or local emergency service.",
-                    Collections.emptyList(),
-                    requestId
-            );
+        // 1. Check for provider refusal
+        if (isRefusal) {
+            return new AssistantChatResponse(SAFE_REFUSAL_MESSAGE, Collections.emptyList(), requestId);
         }
 
-        // Attempt JSON parse
+        if (rawOutput.isBlank()) {
+            return new AssistantChatResponse(SAFE_UNSTRUCTURED_FALLBACK, Collections.emptyList(), requestId);
+        }
+
+        // 2. Strict JSON parsing
+        JsonNode rootNode;
         try {
-            JsonNode rootNode = objectMapper.readTree(rawOutput);
-            String answer = rootNode.hasNonNull("answer")
-                    ? rootNode.get("answer").asText()
-                    : rawOutput;
+            rootNode = objectMapper.readTree(rawOutput);
+        } catch (Exception parseException) {
+            log.warn("Assistant response was not valid JSON for requestId: {}", requestId);
+            return new AssistantChatResponse(SAFE_UNSTRUCTURED_FALLBACK, Collections.emptyList(), requestId);
+        }
 
-            List<AssistantActionDto> actions = new ArrayList<>();
-            if (rootNode.has("suggestedActions") && rootNode.get("suggestedActions").isArray()) {
-                for (JsonNode actionNode : rootNode.get("suggestedActions")) {
-                    String label = actionNode.hasNonNull("label") ? actionNode.get("label").asText() : "";
-                    String path = actionNode.hasNonNull("path") ? actionNode.get("path").asText() : "";
+        // 3. Answer extraction and character limit enforcement
+        if (!rootNode.hasNonNull("answer") || !rootNode.get("answer").isTextual()
+                || rootNode.get("answer").asText().isBlank()) {
+            log.warn("Assistant response missing textual answer field for requestId: {}", requestId);
+            return new AssistantChatResponse(SAFE_UNSTRUCTURED_FALLBACK, Collections.emptyList(), requestId);
+        }
 
-                    // Strictly enforce allowlisted internal routes
-                    if (AssistantRouteCatalog.isAllowedRoute(path) && !label.isBlank()) {
-                        actions.add(new AssistantActionDto(label.trim(), path.trim()));
-                    }
+        String answer = rootNode.get("answer").asText().trim();
+        if (answer.length() > MAX_ANSWER_CHARACTERS) {
+            answer = answer.substring(0, MAX_ANSWER_CHARACTERS) + "...";
+        }
+
+        // 4. Suggested actions extraction and caller-aware authorization filtering
+        List<AssistantActionDto> actions = new ArrayList<>();
+        if (rootNode.has("suggestedActions") && rootNode.get("suggestedActions").isArray()) {
+            for (JsonNode actionNode : rootNode.get("suggestedActions")) {
+                if (actions.size() >= MAX_SUGGESTED_ACTIONS) {
+                    break;
+                }
+
+                String label = actionNode.hasNonNull("label") ? actionNode.get("label").asText().trim() : "";
+                String path = actionNode.hasNonNull("path") ? actionNode.get("path").asText().trim() : "";
+
+                // Enforce label length and non-blankness
+                if (label.isBlank() || label.length() > MAX_ACTION_LABEL_LENGTH) {
+                    continue;
+                }
+
+                // Strictly enforce route authorization for the caller
+                if (AssistantRouteCatalog.isAuthorizedRoute(path, callerAuthorities)) {
+                    actions.add(new AssistantActionDto(label, path));
                 }
             }
-
-            return new AssistantChatResponse(answer.trim(), actions, requestId);
-        } catch (Exception ignored) {
-            // Fallback to plain text output if provider did not return strict JSON
-            return new AssistantChatResponse(rawOutput.trim(), Collections.emptyList(), requestId);
         }
+
+        return new AssistantChatResponse(answer, actions, requestId);
     }
 
     private boolean isTimeout(Throwable ex) {
