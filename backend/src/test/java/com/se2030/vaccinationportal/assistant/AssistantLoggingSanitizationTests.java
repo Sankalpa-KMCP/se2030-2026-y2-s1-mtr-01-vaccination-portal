@@ -134,6 +134,56 @@ class AssistantLoggingSanitizationTests {
             assertThat(msg).doesNotContain("gpt-4o-hidden");
             assertThat(msg).doesNotContain("sk-proj");
             assertThat(msg).doesNotContain("192.168.1.100"); // raw IP must not be logged
+            assertThat(msg).doesNotContain("101"); // raw user ID must not be logged
+            assertThat(msg).doesNotContain("actorId");
+            assertThat(msg).doesNotContain("user@test.local");
+        }
+    }
+
+    @Test
+    void successfulRequest_doesNotContainRawUserIdOrMessage() {
+        AssistantProperties properties = new AssistantProperties();
+        properties.setEnabled(true);
+
+        AssistantRateLimiter rateLimiter = mock(AssistantRateLimiter.class);
+        when(rateLimiter.tryAcquire(anyString(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(true);
+
+        AiResponseProvider provider = mock(AiResponseProvider.class);
+        when(provider.isAvailable()).thenReturn(true);
+        when(provider.generateResponse(any(), anyString(), anyString(), any()))
+                .thenReturn(new com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse(
+                        "Answer", List.of(), "req-xyz"
+                ));
+
+        AssistantService service = new AssistantService(provider, rateLimiter);
+
+        String userQuery = "What is the status of my appointment?";
+        AssistantChatRequest request = new AssistantChatRequest(userQuery, List.of(), "/app/appointments/mine");
+
+        MockHttpServletRequest httpRequest = new MockHttpServletRequest();
+        httpRequest.setRemoteAddr("10.10.10.10");
+
+        UserPrincipal principal = new UserPrincipal(
+                5555L,
+                "citizen5555@test.local",
+                "hashed",
+                true,
+                List.of(new SimpleGrantedAuthority("ROLE_CITIZEN"))
+        );
+
+        service.processMessage(request, principal, httpRequest);
+
+        List<String> logMessages = listAppender.list.stream()
+                .map(ILoggingEvent::getFormattedMessage)
+                .toList();
+
+        assertThat(logMessages).isNotEmpty();
+        for (String msg : logMessages) {
+            assertThat(msg).doesNotContain("5555");
+            assertThat(msg).doesNotContain("actorId");
+            assertThat(msg).doesNotContain("citizen5555@test.local");
+            assertThat(msg).doesNotContain(userQuery);
+            assertThat(msg).contains("category=authenticated");
         }
     }
 }

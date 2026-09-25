@@ -107,28 +107,19 @@ public class AssistantService {
 
         boolean isAuthenticated = principal != null;
         String category = isAuthenticated ? "authenticated" : "anonymous";
-        String actorId = isAuthenticated ? String.valueOf(principal.getUserId()) : null;
         String clientKey = resolveClientKey(principal, httpRequest);
         int inputLength = request.message() != null ? request.message().length() : 0;
         int historyCount = request.history() != null ? request.history().size() : 0;
 
-        // Rate limit check
+        // 1. Rate limit check
         if (!rateLimiter.tryAcquire(clientKey, isAuthenticated)) {
             long latencyMs = System.currentTimeMillis() - startTime;
-            log.warn("Assistant rate limit exceeded: requestId={}, category={}, actorId={}, status=429, latencyMs={}, inputLength={}, historyCount={}",
-                    requestId, category, actorId != null ? actorId : "anonymous", latencyMs, inputLength, historyCount);
+            log.warn("Assistant rate limit exceeded: requestId={}, category={}, status=429, latencyMs={}, inputLength={}, historyCount={}",
+                    requestId, category, latencyMs, inputLength, historyCount);
             throw new AssistantRateLimitExceededException("Too many requests. Please wait a moment before sending another message.");
         }
 
-        // Provider availability check
-        if (!aiResponseProvider.isAvailable()) {
-            long latencyMs = System.currentTimeMillis() - startTime;
-            log.warn("Assistant request rejected (disabled/misconfigured): requestId={}, category={}, actorId={}, status=503, latencyMs={}, inputLength={}, historyCount={}",
-                    requestId, category, actorId != null ? actorId : "anonymous", latencyMs, inputLength, historyCount);
-            throw new AssistantDisabledException("The AI assistant is currently disabled or unavailable.");
-        }
-
-        // Derive normalized, immutable authority set
+        // 2. Derive normalized, immutable authority set
         Set<String> callerAuthorities = Collections.emptySet();
         if (isAuthenticated && principal.getAuthorities() != null) {
             callerAuthorities = principal.getAuthorities().stream()
@@ -139,17 +130,25 @@ public class AssistantService {
             callerAuthorities = Collections.unmodifiableSet(callerAuthorities);
         }
 
-        // Server-side deterministic safety policy evaluation
+        // 3. Server-side deterministic safety policy evaluation (before provider check)
         Optional<AssistantChatResponse> policyRefusal = AssistantRefusalPolicy.evaluatePolicy(
                 request.message(), callerAuthorities, requestId);
         if (policyRefusal.isPresent()) {
             long latencyMs = System.currentTimeMillis() - startTime;
-            log.info("Assistant request intercepted by safety policy: requestId={}, category={}, actorId={}, status=200, latencyMs={}, inputLength={}",
-                    requestId, category, actorId != null ? actorId : "anonymous", latencyMs, inputLength);
+            log.info("Assistant request intercepted by safety policy: requestId={}, category={}, status=200, latencyMs={}, inputLength={}",
+                    requestId, category, latencyMs, inputLength);
             return policyRefusal.get();
         }
 
-        // Authorized citizen read-only personalized tool execution
+        // 4. Provider availability check (evaluated only after deterministic safety policy)
+        if (!aiResponseProvider.isAvailable()) {
+            long latencyMs = System.currentTimeMillis() - startTime;
+            log.warn("Assistant request rejected (disabled/misconfigured): requestId={}, category={}, status=503, latencyMs={}, inputLength={}, historyCount={}",
+                    requestId, category, latencyMs, inputLength, historyCount);
+            throw new AssistantDisabledException("The AI assistant is currently disabled or unavailable.");
+        }
+
+        // 5. Authorized citizen read-only personalized tool execution
         String personalizedContext = null;
         if (isAuthenticated && callerAuthorities.contains("ROLE_CITIZEN")) {
             AssistantToolContext toolContext = new AssistantToolContext(requestId, principal, callerAuthorities);
@@ -158,7 +157,7 @@ public class AssistantService {
                     .orElse(null);
         }
 
-        // Deterministic role-aware knowledge catalogue retrieval
+        // 6. Deterministic role-aware knowledge catalogue retrieval
         List<AssistantKnowledgeEntry> knowledgeEntries = AssistantKnowledgeCatalog.findRelevantEntries(
                 request.message(), callerAuthorities, 3);
         String knowledgeContext = AssistantKnowledgeContextBuilder.buildKnowledgeContext(
@@ -171,14 +170,14 @@ public class AssistantService {
             AssistantChatResponse response = aiResponseProvider.generateResponse(request, systemInstruction, requestId, callerAuthorities);
 
             long latencyMs = System.currentTimeMillis() - startTime;
-            log.info("Assistant request completed: requestId={}, category={}, actorId={}, status=200, latencyMs={}, inputLength={}, historyCount={}",
-                    requestId, category, actorId != null ? actorId : "anonymous", latencyMs, inputLength, historyCount);
+            log.info("Assistant request completed: requestId={}, category={}, status=200, latencyMs={}, inputLength={}, historyCount={}",
+                    requestId, category, latencyMs, inputLength, historyCount);
 
             return response;
         } catch (RuntimeException ex) {
             long latencyMs = System.currentTimeMillis() - startTime;
-            log.error("Assistant request failed: requestId={}, category={}, actorId={}, exceptionClass={}, latencyMs={}, inputLength={}, historyCount={}",
-                    requestId, category, actorId != null ? actorId : "anonymous", ex.getClass().getSimpleName(), latencyMs, inputLength, historyCount);
+            log.error("Assistant request failed: requestId={}, category={}, exceptionClass={}, latencyMs={}, inputLength={}, historyCount={}",
+                    requestId, category, ex.getClass().getSimpleName(), latencyMs, inputLength, historyCount);
             throw ex;
         }
     }

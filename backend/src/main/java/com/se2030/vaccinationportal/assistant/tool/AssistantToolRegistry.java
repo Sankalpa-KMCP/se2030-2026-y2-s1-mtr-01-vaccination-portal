@@ -3,7 +3,9 @@ package com.se2030.vaccinationportal.assistant.tool;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -15,7 +17,16 @@ public class AssistantToolRegistry {
     private final List<AssistantReadOnlyTool> tools;
 
     public AssistantToolRegistry(List<AssistantReadOnlyTool> tools) {
-        this.tools = tools != null ? List.copyOf(tools) : Collections.emptyList();
+        if (tools == null || tools.isEmpty()) {
+            this.tools = Collections.emptyList();
+        } else {
+            List<AssistantReadOnlyTool> sorted = tools.stream()
+                    .filter(Objects::nonNull)
+                    .filter(t -> t.getToolId() != null)
+                    .sorted(Comparator.comparing(AssistantReadOnlyTool::getToolId))
+                    .toList();
+            this.tools = List.copyOf(sorted);
+        }
     }
 
     public Optional<AssistantReadOnlyTool> findMatchingTool(String userMessage) {

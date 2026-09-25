@@ -95,7 +95,7 @@ public class MyAppointmentsAssistantTool implements AssistantReadOnlyTool {
                     .append(", Slot ID: ").append(appt.getSlotId())
                     .append("\n");
         }
-        sb.append("Note: The repository provides status, campaign ID, and slot ID. It does not provide an authoritative scheduled appointment timestamp. Never describe record creation timestamps as the scheduled appointment time. Advise the user to view their full appointment schedule under /app/appointments/mine.");
+        sb.append("Note: The repository provides status, campaign ID, and slot ID. It does not provide an authoritative scheduled appointment timestamp. Never describe record creation timestamps as the scheduled appointment time. Advise the user to view their full appointment schedule using authorized portal navigation.");
 
         return new AssistantToolResult(
                 AssistantToolId.MY_APPOINTMENTS,
