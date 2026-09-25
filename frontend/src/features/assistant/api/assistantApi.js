@@ -15,7 +15,8 @@ export const MAX_HISTORY_LENGTH = 10;
 
 /**
  * Checks whether a suggested action path is a safe, relative internal route.
- * Rejects external URLs, protocol-relative paths, backslashes, colons, traversal, or control characters.
+ * Rejects external URLs, protocol-relative paths, encoded characters, backslashes,
+ * colons, traversal, angle brackets, quotes, or control characters.
  *
  * @param {string} path - Target route path
  * @returns {boolean} True if the path is safe for internal client-side navigation
@@ -31,11 +32,16 @@ export function isSafeInternalPath(path) {
     return false;
   }
 
-  // Reject URLs with schemes/protocols, backslashes, path traversal, control chars
+  // Reject %, backslashes, colons, traversal, angle brackets, quotes, control characters
   if (
-    trimmed.includes(':') ||
+    trimmed.includes('%') ||
     trimmed.includes('\\') ||
+    trimmed.includes(':') ||
     trimmed.includes('..') ||
+    trimmed.includes('<') ||
+    trimmed.includes('>') ||
+    trimmed.includes('"') ||
+    trimmed.includes("'") ||
     Array.from(trimmed).some((ch) => {
       const code = ch.charCodeAt(0);
       return code < 32 || code === 127;
@@ -65,7 +71,7 @@ export function sanitizeCurrentPath(pathname) {
 /**
  * Fetches the assistant operational status and system disclaimer.
  *
- * @returns {Promise<{ available: boolean, disclaimer: string, model?: string }>}
+ * @returns {Promise<{ available: boolean, personalizedFeaturesAvailable: boolean, disclaimer: string }>}
  */
 export async function getAssistantStatus() {
   return apiRequestData('/v1/assistant/status', {

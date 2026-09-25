@@ -231,7 +231,7 @@ export default function AssistantWidget() {
                 )}
 
                 {/* Initial suggested questions chips under initial greeting */}
-                {msg.id === 'initial-greeting' && (
+                {msg.isGreeting && (
                   <div className="assistant-suggested-questions">
                     {SUGGESTED_QUESTIONS.map((q, qIdx) => (
                       <button

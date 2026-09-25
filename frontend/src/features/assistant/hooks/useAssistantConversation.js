@@ -12,13 +12,14 @@ import {
   sendAssistantMessage,
   isSafeInternalPath,
   MAX_MESSAGE_LENGTH,
+  MAX_HISTORY_LENGTH,
 } from '../api/assistantApi';
 
 export const INITIAL_ASSISTANT_MESSAGE =
   'Hello. I can help you understand portal services and find the correct page.';
 
 export const DEFAULT_DISCLAIMER =
-  'AI-generated information for portal navigation. Not medical advice. For emergencies, contact local emergency services.';
+  'This assistant explains portal services. It does not provide medical advice or emergency care.';
 
 export const SUGGESTED_QUESTIONS = [
   'How do I register?',
@@ -31,13 +32,27 @@ function generateId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+export function createInitialGreeting() {
+  return {
+    id: generateId(),
+    role: 'assistant',
+    content: INITIAL_ASSISTANT_MESSAGE,
+    suggestedActions: [],
+    isGreeting: true,
+  };
+}
+
 export function formatErrorMessage(err) {
   if (!err) {
     return 'An unexpected error occurred. Please try again.';
   }
 
   const status = err.status ?? (err.cause?.status || 0);
+  const errorCode = err.data?.code || err.cause?.data?.code || err.code;
 
+  if (status === 503 || errorCode === 'ASSISTANT_DISABLED') {
+    return 'The portal assistant is currently unavailable.';
+  }
   if (status === 400) {
     return 'The request could not be completed. Please check your message.';
   }
@@ -47,10 +62,11 @@ export function formatErrorMessage(err) {
   if (status === 429) {
     return 'You have sent several requests. Please wait and try again.';
   }
-  if (status === 503) {
-    return 'The portal assistant is currently unavailable.';
-  }
-  if (status === 0 || err.message?.toLowerCase().includes('network') || err.message?.toLowerCase().includes('unable to reach')) {
+  if (
+    status === 0 ||
+    err.message?.toLowerCase().includes('network') ||
+    err.message?.toLowerCase().includes('unable to reach')
+  ) {
     return 'Unable to reach the server. Please check your connection and try again.';
   }
 
@@ -62,14 +78,7 @@ export function useAssistantConversation() {
   const location = useLocation();
 
   // In-memory conversation state (strictly ephemeral; never persisted in browser storage)
-  const [messages, setMessages] = useState(() => [
-    {
-      id: 'initial-greeting',
-      role: 'assistant',
-      content: INITIAL_ASSISTANT_MESSAGE,
-      suggestedActions: [],
-    },
-  ]);
+  const [messages, setMessages] = useState(() => [createInitialGreeting()]);
 
   const [status, setStatus] = useState(null);
   const [isStatusLoading, setIsStatusLoading] = useState(true);
@@ -77,23 +86,27 @@ export function useAssistantConversation() {
   const [isSending, setIsSending] = useState(false);
   const [turnError, setTurnError] = useState(null);
 
+  // Generation counters to prevent stale responses crossing privacy boundaries
+  const conversationGenerationRef = useRef(0);
+  const statusGenerationRef = useRef(0);
+
   // Track authentication boundary to clear conversation on user change or login/logout
   const authIdentityRef = useRef({
     isAuthenticated: !!isAuthenticated,
     userId: user?.id || user?.userId || null,
   });
 
-  const clearConversation = useCallback(() => {
-    setMessages([
-      {
-        id: generateId(),
-        role: 'assistant',
-        content: INITIAL_ASSISTANT_MESSAGE,
-        suggestedActions: [],
-      },
-    ]);
+  const invalidateConversation = useCallback(() => {
+    conversationGenerationRef.current += 1;
+    setIsSending(false);
     setTurnError(null);
+    return conversationGenerationRef.current;
   }, []);
+
+  const clearConversation = useCallback(() => {
+    invalidateConversation();
+    setMessages([createInitialGreeting()]);
+  }, [invalidateConversation]);
 
   // Detect authentication state changes
   useEffect(() => {
@@ -109,22 +122,38 @@ export function useAssistantConversation() {
         isAuthenticated: currentIsAuth,
         userId: currentUserId,
       };
-      clearConversation();
+      invalidateConversation();
+      setMessages([createInitialGreeting()]);
     }
-  }, [user, isAuthenticated, clearConversation]);
+  }, [user, isAuthenticated, invalidateConversation]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      conversationGenerationRef.current += 1;
+      statusGenerationRef.current += 1;
+    };
+  }, []);
 
   // Fetch status on initial mount or manual retry
   const fetchStatus = useCallback(async () => {
+    const currentGen = ++statusGenerationRef.current;
     setIsStatusLoading(true);
     setStatusError(null);
     try {
       const result = await getAssistantStatus();
-      setStatus(result);
+      if (currentGen === statusGenerationRef.current) {
+        setStatus(result);
+      }
     } catch (err) {
-      setStatus({ available: false, disclaimer: DEFAULT_DISCLAIMER });
-      setStatusError(formatErrorMessage(err));
+      if (currentGen === statusGenerationRef.current) {
+        setStatus({ available: false, disclaimer: DEFAULT_DISCLAIMER });
+        setStatusError(formatErrorMessage(err));
+      }
     } finally {
-      setIsStatusLoading(false);
+      if (currentGen === statusGenerationRef.current) {
+        setIsStatusLoading(false);
+      }
     }
   }, []);
 
@@ -149,15 +178,18 @@ export function useAssistantConversation() {
         return;
       }
 
+      const currentGeneration = conversationGenerationRef.current;
+
       const userMessage = {
         id: generateId(),
         role: 'user',
         content: trimmed,
       };
 
-      // Extract prior turns for backend history (strictly prior messages, omitting greeting and current turn)
+      // Extract prior genuine turns for backend history (omitting greeting and current turn, capped at MAX_HISTORY_LENGTH)
       const priorHistory = messages
-        .filter((m) => m.id !== 'initial-greeting' && (m.role === 'user' || m.role === 'assistant'))
+        .filter((m) => !m.isGreeting && (m.role === 'user' || m.role === 'assistant'))
+        .slice(-MAX_HISTORY_LENGTH)
         .map((m) => ({
           role: m.role,
           content: m.content,
@@ -173,6 +205,11 @@ export function useAssistantConversation() {
           history: priorHistory,
           currentPath: location.pathname || '/',
         });
+
+        // Ignore stale response if conversation generation changed during in-flight request
+        if (currentGeneration !== conversationGenerationRef.current) {
+          return;
+        }
 
         // Defensively sanitize suggested action routes
         const safeActions = Array.isArray(response?.suggestedActions)
@@ -190,10 +227,27 @@ export function useAssistantConversation() {
 
         setMessages((prev) => [...prev, assistantMessage]);
       } catch (err) {
+        // Ignore stale error if conversation generation changed
+        if (currentGeneration !== conversationGenerationRef.current) {
+          return;
+        }
+
+        const httpStatus = err.status ?? (err.cause?.status || 0);
+        const errorCode = err.data?.code;
+        if (httpStatus === 503 || errorCode === 'ASSISTANT_DISABLED') {
+          setStatus((prev) => ({
+            ...(prev || {}),
+            available: false,
+            disclaimer: prev?.disclaimer || DEFAULT_DISCLAIMER,
+          }));
+        }
+
         const message = formatErrorMessage(err);
         setTurnError(message);
       } finally {
-        setIsSending(false);
+        if (currentGeneration === conversationGenerationRef.current) {
+          setIsSending(false);
+        }
       }
     },
     [isSending, status, messages, location.pathname]

@@ -52,7 +52,7 @@ describe('AssistantWidget component', () => {
     vi.spyOn(assistantApi, 'getAssistantStatus').mockResolvedValue({
       available: true,
       disclaimer: 'System disclaimer: Not medical advice.',
-      model: 'gpt-4o-mini',
+      personalizedFeaturesAvailable: false,
     });
 
     vi.spyOn(assistantApi, 'sendAssistantMessage').mockResolvedValue({

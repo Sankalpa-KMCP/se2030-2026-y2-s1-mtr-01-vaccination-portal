@@ -36,13 +36,18 @@ describe('assistantApi', () => {
       expect(isSafeInternalPath('/register/citizen')).toBe(true);
     });
 
-    it('rejects external URLs, protocol-relative, and dangerous paths', () => {
+    it('rejects external URLs, protocol-relative, encoded, and dangerous paths', () => {
       expect(isSafeInternalPath('https://example.com')).toBe(false);
       expect(isSafeInternalPath('http://malicious.org')).toBe(false);
       expect(isSafeInternalPath('//google.com')).toBe(false);
       expect(isSafeInternalPath('javascript:alert(1)')).toBe(false);
       expect(isSafeInternalPath('/app/../etc/passwd')).toBe(false);
       expect(isSafeInternalPath('/app\\admin')).toBe(false);
+      expect(isSafeInternalPath('/app/%2e%2e/admin')).toBe(false);
+      expect(isSafeInternalPath('/app/%2F%2Fevil')).toBe(false);
+      expect(isSafeInternalPath('/app/<script>')).toBe(false);
+      expect(isSafeInternalPath('/app/"quoted"')).toBe(false);
+      expect(isSafeInternalPath("/app/'quoted'")).toBe(false);
       expect(isSafeInternalPath('')).toBe(false);
       expect(isSafeInternalPath(null)).toBe(false);
       expect(isSafeInternalPath(123)).toBe(false);
@@ -61,7 +66,7 @@ describe('assistantApi', () => {
     it('calls GET /api/v1/assistant/status via apiClient', async () => {
       const mockStatus = {
         available: true,
-        model: 'gpt-4o-mini',
+        personalizedFeaturesAvailable: false,
         disclaimer: 'Informational only.',
       };
       fetch.mockResolvedValueOnce(mockResponse(mockStatus));
