@@ -54,7 +54,8 @@ class AssistantKnowledgeCatalogTests {
         );
         assertThat(bookingEntries).isNotEmpty();
         assertEquals("APPOINTMENT_BOOKING", bookingEntries.get(0).id());
-        assertThat(bookingEntries.get(0).explanation()).contains("/app/appointments/book");
+        assertThat(bookingEntries.get(0).relevantRoutes()).contains("/app/appointments/book");
+        assertThat(bookingEntries.get(0).explanation()).doesNotContain("/app/appointments/book");
 
         // Cancellation / Rescheduling query
         List<AssistantKnowledgeEntry> apptMgmt = AssistantKnowledgeCatalog.findRelevantEntries(
@@ -73,6 +74,120 @@ class AssistantKnowledgeCatalogTests {
         );
         for (AssistantKnowledgeEntry entry : staffEntries) {
             assertNotEquals("STAFF_CHECK_IN", entry.id(), "Citizen must never receive staff check-in operations");
+        }
+    }
+
+    @Test
+    @DisplayName("Complete generated context for an anonymous caller never leaks protected routes")
+    void testAnonymousCallerContextNeverContainsProtectedRoutes() {
+        // Query multiple topics that might touch staff, screening, appointment, inventory, or checkin concepts
+        List<String> testQueries = List.of(
+                "How do staff register and get approved?",
+                "Am I eligible for vaccination and who decides?",
+                "How do I book an appointment?",
+                "Where is the vaccine inventory managed?",
+                "How do checkin queues work?"
+        );
+
+        for (String query : testQueries) {
+            List<AssistantKnowledgeEntry> entries = AssistantKnowledgeCatalog.findRelevantEntries(
+                    query,
+                    Collections.emptySet(),
+                    5
+            );
+            String context = AssistantKnowledgeContextBuilder.buildKnowledgeContext(entries, Collections.emptySet());
+
+            assertThat(context).doesNotContain("/app/admin/staff-requests");
+            assertThat(context).doesNotContain("/app/screening/eligibility");
+            assertThat(context).doesNotContain("/app/appointments/book");
+            assertThat(context).doesNotContain("/app/inventory");
+            assertThat(context).doesNotContain("/app/checkin/queue");
+        }
+    }
+
+    @Test
+    @DisplayName("Anonymous staff-registration guidance explains approval is required but does not reveal admin route")
+    void testAnonymousStaffRegistrationGuidanceHidesAdminRoute() {
+        List<AssistantKnowledgeEntry> entries = AssistantKnowledgeCatalog.findRelevantEntries(
+                "staff registration request approval",
+                Collections.emptySet(),
+                3
+        );
+        assertThat(entries).isNotEmpty();
+        AssistantKnowledgeEntry staffReg = entries.stream()
+                .filter(e -> e.id().equals("STAFF_REGISTRATION_REQUEST"))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(staffReg.explanation()).contains("administrative review and approval");
+        assertThat(staffReg.explanation()).doesNotContain("/app/admin/staff-requests");
+
+        String context = AssistantKnowledgeContextBuilder.buildKnowledgeContext(entries, Collections.emptySet());
+        assertThat(context).contains("/register/staff");
+        assertThat(context).doesNotContain("/app/admin/staff-requests");
+    }
+
+    @Test
+    @DisplayName("Eligibility querying: citizen receives /app/screening/eligibility while anonymous caller receives governance fact only")
+    void testEligibilityQueryingRoleDifferences() {
+        // 1. Anonymous caller
+        List<AssistantKnowledgeEntry> anonEntries = AssistantKnowledgeCatalog.findRelevantEntries(
+                "who decides eligibility am I eligible",
+                Collections.emptySet(),
+                3
+        );
+        assertThat(anonEntries).isNotEmpty();
+        String anonContext = AssistantKnowledgeContextBuilder.buildKnowledgeContext(anonEntries, Collections.emptySet());
+        assertThat(anonContext).contains("Final clinical eligibility is determined solely by an authorized Healthcare Officer");
+        assertThat(anonContext).doesNotContain("/app/screening/eligibility");
+
+        // 2. Citizen caller
+        List<AssistantKnowledgeEntry> citizenEntries = AssistantKnowledgeCatalog.findRelevantEntries(
+                "who decides eligibility am I eligible",
+                Set.of(AssistantRouteCatalog.ROLE_CITIZEN),
+                3
+        );
+        assertThat(citizenEntries).isNotEmpty();
+        String citizenContext = AssistantKnowledgeContextBuilder.buildKnowledgeContext(citizenEntries, Set.of(AssistantRouteCatalog.ROLE_CITIZEN));
+        assertThat(citizenContext).contains("Final clinical eligibility is determined solely by an authorized Healthcare Officer");
+        assertThat(citizenContext).contains("/app/screening/eligibility");
+    }
+
+    @Test
+    @DisplayName("Inventory route: Inventory Officer can receive /app/inventory, Citizen cannot")
+    void testInventoryRouteRoleExclusion() {
+        // Inventory officer
+        List<AssistantKnowledgeEntry> invEntries = AssistantKnowledgeCatalog.findRelevantEntries(
+                "inventory batch stock levels",
+                Set.of(AssistantRouteCatalog.ROLE_INVENTORY_OFFICER),
+                3
+        );
+        assertThat(invEntries).isNotEmpty();
+        String invContext = AssistantKnowledgeContextBuilder.buildKnowledgeContext(invEntries, Set.of(AssistantRouteCatalog.ROLE_INVENTORY_OFFICER));
+        assertThat(invContext).contains("/app/inventory");
+
+        // Citizen
+        List<AssistantKnowledgeEntry> citizenEntries = AssistantKnowledgeCatalog.findRelevantEntries(
+                "inventory batch stock levels",
+                Set.of(AssistantRouteCatalog.ROLE_CITIZEN),
+                3
+        );
+        assertTrue(citizenEntries.stream().noneMatch(e -> e.id().equals("INVENTORY_MANAGEMENT")));
+        String citizenContext = AssistantKnowledgeContextBuilder.buildKnowledgeContext(citizenEntries, Set.of(AssistantRouteCatalog.ROLE_CITIZEN));
+        assertThat(citizenContext).doesNotContain("/app/inventory");
+    }
+
+    @Test
+    @DisplayName("Internal evidenceReference values never enter model context for any catalog entry")
+    void testEvidenceReferencesNeverEnterModelContext() {
+        for (AssistantKnowledgeEntry entry : AssistantKnowledgeCatalog.ALL_ENTRIES) {
+            if (entry.evidenceReference() != null && !entry.evidenceReference().isBlank()) {
+                String context = AssistantKnowledgeContextBuilder.buildKnowledgeContext(
+                        List.of(entry),
+                        Set.of(AssistantRouteCatalog.ROLE_SUPER_ADMIN, AssistantRouteCatalog.ROLE_CITIZEN)
+                );
+                assertThat(context).doesNotContain(entry.evidenceReference());
+            }
         }
     }
 
