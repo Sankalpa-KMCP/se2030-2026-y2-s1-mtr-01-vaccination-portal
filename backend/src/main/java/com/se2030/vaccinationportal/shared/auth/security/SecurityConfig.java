@@ -126,6 +126,10 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
 
+                        // Assistant Endpoints: per-endpoint rules (never permit wildcard /api/v1/assistant/**)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/assistant/status").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/assistant/messages").permitAll()
+
                         // Protected Appointments and Waitlist Endpoints (MF-03)
                         .requestMatchers("/api/v1/appointments/**", "/api/v1/waitlist/**").authenticated()
 
