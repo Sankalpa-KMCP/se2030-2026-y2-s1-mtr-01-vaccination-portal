@@ -1,0 +1,466 @@
+/* ==========================================================================
+   AI Assistant Feature Styles
+   Teal (#0F6E5B), Amber (#F59E0B), Soft Off-White (#F8FAFC), Charcoal (#1E293B)
+   Scoped entirely to .assistant-widget container and elements
+   ========================================================================== */
+
+/* Launcher Floating Button */
+.assistant-launcher-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1060;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--primary, #0F6E5B);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(15, 110, 91, 0.35), 0 2px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.assistant-launcher-btn:hover {
+  background-color: var(--primary-hover, #0c5a4a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(15, 110, 91, 0.45), 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.assistant-launcher-btn:active {
+  transform: translateY(0);
+}
+
+.assistant-launcher-btn:focus-visible {
+  outline: 3px solid var(--accent, #F59E0B);
+  outline-offset: 3px;
+}
+
+/* Assistant Panel Dialog */
+.assistant-panel {
+  position: fixed;
+  bottom: 5.5rem;
+  right: 1.5rem;
+  z-index: 1060;
+  width: min(400px, calc(100vw - 2rem));
+  height: min(600px, calc(100vh - 7rem));
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  border-radius: var(--radius-lg, 1rem);
+  box-shadow: var(--shadow-lg, 0 10px 25px rgba(0, 0, 0, 0.1));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: assistantPanelOpen 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes assistantPanelOpen {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header */
+.assistant-header {
+  background-color: var(--primary, #0F6E5B);
+  color: #ffffff;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+.assistant-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.assistant-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+}
+
+.assistant-status-dot.unavailable {
+  background-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+}
+
+.assistant-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.assistant-icon-btn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm, 0.5rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.9;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.assistant-icon-btn:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.assistant-icon-btn:focus-visible {
+  outline: 2px solid var(--accent, #F59E0B);
+  outline-offset: 2px;
+}
+
+/* Disclaimer Banner */
+.assistant-disclaimer-banner {
+  background-color: var(--primary-soft-bg, #e8f5f1);
+  color: var(--text-secondary, #64748B);
+  border-bottom: 1px solid var(--primary-soft-border, #bfe5db);
+  padding: 0.5rem 0.85rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.assistant-disclaimer-banner i {
+  color: var(--primary, #0F6E5B);
+  font-size: 0.85rem;
+  margin-top: 1px;
+}
+
+/* Service Unavailable Alert */
+.assistant-unavailable-alert {
+  background-color: var(--warning-soft, #fef3c7);
+  border-bottom: 1px solid var(--accent-soft-border, #fde68a);
+  padding: 0.65rem 0.85rem;
+  font-size: 0.8rem;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.assistant-retry-btn {
+  background-color: #ffffff;
+  border: 1px solid #d97706;
+  color: #b45309;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm, 0.5rem);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.assistant-retry-btn:hover {
+  background-color: #fef3c7;
+}
+
+/* Messages Area */
+.assistant-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background-color: #ffffff;
+}
+
+/* Message Bubble */
+.assistant-message-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 88%;
+}
+
+.assistant-message-row.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.assistant-message-row.assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.assistant-message-bubble {
+  padding: 0.7rem 0.9rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.assistant-message-row.user .assistant-message-bubble {
+  background-color: var(--primary, #0F6E5B);
+  color: #ffffff;
+  border-radius: 0.85rem 0.85rem 0.2rem 0.85rem;
+}
+
+.assistant-message-row.assistant .assistant-message-bubble {
+  background-color: var(--app-bg, #F8FAFC);
+  color: var(--text-primary, #1E293B);
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  border-radius: 0.85rem 0.85rem 0.85rem 0.2rem;
+}
+
+/* Suggested Action Buttons */
+.assistant-actions-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.assistant-action-chip {
+  background-color: #ffffff;
+  border: 1px solid var(--primary, #0F6E5B);
+  color: var(--primary, #0F6E5B);
+  font-size: 0.775rem;
+  font-weight: 500;
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.assistant-action-chip:hover {
+  background-color: var(--primary-soft-bg, #e8f5f1);
+  color: var(--primary-hover, #0c5a4a);
+  border-color: var(--primary-hover, #0c5a4a);
+}
+
+.assistant-action-chip:focus-visible {
+  outline: 2px solid var(--accent, #F59E0B);
+  outline-offset: 1px;
+}
+
+/* Suggested Questions Block */
+.assistant-suggested-questions {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.assistant-question-chip {
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  color: var(--text-primary, #1E293B);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-sm, 0.5rem);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.assistant-question-chip:hover:not(:disabled) {
+  background-color: var(--primary-soft-bg, #e8f5f1);
+  border-color: var(--primary-soft-border, #bfe5db);
+  color: var(--primary, #0F6E5B);
+}
+
+.assistant-question-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Typing / Sending Indicator */
+.assistant-typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.6rem 0.85rem;
+  background-color: var(--app-bg, #F8FAFC);
+  border: 1px solid var(--border-subtle, #E2E8F0);
+  border-radius: 0.85rem 0.85rem 0.85rem 0.2rem;
+  align-self: flex-start;
+}
+
+.assistant-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--text-secondary, #64748B);
+  animation: assistantTyping 1.4s infinite ease-in-out both;
+}
+
+.assistant-typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.assistant-typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes assistantTyping {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+/* Error Banner in Dialog */
+.assistant-error-banner {
+  background-color: var(--danger-soft, #fbeaea);
+  color: #b91c1c;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  border-top: 1px solid #fecaca;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Footer & Input Form */
+.assistant-footer {
+  border-top: 1px solid var(--border-subtle, #E2E8F0);
+  background-color: #ffffff;
+  padding: 0.75rem 0.85rem;
+}
+
+.assistant-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.assistant-input-textarea {
+  flex: 1;
+  resize: none;
+  min-height: 40px;
+  max-height: 100px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border-input, #CBD5E1);
+  border-radius: var(--radius-sm, 0.5rem);
+  color: var(--text-primary, #1E293B);
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+.assistant-input-textarea:focus {
+  border-color: var(--primary, #0F6E5B);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 110, 91, 0.15);
+}
+
+.assistant-input-textarea:disabled {
+  background-color: var(--app-bg, #F8FAFC);
+  cursor: not-allowed;
+}
+
+.assistant-send-btn {
+  background-color: var(--primary, #0F6E5B);
+  color: #ffffff;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm, 0.5rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.assistant-send-btn:hover:not(:disabled) {
+  background-color: var(--primary-hover, #0c5a4a);
+}
+
+.assistant-send-btn:disabled {
+  background-color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.assistant-send-btn:focus-visible {
+  outline: 2px solid var(--accent, #F59E0B);
+  outline-offset: 2px;
+}
+
+.assistant-input-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.35rem;
+  font-size: 0.725rem;
+  color: var(--text-secondary, #64748B);
+}
+
+.assistant-clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #64748B);
+  font-size: 0.725rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.assistant-clear-btn:hover {
+  color: var(--text-primary, #1E293B);
+}
+
+/* Accessibility / Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .assistant-panel,
+  .assistant-launcher-btn,
+  .assistant-action-chip,
+  .assistant-typing-dot {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Mobile responsive constraints */
+@media (max-width: 480px) {
+  .assistant-launcher-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+
+  .assistant-panel {
+    bottom: 4.75rem;
+    right: 1rem;
+    width: calc(100vw - 2rem);
+    height: calc(100vh - 6.5rem);
+  }
+}
