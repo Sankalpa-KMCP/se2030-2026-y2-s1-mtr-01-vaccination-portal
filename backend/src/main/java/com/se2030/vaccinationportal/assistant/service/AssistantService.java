@@ -5,6 +5,7 @@ import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
 import com.se2030.vaccinationportal.assistant.dto.AssistantStatusResponse;
 import com.se2030.vaccinationportal.assistant.exception.AssistantDisabledException;
 import com.se2030.vaccinationportal.assistant.exception.AssistantRateLimitExceededException;
+import com.se2030.vaccinationportal.assistant.policy.AssistantRefusalPolicy;
 import com.se2030.vaccinationportal.assistant.policy.AssistantSystemPolicy;
 import com.se2030.vaccinationportal.assistant.provider.AiResponseProvider;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
@@ -20,10 +21,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.HexFormat;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 
 /**
  * Service coordinating assistant requests, privacy-conscious rate limiting,
@@ -91,6 +94,16 @@ public class AssistantService {
                     .map(String::trim)
                     .collect(Collectors.toCollection(TreeSet::new));
             callerAuthorities = Collections.unmodifiableSet(callerAuthorities);
+        }
+
+        // Server-side deterministic safety policy evaluation
+        Optional<AssistantChatResponse> policyRefusal = AssistantRefusalPolicy.evaluatePolicy(
+                request.message(), callerAuthorities, requestId);
+        if (policyRefusal.isPresent()) {
+            long latencyMs = System.currentTimeMillis() - startTime;
+            log.info("Assistant request intercepted by safety policy: requestId={}, category={}, actorId={}, status=200, latencyMs={}, inputLength={}",
+                    requestId, category, actorId != null ? actorId : "anonymous", latencyMs, inputLength);
+            return policyRefusal.get();
         }
 
         String systemInstruction = AssistantSystemPolicy.buildSystemInstruction(request.currentPath(), callerAuthorities);

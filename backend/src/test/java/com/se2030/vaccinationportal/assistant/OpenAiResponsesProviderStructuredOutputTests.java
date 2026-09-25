@@ -8,18 +8,21 @@ import com.openai.models.responses.ResponseOutputMessage;
 import com.openai.models.responses.ResponseOutputRefusal;
 import com.openai.models.responses.ResponseOutputText;
 import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
+import com.se2030.vaccinationportal.assistant.dto.AssistantChatRequest;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
+import com.se2030.vaccinationportal.assistant.policy.AssistantRefusalPolicy;
 import com.se2030.vaccinationportal.assistant.provider.OpenAiResponsesProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -84,28 +87,30 @@ class OpenAiResponsesProviderStructuredOutputTests {
     }
 
     @Test
-    @DisplayName("Provider refusal returns safe user-facing refusal and zero actions")
+    @DisplayName("Provider refusal returns safe user-facing operational fallback and zero actions")
     void testProviderRefusalHandling() {
         Response response = createMockResponseWithRefusal("I cannot discuss this topic.");
         AssistantChatResponse chatResponse = provider.parseResponse(response, "req-1", Collections.emptySet());
 
-        assertEquals(OpenAiResponsesProvider.SAFE_REFUSAL_MESSAGE, chatResponse.answer());
+        assertEquals(AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE, chatResponse.answer());
+        assertThat(chatResponse.answer()).doesNotContain("emergency");
         assertTrue(chatResponse.suggestedActions().isEmpty());
     }
 
     @Test
-    @DisplayName("Malformed JSON returns safe generic message and does not leak raw output")
+    @DisplayName("Malformed JSON returns safe operational fallback and does not leak raw output or mention emergency")
     void testMalformedJsonHandling() {
         Response response = createMockResponseWithText("This is totally not JSON at all!");
         AssistantChatResponse chatResponse = provider.parseResponse(response, "req-2", Collections.emptySet());
 
-        assertEquals(OpenAiResponsesProvider.SAFE_UNSTRUCTURED_FALLBACK, chatResponse.answer());
+        assertEquals(AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE, chatResponse.answer());
         assertFalse(chatResponse.answer().contains("not JSON"));
+        assertThat(chatResponse.answer()).doesNotContain("emergency");
         assertTrue(chatResponse.suggestedActions().isEmpty());
     }
 
     @Test
-    @DisplayName("Missing answer field returns safe generic fallback")
+    @DisplayName("Missing answer field returns safe operational fallback")
     void testMissingAnswerField() {
         String jsonWithoutAnswer = """
                 {
@@ -117,7 +122,30 @@ class OpenAiResponsesProviderStructuredOutputTests {
         Response response = createMockResponseWithText(jsonWithoutAnswer);
         AssistantChatResponse chatResponse = provider.parseResponse(response, "req-3", Collections.emptySet());
 
-        assertEquals(OpenAiResponsesProvider.SAFE_UNSTRUCTURED_FALLBACK, chatResponse.answer());
+        assertEquals(AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE, chatResponse.answer());
+        assertThat(chatResponse.answer()).doesNotContain("emergency");
+        assertTrue(chatResponse.suggestedActions().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Provider outage when calling OpenAI returns operational fallback without emergency guidance")
+    void testProviderOutageReturnsOperationalFallback() {
+        com.openai.services.blocking.ResponseService responseService = mock(com.openai.services.blocking.ResponseService.class);
+        when(mockClient.responses()).thenReturn(responseService);
+        when(responseService.create(any(com.openai.models.responses.ResponseCreateParams.class)))
+                .thenThrow(new RuntimeException("OpenAI HTTP 503 Service Unavailable"));
+
+
+        AssistantChatRequest request = new AssistantChatRequest("Where are centers?", Collections.emptyList(), null);
+        AssistantChatResponse chatResponse = provider.generateResponse(
+                request,
+                "system instruction",
+                "req-outage-test",
+                Collections.emptySet()
+        );
+
+        assertEquals(AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE, chatResponse.answer());
+        assertThat(chatResponse.answer()).doesNotContain("emergency");
         assertTrue(chatResponse.suggestedActions().isEmpty());
     }
 
@@ -132,6 +160,27 @@ class OpenAiResponsesProviderStructuredOutputTests {
 
         assertTrue(chatResponse.answer().length() <= OpenAiResponsesProvider.MAX_ANSWER_CHARACTERS + 3);
         assertTrue(chatResponse.answer().endsWith("..."));
+    }
+
+    @Test
+    @DisplayName("Answer truncation does not split Unicode surrogate pairs")
+    void testAnswerTruncationPreservesSurrogatePairs() {
+        // Build a string with an emoji (surrogate pair) right at the boundary index 2000
+        // E.g., 1999 ASCII characters + 😀 (2 chars in UTF-16: \uD83D\uDE00) + 100 extra chars
+        String prefix = "X".repeat(1999);
+        String emoji = "\uD83D\uDE00";
+        String suffix = "Y".repeat(100);
+        String fullAnswer = prefix + emoji + suffix;
+
+        String truncated = OpenAiResponsesProvider.safeTruncate(fullAnswer, 2000);
+
+        assertTrue(truncated.endsWith("..."));
+        String withoutEllipsis = truncated.substring(0, truncated.length() - 3);
+
+        // The length must be 1999 (stepped back to avoid splitting the surrogate pair)
+        assertEquals(1999, withoutEllipsis.length());
+        assertFalse(Character.isHighSurrogate(withoutEllipsis.charAt(withoutEllipsis.length() - 1)));
+        assertFalse(Character.isLowSurrogate(withoutEllipsis.charAt(withoutEllipsis.length() - 1)));
     }
 
     @Test

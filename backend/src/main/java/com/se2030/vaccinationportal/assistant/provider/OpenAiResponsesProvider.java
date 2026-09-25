@@ -21,9 +21,11 @@ import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
 import com.se2030.vaccinationportal.assistant.dto.AssistantMessageDto;
 import com.se2030.vaccinationportal.assistant.exception.AssistantProviderException;
 import com.se2030.vaccinationportal.assistant.exception.AssistantTimeoutException;
+import com.se2030.vaccinationportal.assistant.policy.AssistantRefusalPolicy;
 import com.se2030.vaccinationportal.assistant.policy.AssistantRouteCatalog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
@@ -48,10 +50,13 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
     public static final int MAX_ACTION_LABEL_LENGTH = 100;
 
     public static final String SAFE_REFUSAL_MESSAGE =
-            "I cannot assist with this request. Please contact an authorized healthcare professional or local emergency service.";
+            AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE;
 
     public static final String SAFE_UNSTRUCTURED_FALLBACK =
-            "I am currently unable to provide an answer. Please contact an authorized healthcare professional or local emergency service.";
+            AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE;
+
+    public static final String OPERATIONAL_FALLBACK =
+            AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE;
 
     private final AssistantProperties properties;
     private final OpenAIClient openAiClient;
@@ -170,7 +175,7 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
                 throw new AssistantTimeoutException("Assistant provider request timed out", ex);
             }
             log.error("Upstream assistant provider error occurred for requestId: {}", requestId);
-            throw new AssistantProviderException("Assistant provider temporarily unavailable", ex);
+            return new AssistantChatResponse(OPERATIONAL_FALLBACK, Collections.emptyList(), requestId);
         }
     }
 
@@ -234,9 +239,7 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
         }
 
         String answer = rootNode.get("answer").asText().trim();
-        if (answer.length() > MAX_ANSWER_CHARACTERS) {
-            answer = answer.substring(0, MAX_ANSWER_CHARACTERS) + "...";
-        }
+        answer = safeTruncate(answer, MAX_ANSWER_CHARACTERS);
 
         // 4. Suggested actions extraction and caller-aware authorization filtering
         List<AssistantActionDto> actions = new ArrayList<>();
@@ -245,6 +248,7 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
                 if (actions.size() >= MAX_SUGGESTED_ACTIONS) {
                     break;
                 }
+
 
                 String label = actionNode.hasNonNull("label") ? actionNode.get("label").asText().trim() : "";
                 String path = actionNode.hasNonNull("path") ? actionNode.get("path").asText().trim() : "";
@@ -264,7 +268,28 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
         return new AssistantChatResponse(answer, actions, requestId);
     }
 
+    public static String safeTruncate(String text, int maxCharacters) {
+        if (text == null || text.length() <= maxCharacters) {
+            return text;
+        }
+
+        int targetIndex = maxCharacters;
+        // Step back if index splits a UTF-16 surrogate pair
+        if (Character.isHighSurrogate(text.charAt(targetIndex - 1))) {
+            targetIndex--;
+        } else if (Character.isLowSurrogate(text.charAt(targetIndex))) {
+            targetIndex--;
+        }
+
+        if (targetIndex < 0) {
+            targetIndex = 0;
+        }
+
+        return text.substring(0, targetIndex) + "...";
+    }
+
     private boolean isTimeout(Throwable ex) {
+
         Throwable current = ex;
         while (current != null) {
             if (current instanceof SocketTimeoutException

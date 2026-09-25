@@ -98,8 +98,9 @@ class AssistantLoggingSanitizationTests {
 
         AssistantService service = new AssistantService(provider, rateLimiter);
 
-        String sensitiveUserMessage = "My confidential medical diagnosis is severe anaphylaxis to vaccine batch #999";
-        String sensitiveHistoryContent = "Earlier private message about medical conditions";
+        String sensitiveUserMessage = "My confidential personal record identifier is RECORD-987654321-PRIVATE";
+        String sensitiveHistoryContent = "Earlier private message about user identifier RECORD-123456789";
+
         AssistantChatRequest request = new AssistantChatRequest(
                 sensitiveUserMessage,
                 List.of(new AssistantMessageDto("user", sensitiveHistoryContent)),
