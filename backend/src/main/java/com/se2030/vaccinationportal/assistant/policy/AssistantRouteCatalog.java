@@ -280,10 +280,11 @@ public final class AssistantRouteCatalog {
                 && !trimmed.contains("'");
     }
 
-    private static Set<String> expandAuthorities(Set<String> authorities) {
-        if (!authorities.contains(ROLE_SUPER_ADMIN)) {
-            return authorities;
+    public static Set<String> expandAuthorities(Set<String> authorities) {
+        if (authorities == null || !authorities.contains(ROLE_SUPER_ADMIN)) {
+            return authorities != null ? authorities : Collections.emptySet();
         }
+
 
         Set<String> expanded = new HashSet<>(authorities);
         expanded.addAll(SUPER_ADMIN_IMPLIED_ROLES);

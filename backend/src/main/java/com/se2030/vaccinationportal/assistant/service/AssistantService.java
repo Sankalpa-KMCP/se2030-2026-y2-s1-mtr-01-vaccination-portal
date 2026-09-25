@@ -5,6 +5,9 @@ import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
 import com.se2030.vaccinationportal.assistant.dto.AssistantStatusResponse;
 import com.se2030.vaccinationportal.assistant.exception.AssistantDisabledException;
 import com.se2030.vaccinationportal.assistant.exception.AssistantRateLimitExceededException;
+import com.se2030.vaccinationportal.assistant.knowledge.AssistantKnowledgeCatalog;
+import com.se2030.vaccinationportal.assistant.knowledge.AssistantKnowledgeContextBuilder;
+import com.se2030.vaccinationportal.assistant.knowledge.AssistantKnowledgeEntry;
 import com.se2030.vaccinationportal.assistant.policy.AssistantRefusalPolicy;
 import com.se2030.vaccinationportal.assistant.policy.AssistantSystemPolicy;
 import com.se2030.vaccinationportal.assistant.provider.AiResponseProvider;
@@ -20,12 +23,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 
 
 /**
@@ -106,7 +111,14 @@ public class AssistantService {
             return policyRefusal.get();
         }
 
-        String systemInstruction = AssistantSystemPolicy.buildSystemInstruction(request.currentPath(), callerAuthorities);
+        // Deterministic role-aware knowledge catalogue retrieval
+        List<AssistantKnowledgeEntry> knowledgeEntries = AssistantKnowledgeCatalog.findRelevantEntries(
+                request.message(), callerAuthorities, 3);
+        String knowledgeContext = AssistantKnowledgeContextBuilder.buildKnowledgeContext(
+                knowledgeEntries, callerAuthorities);
+
+        String systemInstruction = AssistantSystemPolicy.buildSystemInstruction(
+                request.currentPath(), callerAuthorities, knowledgeContext);
 
         try {
             AssistantChatResponse response = aiResponseProvider.generateResponse(request, systemInstruction, requestId, callerAuthorities);

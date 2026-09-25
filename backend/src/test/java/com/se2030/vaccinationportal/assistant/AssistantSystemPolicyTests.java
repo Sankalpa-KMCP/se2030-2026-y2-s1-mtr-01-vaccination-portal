@@ -45,4 +45,19 @@ class AssistantSystemPolicyTests {
         assertTrue(multiRoleInstruction.contains("ROLE_ADMIN"));
         assertTrue(multiRoleInstruction.contains("ROLE_INVENTORY_OFFICER"));
     }
+
+    @Test
+    @DisplayName("buildSystemInstruction includes knowledge context securely")
+    void testBuildInstructionWithKnowledgeContext() {
+        String instruction = AssistantSystemPolicy.buildSystemInstruction(
+                "/app/citizen/screening",
+                java.util.Set.of("ROLE_CITIZEN"),
+                "=== VERIFIED PORTAL KNOWLEDGE ===\n[Topic: Screening]\n=== END VERIFIED PORTAL KNOWLEDGE ==="
+        );
+        assertTrue(instruction.contains("ROLE_CITIZEN"));
+        assertTrue(instruction.contains("/app/citizen/screening"));
+        assertTrue(instruction.contains("=== VERIFIED PORTAL KNOWLEDGE ==="));
+        assertTrue(instruction.contains("[Topic: Screening]"));
+        assertTrue(instruction.contains("=== END VERIFIED PORTAL KNOWLEDGE ==="));
+    }
 }

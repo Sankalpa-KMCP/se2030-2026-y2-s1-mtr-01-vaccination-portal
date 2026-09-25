@@ -64,7 +64,11 @@ public final class AssistantSystemPolicy {
             If no specific navigation action is relevant, provide an empty list for "suggestedActions".
             """;
 
-    public static String buildSystemInstruction(String currentPath, java.util.Set<String> authorities) {
+    public static String buildSystemInstruction(
+            String currentPath,
+            java.util.Set<String> authorities,
+            String knowledgeContext
+    ) {
         StringBuilder sb = new StringBuilder(BASE_SYSTEM_INSTRUCTIONS);
         if (currentPath != null && !currentPath.isBlank()) {
             sb.append("\nCURRENT USER CONTEXT:\n");
@@ -77,8 +81,16 @@ public final class AssistantSystemPolicy {
         } else {
             sb.append("- User context: Anonymous visitor (no personalized records or account context available)\n");
         }
+        if (knowledgeContext != null && !knowledgeContext.isBlank()) {
+            sb.append("\n").append(knowledgeContext.trim()).append("\n");
+        }
         return sb.toString();
     }
+
+    public static String buildSystemInstruction(String currentPath, java.util.Set<String> authorities) {
+        return buildSystemInstruction(currentPath, authorities, null);
+    }
+
 
     public static String buildSystemInstruction(String currentPath, String actorRole) {
         java.util.Set<String> roles = (actorRole != null && !actorRole.isBlank())
