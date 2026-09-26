@@ -138,9 +138,9 @@ The backend provides a secure, rate-limited, read-only conversational assistant 
 - **Test isolation**: Automated test suites use a deterministic fake provider (`DeterministicFakeAiResponseProvider`) and **never make live requests to OpenAI**.
 - **Deterministic safety policy**: Pre-evaluates clinical and mutation boundaries, immediately refusing medical diagnosis, prescription advice, and database modification requests.
 - **Authorized read-only citizen tools**:
-  1. `CitizenAppointmentTool`: Retrieves appointment history, scheduled dates, and statuses for the logged-in citizen.
-  2. `CitizenEligibilityTool`: Retrieves recorded screening outcomes and eligibility assessments for the logged-in citizen.
-  3. `CitizenCertificateTool`: Retrieves administered vaccination records and digital certificate status for the logged-in citizen.
+  1. `MyAppointmentsAssistantTool`: Retrieves recent appointment records (status, campaign ID, slot ID; bounded to at most 5) for the authenticated citizen without providing unverified scheduled times or center locations.
+  2. `MyEligibilityAssistantTool`: Retrieves recorded eligibility assessments (campaign ID, status (`ELIGIBLE`, `INELIGIBLE`, `EXPIRED`, `REVOKED`), reviewed time, validity time, and lifecycle state; up to 5 campaigns) for the authenticated citizen without making clinical determinations.
+  3. `MyVaccinationSummaryAssistantTool`: Retrieves finalized vaccination record count, recent administered doses (dose number and date/time), and digital certificate status/issue date for the authenticated citizen without exposing verification tokens, clinical notes, or batch numbers.
   *(All tools are strictly scoped to the verified `principal.getUserId()`; arbitrary citizen IDs in user prompts are ignored).*
 - **Setup & Evaluation Guide**: See [docs/AI_ASSISTANT_SETUP_AND_DEMO.md](../docs/AI_ASSISTANT_SETUP_AND_DEMO.md) for full architecture, macOS setup, cURL examples, and evaluation walkthroughs.
 

@@ -86,24 +86,24 @@ All active citizen and staff accounts authenticate through `/login`. Upon authen
 
 ### Protected Routes (`/app/*`)
 Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticated session. Users are automatically directed to their role-specific view:
-- `/app/citizen` - Citizen Dashboard (accessible to `ROLE_CITIZEN`)
+- `/app/citizen` - Citizen Dashboard (`ROLE_CITIZEN`)
+- `/app/citizen/profile` - Citizen profile management (`ROLE_CITIZEN`)
+- `/app/citizen/vaccinations` - Personal administered vaccination records and digital certificates (`ROLE_CITIZEN`, alias `/app/vaccinations`)
+- `/app/screening` - Citizen pre-vaccination screening campaigns (`ROLE_CITIZEN`)
+- `/app/screening/eligibility` - Citizen pre-vaccination eligibility status overview (`ROLE_CITIZEN`)
+- `/app/screening/history` - Screening history, details, and correction submissions (`ROLE_CITIZEN`)
 - `/app/appointments/book` - Vaccination session availability search and appointment booking (`ROLE_CITIZEN`)
 - `/app/appointments/mine` - Personal appointment listing, rescheduling, and cancellation management (`ROLE_CITIZEN`)
 - `/app/appointments/waitlist` - Citizen waitlist status and registration (`ROLE_CITIZEN`)
-- `/app/citizen/screening` - Citizen pre-vaccination screening questionnaires (`ROLE_CITIZEN`)
-- `/app/citizen/eligibility` - Citizen pre-vaccination eligibility status overview (`ROLE_CITIZEN`)
-- `/app/citizen/screening/history` - Screening history, details, and correction submissions (`ROLE_CITIZEN`)
-- `/app/vaccinations/mine` - Personal administered vaccination records and digital certificates (`ROLE_CITIZEN`)
-- `/app/profile` - Citizen profile management (`ROLE_CITIZEN`)
-- `/app/staff` - Staff Operations Dashboard (accessible to operational and clinical roles)
+- `/app/staff` - Staff Operations Dashboard (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_HEALTHCARE_OFFICER`, `ROLE_INVENTORY_OFFICER`, `ROLE_MANAGEMENT_USER`, `ROLE_VACCINATOR`)
+- `/app/staff/vaccination-drafts` - Clinical vaccination draft recording and finalization (`ROLE_VACCINATOR`)
+- `/app/staff/screening/reviews` - Clinical screening review queue and history (`ROLE_HEALTHCARE_OFFICER`)
+- `/app/campaigns` - Vaccination campaign management and dose programme configuration (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_MANAGEMENT_USER`)
+- `/app/center-operations` - Center master data, operating hours, and closures (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_MANAGEMENT_USER`)
+- `/app/sessions` - Vaccination session planning, recurrence series, and staff rostering (`ROLE_ADMIN`, `ROLE_CENTER_MANAGER`, `ROLE_CAMPAIGN_OFFICER`)
+- `/app/analytics` - Operational analytics and program metrics visualization (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`)
 - `/app/checkin/queue` - Clinic arrival check-in queue management (`ROLE_ADMIN`, `ROLE_CENTER_MANAGER`, `ROLE_VACCINATOR`)
-- `/app/vaccinations/drafts` - Clinical vaccination draft recording and finalization (`ROLE_VACCINATOR`, clinical staff)
-- `/app/screening/reviews` - Clinical screening review queue and history for healthcare officers (`ROLE_HEALTHCARE_OFFICER`)
-- `/app/campaigns` - Vaccination campaign management and dose programme configuration
-- `/app/center-operations` - Center master data, operating hours, and closures
-- `/app/sessions` - Vaccination session planning, recurrence series, and staff rostering
 - `/app/inventory` - Vaccine inventory, stock levels, and batch allocations (`ROLE_ADMIN`, `ROLE_INVENTORY_OFFICER`)
-- `/app/analytics` - Operational analytics and program metrics visualization
 - `/app/screening/questions` - Screening question configuration (`ROLE_HEALTHCARE_OFFICER`)
 - `/app/screening/questionnaires` - Screening questionnaire versioning (`ROLE_HEALTHCARE_OFFICER`)
 - `/app/admin` - System Administration Dashboard (`ROLE_ADMIN`)
@@ -122,7 +122,7 @@ Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticat
 | **Session Management** | `src/features/session-management/` | **Implemented**: Recurring session generation, time slots, operational capacity, and staff rostering. |
 | **Appointment Management** | `src/features/appointment-management/` | **Implemented**: Availability search, slot booking (`/app/appointments/book`), personal appointment management (`/app/appointments/mine`), citizen waitlist (`/app/appointments/waitlist`), and staff arrival check-in queue (`/app/checkin/queue`). |
 | **Vaccine Inventory** | `src/features/inventory-management/` | **Implemented**: Center inventory management, stock levels, lot allocations, and replenishment tracking. |
-| **Vaccination Administration** | `src/features/vaccination-administration/` | **Implemented**: Clinical vaccination draft recording, citizen vaccination history (`/app/vaccinations/mine`), and public digital certificate verification (`/verify-certificate`). |
+| **Vaccination Administration** | `src/features/vaccination-administration/` | **Implemented**: Clinical vaccination draft recording, citizen vaccination history (`/app/citizen/vaccinations`), and public digital certificate verification (`/verify-certificate`). |
 | **Operational Analytics** | `src/features/analytics/` | **Implemented**: Interactive operations analytics view with filterable program metrics. |
 
 ## Project-Wide AI Assistant Widget

@@ -20,7 +20,7 @@ Spring AssistantController (/api/v1/assistant/messages)
     │      └── Blocks medical advice, diagnosis, triage & mutation requests
     │
     ├── 3. Optional Authorized Read-Only Tools (Server-selected, authenticated only)
-    │      └── CitizenAppointmentTool / CitizenEligibilityTool / CitizenCertificateTool
+    │      └── MyAppointmentsAssistantTool / MyEligibilityAssistantTool / MyVaccinationSummaryAssistantTool
     │          (Strictly scoped to principal.getUserId(); prompt cannot inject IDs)
     │
     ├── 4. Verified Knowledge Context (AssistantKnowledgeCatalog & ContextBuilder)
@@ -65,7 +65,7 @@ Authorized React Router Navigation
   "currentPath": "/"
 }
 ```
-- **Response Format (`AssistantChatResponse`)**:
+- **Response Format (`AssistantChatResponse`)** *(Illustrative example response; model-generated text may vary while JSON schema and allowlisted route authorizations remain deterministic)*:
 ```json
 {
   "answer": "To book an appointment, navigate to the Book Appointment page...",
@@ -78,6 +78,7 @@ Authorized React Router Navigation
   "requestId": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
 
 ---
 
@@ -93,9 +94,9 @@ The assistant provides comprehensive assistance across the portal while enforcin
   - **MF-04 (Vaccine Inventory & Batch Management)**: Explains cold-chain tracking, lot release, vaccine allocations, and waste reduction principles.
   - **MF-05 (Vaccination Administration & Records)**: Explains clinical dose recording, adverse event documentation, and verifiable digital certificate issuance.
 - **Role-Aware Route Suggestions**: Evaluates caller authorities (`ROLE_CITIZEN`, `ROLE_ADMIN`, `ROLE_HEALTHCARE_OFFICER`, etc.) and filters suggested navigation pills so users only receive routes they are authorized to access.
-- **Citizen-Owned Appointment Status**: For authenticated citizens, retrieves active slot bookings, session dates, center locations, and appointment statuses (`CONFIRMED`, `CANCELLED`, `COMPLETED`).
-- **Citizen-Owned Eligibility Status**: Retrieves the authenticated citizen's recorded eligibility assessments, outcomes (`ELIGIBLE`, `INELIGIBLE`, `REQUIRES_REVIEW`), and reason summaries.
-- **Citizen-Owned Vaccination / Certificate Summary**: Retrieves administered doses, vaccine products, dates, and digital certificate verification status for the logged-in citizen.
+- **Citizen-Owned Appointment Status**: For authenticated citizens, `MyAppointmentsAssistantTool` retrieves up to five recent appointment records, providing appointment status, campaign ID, and slot ID. It does not provide an authoritative scheduled appointment time, center name, or center location (directs callers to `/app/appointments/mine` for complete schedule details).
+- **Citizen-Owned Eligibility Status**: For authenticated citizens, `MyEligibilityAssistantTool` retrieves recorded eligibility assessments (latest per campaign, up to 5 campaigns) including campaign ID, recorded status (`ELIGIBLE`, `INELIGIBLE`, `EXPIRED`, `REVOKED`), reviewed time, validity time, and lifecycle state (`ACTIVE`, `EXPIRED`, `REVOKED`). It does not return clinical reason notes or make independent clinical determinations.
+- **Citizen-Owned Vaccination / Certificate Summary**: For authenticated citizens, `MyVaccinationSummaryAssistantTool` retrieves finalized vaccination record count, bounded recent administered doses (dose number and administration date/time; up to 5), certificate existence, certificate status, and issue date. Sensitive clinical notes, vaccine products, batch numbers, QR payloads, and verification tokens are excluded from assistant context.
 - **Deterministic Safety Refusals**: Deterministically detects and refuses medical diagnosis, personal clinical advice, dosage/treatment recommendations, and emergency queries with safe referrals to national hotlines or clinical staff.
 - **Disabled/Unavailable Behavior**: Gracefully indicates unavailable status without disrupting the rest of the portal when AI is disabled or unconfigured.
 - **Rate Limiting**: In-memory token bucket rate limiting (5 requests/minute for anonymous clients; 15 requests/minute for authenticated callers) prevents abuse.
@@ -252,7 +253,7 @@ curl -s \
   }'
 ```
 
-**Expected Response**:
+**Expected Response** *(Illustrative example response; model-generated text may vary while JSON schema and allowlisted route authorizations remain deterministic)*:
 ```json
 {
   "answer": "To book a vaccination appointment, you can search for available sessions and select an open time slot. If you are already registered as a citizen, sign in and navigate to the Book Appointment page.",
@@ -271,7 +272,7 @@ curl -s \
 ```
 
 **Expected UI Behavior**:
-- The assistant displays the answer with Markdown styling.
+- The assistant displays the answer as plain text with preserved whitespace and line breaks.
 - Suggested action buttons appear below the message.
 - Clicking an action pill navigates the user directly to the relevant authorized portal route.
 
@@ -300,9 +301,9 @@ curl -s \
 
 | Query | Scope | Expected Behavior |
 | :--- | :--- | :--- |
-| *"What is the status of my appointment?"* | Personalized | Backend calls `CitizenAppointmentTool` with caller's ID; returns appointment date, center, and status. |
-| *"What is my recorded eligibility status?"* | Personalized | Backend calls `CitizenEligibilityTool` with caller's ID; returns eligibility outcome and assessment date. |
-| *"Do I have a digital certificate?"* | Personalized | Backend calls `CitizenCertificateTool` with caller's ID; returns certificate issuance state and dose count. |
+| *"What is the status of my appointment?"* | Personalized | Backend calls `MyAppointmentsAssistantTool` with caller's ID; returns up to 5 recent records with status, campaign ID, and slot ID (without center location or scheduled timestamp). |
+| *"What is my recorded eligibility status?"* | Personalized | Backend calls `MyEligibilityAssistantTool` with caller's ID; returns recorded assessment status (`ELIGIBLE`, `INELIGIBLE`, `EXPIRED`, `REVOKED`), reviewed timestamp, validity time, and lifecycle state. |
+| *"Do I have a digital certificate?"* | Personalized | Backend calls `MyVaccinationSummaryAssistantTool` with caller's ID; returns finalized dose count, bounded dose numbers and administration dates/times, and digital certificate status/issue date (excluding verification tokens and batch IDs). |
 | *"Can you book an appointment for me?"* | Mutation Boundary | Deterministically refused; explains the assistant cannot make changes and directs to `/app/appointments/book`. |
 | *"Should I take the vaccine if I have a high fever?"* | Clinical Boundary | Deterministically refused; provides safety guidance and refers user to a qualified healthcare provider. |
 
@@ -335,7 +336,7 @@ During code review and assessment, verify the following core security principles
 1. **Server-Only API Key**: `OPENAI_API_KEY` exists strictly within the Spring Boot application context (`AssistantProperties`). It is never passed to Vite, never sent across HTTP to the client, and never stored in version control.
 2. **Stateless JWT Identity**: Identity is determined solely by the cryptographically signed JWT in the `Authorization: Bearer` header. The user ID is retrieved via `UserPrincipal.getUserId()`.
 3. **Role-Filtered Route Catalog**: The backend route catalog (`AssistantRouteCatalog`) categorizes all routes by allowed roles. The assistant only returns navigation suggestions matching the caller's actual authorities.
-4. **Server-Selected Read-Only Tools**: Personalized tools (`CitizenAppointmentTool`, `CitizenEligibilityTool`, `CitizenCertificateTool`) are invoked based on server-side intent classification. Prompts cannot inject arbitrary tool calls or method invocations.
+4. **Server-Selected Read-Only Tools**: Personalized tools (`MyAppointmentsAssistantTool`, `MyEligibilityAssistantTool`, `MyVaccinationSummaryAssistantTool`) are invoked based on server-side intent classification. Prompts cannot inject arbitrary tool calls or method invocations.
 5. **Principal-Bound Data Access**: Personalized tools accept only the verified caller's ID (`principal.getUserId()`). Any citizen ID mentioned in prompt text is completely ignored.
 6. **Mutation Boundary Enforcement**: The assistant has no database write access and cannot invoke mutating service methods (booking, cancellation, check-in, registration).
 7. **Clinical Privacy Protection**: Raw clinical questionnaire responses, physician notes, verification tokens, and internal batch IDs are excluded from prompt context.
@@ -350,8 +351,8 @@ During code review and assessment, verify the following core security principles
 | :--- | :--- | :--- |
 | **Status returns `available: false`** | `AI_ASSISTANT_ENABLED` is `false` or missing. | Ensure `export AI_ASSISTANT_ENABLED="true"` is set in the backend environment before startup. |
 | **Missing `OPENAI_API_KEY`** | Secret key was not exported in the shell. | Re-run `read -s "OPENAI_API_KEY?OpenAI API key: "` and restart the backend. |
-| **Missing `OPENAI_MODEL`** | Model property is unset or blank. | Set `export OPENAI_MODEL="gpt-4o-mini"` (or another supported model) and restart the backend. |
-| **Backend running on different port** | Port collision or custom port used. | Start frontend with `export BACKEND_PORT="8081" npm run dev` so Vite proxies to the correct port. |
+| **Missing `OPENAI_MODEL`** | Model property is unset or blank. | Set `export OPENAI_MODEL="<supported-model-name>"` to a Responses API compatible model available to the project's OpenAI account and restart the backend. |
+| **Backend running on different port** | Port collision or custom port used. | Start frontend with `BACKEND_PORT=8081 npm run dev` (or `export BACKEND_PORT=8081` then `npm run dev`) so Vite proxies to the correct port. |
 | **MySQL authentication failure** | Incorrect DB password or MySQL not running. | Verify MySQL is running on port 3306 and verify `DB_PASSWORD`. |
 | **Frontend proxy failure (ECONNREFUSED)** | Backend is not started or still initializing. | Start the backend (`./mvnw spring-boot:run`) and confirm `http://localhost:8080/actuator/health` returns `UP`. |
 | **HTTP 401 Unauthorized on messages** | Expired or invalid JWT token. | Re-authenticate through `/login` to obtain a fresh JWT. |
