@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +16,12 @@ import java.util.Optional;
 
 @Repository
 public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
+
+    /**
+     * Loads slots with their session, campaign, and center for bounded citizen appointment summaries.
+     */
+    @EntityGraph(attributePaths = {"session", "session.campaign", "session.center"})
+    List<TimeSlot> findByIdIn(Collection<Long> ids);
 
     @Query(value = "SELECT session_id FROM time_slots WHERE id = :id", nativeQuery = true)
     Optional<Long> findSessionIdBySlotId(@Param("id") Long id);

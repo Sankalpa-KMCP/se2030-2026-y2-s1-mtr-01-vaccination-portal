@@ -7,14 +7,18 @@ import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -22,14 +26,18 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Server-side read-only tool providing bounded appointment summary for the authenticated citizen.
- * Strictly uses principal.getUserId() and ignores any citizen identifier in the user message.
+ * Read-only appointment and waitlist summaries for the authenticated citizen.
+ * The citizen identifier always comes from the verified principal.
  */
 @Component
 public class MyAppointmentsAssistantTool implements AssistantReadOnlyTool {
 
     private static final int MAX_APPOINTMENT_RESULTS = 5;
     private static final int MAX_WAITLIST_RESULTS = 5;
+    private static final ZoneId DISPLAY_ZONE = ZoneId.of("Asia/Colombo");
+    private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter
+            .ofPattern("dd MMM uuuu, hh:mm a 'Sri Lanka time'", Locale.ENGLISH)
+            .withZone(DISPLAY_ZONE);
 
     private final AppointmentRepository appointmentRepository;
     private final TimeSlotRepository timeSlotRepository;
@@ -71,192 +79,225 @@ public class MyAppointmentsAssistantTool implements AssistantReadOnlyTool {
 
     @Override
     public boolean matchesIntent(String userMessage) {
-        if (userMessage == null || userMessage.isBlank()) {
-            return false;
-        }
+        if (userMessage == null || userMessage.isBlank()) return false;
         String normalized = userMessage.trim();
         for (Pattern negative : NEGATIVE_PATTERNS) {
-            if (negative.matcher(normalized).find()) {
-                return false;
-            }
+            if (negative.matcher(normalized).find()) return false;
         }
         for (Pattern pattern : INTENT_PATTERNS) {
-            if (pattern.matcher(normalized).find()) {
-                return true;
-            }
+            if (pattern.matcher(normalized).find()) return true;
         }
-        return false;
+        return isSinhalaAppointmentIntent(normalized) || isTamilAppointmentIntent(normalized);
     }
 
     @Override
     @Transactional(readOnly = true)
     public AssistantToolResult execute(AssistantToolContext context) {
+        return execute(context, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AssistantToolResult execute(AssistantToolContext context, String userMessage) {
         if (context == null || context.principal() == null || !context.isCitizen()) {
             throw new IllegalArgumentException("Personalized tools require an authenticated citizen principal.");
         }
 
+        AppointmentIntent intent = detectIntent(userMessage);
         Long citizenId = context.getCitizenId();
-        List<Appointment> allAppointments = appointmentRepository.findByCitizenIdOrderByBookedAtDesc(citizenId);
-        List<WaitlistEntry> allWaitlistEntries = waitlistRepository.findByCitizenIdOrderByJoinedAtDesc(citizenId);
-        List<String> routes = List.of("/app/appointments/mine", "/app/appointments/waitlist");
+        boolean needsAppointments = intent != AppointmentIntent.WAITLIST;
+        boolean needsWaitlist = intent == AppointmentIntent.ALL || intent == AppointmentIntent.WAITLIST;
+        List<Appointment> appointments = needsAppointments
+                ? nullSafe(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(citizenId)) : List.of();
+        List<WaitlistEntry> waitlistEntries = needsWaitlist
+                ? nullSafe(waitlistRepository.findByCitizenIdOrderByJoinedAtDesc(citizenId)).stream()
+                    .limit(MAX_WAITLIST_RESULTS).toList() : List.of();
 
-        if ((allAppointments == null || allAppointments.isEmpty())
-                && (allWaitlistEntries == null || allWaitlistEntries.isEmpty())) {
-            return AssistantToolResult.empty(
-                    AssistantToolId.MY_APPOINTMENTS,
-                    "No appointment or waitlist records were found for the signed-in citizen.",
-                    routes
-            );
-        }
-
-        List<Appointment> appointments = allAppointments == null ? List.of() : allAppointments;
         Map<Long, TimeSlot> slotsById = loadSlotsById(appointments);
         Instant now = Instant.now();
+        List<AppointmentView> activeOrUpcoming = classifyAppointments(appointments, slotsById, now, true);
+        List<AppointmentView> pastOrInactive = classifyAppointments(appointments, slotsById, now, false);
+        StringBuilder sb = new StringBuilder("Read-only information for the signed-in citizen only.\n");
+        int resultCount = 0;
+        List<String> routes;
 
-        List<AppointmentView> activeOrUpcoming = appointments.stream()
-                .map(appointment -> new AppointmentView(appointment, slotsById.get(appointment.getSlotId())))
-                .filter(view -> isActiveOrUpcoming(view, now))
-                .sorted(Comparator.comparing(
-                        MyAppointmentsAssistantTool::scheduledStart,
-                        Comparator.nullsLast(Comparator.naturalOrder())))
-                .limit(MAX_APPOINTMENT_RESULTS)
-                .toList();
-
-        List<AppointmentView> pastOrInactive = appointments.stream()
-                .map(appointment -> new AppointmentView(appointment, slotsById.get(appointment.getSlotId())))
-                .filter(view -> !isActiveOrUpcoming(view, now))
-                .sorted(Comparator.comparing(
-                        MyAppointmentsAssistantTool::scheduledStart,
-                        Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(MAX_APPOINTMENT_RESULTS)
-                .toList();
-
-        List<WaitlistEntry> waitlistEntries = (allWaitlistEntries == null ? List.<WaitlistEntry>of() : allWaitlistEntries)
-                .stream()
-                .limit(MAX_WAITLIST_RESULTS)
-                .toList();
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("Read-only appointment snapshot for the authenticated citizen.\n");
-        appendAppointmentSection(sb, "Active or upcoming appointment records", activeOrUpcoming, now);
-        appendAppointmentSection(sb, "Past or inactive appointment records", pastOrInactive, now);
-
-        if (!waitlistEntries.isEmpty()) {
-            sb.append("Waitlist records (newest first, bounded to at most ")
-                    .append(MAX_WAITLIST_RESULTS).append("):\n");
-            int index = 1;
-            for (WaitlistEntry entry : waitlistEntries) {
-                sb.append("- Waitlist Record ").append(index++).append(": ")
-                        .append("Status: ").append(entry.getStatus() != null ? entry.getStatus().name() : "UNKNOWN")
-                        .append(", Campaign ID: ").append(entry.getCampaignId())
-                        .append(", Session ID: ").append(entry.getSessionId());
-                Integer position = findQueuePosition(entry, citizenId);
-                if (position != null) {
-                    sb.append(", Current Queue Position: ").append(position);
+        switch (intent) {
+            case UPCOMING -> {
+                routes = List.of("/app/appointments/mine");
+                resultCount += appendAppointmentSection(sb, "Active or upcoming appointment records", activeOrUpcoming, now);
+                if (activeOrUpcoming.isEmpty()) {
+                    sb.append("No active or upcoming appointment was found. The citizen can search available slots using the authorized Book Appointment page.\n");
+                    routes = List.of("/app/appointments/mine", "/app/appointments/book");
                 }
-                sb.append("\n");
+            }
+            case PAST -> {
+                routes = List.of("/app/appointments/mine");
+                resultCount += appendAppointmentSection(sb, "Past or inactive appointment records", pastOrInactive, now);
+                if (pastOrInactive.isEmpty()) sb.append("No past or inactive appointment record was found.\n");
+            }
+            case CHECK_IN -> {
+                routes = List.of("/app/appointments/mine");
+                List<AppointmentView> checkedIn = appointments.stream()
+                        .filter(a -> a.getStatus() == AppointmentStatus.CHECKED_IN)
+                        .map(a -> new AppointmentView(a, slotsById.get(a.getSlotId())))
+                        .limit(MAX_APPOINTMENT_RESULTS).toList();
+                resultCount += appendAppointmentSection(sb, "Checked-in appointment records", checkedIn, now);
+                if (checkedIn.isEmpty()) sb.append("No appointment currently has the recorded status CHECKED_IN.\n");
+            }
+            case WAITLIST -> {
+                routes = List.of("/app/appointments/waitlist");
+                resultCount += appendWaitlistSection(sb, waitlistEntries);
+                if (waitlistEntries.isEmpty()) sb.append("No waitlist record was found for the signed-in citizen.\n");
+            }
+            default -> {
+                routes = List.of("/app/appointments/mine", "/app/appointments/waitlist");
+                resultCount += appendAppointmentSection(sb, "Active or upcoming appointment records", activeOrUpcoming, now);
+                resultCount += appendAppointmentSection(sb, "Past or inactive appointment records", pastOrInactive, now);
+                resultCount += appendWaitlistSection(sb, waitlistEntries);
+                if (resultCount == 0) {
+                    sb.append("No appointment or waitlist record was found. The citizen can search available slots using the authorized Book Appointment page.\n");
+                    routes = List.of("/app/appointments/mine", "/app/appointments/waitlist", "/app/appointments/book");
+                }
             }
         }
-        sb.append("Use only these recorded statuses and MF-02 time-slot timestamps. A past scheduled time with status CONFIRMED is not proof of a no-show. Never describe record creation timestamps as the scheduled appointment time.");
+        sb.append("Use only these recorded statuses and linked MF-02 schedule details. A past scheduled time with status CONFIRMED is not proof of a no-show. Never describe record creation timestamps as the scheduled appointment time.");
+        return new AssistantToolResult(AssistantToolId.MY_APPOINTMENTS, true, resultCount, sb.toString(), routes);
+    }
 
-        return new AssistantToolResult(
-                AssistantToolId.MY_APPOINTMENTS,
-                true,
-                activeOrUpcoming.size() + pastOrInactive.size() + waitlistEntries.size(),
-                sb.toString(),
-                routes
-        );
+    private List<AppointmentView> classifyAppointments(List<Appointment> appointments, Map<Long, TimeSlot> slotsById,
+                                                       Instant now, boolean active) {
+        Comparator<AppointmentView> comparator = active
+                ? Comparator.comparing(MyAppointmentsAssistantTool::scheduledStart, Comparator.nullsLast(Comparator.naturalOrder()))
+                : Comparator.comparing(MyAppointmentsAssistantTool::scheduledStart, Comparator.nullsLast(Comparator.reverseOrder()));
+        return appointments.stream()
+                .map(a -> new AppointmentView(a, slotsById.get(a.getSlotId())))
+                .filter(view -> isActiveOrUpcoming(view, now) == active)
+                .sorted(comparator).limit(MAX_APPOINTMENT_RESULTS).toList();
     }
 
     private Map<Long, TimeSlot> loadSlotsById(List<Appointment> appointments) {
-        List<Long> slotIds = appointments.stream()
-                .map(Appointment::getSlotId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        if (slotIds.isEmpty()) {
-            return Map.of();
-        }
-        List<TimeSlot> slots = timeSlotRepository.findAllById(slotIds);
-        if (slots == null || slots.isEmpty()) {
-            return Map.of();
-        }
-        return slots.stream()
-                .filter(slot -> slot.getId() != null)
-                .collect(Collectors.toMap(
-                        TimeSlot::getId,
-                        Function.identity(),
-                        (first, ignored) -> first,
-                        LinkedHashMap::new));
+        List<Long> slotIds = appointments.stream().map(Appointment::getSlotId)
+                .filter(Objects::nonNull).distinct().toList();
+        if (slotIds.isEmpty()) return Map.of();
+        List<TimeSlot> slots = timeSlotRepository.findByIdIn(slotIds);
+        if (slots == null || slots.isEmpty()) return Map.of();
+        return slots.stream().filter(slot -> slot.getId() != null)
+                .collect(Collectors.toMap(TimeSlot::getId, Function.identity(),
+                        (first, ignored) -> first, LinkedHashMap::new));
     }
 
     private static boolean isActiveOrUpcoming(AppointmentView view, Instant now) {
         AppointmentStatus status = view.appointment().getStatus();
-        if (status != AppointmentStatus.CONFIRMED && status != AppointmentStatus.CHECKED_IN) {
-            return false;
-        }
-        if (status == AppointmentStatus.CHECKED_IN || view.slot() == null || view.slot().getEndTime() == null) {
-            return true;
-        }
-        return !view.slot().getEndTime().isBefore(now);
+        if (status != AppointmentStatus.CONFIRMED && status != AppointmentStatus.CHECKED_IN) return false;
+        return status == AppointmentStatus.CHECKED_IN || view.slot() == null
+                || view.slot().getEndTime() == null || !view.slot().getEndTime().isBefore(now);
     }
 
     private static Instant scheduledStart(AppointmentView view) {
         return view.slot() == null ? null : view.slot().getStartTime();
     }
 
-    private static void appendAppointmentSection(
-            StringBuilder sb,
-            String heading,
-            List<AppointmentView> records,
-            Instant now
-    ) {
-        if (records.isEmpty()) {
-            return;
-        }
-        sb.append(heading).append(" (bounded to at most ")
-                .append(MAX_APPOINTMENT_RESULTS).append("):\n");
+    private static int appendAppointmentSection(StringBuilder sb, String heading,
+                                                List<AppointmentView> records, Instant now) {
+        if (records.isEmpty()) return 0;
+        sb.append(heading).append(" (bounded to at most ").append(MAX_APPOINTMENT_RESULTS).append("):\n");
         int index = 1;
         for (AppointmentView view : records) {
             Appointment appointment = view.appointment();
-            sb.append("- Appointment Record ").append(index++).append(": ")
-                    .append("Status: ").append(appointment.getStatus() != null ? appointment.getStatus().name() : "UNKNOWN")
+            sb.append("- Appointment Record ").append(index++).append(": Status: ")
+                    .append(appointment.getStatus() != null ? appointment.getStatus().name() : "UNKNOWN")
                     .append(", Campaign ID: ").append(appointment.getCampaignId())
                     .append(", Slot ID: ").append(appointment.getSlotId());
-            if (view.slot() != null) {
-                sb.append(", Scheduled Start: ").append(view.slot().getStartTime())
-                        .append(", Scheduled End: ").append(view.slot().getEndTime());
-                if (appointment.getStatus() == AppointmentStatus.CONFIRMED
-                        && view.slot().getEndTime() != null
-                        && view.slot().getEndTime().isBefore(now)) {
-                    sb.append(", Timing Note: scheduled time has passed but the recorded status remains CONFIRMED");
-                }
-            } else {
-                sb.append(", Schedule: unavailable from the linked time slot");
+            appendFriendlySchedule(sb, view.slot());
+            if (appointment.getStatus() == AppointmentStatus.CONFIRMED && view.slot() != null
+                    && view.slot().getEndTime() != null && view.slot().getEndTime().isBefore(now)) {
+                sb.append(", Timing Note: scheduled time has passed but the recorded status remains CONFIRMED");
             }
             sb.append("\n");
         }
+        return records.size();
     }
 
-    private Integer findQueuePosition(WaitlistEntry entry, Long citizenId) {
-        if (entry.getStatus() != WaitlistStatus.WAITING || entry.getSessionId() == null) {
-            return null;
+    private static void appendFriendlySchedule(StringBuilder sb, TimeSlot slot) {
+        if (slot == null) {
+            sb.append(", Schedule: unavailable from the linked time slot");
+            return;
         }
-        List<WaitlistEntry> queue = waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(
-                entry.getSessionId(), WaitlistStatus.WAITING);
-        if (queue == null) {
-            return null;
-        }
-        for (int i = 0; i < queue.size(); i++) {
-            WaitlistEntry queued = queue.get(i);
-            if (Objects.equals(queued.getCitizenId(), citizenId)
-                    && Objects.equals(queued.getCampaignId(), entry.getCampaignId())) {
-                return i + 1;
-            }
-        }
-        return null;
+        VaccinationSession session = slot.getSession();
+        if (session != null && session.getCampaign() != null && hasText(session.getCampaign().getName()))
+            sb.append(", Campaign: ").append(session.getCampaign().getName().trim());
+        if (session != null && session.getCenter() != null && hasText(session.getCenter().getName()))
+            sb.append(", Center: ").append(session.getCenter().getName().trim());
+        if (session != null && session.getCenter() != null && hasText(session.getCenter().getAddress()))
+            sb.append(", Center Address: ").append(session.getCenter().getAddress().trim());
+        sb.append(", Scheduled Start: ").append(formatTime(slot.getStartTime()))
+                .append(", Scheduled End: ").append(formatTime(slot.getEndTime()));
     }
 
-    private record AppointmentView(Appointment appointment, TimeSlot slot) {
+    private int appendWaitlistSection(StringBuilder sb, List<WaitlistEntry> entries) {
+        if (entries.isEmpty()) return 0;
+        sb.append("Waitlist records (newest first, bounded to at most ").append(MAX_WAITLIST_RESULTS).append("):\n");
+        int index = 1;
+        for (WaitlistEntry entry : entries) {
+            sb.append("- Waitlist Record ").append(index++).append(": Status: ")
+                    .append(entry.getStatus() != null ? entry.getStatus().name() : "UNKNOWN")
+                    .append(", Campaign ID: ").append(entry.getCampaignId())
+                    .append(", Session ID: ").append(entry.getSessionId());
+            Integer position = findQueuePosition(entry);
+            if (position != null) sb.append(", Current Queue Position: ").append(position);
+            sb.append("\n");
+        }
+        return entries.size();
     }
+
+    private Integer findQueuePosition(WaitlistEntry entry) {
+        if (entry.getStatus() != WaitlistStatus.WAITING || entry.getSessionId() == null
+                || entry.getJoinedAt() == null || entry.getId() == null) return null;
+        long position = waitlistRepository.countQueuePosition(
+                entry.getSessionId(), WaitlistStatus.WAITING, entry.getJoinedAt(), entry.getId());
+        return position > 0 && position <= Integer.MAX_VALUE ? (int) position : null;
+    }
+
+    private static AppointmentIntent detectIntent(String message) {
+        if (message == null || message.isBlank()) return AppointmentIntent.ALL;
+        String normalized = message.toLowerCase(Locale.ROOT);
+        if (normalized.contains("waitlist") || normalized.contains("queue position")
+                || normalized.contains("පොරොත්තු") || normalized.contains("පෝලිමේ")
+                || normalized.contains("காத்திருப்பு") || normalized.contains("வரிசை நிலை")) return AppointmentIntent.WAITLIST;
+        if (normalized.contains("checked in") || normalized.contains("check-in") || normalized.contains("check in"))
+            return AppointmentIntent.CHECK_IN;
+        if (normalized.contains("upcoming") || normalized.contains("future")
+                || normalized.contains("ඉදිරි") || normalized.contains("வரவிருக்கும்")) return AppointmentIntent.UPCOMING;
+        if (normalized.contains("past") || normalized.contains("previous") || normalized.contains("completed")
+                || normalized.contains("cancelled") || normalized.contains("පසුගිය") || normalized.contains("கடந்த"))
+            return AppointmentIntent.PAST;
+        return AppointmentIntent.ALL;
+    }
+
+    private static boolean isSinhalaAppointmentIntent(String text) {
+        return (text.contains("මගේ") || text.contains("මාගේ"))
+                && (text.contains("හමුවීම්") || text.contains("වෙන්කිරීම්")
+                || text.contains("පොරොත්තු") || text.contains("පෝලිමේ"));
+    }
+
+    private static boolean isTamilAppointmentIntent(String text) {
+        return (text.contains("எனது") || text.contains("என்"))
+                && (text.contains("சந்திப்பு") || text.contains("காத்திருப்பு") || text.contains("வரிசை"));
+    }
+
+    private static String formatTime(Instant instant) {
+        return instant == null ? "unavailable" : DISPLAY_TIME.format(instant);
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private static <T> List<T> nullSafe(List<T> values) {
+        return values == null ? List.of() : values;
+    }
+
+    private enum AppointmentIntent { ALL, UPCOMING, PAST, WAITLIST, CHECK_IN }
+
+    private record AppointmentView(Appointment appointment, TimeSlot slot) {}
 }

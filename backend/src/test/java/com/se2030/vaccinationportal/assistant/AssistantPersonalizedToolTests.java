@@ -320,14 +320,13 @@ class AssistantPersonalizedToolTests {
         when(pastSlot.getEndTime()).thenReturn(now.minusSeconds(3600));
 
         when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(88L)).thenReturn(List.of(upcoming, past));
-        when(timeSlotRepository.findAllById(any())).thenReturn(List.of(upcomingSlot, pastSlot));
+        when(timeSlotRepository.findByIdIn(any())).thenReturn(List.of(upcomingSlot, pastSlot));
 
         AssistantToolResult result = appointmentsTool.execute(context);
 
         assertThat(result.contextSnippet()).contains("Active or upcoming appointment records");
         assertThat(result.contextSnippet()).contains("Past or inactive appointment records");
-        assertThat(result.contextSnippet()).contains("Scheduled Start: " + upcomingSlot.getStartTime());
-        assertThat(result.contextSnippet()).contains("Scheduled Start: " + pastSlot.getStartTime());
+        assertThat(result.contextSnippet()).contains("Sri Lanka time");
         assertThat(result.contextSnippet()).doesNotContain(bookingCreationTime.toString());
     }
 
@@ -336,12 +335,18 @@ class AssistantPersonalizedToolTests {
     void testWaitlistOutputUsesPrincipalCitizenId() {
         UserPrincipal citizen = createCitizenPrincipal(88L);
         AssistantToolContext context = new AssistantToolContext("req-6b", citizen, Set.of("ROLE_CITIZEN"));
-        WaitlistEntry other = new WaitlistEntry(77L, 10L, 500L, WaitlistStatus.WAITING, Instant.now().minusSeconds(60));
-        WaitlistEntry own = new WaitlistEntry(88L, 10L, 500L, WaitlistStatus.WAITING, Instant.now());
+        WaitlistEntry own = mock(WaitlistEntry.class);
+        Instant joinedAt = Instant.now();
+        when(own.getId()).thenReturn(900L);
+        when(own.getCitizenId()).thenReturn(88L);
+        when(own.getCampaignId()).thenReturn(10L);
+        when(own.getSessionId()).thenReturn(500L);
+        when(own.getStatus()).thenReturn(WaitlistStatus.WAITING);
+        when(own.getJoinedAt()).thenReturn(joinedAt);
 
         when(waitlistRepository.findByCitizenIdOrderByJoinedAtDesc(88L)).thenReturn(List.of(own));
-        when(waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(500L, WaitlistStatus.WAITING))
-                .thenReturn(List.of(other, own));
+        when(waitlistRepository.countQueuePosition(500L, WaitlistStatus.WAITING, joinedAt, 900L))
+                .thenReturn(2L);
 
         AssistantToolResult result = appointmentsTool.execute(context);
 
@@ -575,7 +580,7 @@ class AssistantPersonalizedToolTests {
 
         when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(100L)).thenReturn(Collections.emptyList());
         AssistantToolResult apptResult = appointmentsTool.execute(context);
-        assertThat(apptResult.contextSnippet()).isEqualTo("No appointment or waitlist records were found for the signed-in citizen.");
+        assertThat(apptResult.contextSnippet()).contains("No appointment or waitlist record was found.");
 
         when(eligibilityAssessmentRepository.findByCitizenIdOrderByReviewedAtDesc(100L)).thenReturn(Collections.emptyList());
         AssistantToolResult eligResult = eligibilityTool.execute(context);

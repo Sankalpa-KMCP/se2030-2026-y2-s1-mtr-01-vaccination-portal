@@ -139,10 +139,13 @@ The backend provides a secure, rate-limited, read-only conversational assistant 
 - **Test isolation**: Automated test suites use a deterministic fake provider (`DeterministicFakeAiResponseProvider`) and **never make live requests to OpenAI**.
 - **Deterministic safety policy**: Pre-evaluates clinical and mutation boundaries, immediately refusing medical diagnosis, prescription advice, and database modification requests.
 - **Authorized read-only citizen tools**:
-  1. `MyAppointmentsAssistantTool`: Retrieves the authenticated citizen's active/upcoming and past appointment records (status, campaign ID, slot ID, and authoritative MF-02 slot times; up to 5 per appointment category), plus up to 5 recent waitlist records and the current FIFO position for active entries. It never substitutes the booking creation timestamp for the scheduled time.
+  1. `MyAppointmentsAssistantTool`: Returns only the appointment category requested (upcoming, past, check-in, waitlist, or combined status), with campaign/center details and authoritative MF-02 times formatted for Sri Lanka. Queue position uses a database count query and never loads another citizen's queue record into assistant context.
   2. `MyEligibilityAssistantTool`: Retrieves recorded eligibility assessments (campaign ID, status (`ELIGIBLE`, `INELIGIBLE`, `EXPIRED`, `REVOKED`), reviewed time, validity time, and lifecycle state; up to 5 campaigns) for the authenticated citizen without making clinical determinations.
-  3. `MyVaccinationSummaryAssistantTool`: Retrieves finalized vaccination record count, recent administered doses (dose number and date/time), and digital certificate status/issue date for the authenticated citizen without exposing verification tokens, clinical notes, or batch numbers.
+  3. `MyProfileCompletionAssistantTool`: Reports account status and missing profile field names without exposing the profile's raw personal values.
+  4. `MyVaccinationSummaryAssistantTool`: Retrieves finalized vaccination record count, recent administered doses (dose number and date/time), and digital certificate status/issue date for the authenticated citizen without exposing verification tokens, clinical notes, or batch numbers.
   *(All tools are strictly scoped to the verified `principal.getUserId()`; arbitrary citizen IDs in user prompts are ignored).*
+- **Deterministic navigation actions**: Personalized tool routes are converted to authorized action buttons on the server instead of relying on the model to generate them.
+- **Multilingual responses**: The assistant follows the user's latest language for English, Sinhala, and Tamil while preserving the same safety and privacy rules.
 - **Setup & Evaluation Guide**: See [docs/AI_ASSISTANT_SETUP_AND_DEMO.md](../docs/AI_ASSISTANT_SETUP_AND_DEMO.md) for full architecture, macOS setup, cURL examples, and evaluation walkthroughs.
 
 #### Environment Variables

@@ -154,6 +154,23 @@
   margin-top: 1px;
 }
 
+.assistant-privacy-banner {
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a5f;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.assistant-privacy-banner i {
+  color: #1d4ed8;
+  margin-top: 1px;
+}
+
 /* Service Unavailable Alert */
 .assistant-unavailable-alert {
   background-color: var(--warning-soft, #fef3c7);

@@ -6,5 +6,6 @@ package com.se2030.vaccinationportal.assistant.tool;
 public enum AssistantToolId {
     MY_APPOINTMENTS,
     MY_ELIGIBILITY_STATUS,
+    MY_PROFILE_COMPLETION,
     MY_VACCINATION_AND_CERTIFICATE_SUMMARY
 }

@@ -5,6 +5,8 @@ import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -31,6 +33,19 @@ public interface WaitlistRepository extends JpaRepository<WaitlistEntry, Long> {
      * Used by the assistant's citizen-owned, read-only status summary.
      */
     List<WaitlistEntry> findByCitizenIdOrderByJoinedAtDesc(Long citizenId);
+
+    /**
+     * Computes a WAITING entry's one-based FIFO position without loading other citizens' entries.
+     */
+    @Query("SELECT COUNT(w) FROM WaitlistEntry w " +
+            "WHERE w.sessionId = :sessionId AND w.status = :status " +
+            "AND (w.joinedAt < :joinedAt OR (w.joinedAt = :joinedAt AND w.id <= :entryId))")
+    long countQueuePosition(
+            @Param("sessionId") Long sessionId,
+            @Param("status") WaitlistStatus status,
+            @Param("joinedAt") java.time.Instant joinedAt,
+            @Param("entryId") Long entryId
+    );
 
     /**
      * Finds a waitlist entry for a citizen, campaign, and specific status (e.g. WAITING).

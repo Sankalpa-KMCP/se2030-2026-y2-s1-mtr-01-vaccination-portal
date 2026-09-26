@@ -264,6 +264,7 @@ export function useAssistantConversation() {
     clearConversation,
     retryStatus: fetchStatus,
     isAvailable: status?.available ?? false,
+    personalizedFeaturesAvailable: status?.personalizedFeaturesAvailable ?? false,
     disclaimer: status?.disclaimer || DEFAULT_DISCLAIMER,
   };
 }

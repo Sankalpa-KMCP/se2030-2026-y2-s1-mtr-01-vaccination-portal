@@ -27,6 +27,14 @@ public class AssistantPersonalizedContextBuilder {
     }
 
     public Optional<String> buildPersonalizedContext(String userMessage, AssistantToolContext context) {
+        return buildPersonalizedResult(userMessage, context)
+                .map(AssistantPersonalizedContextResult::promptContext);
+    }
+
+    public Optional<AssistantPersonalizedContextResult> buildPersonalizedResult(
+            String userMessage,
+            AssistantToolContext context
+    ) {
         if (userMessage == null || userMessage.isBlank() || context == null || !context.isCitizen()) {
             return Optional.empty();
         }
@@ -41,7 +49,7 @@ public class AssistantPersonalizedContextBuilder {
         AssistantToolResult result;
 
         try {
-            result = tool.execute(context);
+            result = tool.execute(context, userMessage);
             long latencyMs = System.currentTimeMillis() - startTime;
             // Privacy-conscious metric log: strictly excludes question, SQL, and personalized record details
             log.info("Personalized tool executed: requestId={}, toolId={}, success={}, resultCount={}, latencyMs={}",
@@ -75,6 +83,6 @@ public class AssistantPersonalizedContextBuilder {
         sb.append("4. Adhere strictly to authorized portal navigation routes.\n");
         sb.append(DELIMITER_END);
 
-        return Optional.of(sb.toString());
+        return Optional.of(new AssistantPersonalizedContextResult(sb.toString(), authorizedRoutes));
     }
 }

@@ -88,6 +88,23 @@ describe('AssistantWidget component', () => {
     expect(screen.getByRole('button', { name: /open portal assistant/i })).toBeTruthy();
   });
 
+  it('shows the signed-in account privacy notice when personalized features are available', async () => {
+    authContextMock.current = {
+      isAuthenticated: true,
+      user: { id: 10, role: 'ROLE_CITIZEN' },
+    };
+    assistantApi.getAssistantStatus.mockResolvedValueOnce({
+      available: true,
+      disclaimer: 'System disclaimer: Not medical advice.',
+      personalizedFeaturesAvailable: true,
+    });
+
+    await openPanel('/app/citizen');
+
+    expect(await screen.findByText(/personal information is shown only for your signed-in citizen account/i))
+      .toBeTruthy();
+  });
+
   it('opens and closes the dialog panel via launcher button and close button', async () => {
     await openPanel();
     expect(screen.getByRole('dialog', { name: /portal assistant/i })).toBeTruthy();

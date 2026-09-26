@@ -29,6 +29,7 @@ export default function AssistantWidget() {
     clearConversation,
     retryStatus,
     isAvailable,
+    personalizedFeaturesAvailable,
     disclaimer,
   } = useAssistantConversation();
 
@@ -180,6 +181,13 @@ export default function AssistantWidget() {
             <i className="bi bi-info-circle-fill" aria-hidden="true" />
             <span>{disclaimer}</span>
           </div>
+
+          {personalizedFeaturesAvailable && (
+            <div className="assistant-privacy-banner" role="note">
+              <i className="bi bi-shield-lock-fill" aria-hidden="true" />
+              <span>Personal information is shown only for your signed-in citizen account.</span>
+            </div>
+          )}
 
           {/* Availability / Status Alert */}
           {!isStatusLoading && !isAvailable && (

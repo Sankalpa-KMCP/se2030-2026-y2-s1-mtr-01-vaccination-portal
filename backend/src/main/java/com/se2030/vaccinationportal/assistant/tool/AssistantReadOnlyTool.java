@@ -10,4 +10,12 @@ public interface AssistantReadOnlyTool {
     boolean matchesIntent(String userMessage);
 
     AssistantToolResult execute(AssistantToolContext context);
+
+    /**
+     * Executes a tool with the matched user message available for intent-specific filtering.
+     * Existing tools retain their original behavior through the default implementation.
+     */
+    default AssistantToolResult execute(AssistantToolContext context, String userMessage) {
+        return execute(context);
+    }
 }

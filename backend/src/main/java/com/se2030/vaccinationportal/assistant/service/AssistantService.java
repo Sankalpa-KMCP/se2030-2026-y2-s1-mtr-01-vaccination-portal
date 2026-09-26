@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.assistant.service;
 
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatRequest;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
+import com.se2030.vaccinationportal.assistant.dto.AssistantActionDto;
 import com.se2030.vaccinationportal.assistant.dto.AssistantStatusResponse;
 import com.se2030.vaccinationportal.assistant.exception.AssistantDisabledException;
 import com.se2030.vaccinationportal.assistant.exception.AssistantRateLimitExceededException;
@@ -43,8 +44,10 @@ import java.util.stream.Collectors;
  * headers are not trusted directly to prevent IP spoofing attacks against rate limits.
  */
 import com.se2030.vaccinationportal.assistant.tool.AssistantPersonalizedContextBuilder;
+import com.se2030.vaccinationportal.assistant.tool.AssistantPersonalizedContextResult;
 import com.se2030.vaccinationportal.assistant.tool.AssistantToolContext;
 import com.se2030.vaccinationportal.assistant.tool.AssistantToolRegistry;
+import com.se2030.vaccinationportal.assistant.policy.AssistantRouteCatalog;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
@@ -149,13 +152,14 @@ public class AssistantService {
         }
 
         // 5. Authorized citizen read-only personalized tool execution
-        String personalizedContext = null;
+        AssistantPersonalizedContextResult personalizedResult = null;
         if (isAuthenticated && callerAuthorities.contains("ROLE_CITIZEN")) {
             AssistantToolContext toolContext = new AssistantToolContext(requestId, principal, callerAuthorities);
-            personalizedContext = personalizedContextBuilder
-                    .buildPersonalizedContext(request.message(), toolContext)
+            personalizedResult = personalizedContextBuilder
+                    .buildPersonalizedResult(request.message(), toolContext)
                     .orElse(null);
         }
+        String personalizedContext = personalizedResult != null ? personalizedResult.promptContext() : null;
 
         // 6. Deterministic role-aware knowledge catalogue retrieval
         List<AssistantKnowledgeEntry> knowledgeEntries = AssistantKnowledgeCatalog.findRelevantEntries(
@@ -168,6 +172,7 @@ public class AssistantService {
 
         try {
             AssistantChatResponse response = aiResponseProvider.generateResponse(request, systemInstruction, requestId, callerAuthorities);
+            response = addDeterministicPersonalizedActions(response, personalizedResult, callerAuthorities);
 
             long latencyMs = System.currentTimeMillis() - startTime;
             log.info("Assistant request completed: requestId={}, category={}, status=200, latencyMs={}, inputLength={}, historyCount={}",
@@ -180,6 +185,40 @@ public class AssistantService {
                     requestId, category, ex.getClass().getSimpleName(), latencyMs, inputLength, historyCount);
             throw ex;
         }
+    }
+
+    private AssistantChatResponse addDeterministicPersonalizedActions(
+            AssistantChatResponse response,
+            AssistantPersonalizedContextResult personalizedResult,
+            Set<String> callerAuthorities
+    ) {
+        if (response == null || personalizedResult == null || personalizedResult.authorizedRoutes().isEmpty()) {
+            return response;
+        }
+
+        java.util.LinkedHashMap<String, AssistantActionDto> actionsByPath = new java.util.LinkedHashMap<>();
+        for (String route : personalizedResult.authorizedRoutes()) {
+            if (!AssistantRouteCatalog.isAuthorizedRoute(route, callerAuthorities)) {
+                continue;
+            }
+            String label = AssistantRouteCatalog.findMetadata(route)
+                    .map(meta -> meta.defaultLabel())
+                    .orElse("Open Page");
+            actionsByPath.put(route, new AssistantActionDto(label, route));
+        }
+        for (AssistantActionDto action : response.suggestedActions()) {
+            if (actionsByPath.size() >= 3) {
+                break;
+            }
+            if (action != null && AssistantRouteCatalog.isAuthorizedRoute(action.path(), callerAuthorities)) {
+                actionsByPath.putIfAbsent(action.path(), action);
+            }
+        }
+
+        return new AssistantChatResponse(
+                response.answer(),
+                actionsByPath.values().stream().limit(3).toList(),
+                response.requestId());
     }
 
     private String resolveClientKey(UserPrincipal principal, HttpServletRequest httpRequest) {
