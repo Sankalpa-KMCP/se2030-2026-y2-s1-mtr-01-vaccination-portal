@@ -20,6 +20,7 @@ import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.campaign.service.CampaignCenterAssignmentService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -113,6 +114,19 @@ class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
                         )
                 );
             }
+        });
+    }
+
+    @AfterEach
+    void tearDown() {
+        transactionTemplate.executeWithoutResult(status -> {
+            sessionRepository.deleteAllInBatch();
+            assignmentRepository.deleteAllInBatch();
+            operatingHoursRepository.deleteAllInBatch();
+            campaignRepository.deleteAllInBatch();
+            centerRepository.deleteAllInBatch();
+            targetGroupRepository.deleteAllInBatch();
+            vaccineTypeRepository.deleteAllInBatch();
         });
     }
 

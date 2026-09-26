@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.se2030.vaccinationportal.campaign.service.QuestionnaireVersionPublicationPort;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -67,6 +69,18 @@ class CampaignSchedulingConcurrencyIntegrationTests {
     @Autowired private CampaignCenterAssignmentRepository centerAssignmentRepository;
     @Autowired private VaccinationCenterRepository centerRepository;
     @Autowired private Clock clock;
+
+    @BeforeEach
+    @AfterEach
+    void cleanState() {
+        centerAssignmentRepository.deleteAllInBatch();
+        questionnaireAssignmentRepository.deleteAllInBatch();
+        doseProgrammeRepository.deleteAllInBatch();
+        campaignRepository.deleteAllInBatch();
+        centerRepository.deleteAllInBatch();
+        targetGroupRepository.deleteAllInBatch();
+        vaccineTypeRepository.deleteAllInBatch();
+    }
 
     @Test
     @Timeout(30)
