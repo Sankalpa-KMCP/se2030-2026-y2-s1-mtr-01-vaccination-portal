@@ -27,6 +27,12 @@ import org.springframework.stereotype.Repository;
 public interface WaitlistRepository extends JpaRepository<WaitlistEntry, Long> {
 
     /**
+     * Finds the signed-in citizen's waitlist history, newest first.
+     * Used by the assistant's citizen-owned, read-only status summary.
+     */
+    List<WaitlistEntry> findByCitizenIdOrderByJoinedAtDesc(Long citizenId);
+
+    /**
      * Finds a waitlist entry for a citizen, campaign, and specific status (e.g. WAITING).
      * Used for duplicate active waitlist entry validation.
      *

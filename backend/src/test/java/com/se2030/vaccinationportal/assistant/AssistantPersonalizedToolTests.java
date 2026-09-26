@@ -6,7 +6,10 @@ import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
+import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
 import com.se2030.vaccinationportal.assistant.controller.AssistantController;
 import com.se2030.vaccinationportal.assistant.controller.AssistantExceptionHandler;
@@ -25,6 +28,8 @@ import com.se2030.vaccinationportal.assistant.tool.AssistantToolResult;
 import com.se2030.vaccinationportal.assistant.tool.MyAppointmentsAssistantTool;
 import com.se2030.vaccinationportal.assistant.tool.MyEligibilityAssistantTool;
 import com.se2030.vaccinationportal.assistant.tool.MyVaccinationSummaryAssistantTool;
+import com.se2030.vaccinationportal.campaign.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
@@ -79,6 +84,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AssistantPersonalizedToolTests {
 
     private AppointmentRepository appointmentRepository;
+    private TimeSlotRepository timeSlotRepository;
+    private WaitlistRepository waitlistRepository;
     private EligibilityAssessmentRepository eligibilityAssessmentRepository;
     private DigitalCertificateService digitalCertificateService;
 
@@ -104,10 +111,13 @@ class AssistantPersonalizedToolTests {
         SecurityContextHolder.clearContext();
 
         appointmentRepository = mock(AppointmentRepository.class);
+        timeSlotRepository = mock(TimeSlotRepository.class);
+        waitlistRepository = mock(WaitlistRepository.class);
         eligibilityAssessmentRepository = mock(EligibilityAssessmentRepository.class);
         digitalCertificateService = mock(DigitalCertificateService.class);
 
-        appointmentsTool = new MyAppointmentsAssistantTool(appointmentRepository);
+        appointmentsTool = new MyAppointmentsAssistantTool(
+                appointmentRepository, timeSlotRepository, waitlistRepository);
         eligibilityTool = new MyEligibilityAssistantTool(eligibilityAssessmentRepository);
         vaccinationTool = new MyVaccinationSummaryAssistantTool(digitalCertificateService);
 
@@ -172,7 +182,8 @@ class AssistantPersonalizedToolTests {
 
         assistantService.processMessage(request, null, httpReq);
 
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
+                eligibilityAssessmentRepository, digitalCertificateService);
         String recordedInstruction = fakeProvider.getRecordedSystemInstructions().get(0);
         assertThat(recordedInstruction).doesNotContain(AssistantPersonalizedContextBuilder.DELIMITER_START);
         assertThat(recordedInstruction).contains("Anonymous visitor");
@@ -199,7 +210,8 @@ class AssistantPersonalizedToolTests {
 
         assistantService.processMessage(request, staffPrincipal, httpReq);
 
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
+                eligibilityAssessmentRepository, digitalCertificateService);
         String recordedInstruction = fakeProvider.getRecordedSystemInstructions().get(0);
         assertThat(recordedInstruction).doesNotContain(AssistantPersonalizedContextBuilder.DELIMITER_START);
     }
@@ -286,6 +298,59 @@ class AssistantPersonalizedToolTests {
 
         assertThat(result.contextSnippet()).doesNotContain("Appointment Time:");
         assertThat(result.contextSnippet()).contains("Never describe record creation timestamps as the scheduled appointment time");
+    }
+
+    @Test
+    @DisplayName("6a. Appointment output uses linked slot times to distinguish upcoming and past records")
+    void testAppointmentOutputUsesAuthoritativeSlotTimes() {
+        UserPrincipal citizen = createCitizenPrincipal(88L);
+        AssistantToolContext context = new AssistantToolContext("req-6a", citizen, Set.of("ROLE_CITIZEN"));
+        Instant now = Instant.now();
+
+        Instant bookingCreationTime = now.minusSeconds(12345);
+        Appointment upcoming = new Appointment(88L, 10L, 100L, AppointmentStatus.CONFIRMED, bookingCreationTime);
+        Appointment past = new Appointment(88L, 20L, 200L, AppointmentStatus.COMPLETED, now.minusSeconds(22345));
+        TimeSlot upcomingSlot = mock(TimeSlot.class);
+        when(upcomingSlot.getId()).thenReturn(100L);
+        when(upcomingSlot.getStartTime()).thenReturn(now.plusSeconds(3600));
+        when(upcomingSlot.getEndTime()).thenReturn(now.plusSeconds(5400));
+        TimeSlot pastSlot = mock(TimeSlot.class);
+        when(pastSlot.getId()).thenReturn(200L);
+        when(pastSlot.getStartTime()).thenReturn(now.minusSeconds(5400));
+        when(pastSlot.getEndTime()).thenReturn(now.minusSeconds(3600));
+
+        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(88L)).thenReturn(List.of(upcoming, past));
+        when(timeSlotRepository.findAllById(any())).thenReturn(List.of(upcomingSlot, pastSlot));
+
+        AssistantToolResult result = appointmentsTool.execute(context);
+
+        assertThat(result.contextSnippet()).contains("Active or upcoming appointment records");
+        assertThat(result.contextSnippet()).contains("Past or inactive appointment records");
+        assertThat(result.contextSnippet()).contains("Scheduled Start: " + upcomingSlot.getStartTime());
+        assertThat(result.contextSnippet()).contains("Scheduled Start: " + pastSlot.getStartTime());
+        assertThat(result.contextSnippet()).doesNotContain(bookingCreationTime.toString());
+    }
+
+    @Test
+    @DisplayName("6b. Waitlist output is citizen-owned and includes only the derived queue position")
+    void testWaitlistOutputUsesPrincipalCitizenId() {
+        UserPrincipal citizen = createCitizenPrincipal(88L);
+        AssistantToolContext context = new AssistantToolContext("req-6b", citizen, Set.of("ROLE_CITIZEN"));
+        WaitlistEntry other = new WaitlistEntry(77L, 10L, 500L, WaitlistStatus.WAITING, Instant.now().minusSeconds(60));
+        WaitlistEntry own = new WaitlistEntry(88L, 10L, 500L, WaitlistStatus.WAITING, Instant.now());
+
+        when(waitlistRepository.findByCitizenIdOrderByJoinedAtDesc(88L)).thenReturn(List.of(own));
+        when(waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(500L, WaitlistStatus.WAITING))
+                .thenReturn(List.of(other, own));
+
+        AssistantToolResult result = appointmentsTool.execute(context);
+
+        verify(waitlistRepository).findByCitizenIdOrderByJoinedAtDesc(88L);
+        verify(waitlistRepository, never()).findByCitizenIdOrderByJoinedAtDesc(77L);
+        assertThat(result.contextSnippet()).contains("Status: WAITING");
+        assertThat(result.contextSnippet()).contains("Current Queue Position: 2");
+        assertThat(result.contextSnippet()).doesNotContain("77");
+        assertThat(result.suggestedRoutes()).contains("/app/appointments/waitlist");
     }
 
     @Test
@@ -431,7 +496,8 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.MUTATION_REFUSAL_MESSAGE);
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
+                eligibilityAssessmentRepository, digitalCertificateService);
     }
 
     @Test
@@ -445,7 +511,8 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.MEDICAL_BOUNDARY_MESSAGE);
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
+                eligibilityAssessmentRepository, digitalCertificateService);
     }
 
     @Test
@@ -459,7 +526,8 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.SECURITY_REFUSAL_MESSAGE);
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
+                eligibilityAssessmentRepository, digitalCertificateService);
     }
 
     @Test
@@ -507,7 +575,7 @@ class AssistantPersonalizedToolTests {
 
         when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(100L)).thenReturn(Collections.emptyList());
         AssistantToolResult apptResult = appointmentsTool.execute(context);
-        assertThat(apptResult.contextSnippet()).isEqualTo("No appointment records were found for the signed-in citizen.");
+        assertThat(apptResult.contextSnippet()).isEqualTo("No appointment or waitlist records were found for the signed-in citizen.");
 
         when(eligibilityAssessmentRepository.findByCitizenIdOrderByReviewedAtDesc(100L)).thenReturn(Collections.emptyList());
         AssistantToolResult eligResult = eligibilityTool.execute(context);
@@ -774,7 +842,8 @@ class AssistantPersonalizedToolTests {
         assertThat(toolResult.contextSnippet()).doesNotContain("/app/appointments/mine");
 
         // 2. Navigation routes are stored strictly in suggestedRoutes
-        assertThat(toolResult.suggestedRoutes()).containsExactly("/app/appointments/mine");
+        assertThat(toolResult.suggestedRoutes()).containsExactly(
+                "/app/appointments/mine", "/app/appointments/waitlist");
 
         // 3. If a tool suggests an unauthorized route (e.g. admin path), AssistantRouteCatalog filters it out
         AssistantReadOnlyTool mockToolWithUnauthorizedRoute = new AssistantReadOnlyTool() {
