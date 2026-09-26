@@ -5,12 +5,15 @@ import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
+import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.repository.CitizenCampaignBookingGuardRepository;
+import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Service orchestrating atomic appointment booking workflows for citizens.
  * Enforces guard-row locking, cross-module eligibility lookup, active appointment duplicate checks,
- * and time-slot capacity reservations within one transactional boundary.
+ * active waitlist duplicate checks (Policy A), and time-slot capacity reservations within one transactional boundary.
  *
  * <p><b>User Story:</b>
  * <ul>
@@ -32,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>MF03-BR-01: Booking requires a currently valid ELIGIBLE assessment for the same campaign.</li>
  *   <li>MF03-BR-02: Exactly one active appointment per citizen per campaign is enforced.</li>
  *   <li>MF03-BR-03: Capacity allocation is atomic and prevents two concurrent users taking the last place.</li>
+ *   <li>MF03-BR-14 / Policy A: Dual holdings prohibited; active waitlist entry precludes direct booking.</li>
  * </ul>
  */
 @Service
@@ -39,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AppointmentBookingService {
 
     private final AppointmentRepository appointmentRepository;
+    private final WaitlistRepository waitlistRepository;
     private final CitizenCampaignBookingGuardRepository guardRepository;
     private final EligibilityLookupPort eligibilityLookupPort;
     private final SlotCapacityPort slotCapacityPort;
@@ -46,11 +51,13 @@ public class AppointmentBookingService {
     @Autowired
     public AppointmentBookingService(
             AppointmentRepository appointmentRepository,
+            WaitlistRepository waitlistRepository,
             CitizenCampaignBookingGuardRepository guardRepository,
             @Autowired(required = false) EligibilityLookupPort eligibilityLookupPort,
             @Autowired(required = false) SlotCapacityPort slotCapacityPort
     ) {
         this.appointmentRepository = appointmentRepository;
+        this.waitlistRepository = waitlistRepository;
         this.guardRepository = guardRepository;
         this.eligibilityLookupPort = eligibilityLookupPort;
         this.slotCapacityPort = slotCapacityPort;
@@ -70,6 +77,8 @@ public class AppointmentBookingService {
      *       we do not mutate/decrement physical slot capacity for an ineligible citizen.</li>
      *   <li><b>Check Active Appointment Duplicates (MF03-BR-02):</b> Verified before slot reservation to prevent
      *       wasting capacity if the citizen already has a confirmed or checked-in booking.</li>
+     *   <li><b>Check Active Waitlist Duplicates (MF03-BR-14 / Policy A):</b> Verified before slot reservation to prevent
+     *       dual active holdings. Citizen must explicitly leave the waitlist before direct booking.</li>
      *   <li><b>Verify Slot Belongs to Campaign:</b> Verifies that the requested time slot belongs to the target campaign
      *       before allocating capacity, preventing cross-campaign slot booking integrity violations.</li>
      *   <li><b>Reserve MF-02 Slot Capacity (MF03-BR-03):</b> Atomically decrements slot capacity. If the slot is
@@ -85,6 +94,7 @@ public class AppointmentBookingService {
      * @return Saved {@link Appointment} entity
      * @throws NotEligibleException                if citizen is not ELIGIBLE in MF-01
      * @throws DuplicateActiveAppointmentException if citizen already has a CONFIRMED or CHECKED_IN appointment for the campaign
+     * @throws DuplicateWaitlistEntryException     if citizen already has an active WAITING waitlist entry for the campaign (Policy A)
      * @throws SlotFullException                   if time slot capacity reservation fails in MF-02
      * @throws IllegalArgumentException            if any required parameter is null or slot does not belong to campaign
      */
@@ -124,6 +134,13 @@ public class AppointmentBookingService {
         );
         if (!existingActiveAppointments.isEmpty()) {
             throw new DuplicateActiveAppointmentException("Citizen " + citizenId + " already has an active appointment for campaign " + campaignId);
+        }
+
+        // Step 1c-2: Check active waitlist duplicates (WAITING) under guard lock (Policy A - F05 invariant).
+        // Viva note: A citizen cannot hold an active waitlist entry and an active appointment for the same campaign.
+        // Citizen must explicitly leave the waitlist before direct booking. Checked before capacity reservation and persistence.
+        if (waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(citizenId, campaignId, WaitlistStatus.WAITING).isPresent()) {
+            throw new DuplicateWaitlistEntryException("Citizen already has an active waitlist entry for this campaign. Must leave waitlist before booking directly.");
         }
 
         // Step 1d: Verify slot belongs to the requested campaign.

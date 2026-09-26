@@ -2,12 +2,17 @@ package com.se2030.vaccinationportal.appointment.service;
 
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
+import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
+import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.repository.CitizenCampaignBookingGuardRepository;
+import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -36,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Service-level unit and integration tests for {@link AppointmentBookingService}.
  * Verifies successful booking, eligibility rejection (MF03-BR-01), duplicate active appointment rejection (MF03-BR-02),
+ * active waitlist entry rejection (MF03-BR-14 / Policy A),
  * slot capacity exhaustion rejection, and atomic last-slot concurrent booking safety (MF03-BR-03).
  */
 @SpringBootTest
@@ -63,6 +69,9 @@ class AppointmentBookingServiceTests {
     private AppointmentRepository appointmentRepository;
 
     @Autowired
+    private WaitlistRepository waitlistRepository;
+
+    @Autowired
     private CitizenCampaignBookingGuardRepository guardRepository;
 
     @Autowired
@@ -73,6 +82,7 @@ class AppointmentBookingServiceTests {
 
     @BeforeEach
     void setUp() {
+        waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
@@ -81,6 +91,7 @@ class AppointmentBookingServiceTests {
 
     @AfterEach
     void tearDown() {
+        waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
     }
@@ -202,6 +213,98 @@ class AppointmentBookingServiceTests {
 
         List<Appointment> saved = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
                 citizenId, campaignId, List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN));
+        assertEquals(1, saved.size());
+    }
+
+    @Test
+    void bookAppointment_activeWaitlistEntrySameCampaign_rejectsWithDuplicateWaitlistEntryException() {
+        Long citizenId = 1005L;
+        Long campaignId = 2001L;
+        Long sessionId = 4001L;
+        Long slotId = 3005L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        slotCapacityPortDouble.setSlotCampaign(slotId, campaignId);
+
+        // Citizen has active WAITING entry for this campaign
+        WaitlistEntry waitlistEntry = waitlistRepository.save(
+                new WaitlistEntry(citizenId, campaignId, sessionId, WaitlistStatus.WAITING, Instant.now())
+        );
+
+        DuplicateWaitlistEntryException ex = assertThrows(
+                DuplicateWaitlistEntryException.class,
+                () -> bookingService.bookAppointment(citizenId, campaignId, slotId)
+        );
+        assertTrue(ex.getMessage().contains("already has an active waitlist entry for this campaign"));
+
+        // Verify slot capacity was NOT reserved (remains 5)
+        assertEquals(5, slotCapacityPortDouble.getAvailableCapacity(slotId));
+
+        // Verify no appointment was persisted
+        List<Appointment> saved = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
+                citizenId, campaignId, List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN));
+        assertTrue(saved.isEmpty());
+
+        // Verify waitlist entry remains untouched in WAITING status (Policy A does not cancel it)
+        WaitlistEntry refreshedEntry = waitlistRepository.findById(waitlistEntry.getId()).orElseThrow();
+        assertEquals(WaitlistStatus.WAITING, refreshedEntry.getStatus());
+    }
+
+    @Test
+    void bookAppointment_activeWaitlistEntryDifferentCampaign_succeeds() {
+        Long citizenId = 1006L;
+        Long campaignId = 2001L;
+        Long otherCampaignId = 2002L;
+        Long sessionId = 4002L;
+        Long slotId = 3006L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        slotCapacityPortDouble.setSlotCampaign(slotId, campaignId);
+
+        // Citizen has active WAITING entry for a DIFFERENT campaign
+        WaitlistEntry waitlistEntry = waitlistRepository.save(
+                new WaitlistEntry(citizenId, otherCampaignId, sessionId, WaitlistStatus.WAITING, Instant.now())
+        );
+
+        Appointment appointment = bookingService.bookAppointment(citizenId, campaignId, slotId);
+
+        assertNotNull(appointment);
+        assertEquals(citizenId, appointment.getCitizenId());
+        assertEquals(campaignId, appointment.getCampaignId());
+        assertEquals(4, slotCapacityPortDouble.getAvailableCapacity(slotId));
+
+        // Waitlist entry for other campaign remains WAITING
+        WaitlistEntry refreshedEntry = waitlistRepository.findById(waitlistEntry.getId()).orElseThrow();
+        assertEquals(WaitlistStatus.WAITING, refreshedEntry.getStatus());
+    }
+
+    @Test
+    void bookAppointment_cancelledWaitlistEntrySameCampaign_succeeds() {
+        Long citizenId = 1007L;
+        Long campaignId = 2001L;
+        Long sessionId = 4003L;
+        Long slotId = 3007L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        slotCapacityPortDouble.setSlotCampaign(slotId, campaignId);
+
+        // Citizen previously had a waitlist entry that was CANCELLED (e.g. they voluntarily left)
+        waitlistRepository.save(
+                new WaitlistEntry(citizenId, campaignId, sessionId, WaitlistStatus.CANCELLED, Instant.now())
+        );
+
+        Appointment appointment = bookingService.bookAppointment(citizenId, campaignId, slotId);
+
+        assertNotNull(appointment);
+        assertEquals(citizenId, appointment.getCitizenId());
+        assertEquals(campaignId, appointment.getCampaignId());
+        assertEquals(4, slotCapacityPortDouble.getAvailableCapacity(slotId));
+
+        List<Appointment> saved = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
+                citizenId, campaignId, List.of(AppointmentStatus.CONFIRMED));
         assertEquals(1, saved.size());
     }
 
