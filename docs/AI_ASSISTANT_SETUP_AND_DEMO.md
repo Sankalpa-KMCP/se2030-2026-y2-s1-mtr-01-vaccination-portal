@@ -26,8 +26,9 @@ Spring AssistantController (/api/v1/assistant/messages)
     ├── 4. Verified Knowledge Context (AssistantKnowledgeCatalog & ContextBuilder)
     │      └── Grounded repository documentation, MF-01..MF-05 capabilities & routes
     │
-    ├── 5. Backend OpenAI Responses Provider (OpenAiResponsesProvider)
-    │      └── Model completion via server-side OPENAI_API_KEY (never exposed to client)
+    ├── 5. Selected Backend Provider (AiResponseProvider)
+    │      ├── OpenAiResponsesProvider (server-side API key)
+    │      └── OllamaChatProvider (free local model; loopback only)
     │
     ▼
 Structured Response (AssistantChatResponse)
@@ -135,14 +136,40 @@ export DB_PASSWORD="<your-local-database-password>"
 export SERVER_PORT="8080"
 ```
 
-### Step 2: AI Assistant Environment Variables
+### Step 2A: Free Local Ollama Provider
+
+Install [Ollama](https://ollama.com/download), then download the local model once:
+
+```zsh
+ollama pull qwen3:4b
+```
+
+Ollama's `qwen3:4b` download is approximately 2.5 GB. Start Ollama, then configure the backend in the same terminal used to start Spring Boot:
+
+```zsh
+export AI_ASSISTANT_ENABLED="true"
+export AI_ASSISTANT_PROVIDER="ollama"
+export AI_ASSISTANT_MODEL="qwen3:4b"
+export OLLAMA_BASE_URL="http://localhost:11434"
+```
+
+No API key, OpenAI account, or API credit is required in this mode. The backend accepts only a loopback Ollama URL so authorized user context cannot be redirected to a remote model server. Model files and inference remain on the local computer.
+
+Confirm that Ollama is running and the model is installed:
+
+```zsh
+curl -s http://localhost:11434/api/tags
+```
+
+### Step 2B: OpenAI Provider
 
 To prevent secrets from leaking into shell history (`~/.zsh_history`), use a hidden terminal prompt (`read -s`) to export your API key:
 
 ```zsh
-# Enable the assistant and set the target OpenAI model
+# Enable the assistant and select the OpenAI provider and model
 export AI_ASSISTANT_ENABLED="true"
-export OPENAI_MODEL="<supported-model-name>"
+export AI_ASSISTANT_PROVIDER="openai"
+export AI_ASSISTANT_MODEL="<supported-model-name>"
 
 # Securely input the API key without echoing to the screen or history
 read -s "OPENAI_API_KEY?OpenAI API key: "
@@ -222,7 +249,7 @@ curl -s http://localhost:8080/api/v1/assistant/status
 
 ## 8. Enabled Public Demonstration
 
-When configured with valid environment variables (`AI_ASSISTANT_ENABLED="true"`, `OPENAI_MODEL`, `OPENAI_API_KEY`):
+When configured with either a running local Ollama model or valid OpenAI environment variables:
 
 ### 1. Check Assistant Status
 
@@ -350,12 +377,13 @@ During code review and assessment, verify the following core security principles
 | Issue | Root Cause | Solution |
 | :--- | :--- | :--- |
 | **Status returns `available: false`** | `AI_ASSISTANT_ENABLED` is `false` or missing. | Ensure `export AI_ASSISTANT_ENABLED="true"` is set in the backend environment before startup. |
-| **Missing `OPENAI_API_KEY`** | Secret key was not exported in the shell. | Re-run `read -s "OPENAI_API_KEY?OpenAI API key: "` and restart the backend. |
-| **Missing `OPENAI_MODEL`** | Model property is unset or blank. | Set `export OPENAI_MODEL="<supported-model-name>"` to a Responses API compatible model available to the project's OpenAI account and restart the backend. |
+| **Ollama status is available but replies fail** | Ollama is stopped or the configured model has not been downloaded. | Start Ollama, run `ollama pull qwen3:4b`, and verify `curl http://localhost:11434/api/tags`. |
+| **Missing `OPENAI_API_KEY`** | OpenAI is selected but its secret key was not exported. | Re-run `read -s "OPENAI_API_KEY?OpenAI API key: "` and restart the backend, or select the local Ollama provider. |
+| **Missing assistant model** | `AI_ASSISTANT_MODEL` is unset or blank. | Set it to `qwen3:4b` for the documented Ollama setup or a Responses API compatible model for OpenAI. |
 | **Backend running on different port** | Port collision or custom port used. | Start frontend with `BACKEND_PORT=8081 npm run dev` (or `export BACKEND_PORT=8081` then `npm run dev`) so Vite proxies to the correct port. |
 | **MySQL authentication failure** | Incorrect DB password or MySQL not running. | Verify MySQL is running on port 3306 and verify `DB_PASSWORD`. |
 | **Frontend proxy failure (ECONNREFUSED)** | Backend is not started or still initializing. | Start the backend (`./mvnw spring-boot:run`) and confirm `http://localhost:8080/actuator/health` returns `UP`. |
 | **HTTP 401 Unauthorized on messages** | Expired or invalid JWT token. | Re-authenticate through `/login` to obtain a fresh JWT. |
 | **HTTP 429 Too Many Requests** | Rate limit exceeded (5 RPM anonymous, 15 RPM auth). | Wait 60 seconds before sending additional requests. |
-| **HTTP 503 Service Unavailable** | AI disabled or external provider unreachable. | Verify internet connectivity, upstream OpenAI service status, and backend logs. |
+| **HTTP 503 Service Unavailable** | AI is disabled or the selected provider is misconfigured. | Verify `AI_ASSISTANT_ENABLED`, `AI_ASSISTANT_PROVIDER`, and `AI_ASSISTANT_MODEL`; for Ollama also verify the local server. |
 | **Accidental frontend key injection** | Attempting to solve errors by adding key to React. | **NEVER** place an OpenAI API key in `frontend/` or `VITE_*` variables. The key belongs exclusively on the backend. |

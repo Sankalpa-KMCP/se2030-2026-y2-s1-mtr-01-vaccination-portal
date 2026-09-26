@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.assistant.config;
 import com.se2030.vaccinationportal.assistant.provider.AiResponseProvider;
 import com.se2030.vaccinationportal.assistant.provider.DisabledAiResponseProvider;
 import com.se2030.vaccinationportal.assistant.provider.OpenAiResponsesProvider;
+import com.se2030.vaccinationportal.assistant.provider.OllamaChatProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -24,12 +25,22 @@ public class AssistantConfig {
             return new DisabledAiResponseProvider();
         }
 
-        if (properties.getApiKey().isBlank() || properties.getModel().isBlank()) {
+        if (!properties.isConfiguredForLiveProvider()) {
             log.warn("AI Assistant is enabled but configuration is incomplete. Registered DisabledAiResponseProvider.");
             return new DisabledAiResponseProvider();
         }
 
-        log.info("AI Assistant initialized with live Responses provider.");
-        return new OpenAiResponsesProvider(properties);
+        if ("ollama".equals(properties.getProvider())) {
+            log.info("AI Assistant initialized with local Ollama provider.");
+            return new OllamaChatProvider(properties);
+        }
+
+        if ("openai".equals(properties.getProvider())) {
+            log.info("AI Assistant initialized with live Responses provider.");
+            return new OpenAiResponsesProvider(properties);
+        }
+
+        log.warn("AI Assistant provider is unsupported. Registered DisabledAiResponseProvider.");
+        return new DisabledAiResponseProvider();
     }
 }

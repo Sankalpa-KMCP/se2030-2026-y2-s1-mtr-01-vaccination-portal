@@ -63,12 +63,15 @@ app.security.auth.delivery-mode=console
 # and NEVER commit a populated API key to version control.
 # Standard unit and integration tests use a fake provider and never call OpenAI.
 AI_ASSISTANT_ENABLED=false
+AI_ASSISTANT_PROVIDER=openai
+AI_ASSISTANT_MODEL=
 OPENAI_API_KEY=
+# Legacy OpenAI-only model variable; AI_ASSISTANT_MODEL takes precedence.
 OPENAI_MODEL=
+OLLAMA_BASE_URL=http://localhost:11434
 AI_ASSISTANT_TIMEOUT=15s
 AI_ASSISTANT_MAX_INPUT_CHARACTERS=1500
 AI_ASSISTANT_MAX_HISTORY_MESSAGES=10
 AI_ASSISTANT_MAX_OUTPUT_TOKENS=500
 AI_ASSISTANT_ANONYMOUS_RPM=5
 AI_ASSISTANT_AUTHENTICATED_RPM=15
-

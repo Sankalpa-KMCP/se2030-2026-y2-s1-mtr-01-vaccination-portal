@@ -7,7 +7,9 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+import java.net.URI;
 import java.time.Duration;
+import java.util.Locale;
 
 /**
  * Validated configuration properties for the AI Assistant subsystem.
@@ -19,9 +21,13 @@ public class AssistantProperties {
 
     private boolean enabled = false;
 
+    private String provider = "openai";
+
     private String apiKey = "";
 
     private String model = "";
+
+    private String baseUrl = "http://localhost:11434";
 
     @NotNull
     private Duration timeout = Duration.ofSeconds(15);
@@ -88,6 +94,14 @@ public class AssistantProperties {
         return apiKey;
     }
 
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider != null ? provider.trim().toLowerCase(Locale.ROOT) : "openai";
+    }
+
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey != null ? apiKey.trim() : "";
     }
@@ -98,6 +112,14 @@ public class AssistantProperties {
 
     public void setModel(String model) {
         this.model = model != null ? model.trim() : "";
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl != null ? baseUrl.trim() : "";
     }
 
     public Duration getTimeout() {
@@ -141,15 +163,39 @@ public class AssistantProperties {
     }
 
     public boolean isConfiguredForLiveProvider() {
-        return enabled && !apiKey.isEmpty() && !model.isEmpty();
+        return switch (provider) {
+            case "openai" -> enabled && !apiKey.isEmpty() && !model.isEmpty();
+            case "ollama" -> enabled && isLoopbackBaseUrl() && !model.isEmpty();
+            default -> false;
+        };
+    }
+
+    /**
+     * Local-model prompts can contain authorized user context, so Ollama is deliberately restricted
+     * to the loopback interface and cannot be redirected to an arbitrary remote host.
+     */
+    public boolean isLoopbackBaseUrl() {
+        try {
+            URI uri = URI.create(baseUrl);
+            String host = uri.getHost();
+            return "http".equalsIgnoreCase(uri.getScheme())
+                    && host != null
+                    && ("localhost".equalsIgnoreCase(host)
+                    || "127.0.0.1".equals(host)
+                    || "::1".equals(host));
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 
     @Override
     public String toString() {
         return "AssistantProperties{" +
                 "enabled=" + enabled +
+                ", provider='" + provider + '\'' +
                 ", apiKey='" + (apiKey.isEmpty() ? "<empty>" : "<redacted>") + '\'' +
                 ", model='" + model + '\'' +
+                ", baseUrl='" + baseUrl + '\'' +
                 ", timeout=" + timeout +
                 ", maxInputCharacters=" + maxInputCharacters +
                 ", maxHistoryMessages=" + maxHistoryMessages +

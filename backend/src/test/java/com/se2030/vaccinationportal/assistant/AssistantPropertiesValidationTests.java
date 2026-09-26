@@ -31,8 +31,10 @@ class AssistantPropertiesValidationTests {
         AssistantProperties props = new AssistantProperties();
 
         assertFalse(props.isEnabled(), "Assistant must default to disabled (false)");
+        assertEquals("openai", props.getProvider());
         assertEquals("", props.getApiKey());
         assertEquals("", props.getModel());
+        assertEquals("http://localhost:11434", props.getBaseUrl());
         assertEquals(Duration.ofSeconds(15), props.getTimeout());
         assertEquals(1500, props.getMaxInputCharacters());
         assertEquals(10, props.getMaxHistoryMessages());
@@ -44,6 +46,20 @@ class AssistantPropertiesValidationTests {
 
         Set<ConstraintViolation<AssistantProperties>> violations = validator.validate(props);
         assertTrue(violations.isEmpty(), "Default properties should satisfy validation constraints");
+    }
+
+    @Test
+    @DisplayName("Ollama requires an enabled local endpoint and model but no API key")
+    void testOllamaConfiguration() {
+        AssistantProperties props = new AssistantProperties();
+        props.setEnabled(true);
+        props.setProvider("ollama");
+        props.setModel("qwen3:4b");
+
+        assertTrue(props.isConfiguredForLiveProvider());
+
+        props.setBaseUrl("https://remote-model.example.com");
+        assertFalse(props.isConfiguredForLiveProvider(), "Remote endpoints must fail closed");
     }
 
     @Test

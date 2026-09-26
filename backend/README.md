@@ -134,7 +134,8 @@ The backend provides a secure, rate-limited, read-only conversational assistant 
 #### Core Capabilities & Boundaries
 
 - **Disabled by default**: `AI_ASSISTANT_ENABLED` defaults to `false`. The portal starts and operates completely normally when the AI assistant is disabled.
-- **Backend-only secret**: `OPENAI_API_KEY` is strictly server-side. It is never exposed to the frontend or committed to version control.
+- **Selectable provider**: Use the OpenAI Responses API or a free local Ollama model without changing the frontend or assistant security pipeline.
+- **Backend-only secret**: When OpenAI is selected, `OPENAI_API_KEY` is strictly server-side. It is never exposed to the frontend or committed to version control. Ollama mode requires no API key.
 - **Test isolation**: Automated test suites use a deterministic fake provider (`DeterministicFakeAiResponseProvider`) and **never make live requests to OpenAI**.
 - **Deterministic safety policy**: Pre-evaluates clinical and mutation boundaries, immediately refusing medical diagnosis, prescription advice, and database modification requests.
 - **Authorized read-only citizen tools**:
@@ -149,8 +150,11 @@ The backend provides a secure, rate-limited, read-only conversational assistant 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `AI_ASSISTANT_ENABLED` | `false` | Enables the AI assistant (`true` or `false`). |
+| `AI_ASSISTANT_PROVIDER` | `openai` | Provider implementation: `openai` or `ollama`. |
+| `AI_ASSISTANT_MODEL` | *(empty)* | Model used by the selected provider. Takes precedence over legacy `OPENAI_MODEL`. |
 | `OPENAI_API_KEY` | *(empty)* | Official OpenAI API secret key. Must remain server-side. |
-| `OPENAI_MODEL` | *(empty)* | Responses API compatible model available to the project’s OpenAI account. |
+| `OPENAI_MODEL` | *(empty)* | Legacy OpenAI-only model setting. |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama endpoint. Non-loopback URLs are rejected to protect authorized context. |
 | `AI_ASSISTANT_TIMEOUT` | `15s` | Provider HTTP request timeout. |
 | `AI_ASSISTANT_MAX_INPUT_CHARACTERS` | `1500` | Maximum allowed character length for incoming chat messages. |
 | `AI_ASSISTANT_MAX_HISTORY_MESSAGES` | `10` | Maximum conversation history turns processed. |
