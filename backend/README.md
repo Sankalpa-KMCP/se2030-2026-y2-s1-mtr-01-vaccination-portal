@@ -150,7 +150,7 @@ The backend provides a secure, rate-limited, read-only conversational assistant 
 | :--- | :--- | :--- |
 | `AI_ASSISTANT_ENABLED` | `false` | Enables the AI assistant (`true` or `false`). |
 | `OPENAI_API_KEY` | *(empty)* | Official OpenAI API secret key. Must remain server-side. |
-| `OPENAI_MODEL` | *(empty)* | Configured OpenAI model (e.g., `gpt-4o-mini`). |
+| `OPENAI_MODEL` | *(empty)* | Responses API compatible model available to the project’s OpenAI account. |
 | `AI_ASSISTANT_TIMEOUT` | `15s` | Provider HTTP request timeout. |
 | `AI_ASSISTANT_MAX_INPUT_CHARACTERS` | `1500` | Maximum allowed character length for incoming chat messages. |
 | `AI_ASSISTANT_MAX_HISTORY_MESSAGES` | `10` | Maximum conversation history turns processed. |
