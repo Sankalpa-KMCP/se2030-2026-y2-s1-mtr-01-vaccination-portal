@@ -24,6 +24,8 @@ import com.se2030.vaccinationportal.campaign.service.SeriesChangePreview;
 import com.se2030.vaccinationportal.campaign.service.SessionOccurrenceGenerationService;
 import com.se2030.vaccinationportal.campaign.service.SessionSeriesChangeService;
 import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -65,6 +67,20 @@ class SessionSeriesMySqlConcurrencyIntegrationTests extends AbstractMySqlTestCon
     @Autowired private OperatingHoursRepository operatingHoursRepository;
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
+
+    @BeforeEach
+    @AfterEach
+    void clearPersistedState() {
+        sessionChangeEventRepository.deleteAllInBatch();
+        sessionRepository.deleteAllInBatch();
+        ruleRepository.deleteAllInBatch();
+        assignmentRepository.deleteAllInBatch();
+        operatingHoursRepository.deleteAllInBatch();
+        campaignRepository.deleteAllInBatch();
+        centerRepository.deleteAllInBatch();
+        targetGroupRepository.deleteAllInBatch();
+        vaccineTypeRepository.deleteAllInBatch();
+    }
 
     @Test
     @Timeout(30)
