@@ -102,13 +102,14 @@ public class AppointmentRescheduleService {
      *       ({@link RequiresStaffOverrideException}) using shared {@link AppointmentModificationValidator}.</li>
      *   <li>Acquire pessimistic write lock on {@link com.se2030.vaccinationportal.appointment.model.CitizenCampaignBookingGuard}
      *       for (citizenId, campaignId) to serialize concurrent operations for the same citizen+campaign.</li>
+     *   <li>Verify target {@code newSlotId} belongs to {@code appointment.getCampaignId()} to prevent cross-campaign reschedule attacks.</li>
      *   <li>Reserve capacity on {@code newSlotId} via {@link SlotCapacityPort#reserveCapacity(Long)} BEFORE touching the old slot.
      *       If capacity is exhausted, throw {@link SlotFullException} leaving the old slot and appointment completely untouched.</li>
      *   <li>Release capacity on old {@code slotId} via {@link SlotCapacityPort#releaseCapacity(Long)}.</li>
      *   <li>Mutate existing {@link Appointment}'s slotId to {@code newSlotId} (status stays CONFIRMED, lockVersion increments).</li>
      * </ol>
-     * <i>Transactional Rollback Contract:</i> Under Spring's default transactional behavior, if step 5 or 6 fails or throws any
-     * {@link RuntimeException} after step 4 (new slot reservation) succeeded, the entire transaction rolls back completely,
+     * <i>Transactional Rollback Contract:</i> Under Spring's default transactional behavior, if step 6 or 7 fails or throws any
+     * {@link RuntimeException} after step 5 (new slot reservation) succeeded, the entire transaction rolls back completely,
      * reverting the new-slot reservation and preserving system-wide capacity integrity.
      * </p>
      *
@@ -155,7 +156,16 @@ public class AppointmentRescheduleService {
                 .orElseThrow(() -> new IllegalStateException("Failed to acquire booking guard lock for citizen "
                         + appointment.getCitizenId() + " and campaign " + appointment.getCampaignId()));
 
-        // Step 1e: CRITICAL VIVA PROBE: "Reserve-Before-Release" Ordering (MF03-BR-05)
+        // Step 1e: Verify target newSlotId belongs to appointment's campaign
+        // Viva note: Verified before reserving capacity to maintain campaign-slot integrity and prevent cross-campaign reschedule attacks.
+        if (slotCapacityPort == null) {
+            throw new IllegalStateException("SlotCapacityPort implementation (MF-02) is unavailable");
+        }
+        if (!slotCapacityPort.isSlotInCampaign(newSlotId, appointment.getCampaignId())) {
+            throw new IllegalArgumentException("Target time slot " + newSlotId + " does not belong to campaign " + appointment.getCampaignId());
+        }
+
+        // Step 1f: CRITICAL VIVA PROBE: "Reserve-Before-Release" Ordering (MF03-BR-05)
         // Why reserve newSlotId BEFORE releasing oldSlotId?
         // If we released the old slot first and then attempted to reserve the new slot only to find it full
         // (or failing due to a concurrent booking race), the citizen would be left stranded with NEITHER slot!
@@ -168,9 +178,9 @@ public class AppointmentRescheduleService {
 
         Long oldSlotId = appointment.getSlotId();
 
-        // Step 1f: Release capacity on old slotId AFTER new slot reservation succeeds
+        // Step 1g: Release capacity on old slotId AFTER new slot reservation succeeds
         // Viva note: If releasing the old slot fails or throws any exception, Spring's @Transactional rollback
-        // automatically reverts the Step 1e reservation on newSlotId, keeping total system capacity consistent.
+        // automatically reverts the Step 1f reservation on newSlotId, keeping total system capacity consistent.
         boolean released = slotCapacityPort.releaseCapacity(oldSlotId);
         if (!released) {
             throw new IllegalStateException("Failed to release capacity for old slot ID: " + oldSlotId + ". Transaction rolling back.");
@@ -180,7 +190,7 @@ public class AppointmentRescheduleService {
         appointment.reschedule(newSlotId);
         Appointment saved = appointmentRepository.save(appointment);
 
-        // Step 1g: Trigger automatic waitlist promotion for the freed old slot synchronously within this transaction.
+        // Step 1h: Trigger automatic waitlist promotion for the freed old slot synchronously within this transaction.
         // Viva note: Running promotion synchronously within the same transaction ensures that the freshly released
         // old slot is immediately offered to waiting citizens in FIFO order before external searchers can grab it.
         if (promotionService != null) {

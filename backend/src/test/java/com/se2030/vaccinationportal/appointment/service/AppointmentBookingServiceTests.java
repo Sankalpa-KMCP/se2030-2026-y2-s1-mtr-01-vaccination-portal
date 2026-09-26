@@ -76,6 +76,7 @@ class AppointmentBookingServiceTests {
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.clearSlotCampaignMap();
     }
 
     @AfterEach
@@ -106,6 +107,55 @@ class AppointmentBookingServiceTests {
                 citizenId, campaignId, List.of(AppointmentStatus.CONFIRMED));
         assertEquals(1, saved.size());
         assertEquals(appointment.getId(), saved.get(0).getId());
+    }
+
+    @Test
+    void bookAppointment_validCampaignAndSlot_succeeds() {
+        Long citizenId = 1009L;
+        Long campaignId = 2001L;
+        Long slotId = 3009L;
+
+        eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 3);
+        slotCapacityPortDouble.setSlotCampaign(slotId, campaignId);
+
+        Appointment appointment = bookingService.bookAppointment(citizenId, campaignId, slotId);
+
+        assertNotNull(appointment);
+        assertEquals(citizenId, appointment.getCitizenId());
+        assertEquals(campaignId, appointment.getCampaignId());
+        assertEquals(slotId, appointment.getSlotId());
+        assertEquals(2, slotCapacityPortDouble.getAvailableCapacity(slotId));
+
+        List<Appointment> saved = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
+                citizenId, campaignId, List.of(AppointmentStatus.CONFIRMED));
+        assertEquals(1, saved.size());
+    }
+
+    @Test
+    void bookAppointment_mismatchedCampaignAndSlot_rejectsWithIllegalArgumentException() {
+        Long citizenId = 1010L;
+        Long requestedCampaignId = 2001L;
+        Long actualSlotCampaignId = 2002L;
+        Long slotId = 3010L;
+
+        eligibilityPortDouble.setEligibility(citizenId, requestedCampaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        slotCapacityPortDouble.setSlotCampaign(slotId, actualSlotCampaignId);
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> bookingService.bookAppointment(citizenId, requestedCampaignId, slotId)
+        );
+        assertTrue(ex.getMessage().contains("does not belong to campaign " + requestedCampaignId));
+
+        // Verify slot capacity was NOT reserved (remains 5)
+        assertEquals(5, slotCapacityPortDouble.getAvailableCapacity(slotId));
+
+        // Verify no appointment was persisted
+        List<Appointment> saved = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
+                citizenId, requestedCampaignId, List.of(AppointmentStatus.CONFIRMED));
+        assertTrue(saved.isEmpty());
     }
 
     @Test

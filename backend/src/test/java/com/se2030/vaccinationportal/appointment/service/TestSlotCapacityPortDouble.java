@@ -72,13 +72,46 @@ public class TestSlotCapacityPortDouble implements SlotCapacityPort {
     }
 
     private final ConcurrentMap<Long, Boolean> sessionFullMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Long> slotCampaignMap = new ConcurrentHashMap<>();
+    private boolean defaultSlotCampaignMatch = true;
 
     public void setSessionFull(Long sessionId, boolean full) {
         sessionFullMap.put(sessionId, full);
     }
 
+    public void setSlotCampaign(Long slotId, Long campaignId) {
+        if (slotId != null && campaignId != null) {
+            slotCampaignMap.put(slotId, campaignId);
+        }
+    }
+
+    public void setDefaultSlotCampaignMatch(boolean defaultSlotCampaignMatch) {
+        this.defaultSlotCampaignMatch = defaultSlotCampaignMatch;
+    }
+
+    public void clearSlotCampaignMap() {
+        slotCampaignMap.clear();
+    }
+
+    public int getAvailableCapacity(Long slotId) {
+        AtomicInteger remaining = slotCapacityMap.get(slotId);
+        return remaining != null ? remaining.get() : 0;
+    }
+
     @Override
     public boolean isSessionFull(Long sessionId) {
         return sessionFullMap.getOrDefault(sessionId, true);
+    }
+
+    @Override
+    public boolean isSlotInCampaign(Long slotId, Long campaignId) {
+        if (slotId == null || campaignId == null) {
+            return false;
+        }
+        Long mappedCampaign = slotCampaignMap.get(slotId);
+        if (mappedCampaign != null) {
+            return mappedCampaign.equals(campaignId);
+        }
+        return defaultSlotCampaignMatch;
     }
 }

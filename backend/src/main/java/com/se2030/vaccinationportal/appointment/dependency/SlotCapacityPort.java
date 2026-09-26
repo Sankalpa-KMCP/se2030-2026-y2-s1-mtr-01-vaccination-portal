@@ -72,4 +72,14 @@ public interface SlotCapacityPort {
      * @throws IllegalStateException if the session is not in {@code SCHEDULED} status or has no configured time slots
      */
     boolean isSessionFull(Long sessionId);
+
+    /**
+     * Checks whether the specified time slot belongs to the given campaign and is in an operational scheduled state.
+     *
+     * @param slotId     Identifier of the time slot
+     * @param campaignId Identifier of the vaccination campaign
+     * @return {@code true} if the slot exists and belongs to a scheduled session for the specified campaign;
+     *         {@code false} otherwise
+     */
+    boolean isSlotInCampaign(Long slotId, Long campaignId);
 }

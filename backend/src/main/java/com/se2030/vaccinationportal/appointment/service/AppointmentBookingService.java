@@ -70,6 +70,8 @@ public class AppointmentBookingService {
      *       we do not mutate/decrement physical slot capacity for an ineligible citizen.</li>
      *   <li><b>Check Active Appointment Duplicates (MF03-BR-02):</b> Verified before slot reservation to prevent
      *       wasting capacity if the citizen already has a confirmed or checked-in booking.</li>
+     *   <li><b>Verify Slot Belongs to Campaign:</b> Verifies that the requested time slot belongs to the target campaign
+     *       before allocating capacity, preventing cross-campaign slot booking integrity violations.</li>
      *   <li><b>Reserve MF-02 Slot Capacity (MF03-BR-03):</b> Atomically decrements slot capacity. If the slot is
      *       exhausted, throws {@link SlotFullException} and aborts before creating the appointment.</li>
      *   <li><b>Persist Appointment:</b> Saves the new {@link Appointment} in {@link AppointmentStatus#CONFIRMED}
@@ -84,7 +86,7 @@ public class AppointmentBookingService {
      * @throws NotEligibleException                if citizen is not ELIGIBLE in MF-01
      * @throws DuplicateActiveAppointmentException if citizen already has a CONFIRMED or CHECKED_IN appointment for the campaign
      * @throws SlotFullException                   if time slot capacity reservation fails in MF-02
-     * @throws IllegalArgumentException            if any required parameter is null
+     * @throws IllegalArgumentException            if any required parameter is null or slot does not belong to campaign
      */
     public Appointment bookAppointment(Long citizenId, Long campaignId, Long slotId) {
         if (citizenId == null) {
@@ -124,17 +126,23 @@ public class AppointmentBookingService {
             throw new DuplicateActiveAppointmentException("Citizen " + citizenId + " already has an active appointment for campaign " + campaignId);
         }
 
-        // Step 1d: Reserve capacity on MF-02 time slot (MF03-BR-03).
-        // Viva note: Atomic decrement performed inside MF-02's domain ensures no two users claim the last place.
+        // Step 1d: Verify slot belongs to the requested campaign.
+        // Viva note: Verified before reserving capacity to maintain campaign-slot integrity and prevent cross-campaign allocation.
         if (slotCapacityPort == null) {
             throw new IllegalStateException("SlotCapacityPort implementation (MF-02) is unavailable");
         }
+        if (!slotCapacityPort.isSlotInCampaign(slotId, campaignId)) {
+            throw new IllegalArgumentException("Time slot " + slotId + " does not belong to campaign " + campaignId);
+        }
+
+        // Step 1e: Reserve capacity on MF-02 time slot (MF03-BR-03).
+        // Viva note: Atomic decrement performed inside MF-02's domain ensures no two users claim the last place.
         SlotReservationResult reservationResult = slotCapacityPort.reserveCapacity(slotId);
         if (reservationResult != SlotReservationResult.SUCCESS) {
             throw new SlotFullException("Time slot " + slotId + " capacity reservation failed with result: " + reservationResult);
         }
 
-        // Step 1e: Persist new CONFIRMED appointment entity within the same transaction.
+        // Step 1f: Persist new CONFIRMED appointment entity within the same transaction.
         Appointment appointment = new Appointment(citizenId, campaignId, slotId, AppointmentStatus.CONFIRMED, Instant.now());
         return appointmentRepository.save(appointment);
     }

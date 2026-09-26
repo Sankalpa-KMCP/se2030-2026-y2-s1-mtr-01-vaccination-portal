@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
@@ -130,5 +131,27 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         }
 
         return slots.stream().noneMatch(TimeSlot::hasAvailableCapacity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isSlotInCampaign(Long slotId, Long campaignId) {
+        if (slotId == null || campaignId == null) {
+            return false;
+        }
+        Optional<TimeSlot> slotOpt = timeSlotRepository.findById(slotId);
+        if (slotOpt.isEmpty()) {
+            return false;
+        }
+        TimeSlot slot = slotOpt.get();
+        VaccinationSession session = slot.getSession();
+        if (session == null || session.getLifecycleStatus() != SessionLifecycleStatus.SCHEDULED) {
+            return false;
+        }
+        VaccinationCampaign campaign = session.getCampaign();
+        if (campaign == null || campaign.getId() == null) {
+            return false;
+        }
+        return campaignId.equals(campaign.getId());
     }
 }

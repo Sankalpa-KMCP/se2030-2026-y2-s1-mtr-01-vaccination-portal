@@ -40,7 +40,9 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -181,6 +183,34 @@ class SlotCapacityPortCrossModuleIntegrationTests {
 
         Appointment cancelled = cancellationService.cancelAppointment(appointment.getId(), citizenId, false, null, Instant.now());
         assertEquals(AppointmentStatus.CANCELLED, cancelled.getStatus());
+
+        TimeSlot updated = timeSlotRepository.findById(testSlot.getId()).orElseThrow();
+        assertEquals(0, updated.getReservedCount());
+        assertEquals(2, updated.getAvailableCapacity());
+    }
+
+    @Test
+    @DisplayName("Cross-module slot-campaign integrity: isSlotInCampaign validates correctly against database")
+    void isSlotInCampaign_validatesAgainstDatabase() {
+        assertTrue(slotCapacityPort.isSlotInCampaign(testSlot.getId(), testCampaign.getId()));
+        assertFalse(slotCapacityPort.isSlotInCampaign(testSlot.getId(), 999999L));
+        assertFalse(slotCapacityPort.isSlotInCampaign(999999L, testCampaign.getId()));
+        assertFalse(slotCapacityPort.isSlotInCampaign(null, testCampaign.getId()));
+        assertFalse(slotCapacityPort.isSlotInCampaign(testSlot.getId(), null));
+    }
+
+    @Test
+    @DisplayName("Cross-module booking rejects mismatched campaign slot and leaves capacity untouched")
+    void bookAppointment_withMismatchedCampaign_rejectsAndPreservesCapacity() {
+        Long citizenId = 503L;
+        Long mismatchedCampaignId = 999999L;
+        eligibilityLookupPort.setEligibility(citizenId, mismatchedCampaignId, EligibilityStatus.ELIGIBLE);
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> bookingService.bookAppointment(citizenId, mismatchedCampaignId, testSlot.getId())
+        );
+        assertTrue(ex.getMessage().contains("does not belong to campaign " + mismatchedCampaignId));
 
         TimeSlot updated = timeSlotRepository.findById(testSlot.getId()).orElseThrow();
         assertEquals(0, updated.getReservedCount());
