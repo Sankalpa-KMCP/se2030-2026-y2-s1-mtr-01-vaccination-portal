@@ -87,7 +87,7 @@ public class MyAppointmentsAssistantTool implements AssistantReadOnlyTool {
         for (Pattern pattern : INTENT_PATTERNS) {
             if (pattern.matcher(normalized).find()) return true;
         }
-        return isSinhalaAppointmentIntent(normalized) || isTamilAppointmentIntent(normalized);
+        return false;
     }
 
     @Override
@@ -261,28 +261,14 @@ public class MyAppointmentsAssistantTool implements AssistantReadOnlyTool {
     private static AppointmentIntent detectIntent(String message) {
         if (message == null || message.isBlank()) return AppointmentIntent.ALL;
         String normalized = message.toLowerCase(Locale.ROOT);
-        if (normalized.contains("waitlist") || normalized.contains("queue position")
-                || normalized.contains("පොරොත්තු") || normalized.contains("පෝලිමේ")
-                || normalized.contains("காத்திருப்பு") || normalized.contains("வரிசை நிலை")) return AppointmentIntent.WAITLIST;
+        if (normalized.contains("waitlist") || normalized.contains("queue position")) return AppointmentIntent.WAITLIST;
         if (normalized.contains("checked in") || normalized.contains("check-in") || normalized.contains("check in"))
             return AppointmentIntent.CHECK_IN;
-        if (normalized.contains("upcoming") || normalized.contains("future")
-                || normalized.contains("ඉදිරි") || normalized.contains("வரவிருக்கும்")) return AppointmentIntent.UPCOMING;
+        if (normalized.contains("upcoming") || normalized.contains("future")) return AppointmentIntent.UPCOMING;
         if (normalized.contains("past") || normalized.contains("previous") || normalized.contains("completed")
-                || normalized.contains("cancelled") || normalized.contains("පසුගිය") || normalized.contains("கடந்த"))
+                || normalized.contains("cancelled"))
             return AppointmentIntent.PAST;
         return AppointmentIntent.ALL;
-    }
-
-    private static boolean isSinhalaAppointmentIntent(String text) {
-        return (text.contains("මගේ") || text.contains("මාගේ"))
-                && (text.contains("හමුවීම්") || text.contains("වෙන්කිරීම්")
-                || text.contains("පොරොත්තු") || text.contains("පෝලිමේ"));
-    }
-
-    private static boolean isTamilAppointmentIntent(String text) {
-        return (text.contains("எனது") || text.contains("என்"))
-                && (text.contains("சந்திப்பு") || text.contains("காத்திருப்பு") || text.contains("வரிசை"));
     }
 
     private static String formatTime(Instant instant) {

@@ -145,7 +145,7 @@ The backend provides a secure, rate-limited, read-only conversational assistant 
   4. `MyVaccinationSummaryAssistantTool`: Retrieves finalized vaccination record count, recent administered doses (dose number and date/time), and digital certificate status/issue date for the authenticated citizen without exposing verification tokens, clinical notes, or batch numbers.
   *(All tools are strictly scoped to the verified `principal.getUserId()`; arbitrary citizen IDs in user prompts are ignored).*
 - **Deterministic navigation actions**: Personalized tool routes are converted to authorized action buttons on the server instead of relying on the model to generate them.
-- **Multilingual responses**: The assistant follows the user's latest language for English, Sinhala, and Tamil while preserving the same safety and privacy rules.
+- **English-only responses**: The assistant consistently answers in clear English while preserving all safety and privacy rules.
 - **Setup & Evaluation Guide**: See [docs/AI_ASSISTANT_SETUP_AND_DEMO.md](../docs/AI_ASSISTANT_SETUP_AND_DEMO.md) for full architecture, macOS setup, cURL examples, and evaluation walkthroughs.
 
 #### Environment Variables

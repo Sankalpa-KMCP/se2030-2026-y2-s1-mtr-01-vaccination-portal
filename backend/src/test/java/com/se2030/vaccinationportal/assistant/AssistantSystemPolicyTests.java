@@ -30,6 +30,14 @@ class AssistantSystemPolicyTests {
     }
 
     @Test
+    @DisplayName("System policy requires English-only responses")
+    void testPolicyRequiresEnglishOnlyResponses() {
+        String baseInstructions = AssistantSystemPolicy.BASE_SYSTEM_INSTRUCTIONS;
+        assertTrue(baseInstructions.contains("Reply only in clear, concise English"));
+        assertTrue(baseInstructions.contains("Do not translate the response into another language"));
+    }
+
+    @Test
     @DisplayName("buildSystemInstruction includes user context without exposing secrets")
     void testBuildInstructionWithContext() {
         String anonymousInstruction = AssistantSystemPolicy.buildSystemInstruction("/app/citizen", (java.util.Set<String>) null);

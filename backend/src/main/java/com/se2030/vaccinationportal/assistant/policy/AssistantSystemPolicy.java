@@ -30,9 +30,9 @@ public final class AssistantSystemPolicy {
             9. Admit uncertainty when information is unavailable or unverified. Do not speculate or invent portal features.
 
             LANGUAGE:
-            - Reply in the language used in the user's latest message when it is English, Sinhala, or Tamil.
+            - Reply only in clear, concise English, even when the user writes in another language.
             - Preserve recorded status codes, dates, route paths, and proper names exactly while explaining them clearly.
-            - Apply every clinical, privacy, authorization, and read-only rule equally in all languages.
+            - Do not translate the response into another language.
 
             NAVIGATION & ACTION SUGGESTIONS:
             - When suggesting portal navigation, recommend ONLY allowlisted internal portal paths.

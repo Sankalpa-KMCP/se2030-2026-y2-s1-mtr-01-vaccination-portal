@@ -9,7 +9,6 @@ import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatRequest;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
-import com.se2030.vaccinationportal.assistant.policy.AssistantSystemPolicy;
 import com.se2030.vaccinationportal.assistant.service.AssistantService;
 import com.se2030.vaccinationportal.assistant.service.InMemoryAssistantRateLimiter;
 import com.se2030.vaccinationportal.assistant.tool.AssistantPersonalizedContextBuilder;
@@ -150,15 +149,6 @@ class AssistantExperienceUpgradeTests {
 
         assertThat(response.suggestedActions()).extracting(action -> action.path())
                 .containsExactly("/app/appointments/mine", "/app/appointments/book");
-    }
-
-    @Test
-    void languagePolicyAndSinhalaTamilPersonalizedIntentsAreSupported() {
-        MyAppointmentsAssistantTool tool = new MyAppointmentsAssistantTool(
-                mock(AppointmentRepository.class), mock(TimeSlotRepository.class), mock(WaitlistRepository.class));
-        assertThat(tool.matchesIntent("මගේ ඉදිරි හමුවීම් පෙන්වන්න")).isTrue();
-        assertThat(tool.matchesIntent("எனது வரவிருக்கும் சந்திப்புகளைக் காட்டு")).isTrue();
-        assertThat(AssistantSystemPolicy.BASE_SYSTEM_INSTRUCTIONS).contains("English, Sinhala, or Tamil");
     }
 
     private static AssistantToolContext citizenContext(Long id) {

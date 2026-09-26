@@ -104,7 +104,7 @@ The assistant provides comprehensive assistance across the portal while enforcin
 - **Rate Limiting**: In-memory token bucket rate limiting (5 requests/minute for anonymous clients; 15 requests/minute for authenticated callers) prevents abuse.
 - **In-Memory Browser History**: Conversation history is maintained strictly in React component state in browser memory; conversations are cleared on logout, account switch, or manual reset.
 - **Deterministic Navigation Buttons**: Authorized routes returned by a personalized tool become server-generated action buttons, independently of model output.
-- **English, Sinhala, and Tamil**: The assistant responds in the language of the latest question while applying identical privacy, medical-safety, and read-only boundaries.
+- **English-only responses**: The assistant consistently answers in clear English while applying the same privacy, medical-safety, and read-only boundaries.
 
 ---
 
