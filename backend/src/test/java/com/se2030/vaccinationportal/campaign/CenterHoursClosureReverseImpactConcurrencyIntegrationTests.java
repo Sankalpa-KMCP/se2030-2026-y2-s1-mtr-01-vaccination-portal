@@ -20,6 +20,7 @@ import com.se2030.vaccinationportal.campaign.service.CenterClosureService;
 import com.se2030.vaccinationportal.campaign.service.OperatingHoursService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationCenterService;
 import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -117,6 +118,18 @@ class CenterHoursClosureReverseImpactConcurrencyIntegrationTests {
                         today.minusDays(10), today.plusDays(30)
                 ));
             }
+        });
+    }
+
+    @AfterEach
+    void tearDown() {
+        transactionTemplate.executeWithoutResult(status -> {
+            sessionRepository.deleteAll();
+            closureRepository.deleteAll();
+            operatingHoursRepository.deleteAll();
+            assignmentRepository.deleteAll();
+            campaignRepository.deleteAll();
+            centerRepository.deleteAll();
         });
     }
 
