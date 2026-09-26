@@ -154,4 +154,22 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         }
         return campaignId.equals(campaign.getId());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Long> getSessionIdForSlot(Long slotId) {
+        if (slotId == null) {
+            return Optional.empty();
+        }
+        Optional<TimeSlot> slotOpt = timeSlotRepository.findById(slotId);
+        if (slotOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        TimeSlot slot = slotOpt.get();
+        VaccinationSession session = slot.getSession();
+        if (session == null || session.getLifecycleStatus() != SessionLifecycleStatus.SCHEDULED) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(session.getId());
+    }
 }

@@ -99,7 +99,14 @@ public class WaitlistPromotionService {
     }
 
     /**
-     * Promotes the earliest valid WAITING entry for a campaign into an open time slot when session ID is not directly specified.
+     * Promotes the earliest valid WAITING entry for the session of a freed time slot (MF03-BR-07 / F04).
+     * <p>
+     * Resolves the authoritative session for {@code slotId} and verifies campaign-slot integrity via
+     * {@link SlotCapacityPort}. Promotion is strictly scoped to the exact session of the freed slot,
+     * maintaining deterministic FIFO arrival ordering (MF03-BR-06) within that session.
+     * If the slot does not belong to the campaign, cannot be resolved, or has no eligible waiters,
+     * returns {@link Optional#empty()} safely without promoting anyone.
+     * </p>
      *
      * @param campaignId Identifier of the campaign
      * @param slotId     Identifier of the target time slot
@@ -107,15 +114,32 @@ public class WaitlistPromotionService {
      * @return {@link Optional} containing created {@link Appointment} if promotion succeeded; empty otherwise
      */
     public Optional<Appointment> promoteNextForSlot(Long campaignId, Long slotId, Instant now) {
-        if (campaignId == null || slotId == null) {
+        if (campaignId == null || slotId == null || slotCapacityPort == null) {
             return Optional.empty();
         }
         Instant effectiveNow = (now != null) ? now : Instant.now();
 
-        List<WaitlistEntry> waitingEntries = waitlistRepository.findByCampaignIdAndStatusOrderByJoinedAtAsc(
-                campaignId, WaitlistStatus.WAITING);
+        // Step 1: Verify freed slot belongs to the supplied campaign and is in operational state (F03 integrity)
+        if (!slotCapacityPort.isSlotInCampaign(slotId, campaignId)) {
+            return Optional.empty();
+        }
 
-        return processPromotionCandidates(waitingEntries, slotId, effectiveNow);
+        // Step 2: Resolve the authoritative session for the freed slot (F04 session-scoping)
+        Optional<Long> sessionIdOpt = slotCapacityPort.getSessionIdForSlot(slotId);
+        if (sessionIdOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // Step 3: Delegate to session-scoped promotion path to enforce exact session waitlist scoping
+        return promoteNext(sessionIdOpt.get(), slotId, effectiveNow);
+    }
+
+    /**
+     * Overload for {@link #promoteNextForSlot(Long, Long, Instant)} accepting {@link LocalDateTime}.
+     */
+    public Optional<Appointment> promoteNextForSlot(Long campaignId, Long slotId, LocalDateTime now) {
+        Instant instantNow = (now != null) ? now.toInstant(ZoneOffset.UTC) : Instant.now();
+        return promoteNextForSlot(campaignId, slotId, instantNow);
     }
 
     /**

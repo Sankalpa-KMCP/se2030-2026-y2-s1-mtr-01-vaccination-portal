@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.appointment.dependency;
 
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * Cross-module integration port to check, reserve, release capacity, and inspect schedule details on an MF-02 TimeSlot.
@@ -82,4 +83,13 @@ public interface SlotCapacityPort {
      *         {@code false} otherwise
      */
     boolean isSlotInCampaign(Long slotId, Long campaignId);
+
+    /**
+     * Resolves the authoritative session ID for the specified time slot (MF03-BR-07 / F04).
+     *
+     * @param slotId Identifier of the time slot
+     * @return {@link Optional} containing the session ID if the slot exists and belongs to a scheduled session;
+     *         empty otherwise
+     */
+    Optional<Long> getSessionIdForSlot(Long slotId);
 }

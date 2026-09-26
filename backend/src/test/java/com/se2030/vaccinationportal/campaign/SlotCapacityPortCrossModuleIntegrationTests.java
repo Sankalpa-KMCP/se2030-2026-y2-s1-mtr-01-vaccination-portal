@@ -5,10 +5,17 @@ import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
+import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.repository.CitizenCampaignBookingGuardRepository;
+import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.appointment.service.AppointmentBookingService;
 import com.se2030.vaccinationportal.appointment.service.AppointmentCancellationService;
 import com.se2030.vaccinationportal.appointment.service.TestEligibilityLookupPortDouble;
+import com.se2030.vaccinationportal.appointment.service.WaitlistJoinService;
+import com.se2030.vaccinationportal.appointment.service.WaitlistPromotionService;
+import java.util.Optional;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
@@ -91,6 +98,18 @@ class SlotCapacityPortCrossModuleIntegrationTests {
     @Autowired
     private TargetGroupRepository targetGroupRepository;
 
+    @Autowired
+    private WaitlistRepository waitlistRepository;
+
+    @Autowired
+    private CitizenCampaignBookingGuardRepository guardRepository;
+
+    @Autowired
+    private WaitlistPromotionService promotionService;
+
+    @Autowired
+    private WaitlistJoinService waitlistJoinService;
+
     private VaccinationCampaign testCampaign;
     private VaccinationCenter testCenter;
     private VaccinationSession scheduledSession;
@@ -141,7 +160,9 @@ class SlotCapacityPortCrossModuleIntegrationTests {
     }
 
     private void cleanDb() {
+        waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
+        guardRepository.deleteAllInBatch();
         timeSlotRepository.deleteAllInBatch();
         sessionRepository.deleteAllInBatch();
         campaignRepository.deleteAllInBatch();
@@ -215,5 +236,90 @@ class SlotCapacityPortCrossModuleIntegrationTests {
         TimeSlot updated = timeSlotRepository.findById(testSlot.getId()).orElseThrow();
         assertEquals(0, updated.getReservedCount());
         assertEquals(2, updated.getAvailableCapacity());
+    }
+
+    @Test
+    @DisplayName("Cross-module session resolution: getSessionIdForSlot resolves authoritative session from database")
+    void getSessionIdForSlot_validatesAgainstDatabase() {
+        Optional<Long> sessionIdOpt = slotCapacityPort.getSessionIdForSlot(testSlot.getId());
+        assertTrue(sessionIdOpt.isPresent(), "Must resolve session for scheduled time slot");
+        assertEquals(scheduledSession.getId(), sessionIdOpt.get());
+
+        // Nonexistent slot
+        assertTrue(slotCapacityPort.getSessionIdForSlot(999999L).isEmpty());
+        // Null slot
+        assertTrue(slotCapacityPort.getSessionIdForSlot(null).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Cross-module session resolution: getSessionIdForSlot returns empty for DRAFT session")
+    void getSessionIdForSlot_draftSession_returnsEmpty() {
+        VaccinationSession draftSession = new VaccinationSession(
+                testCampaign,
+                testCenter,
+                baseStart,
+                baseEnd,
+                baseStart.minus(2, ChronoUnit.HOURS),
+                "UTC"
+        );
+        draftSession = sessionRepository.save(draftSession);
+        TimeSlot draftSlot = new TimeSlot(draftSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 2);
+        draftSlot = timeSlotRepository.save(draftSlot);
+
+        assertTrue(slotCapacityPort.getSessionIdForSlot(draftSlot.getId()).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Cross-module end-to-end promotion scopes strictly to freed slot's session using real TimeSlotCapacityService")
+    void promoteNextForSlot_withRealAdapter_scopesToFreedSlotSession() {
+        Long citizenSession1 = 601L;
+        Long citizenSession2 = 602L;
+        eligibilityLookupPort.setEligibility(citizenSession1, testCampaign.getId(), EligibilityStatus.ELIGIBLE);
+        eligibilityLookupPort.setEligibility(citizenSession2, testCampaign.getId(), EligibilityStatus.ELIGIBLE);
+
+        // Session 1 is scheduledSession with testSlot (make it full: 2/2)
+        testSlot.setReservedCount(2);
+        timeSlotRepository.save(testSlot);
+
+        // Session 2 is a second scheduled session with slot2 (full: 1/1)
+        Instant s2Start = baseStart.plus(1, ChronoUnit.DAYS);
+        Instant s2End = s2Start.plus(8, ChronoUnit.HOURS);
+        VaccinationSession session2 = new VaccinationSession(
+                testCampaign,
+                testCenter,
+                s2Start,
+                s2End,
+                s2Start.minus(2, ChronoUnit.HOURS),
+                "UTC"
+        );
+        session2.schedule();
+        session2 = sessionRepository.save(session2);
+
+        TimeSlot slot2 = new TimeSlot(session2, s2Start, s2Start.plus(1, ChronoUnit.HOURS), 1);
+        slot2.setReservedCount(1);
+        slot2 = timeSlotRepository.save(slot2);
+
+        Instant t0 = Instant.now().minus(2, ChronoUnit.HOURS);
+        Instant t1 = Instant.now().minus(1, ChronoUnit.HOURS);
+
+        // Citizen 1 joins session 1 at t0
+        WaitlistEntry entry1 = waitlistJoinService.joinWaitlist(citizenSession1, testCampaign.getId(), scheduledSession.getId(), t0);
+        // Citizen 2 joins session 2 at t1 (later)
+        WaitlistEntry entry2 = waitlistJoinService.joinWaitlist(citizenSession2, testCampaign.getId(), session2.getId(), t1);
+
+        // Slot 2 frees 1 place of capacity
+        slot2.setReservedCount(0);
+        timeSlotRepository.save(slot2);
+
+        // Trigger promotion for slot2
+        Optional<Appointment> promoted = promotionService.promoteNextForSlot(testCampaign.getId(), slot2.getId(), Instant.now());
+
+        assertTrue(promoted.isPresent(), "Session 2 candidate must be promoted into slot2");
+        assertEquals(citizenSession2, promoted.get().getCitizenId(), "Must promote session 2 candidate, NOT earlier session 1 candidate");
+        assertEquals(slot2.getId(), promoted.get().getSlotId());
+
+        // Verify entry1 remains WAITING and entry2 is PROMOTED
+        assertEquals(WaitlistStatus.WAITING, waitlistRepository.findById(entry1.getId()).orElseThrow().getStatus());
+        assertEquals(WaitlistStatus.PROMOTED, waitlistRepository.findById(entry2.getId()).orElseThrow().getStatus());
     }
 }

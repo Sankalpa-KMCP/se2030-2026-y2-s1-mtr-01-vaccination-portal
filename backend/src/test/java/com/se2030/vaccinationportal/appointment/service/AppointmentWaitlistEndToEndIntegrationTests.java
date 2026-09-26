@@ -122,6 +122,8 @@ class AppointmentWaitlistEndToEndIntegrationTests {
         // Session is not yet full — citizenA may book
         slotCapacityPortDouble.setSessionFull(SESSION_ID, false);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
+        slotCapacityPortDouble.setSlotSession(SLOT_ID, SESSION_ID);
+        slotCapacityPortDouble.setSlotCampaign(SLOT_ID, CAMPAIGN_ID);
     }
 
     @AfterEach
