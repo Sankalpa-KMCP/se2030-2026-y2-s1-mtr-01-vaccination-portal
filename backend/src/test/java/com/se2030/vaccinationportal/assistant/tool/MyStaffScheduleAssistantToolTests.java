@@ -263,7 +263,6 @@ class MyStaffScheduleAssistantToolTests {
         assertThat(result.suggestedRoutes()).contains("/app/staff");
         assertThat(result.suggestedRoutes()).contains("/app/sessions");
     }
-
     private StaffAssignment assignment(
             Long sessionId,
             Instant start,

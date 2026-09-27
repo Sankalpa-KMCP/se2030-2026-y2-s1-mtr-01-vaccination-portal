@@ -248,7 +248,6 @@ class OpenAiResponsesProviderStructuredOutputTests {
         assertEquals("/about", chatAdmin.suggestedActions().get(0).path());
         assertEquals("/app/admin/staff-requests", chatAdmin.suggestedActions().get(1).path());
     }
-
     @Test
     @DisplayName("Screening routes in suggested actions are stripped for Admin but retained for Healthcare Officer")
     void testScreeningRouteStrippedForAdminRetainedForHealthcareOfficer() {

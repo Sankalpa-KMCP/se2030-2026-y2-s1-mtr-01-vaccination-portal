@@ -157,14 +157,13 @@ When deploying behind a trusted reverse proxy (e.g., NGINX, Cloudflare, AWS Appl
 1. Configure `SERVER_FORWARD_HEADERS_STRATEGY=framework`.
 2. The reverse proxy **MUST** sanitize and overwrite incoming `X-Forwarded-For` headers with the real client IP.
 3. This ensures that the anonymous rate limiter (5 requests/minute) accurately identifies client IPs without permitting header spoofing rate-limit bypasses.
-
 #### Environment Variables
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `AI_ASSISTANT_ENABLED` | `false` | Enables the AI assistant (`true` or `false`). |
 | `AI_ASSISTANT_PROVIDER` | `openai` | Provider implementation: `openai`, `ollama`, or `gemini`. |
-| `AI_ASSISTANT_MODEL` | *(empty)* | Model used by the selected provider (for Gemini, defaults to `gemini-flash-latest`). |
+| `AI_ASSISTANT_MODEL` | *(empty)* | Model used by the selected provider (for Gemini, defaults to `gemini-flash-latest`). Takes precedence over legacy `OPENAI_MODEL`. |
 | `GOOGLE_API_KEY` | *(empty)* | Canonical Google Gemini Developer / AI Studio API key (server-side only). |
 | `GEMINI_API_KEY` | *(empty)* | Fallback environment variable for Google Gemini API key. |
 | `OPENAI_API_KEY` | *(empty)* | Official OpenAI API secret key. Must remain server-side. |

@@ -188,6 +188,7 @@ class AssistantLoggingSanitizationTests {
         }
     }
 
+
     @Test
     void geminiProviderFailure_doesNotLogUpstreamDiagnosticsOrSensitiveMarkers() {
         Logger geminiLogger = (Logger) LoggerFactory.getLogger(com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider.class);

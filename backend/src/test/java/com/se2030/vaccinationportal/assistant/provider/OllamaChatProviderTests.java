@@ -107,7 +107,6 @@ class OllamaChatProviderTests {
         assertThat(response.answer()).isEqualTo(OpenAiResponsesProvider.OPERATIONAL_FALLBACK);
         assertThat(response.suggestedActions()).isEmpty();
     }
-
     @Test
     void truncatesAnswersLongerThan1500Characters() {
         String longText = "A".repeat(1650);

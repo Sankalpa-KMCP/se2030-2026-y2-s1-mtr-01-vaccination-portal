@@ -212,7 +212,6 @@ echo
 > **IMPORTANT**:
 > - Never commit `GOOGLE_API_KEY` or `GEMINI_API_KEY` to Git or expose it to frontend code.
 > - The provider uses Google's official Java SDK (`com.google.genai:google-genai:1.57.0`) and requires only server-side configuration.
-
 ---
 
 ## 5. Starting the Backend

@@ -228,7 +228,6 @@ class AssistantKnowledgeCatalogTests {
         );
         assertThat(vaccinatorEntries).isNotEmpty();
         assertEquals("VACCINATION_ADMINISTRATION_DRAFTS", vaccinatorEntries.get(0).id());
-
         // Staff onboarding guide is available to staff roles (Healthcare Officer, Super Admin) but strictly NOT to Admin
         List<AssistantKnowledgeEntry> hcoOnboarding = AssistantKnowledgeCatalog.findRelevantEntries(
                 "staff dashboard getting started staff guide",

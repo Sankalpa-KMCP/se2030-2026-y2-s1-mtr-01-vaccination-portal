@@ -99,7 +99,6 @@ public class MyStaffScheduleAssistantTool implements AssistantReadOnlyTool {
         if (AssistantRouteCatalog.isAuthorizedRoute("/app/sessions", context.authorities())) {
             suggestedRoutes.add("/app/sessions");
         }
-
         if (assignments.isEmpty()) {
             String period = todayOnly ? "today" : "current or upcoming";
             return AssistantToolResult.empty(

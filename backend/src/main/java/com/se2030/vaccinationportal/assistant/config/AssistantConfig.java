@@ -45,7 +45,6 @@ public class AssistantConfig {
             log.info("AI Assistant initialized with Google Gemini provider.");
             return new GeminiResponseProvider(properties);
         }
-
         log.warn("AI Assistant provider is unsupported. Registered DisabledAiResponseProvider.");
         return new DisabledAiResponseProvider();
     }

@@ -46,7 +46,6 @@ export const ADMIN_SUGGESTED_QUESTIONS = [
   'How do I review pending staff requests?',
   'How does administrator management work?',
 ];
-
 export function getSuggestedQuestions(user, isAuthenticated) {
   if (!isAuthenticated || !Array.isArray(user?.roles)) {
     return SUGGESTED_QUESTIONS;
@@ -55,7 +54,6 @@ export function getSuggestedQuestions(user, isAuthenticated) {
   const roles = user.roles
     .map((role) => (typeof role === 'string' ? role : role?.code))
     .filter(Boolean);
-
   const hasStaffDashboardAccess = roles.some((role) =>
     STAFF_DASHBOARD_ROLES.includes(role)
   );

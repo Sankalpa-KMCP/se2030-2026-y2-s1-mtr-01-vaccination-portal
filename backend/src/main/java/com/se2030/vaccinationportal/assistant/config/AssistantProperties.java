@@ -129,7 +129,6 @@ public class AssistantProperties {
         }
         return "";
     }
-
     public String getModel() {
         return model;
     }
