@@ -90,7 +90,7 @@ export default function ScreeningOverview({ resource }) {
       )}
 
       {!resource.loading && submissionsAvailable && resource.submissions.length === 0 && (
-        <div className="citizen-panel__state">
+        <div className="citizen-panel__state citizen-panel__state--empty citizen-eligibility-card__empty">
           <p><strong>No screening submitted</strong><span>Choose an available campaign to begin its questionnaire.</span></p>
           <Link className="citizen-action-link citizen-action-link--secondary" to="/app/screening">
             Choose a campaign <DashboardIcon name="arrow" size={16} />

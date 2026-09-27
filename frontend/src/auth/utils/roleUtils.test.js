@@ -17,25 +17,26 @@ function userWith(role) {
 }
 
 describe('campaign questionnaire assignment authorization', () => {
-  it.each(['ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER'])(
-    'allows %s to view and mutate questionnaire assignments',
-    (role) => {
-      const user = userWith(role);
+  it('allows ROLE_HEALTHCARE_OFFICER to view and mutate questionnaire assignments', () => {
+    const user = userWith('ROLE_HEALTHCARE_OFFICER');
 
-      expect(canViewQuestionnaireAssignments(user)).toBe(true);
-      expect(canManageQuestionnaireAssignments(user)).toBe(true);
-    },
-  );
+    expect(canViewQuestionnaireAssignments(user)).toBe(true);
+    expect(canManageQuestionnaireAssignments(user)).toBe(true);
+  });
 
-  it('allows a management user to view history without mutation permission', () => {
-    const user = userWith('ROLE_MANAGEMENT_USER');
+  it.each([
+    'ROLE_ADMIN',
+    'ROLE_SUPER_ADMIN',
+    'ROLE_CAMPAIGN_OFFICER',
+    'ROLE_MANAGEMENT_USER',
+  ])('allows %s to view history without mutation permission', (role) => {
+    const user = userWith(role);
 
     expect(canViewQuestionnaireAssignments(user)).toBe(true);
     expect(canManageQuestionnaireAssignments(user)).toBe(false);
   });
 
   it.each([
-    'ROLE_HEALTHCARE_OFFICER',
     'ROLE_CENTER_MANAGER',
     'ROLE_SYSTEM_ADMINISTRATOR',
     'ROLE_CITIZEN',
@@ -111,7 +112,7 @@ describe('super admin role hierarchy and citizen isolation', () => {
 
   it('inherits all non-citizen staff authorities', () => {
     expect(canViewQuestionnaireAssignments(superAdmin)).toBe(true);
-    expect(canManageQuestionnaireAssignments(superAdmin)).toBe(true);
+    expect(canManageQuestionnaireAssignments(superAdmin)).toBe(false);
     expect(canViewSessionOperations(superAdmin)).toBe(true);
     expect(canManageSessionOperations(superAdmin)).toBe(true);
     expect(canOverrideSessionCapacity(superAdmin)).toBe(true);

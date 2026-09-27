@@ -69,6 +69,17 @@ public interface CampaignQuestionnaireAssignmentRepository extends JpaRepository
     Optional<CampaignQuestionnaireAssignment> findOpenEndedAssignment(@Param("campaignId") Long campaignId);
 
     /**
+     * Finds open-ended questionnaire assignments for multiple campaigns.
+     *
+     * @param campaignIds IDs of the VaccinationCampaigns
+     * @return List of open-ended questionnaire assignments
+     */
+    @Query("SELECT a FROM CampaignQuestionnaireAssignment a " +
+           "WHERE a.campaign.id IN :campaignIds " +
+           "AND a.activeTo IS NULL")
+    List<CampaignQuestionnaireAssignment> findOpenEndedAssignmentsForCampaigns(@Param("campaignIds") List<Long> campaignIds);
+
+    /**
      * Finds assignments whose half-open effective periods overlap [activeFrom, activeTo).
      *
      * @param campaignId ID of the VaccinationCampaign

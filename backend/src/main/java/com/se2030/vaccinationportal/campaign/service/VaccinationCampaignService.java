@@ -14,6 +14,7 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.dto.response.CampaignSummaryResponse;
 import com.se2030.vaccinationportal.campaign.dto.response.CitizenCampaignDiscoveryResponse;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.mapper.CampaignDtoMapper;
@@ -1003,6 +1004,23 @@ public class VaccinationCampaignService {
             return campaignRepository.findByStatus(status);
         }
         return campaignRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CampaignSummaryResponse> getCampaignSummaries(CampaignStatus status) {
+        List<VaccinationCampaign> campaigns = getCampaigns(status);
+        if (campaigns.isEmpty()) {
+            return List.of();
+        }
+        List<Long> campaignIds = campaigns.stream().map(VaccinationCampaign::getId).toList();
+        List<CampaignQuestionnaireAssignment> assignments = questionnaireAssignmentRepository.findOpenEndedAssignmentsForCampaigns(campaignIds);
+        java.util.Map<Long, Long> campaignToVersionMap = new java.util.HashMap<>();
+        for (CampaignQuestionnaireAssignment assignment : assignments) {
+            campaignToVersionMap.put(assignment.getCampaign().getId(), assignment.getQuestionnaireVersionId());
+        }
+        return campaigns.stream()
+                .map(campaign -> CampaignDtoMapper.toSummaryResponse(campaign, campaignToVersionMap.get(campaign.getId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)

@@ -71,6 +71,10 @@ public final class CampaignDtoMapper {
     }
 
     public static CampaignSummaryResponse toSummaryResponse(VaccinationCampaign campaign) {
+        return toSummaryResponse(campaign, null);
+    }
+
+    public static CampaignSummaryResponse toSummaryResponse(VaccinationCampaign campaign, Long questionnaireVersionId) {
         if (campaign == null) {
             return null;
         }
@@ -84,7 +88,8 @@ public final class CampaignDtoMapper {
                 targetGroupCode,
                 campaign.getServiceStartDate(),
                 campaign.getServiceEndDate(),
-                campaign.getStatus()
+                campaign.getStatus(),
+                questionnaireVersionId
         );
     }
 

@@ -15,6 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.se2030.vaccinationportal.campaign.dto.response.CampaignSummaryResponse;
+import com.se2030.vaccinationportal.campaign.mapper.CampaignDtoMapper;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleChangeType;
 import com.se2030.vaccinationportal.campaign.model.CampaignLifecycleEvent;
@@ -307,7 +309,8 @@ class CampaignControllerTests {
     @Test
     @DisplayName("GET /api/v1/campaigns returns 200 with summary list")
     void getCampaignsListSuccess() throws Exception {
-        when(campaignService.getCampaigns(null)).thenReturn(List.of(sampleCampaign));
+        CampaignSummaryResponse summary = CampaignDtoMapper.toSummaryResponse(sampleCampaign, null);
+        when(campaignService.getCampaignSummaries(null)).thenReturn(List.of(summary));
 
         mockMvc.perform(get("/api/v1/campaigns"))
                 .andExpect(status().isOk())
@@ -321,14 +324,15 @@ class CampaignControllerTests {
     @Test
     @DisplayName("GET /api/v1/campaigns?status=DRAFT filters campaigns by status")
     void getCampaignsWithStatusFilter() throws Exception {
-        when(campaignService.getCampaigns(CampaignStatus.DRAFT)).thenReturn(List.of(sampleCampaign));
+        CampaignSummaryResponse summary = CampaignDtoMapper.toSummaryResponse(sampleCampaign, null);
+        when(campaignService.getCampaignSummaries(CampaignStatus.DRAFT)).thenReturn(List.of(summary));
 
         mockMvc.perform(get("/api/v1/campaigns").param("status", "DRAFT"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].status", is("DRAFT")));
 
-        verify(campaignService).getCampaigns(CampaignStatus.DRAFT);
+        verify(campaignService).getCampaignSummaries(CampaignStatus.DRAFT);
     }
 
     @Test

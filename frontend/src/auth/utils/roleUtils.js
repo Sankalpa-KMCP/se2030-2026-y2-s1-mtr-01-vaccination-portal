@@ -69,18 +69,34 @@ export function canManageCampaigns(user) {
 
 /**
  * Whether user can view campaign questionnaire assignment history.
- * Authorized by the assignment history endpoint: ADMIN, CAMPAIGN_OFFICER, MANAGEMENT_USER.
+ * Authorized by the assignment history endpoint: ADMIN, CAMPAIGN_OFFICER, HEALTHCARE_OFFICER, MANAGEMENT_USER.
  */
 export function canViewQuestionnaireAssignments(user) {
-  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER', 'ROLE_MANAGEMENT_USER');
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CAMPAIGN_OFFICER',
+    'ROLE_HEALTHCARE_OFFICER',
+    'ROLE_MANAGEMENT_USER'
+  );
 }
 
 /**
  * Whether user can assign or replace a campaign questionnaire version.
- * Authorized by the assignment mutation endpoint: ADMIN, CAMPAIGN_OFFICER.
+ * Authorized strictly for HEALTHCARE_OFFICER only.
+ * ADMIN, SUPER_ADMIN, and CAMPAIGN_OFFICER are strictly read-only.
  */
 export function canManageQuestionnaireAssignments(user) {
-  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER');
+  if (!user || !Array.isArray(user.roles)) {
+    return false;
+  }
+  const normalizedUserRoles = new Set(
+    user.roles.map((r) => (r.startsWith('ROLE_') ? r : `ROLE_${r}`))
+  );
+  return (
+    normalizedUserRoles.has('ROLE_HEALTHCARE_OFFICER') &&
+    !normalizedUserRoles.has(SUPER_ADMIN_ROLE)
+  );
 }
 
 /**

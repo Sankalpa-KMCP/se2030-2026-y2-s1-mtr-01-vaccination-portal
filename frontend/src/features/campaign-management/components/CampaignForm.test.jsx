@@ -6,7 +6,7 @@ import CampaignForm from './CampaignForm';
 const apiMocks = vi.hoisted(() => ({
   listVaccineTypes: vi.fn(),
   listTargetGroups: vi.fn(),
-  getPublishedQuestionnaireVersions: vi.fn(),
+  getQuestionnaireVersion: vi.fn(),
 }));
 
 vi.mock('../api/campaignApi', () => ({
@@ -15,7 +15,7 @@ vi.mock('../api/campaignApi', () => ({
 }));
 
 vi.mock('../api/campaignConfigurationApi', () => ({
-  getPublishedQuestionnaireVersions: apiMocks.getPublishedQuestionnaireVersions,
+  getQuestionnaireVersion: apiMocks.getQuestionnaireVersion,
 }));
 
 describe('CampaignForm — Create and Edit Modes', () => {
@@ -43,26 +43,15 @@ describe('CampaignForm — Create and Edit Modes', () => {
     apiMocks.listTargetGroups.mockResolvedValue([
       { id: 2, code: 'TG-01', description: 'Target One' },
     ]);
-    apiMocks.getPublishedQuestionnaireVersions.mockResolvedValue([
-      {
-        id: 101,
-        questionnaireId: 1,
-        questionnaireCode: 'COVID-SCREEN',
-        questionnaireName: 'COVID-19 Screening',
-        versionNumber: 1,
-        status: 'PUBLISHED',
-        publishedAt: '2026-09-01T10:00:00Z',
-      },
-      {
-        id: 102,
-        questionnaireId: 2,
-        questionnaireCode: 'FLU-SCREEN',
-        questionnaireName: 'Influenza Screening',
-        versionNumber: 2,
-        status: 'PUBLISHED',
-        publishedAt: '2026-09-02T10:00:00Z',
-      },
-    ]);
+    apiMocks.getQuestionnaireVersion.mockResolvedValue({
+      id: 101,
+      questionnaireId: 1,
+      questionnaireCode: 'COVID-SCREEN',
+      questionnaireName: '2026 General Vaccination Screening',
+      versionNumber: 1,
+      status: 'PUBLISHED',
+      publishedAt: '2026-09-01T10:00:00Z',
+    });
   });
 
   afterEach(() => {
@@ -313,10 +302,10 @@ describe('CampaignForm — Create and Edit Modes', () => {
     expect(payload.targetGroupId).toBe(2);
     expect(payload.serviceStartDate).toBe('2026-11-01');
     expect(payload.serviceEndDate).toBe('2026-11-30');
-    expect(payload.questionnaireVersionId).toBeNull();
+    expect(payload.questionnaireVersionId).toBeUndefined();
   });
 
-  it('create mode starts with empty questionnaire selection and does not auto-select', async () => {
+  it('create mode displays read-only unassigned questionnaire guidance', async () => {
     render(
       <CampaignForm
         onSubmit={vi.fn()}
@@ -324,52 +313,40 @@ describe('CampaignForm — Create and Edit Modes', () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Screening Questionnaire/i)).toBeTruthy();
-    });
-
-    const questionnaireSelect = screen.getByLabelText(/Screening Questionnaire/i);
-    // Initial value must be blank and display the placeholder option
-    expect(questionnaireSelect.value).toBe('');
-    expect(screen.getByRole('option', { name: /-- Select a published questionnaire --/i })).toBeTruthy();
-    expect(screen.getByRole('option', { name: /COVID-19 Screening/i })).toBeTruthy();
-    expect(screen.getByRole('option', { name: /Influenza Screening/i })).toBeTruthy();
+    expect(screen.getByText('Screening Questionnaire')).toBeTruthy();
+    expect(screen.getByText('Not assigned yet')).toBeTruthy();
+    expect(
+      screen.getByText(/A Healthcare Officer must configure the screening questionnaire before this campaign can be scheduled/i)
+    ).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: /Screening Questionnaire/i })).toBeNull();
   });
 
-  it('create mode allows explicit selection of a published questionnaire version', async () => {
+  it('edit mode with unassigned campaign displays read-only unassigned guidance and omits questionnaireVersionId on submit', async () => {
     const onSubmit = vi.fn();
     render(
       <CampaignForm
+        initialCampaign={sampleCampaign}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Vaccine Type/i).disabled).toBe(false);
-    });
+    expect(screen.getByText('Screening Questionnaire')).toBeTruthy();
+    expect(screen.getByText('Not assigned yet')).toBeTruthy();
+    expect(
+      screen.getByText(/A Healthcare Officer must configure the screening questionnaire before this campaign can be scheduled/i)
+    ).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: /Screening Questionnaire/i })).toBeNull();
 
-    fireEvent.change(screen.getByLabelText(/Campaign Code/i), { target: { value: 'CMP-WITH-Q' } });
-    fireEvent.change(screen.getByLabelText(/Campaign Name/i), { target: { value: 'Campaign with Questionnaire' } });
-    fireEvent.change(screen.getByLabelText(/Service Start Date/i), { target: { value: '2026-11-01' } });
-    fireEvent.change(screen.getByLabelText(/Service End Date/i), { target: { value: '2026-11-30' } });
-    fireEvent.change(screen.getByLabelText(/Citizen Booking Open Timestamp/i), { target: { value: '2026-10-01T08:00' } });
-    fireEvent.change(screen.getByLabelText(/Citizen Booking Close Timestamp/i), { target: { value: '2026-10-31T18:00' } });
-
-    // Explicitly select Version 102
-    const questionnaireSelect = screen.getByLabelText(/Screening Questionnaire/i);
-    fireEvent.change(questionnaireSelect, { target: { value: '102' } });
-    expect(questionnaireSelect.value).toBe('102');
-
-    const submitBtn = screen.getByRole('button', { name: /Save Campaign/i });
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
     fireEvent.click(submitBtn);
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const payload = onSubmit.mock.calls[0][0];
-    expect(payload.questionnaireVersionId).toBe(102);
+    expect(payload.questionnaireVersionId).toBeUndefined();
   });
 
-  it('edit mode prefills existing questionnaireVersionId and submits it', async () => {
+  it('edit mode with assigned questionnaire displays published version info and HCO management guidance', async () => {
     const onSubmit = vi.fn();
     const campaignWithQ = {
       ...sampleCampaign,
@@ -383,14 +360,19 @@ describe('CampaignForm — Create and Edit Modes', () => {
       />
     );
 
-    const questionnaireSelect = screen.getByLabelText(/Screening Questionnaire/i);
-    expect(questionnaireSelect.value).toBe('101');
+    await waitFor(() => {
+      expect(screen.getByText('2026 General Vaccination Screening')).toBeTruthy();
+    });
+
+    expect(screen.getByText(/Version 1 · Published/i)).toBeTruthy();
+    expect(screen.getByText(/Clinical questionnaire managed by Healthcare Officer/i)).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: /Screening Questionnaire/i })).toBeNull();
 
     const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
     fireEvent.click(submitBtn);
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const payload = onSubmit.mock.calls[0][0];
-    expect(payload.questionnaireVersionId).toBe(101);
+    expect(payload.questionnaireVersionId).toBeUndefined();
   });
 });

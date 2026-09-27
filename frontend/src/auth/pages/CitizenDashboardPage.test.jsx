@@ -113,6 +113,18 @@ describe('CitizenDashboardPage', () => {
     )).toBe(true);
   });
 
+  it('shows the screening empty state with working choose campaign and view eligibility actions', () => {
+    renderDashboard();
+    expect(screen.getByText('No screening submitted')).toBeTruthy();
+    expect(screen.getByText('Choose an available campaign to begin its questionnaire.')).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /choose a campaign/i }).some(
+      (link) => link.getAttribute('href') === '/app/screening',
+    )).toBe(true);
+    expect(screen.getAllByRole('link', { name: /view eligibility/i }).some(
+      (link) => link.getAttribute('href') === '/app/screening/eligibility',
+    )).toBe(true);
+  });
+
   it('renders only supported appointment fields from a successful response', () => {
     mocks.dashboardData = emptyData();
     mocks.dashboardData.appointments.data = [{

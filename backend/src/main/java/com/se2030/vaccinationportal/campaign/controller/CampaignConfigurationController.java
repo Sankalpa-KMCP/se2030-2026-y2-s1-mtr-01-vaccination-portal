@@ -125,7 +125,7 @@ public class CampaignConfigurationController {
     // ---------------------------------------------------------------------------------------------
 
     @PostMapping("/{id}/questionnaire-assignments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
+    @PreAuthorize("hasRole('HEALTHCARE_OFFICER') and !hasRole('SUPER_ADMIN')")
     public ResponseEntity<CampaignQuestionnaireAssignmentResponse> assignQuestionnaireVersion(
             @PathVariable Long id,
             @Valid @RequestBody AssignQuestionnaireRequest request
@@ -141,7 +141,7 @@ public class CampaignConfigurationController {
     }
 
     @GetMapping("/{id}/questionnaire-assignments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'MANAGEMENT_USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignQuestionnaireAssignmentResponse>> getQuestionnaireAssignmentHistory(
             @PathVariable Long id
     ) {

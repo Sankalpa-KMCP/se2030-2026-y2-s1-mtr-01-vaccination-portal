@@ -45,7 +45,10 @@ describe('QuestionnaireTab assignment visibility', () => {
 
     expect(screen.getByText('Assignment Version History')).toBeTruthy();
     expect(screen.getByText('Flu Screening — v1')).toBeTruthy();
-    expect(screen.getAllByText('Flu Screening — v2')).toHaveLength(2);
+    expect(screen.getByText('Flu Screening — v2')).toBeTruthy();
+    expect(screen.getByText('Flu Screening')).toBeTruthy();
+    expect(screen.getByText('Version 2 · Published')).toBeTruthy();
+    expect(screen.getByText('Clinical questionnaire managed by Healthcare Officer')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '+ Reassign / Update Version' }));
     expect(onOpenAssignModal).toHaveBeenCalledTimes(1);
@@ -63,7 +66,9 @@ describe('QuestionnaireTab assignment visibility', () => {
     );
 
     expect(screen.getByText('Assignment Version History')).toBeTruthy();
-    expect(screen.getAllByText('Flu Screening — v2')).toHaveLength(2);
+    expect(screen.getByText('Flu Screening')).toBeTruthy();
+    expect(screen.getByText('Version 2 · Published')).toBeTruthy();
+    expect(screen.getByText('Clinical questionnaire managed by Healthcare Officer')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /assign|reassign|update version/i })).toBeNull();
   });
 
@@ -77,7 +82,13 @@ describe('QuestionnaireTab assignment visibility', () => {
       />,
     );
 
-    expect(screen.getByText('No screening questionnaire assigned to this campaign yet.')).toBeTruthy();
+    expect(screen.getByText('Citizen Screening Questionnaire')).toBeTruthy();
+    expect(screen.getByText('Not assigned yet')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'A Healthcare Officer must configure the screening questionnaire before this campaign can be scheduled.',
+      ),
+    ).toBeTruthy();
     expect(screen.queryByRole('button', { name: /assign/i })).toBeNull();
   });
 });
