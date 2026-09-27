@@ -21,6 +21,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -184,6 +185,52 @@ class AssistantLoggingSanitizationTests {
             assertThat(msg).doesNotContain("citizen5555@test.local");
             assertThat(msg).doesNotContain(userQuery);
             assertThat(msg).contains("category=authenticated");
+        }
+    }
+
+    @Test
+    void geminiProviderFailure_doesNotLogUpstreamDiagnosticsOrSensitiveMarkers() {
+        Logger geminiLogger = (Logger) LoggerFactory.getLogger(com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider.class);
+        geminiLogger.addAppender(listAppender);
+
+        try {
+            AssistantProperties properties = new AssistantProperties();
+            properties.setEnabled(true);
+            properties.setProvider("gemini");
+            properties.setGoogleApiKey("AIzaSyTestKey");
+
+            String sensitiveMarker = "SECRET_UPSTREAM_DETAIL_123";
+            RuntimeException upstreamException = new RuntimeException("Upstream internal error: " + sensitiveMarker);
+
+            com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider provider =
+                    new com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider(
+                            properties,
+                            (model, contents, config) -> java.util.concurrent.CompletableFuture.failedFuture(upstreamException),
+                            new com.fasterxml.jackson.databind.ObjectMapper()
+                    );
+
+            provider.generateResponse(
+                    new AssistantChatRequest("test message", List.of(), "/"),
+                    "sys",
+                    "req-gemini-log-test",
+                    Set.of()
+            );
+
+            List<String> logMessages = listAppender.list.stream()
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .toList();
+
+            assertThat(logMessages).isNotEmpty();
+            for (String msg : logMessages) {
+                assertThat(msg).doesNotContain(sensitiveMarker);
+                assertThat(msg).doesNotContain("Upstream internal error");
+            }
+
+            for (ILoggingEvent event : listAppender.list) {
+                assertThat(event.getThrowableProxy()).isNull();
+            }
+        } finally {
+            geminiLogger.detachAppender(listAppender);
         }
     }
 }

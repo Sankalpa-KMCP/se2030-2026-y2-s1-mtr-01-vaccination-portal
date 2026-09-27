@@ -103,12 +103,26 @@ class AssistantPropertiesValidationTests {
         props.setModel("gemini-2.5-flash");
         assertEquals("gemini-2.5-flash", props.getEffectiveModel());
         assertTrue(props.isConfiguredForLiveProvider());
+    }
 
-        // Fallback to apiKey if googleApiKey is blank
+    @Test
+    @DisplayName("Gemini provider strictly rejects OpenAI credentials and fails closed when Google API key is blank")
+    void testGeminiMustNeverReceiveOpenAiCredentials() {
+        AssistantProperties props = new AssistantProperties();
+        props.setEnabled(true);
+        props.setProvider("gemini");
+
+        // Generic OpenAI apiKey is populated, but Google key is blank
+        props.setApiKey("sk-proj-super-secret-openai-key-999");
         props.setGoogleApiKey("");
-        props.setApiKey("AIzaSyFallbackKey456");
-        assertEquals("AIzaSyFallbackKey456", props.getEffectiveGoogleApiKey());
-        assertTrue(props.isConfiguredForLiveProvider());
+
+        assertEquals("", props.getEffectiveGoogleApiKey(), "Gemini must never fall back to OpenAI apiKey");
+        assertFalse(props.isConfiguredForLiveProvider(), "Gemini must fail closed when Google API key is missing");
+
+        // OpenAI provider configuration remains valid with its own key
+        props.setProvider("openai");
+        props.setModel("gpt-4o");
+        assertTrue(props.isConfiguredForLiveProvider(), "OpenAI provider behavior must remain unchanged");
     }
 
     @Test

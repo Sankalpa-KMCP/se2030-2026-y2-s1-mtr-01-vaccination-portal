@@ -80,9 +80,8 @@ public final class AssistantRouteCatalog {
     );
 
     public static final Set<String> SCREENING_STAFF_ROLES = Set.of(
-            ROLE_ADMIN,
-            ROLE_SUPER_ADMIN,
-            ROLE_HEALTHCARE_OFFICER
+            ROLE_HEALTHCARE_OFFICER,
+            ROLE_SUPER_ADMIN
     );
 
     public static final Set<String> ADMIN_ROLES = Set.of(

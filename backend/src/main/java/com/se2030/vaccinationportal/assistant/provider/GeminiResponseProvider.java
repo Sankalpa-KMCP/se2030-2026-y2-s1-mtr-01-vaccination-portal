@@ -43,7 +43,7 @@ public class GeminiResponseProvider implements AiResponseProvider, AutoCloseable
 
     private static final Logger log = LoggerFactory.getLogger(GeminiResponseProvider.class);
 
-    public static final int MAX_ANSWER_CHARACTERS = 2000;
+    public static final int MAX_ANSWER_CHARACTERS = AiResponseProvider.MAX_ANSWER_CHARACTERS;
     public static final int MAX_SUGGESTED_ACTIONS = 3;
     public static final int MAX_ACTION_LABEL_LENGTH = 100;
 
@@ -185,14 +185,15 @@ public class GeminiResponseProvider implements AiResponseProvider, AutoCloseable
         } catch (TimeoutException ex) {
             future.cancel(true);
             log.warn("Gemini assistant provider timeout occurred for requestId: {}", requestId);
-            throw new AssistantTimeoutException("Assistant provider request timed out", ex);
+            throw new AssistantTimeoutException("Assistant provider request timed out");
         } catch (ExecutionException ex) {
             Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
             if (isTimeout(cause)) {
                 log.warn("Gemini assistant provider timeout occurred for requestId: {}", requestId);
-                throw new AssistantTimeoutException("Assistant provider request timed out", cause);
+                throw new AssistantTimeoutException("Assistant provider request timed out");
             }
-            log.error("Gemini assistant provider error occurred for requestId: {}", requestId, ex);
+            log.error("Gemini assistant provider error occurred for requestId: {}, errorType: {}",
+                    requestId, cause.getClass().getSimpleName());
             return new AssistantChatResponse(OPERATIONAL_FALLBACK, Collections.emptyList(), requestId);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -201,9 +202,10 @@ public class GeminiResponseProvider implements AiResponseProvider, AutoCloseable
         } catch (Exception ex) {
             if (isTimeout(ex)) {
                 log.warn("Gemini assistant provider timeout occurred for requestId: {}", requestId);
-                throw new AssistantTimeoutException("Assistant provider request timed out", ex);
+                throw new AssistantTimeoutException("Assistant provider request timed out");
             }
-            log.error("Gemini assistant provider unexpected error for requestId: {}", requestId, ex);
+            log.error("Gemini assistant provider unexpected error for requestId: {}, errorType: {}",
+                    requestId, ex.getClass().getSimpleName());
             return new AssistantChatResponse(OPERATIONAL_FALLBACK, Collections.emptyList(), requestId);
         }
     }
@@ -244,7 +246,8 @@ public class GeminiResponseProvider implements AiResponseProvider, AutoCloseable
         try {
             rawText = response.text();
         } catch (Exception ex) {
-            log.warn("Failed to extract text from Gemini response for requestId: {}", requestId, ex);
+            log.warn("Failed to extract text from Gemini response for requestId: {}, errorType: {}",
+                    requestId, ex.getClass().getSimpleName());
         }
 
         return parseStructuredOutput(rawText, requestId, callerAuthorities);
@@ -273,7 +276,7 @@ public class GeminiResponseProvider implements AiResponseProvider, AutoCloseable
             return new AssistantChatResponse(SAFE_UNSTRUCTURED_FALLBACK, Collections.emptyList(), requestId);
         }
 
-        String answer = OpenAiResponsesProvider.safeTruncate(
+        String answer = AiResponseProvider.safeTruncate(
                 rootNode.get("answer").asText().trim(),
                 MAX_ANSWER_CHARACTERS
         );
@@ -312,7 +315,7 @@ public class GeminiResponseProvider implements AiResponseProvider, AutoCloseable
             try {
                 client.close();
             } catch (Exception ex) {
-                log.debug("Error while closing Gemini Client", ex);
+                log.debug("Error while closing Gemini Client: {}", ex.getClass().getSimpleName());
             }
         }
     }

@@ -37,7 +37,7 @@ public class OllamaChatProvider implements AiResponseProvider {
 
     private static final Logger log = LoggerFactory.getLogger(OllamaChatProvider.class);
 
-    private static final int MAX_ANSWER_CHARACTERS = 2000;
+    private static final int MAX_ANSWER_CHARACTERS = AiResponseProvider.MAX_ANSWER_CHARACTERS;
     private static final int MAX_SUGGESTED_ACTIONS = 3;
     private static final int MAX_ACTION_LABEL_LENGTH = 100;
     private static final String OPERATIONAL_FALLBACK =
@@ -187,7 +187,7 @@ public class OllamaChatProvider implements AiResponseProvider {
             return fallback(requestId);
         }
 
-        String answer = OpenAiResponsesProvider.safeTruncate(
+        String answer = AiResponseProvider.safeTruncate(
                 root.get("answer").asText().trim(),
                 MAX_ANSWER_CHARACTERS
         );

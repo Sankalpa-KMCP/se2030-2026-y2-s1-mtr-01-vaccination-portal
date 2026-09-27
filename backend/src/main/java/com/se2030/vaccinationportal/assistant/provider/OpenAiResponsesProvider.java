@@ -45,7 +45,7 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiResponsesProvider.class);
 
-    public static final int MAX_ANSWER_CHARACTERS = 2000;
+    public static final int MAX_ANSWER_CHARACTERS = AiResponseProvider.MAX_ANSWER_CHARACTERS;
     public static final int MAX_SUGGESTED_ACTIONS = 3;
     public static final int MAX_ACTION_LABEL_LENGTH = 100;
 
@@ -269,23 +269,11 @@ public class OpenAiResponsesProvider implements AiResponseProvider {
     }
 
     public static String safeTruncate(String text, int maxCharacters) {
-        if (text == null || text.length() <= maxCharacters) {
-            return text;
-        }
+        return AiResponseProvider.safeTruncate(text, maxCharacters);
+    }
 
-        int targetIndex = maxCharacters;
-        // Step back if index splits a UTF-16 surrogate pair
-        if (Character.isHighSurrogate(text.charAt(targetIndex - 1))) {
-            targetIndex--;
-        } else if (Character.isLowSurrogate(text.charAt(targetIndex))) {
-            targetIndex--;
-        }
-
-        if (targetIndex < 0) {
-            targetIndex = 0;
-        }
-
-        return text.substring(0, targetIndex) + "...";
+    public static String safeTruncate(String text) {
+        return AiResponseProvider.safeTruncate(text);
     }
 
     private boolean isTimeout(Throwable ex) {

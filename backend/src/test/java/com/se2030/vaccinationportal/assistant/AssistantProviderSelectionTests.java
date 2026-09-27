@@ -54,6 +54,20 @@ class AssistantProviderSelectionTests {
     }
 
     @Test
+    void geminiWithOnlyOpenAiApiKeyFailsClosedToDisabledProvider() {
+        AssistantProperties properties = new AssistantProperties();
+        properties.setEnabled(true);
+        properties.setProvider("gemini");
+        properties.setGoogleApiKey("");
+        properties.setApiKey("sk-proj-only-openai-key-present");
+
+        AiResponseProvider provider = config.aiResponseProvider(properties);
+
+        assertThat(provider).isInstanceOf(DisabledAiResponseProvider.class);
+        assertThat(provider.isAvailable()).isFalse();
+    }
+
+    @Test
     void unsupportedOrRemoteProviderConfigurationFailsClosed() {
         AssistantProperties properties = new AssistantProperties();
         properties.setEnabled(true);

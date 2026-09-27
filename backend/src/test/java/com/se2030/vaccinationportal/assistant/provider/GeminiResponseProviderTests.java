@@ -14,9 +14,16 @@ import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
 import com.se2030.vaccinationportal.assistant.dto.AssistantMessageDto;
 import com.se2030.vaccinationportal.assistant.exception.AssistantTimeoutException;
 import com.se2030.vaccinationportal.assistant.policy.AssistantRefusalPolicy;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -113,7 +120,7 @@ class GeminiResponseProviderTests {
     }
 
     @Test
-    @DisplayName("Scenario 3: API key fallback resolution from googleApiKey to apiKey")
+    @DisplayName("Scenario 3: Strict credential separation: Gemini uses googleApiKey and never falls back to OpenAI apiKey")
     void testApiKeyFallbackResolution() {
         AssistantProperties props = new AssistantProperties();
         props.setEnabled(true);
@@ -121,12 +128,13 @@ class GeminiResponseProviderTests {
 
         // Primary: googleApiKey
         props.setGoogleApiKey("AIzaSyPrimary");
-        props.setApiKey("AIzaSySecondary");
+        props.setApiKey("sk-proj-OpenAiKey");
         assertEquals("AIzaSyPrimary", props.getEffectiveGoogleApiKey());
 
-        // Fallback: apiKey when googleApiKey is empty
+        // When googleApiKey is empty, it MUST NOT fall back to OpenAI apiKey
         props.setGoogleApiKey("");
-        assertEquals("AIzaSySecondary", props.getEffectiveGoogleApiKey());
+        assertEquals("", props.getEffectiveGoogleApiKey());
+        assertFalse(props.isConfiguredForLiveProvider());
 
         // Both empty
         props.setApiKey("");
@@ -603,5 +611,163 @@ class GeminiResponseProviderTests {
 
         assertEquals(AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE, result.answer());
         assertTrue(result.suggestedActions().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Scenario 20: Upstream error logging is strictly sanitized and never leaks sensitive details")
+    void testErrorLoggingSanitization_doesNotLeakUpstreamDetails() {
+        Logger providerLogger = (Logger) LoggerFactory.getLogger(GeminiResponseProvider.class);
+        ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        listAppender.start();
+        providerLogger.addAppender(listAppender);
+
+        try {
+            String sensitiveMarker = "SECRET_UPSTREAM_DETAIL_123";
+            RuntimeException upstreamException = new RuntimeException("Upstream internal error: " + sensitiveMarker);
+
+            GeminiResponseProvider provider = new GeminiResponseProvider(
+                    properties,
+                    (model, contents, config) -> CompletableFuture.failedFuture(upstreamException),
+                    objectMapper
+            );
+
+            AssistantChatResponse result = provider.generateResponse(
+                    new AssistantChatRequest("test", Collections.emptyList()),
+                    "sys",
+                    "req-sensitive-log",
+                    Collections.emptySet()
+            );
+
+            assertEquals(AssistantRefusalPolicy.OPERATIONAL_FALLBACK_MESSAGE, result.answer());
+
+            List<String> logMessages = listAppender.list.stream()
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .toList();
+
+            assertFalse(logMessages.isEmpty(), "Error log event must be recorded");
+
+            for (ILoggingEvent event : listAppender.list) {
+                String formatted = event.getFormattedMessage();
+                assertFalse(formatted.contains(sensitiveMarker), "Log message must not contain sensitive details");
+                assertFalse(formatted.contains("Upstream internal error"), "Log message must not contain upstream error message");
+                assertNull(event.getThrowableProxy(), "Throwable proxy must not be passed to logger to prevent stacktrace leaks");
+            }
+        } finally {
+            providerLogger.detachAppender(listAppender);
+            listAppender.stop();
+        }
+    }
+
+    @Test
+    @DisplayName("Scenario 21: Long answer > 1500 chars is safely truncated to <= 1500 chars and valid for next turn history")
+    void testLongAnswerTruncatedTo1500_validForNextTurnHistory() {
+        String longAnswer = "A".repeat(1650);
+        String json = "{\"answer\":\"" + longAnswer + "\",\"suggestedActions\":[]}";
+        GenerateContentResponse sdkResponse = createMockResponseWithText(json);
+
+        GeminiResponseProvider provider = new GeminiResponseProvider(
+                properties,
+                (model, contents, config) -> CompletableFuture.completedFuture(sdkResponse),
+                objectMapper
+        );
+
+        AssistantChatResponse response = provider.generateResponse(
+                new AssistantChatRequest("give me a long answer", Collections.emptyList()),
+                "sys",
+                "req-long-ans",
+                Collections.emptySet()
+        );
+
+        assertTrue(response.answer().length() <= 1500, "Answer length must be <= 1500 characters");
+        assertTrue(response.answer().endsWith("..."), "Truncated answer must end with ellipsis");
+
+        // Verify that this answer can be submitted unchanged as an assistant message in next-turn history
+        AssistantMessageDto historyItem = new AssistantMessageDto("assistant", response.answer());
+        assertEquals(response.answer(), historyItem.content());
+
+        AssistantChatRequest nextRequest = new AssistantChatRequest(
+                "Follow up question",
+                List.of(historyItem),
+                "/app/citizen"
+        );
+
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        Set<ConstraintViolation<AssistantChatRequest>> violations = validator.validate(nextRequest);
+        assertTrue(violations.isEmpty(), "Next-turn request with truncated assistant history must satisfy all validation constraints");
+    }
+
+    @Test
+    @DisplayName("Scenario 22: Truncation at 1500 boundary does not split Unicode surrogate pairs")
+    void testLongAnswerUnicodeSurrogatePairPreservation() {
+        // 1496 ASCII chars + emoji (surrogate pair \uD83D\uDE00, 2 chars) + 100 trailing chars
+        String prefix = "X".repeat(1496);
+        String emoji = "\uD83D\uDE00";
+        String suffix = "Y".repeat(100);
+        String fullAnswer = prefix + emoji + suffix;
+
+        String json = "{\"answer\":\"" + fullAnswer + "\",\"suggestedActions\":[]}";
+        GenerateContentResponse sdkResponse = createMockResponseWithText(json);
+
+        GeminiResponseProvider provider = new GeminiResponseProvider(
+                properties,
+                (model, contents, config) -> CompletableFuture.completedFuture(sdkResponse),
+                objectMapper
+        );
+
+        AssistantChatResponse response = provider.generateResponse(
+                new AssistantChatRequest("test emoji boundary", Collections.emptyList()),
+                "sys",
+                "req-emoji-boundary",
+                Collections.emptySet()
+        );
+
+        assertTrue(response.answer().length() <= 1500, "Answer length must be <= 1500 characters");
+        assertTrue(response.answer().endsWith("..."));
+
+        String withoutEllipsis = response.answer().substring(0, response.answer().length() - 3);
+        assertEquals(1496, withoutEllipsis.length());
+        assertFalse(Character.isHighSurrogate(withoutEllipsis.charAt(withoutEllipsis.length() - 1)));
+        assertFalse(Character.isLowSurrogate(withoutEllipsis.charAt(withoutEllipsis.length() - 1)));
+    }
+
+    @Test
+    @DisplayName("Scenario 23: Screening routes in suggested actions are stripped for Admin but retained for Healthcare Officer")
+    void testScreeningRouteStrippedForAdminRetainedForHealthcareOfficer() {
+        String json = """
+                {
+                  "answer": "Screening management options",
+                  "suggestedActions": [
+                    {"label": "Screening Reviews", "path": "/app/staff/screening/reviews"},
+                    {"label": "Screening Questions", "path": "/app/screening/questions"}
+                  ]
+                }
+                """;
+
+        GenerateContentResponse sdkResponse = createMockResponseWithText(json);
+        GeminiResponseProvider provider = new GeminiResponseProvider(
+                properties,
+                (model, contents, config) -> CompletableFuture.completedFuture(sdkResponse),
+                objectMapper
+        );
+
+        // Caller with ROLE_ADMIN: screening routes must be stripped
+        AssistantChatResponse adminResponse = provider.generateResponse(
+                new AssistantChatRequest("screening info", Collections.emptyList()),
+                "sys",
+                "req-scr-admin",
+                Set.of("ROLE_ADMIN")
+        );
+        assertTrue(adminResponse.suggestedActions().isEmpty(), "Screening routes must be stripped for Admin");
+
+        // Caller with ROLE_HEALTHCARE_OFFICER: screening routes must be retained
+        AssistantChatResponse hcoResponse = provider.generateResponse(
+                new AssistantChatRequest("screening info", Collections.emptyList()),
+                "sys",
+                "req-scr-hco",
+                Set.of("ROLE_HEALTHCARE_OFFICER")
+        );
+        assertEquals(2, hcoResponse.suggestedActions().size(), "Screening routes must be retained for Healthcare Officer");
+        assertEquals("/app/staff/screening/reviews", hcoResponse.suggestedActions().get(0).path());
+        assertEquals("/app/screening/questions", hcoResponse.suggestedActions().get(1).path());
     }
 }

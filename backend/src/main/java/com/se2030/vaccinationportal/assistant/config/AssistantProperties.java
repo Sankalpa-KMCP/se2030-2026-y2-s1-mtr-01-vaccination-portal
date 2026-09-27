@@ -117,10 +117,7 @@ public class AssistantProperties {
     }
 
     public String getEffectiveGoogleApiKey() {
-        if (googleApiKey != null && !googleApiKey.isBlank()) {
-            return googleApiKey.trim();
-        }
-        return apiKey != null ? apiKey.trim() : "";
+        return googleApiKey != null ? googleApiKey.trim() : "";
     }
 
     public String getEffectiveModel() {
