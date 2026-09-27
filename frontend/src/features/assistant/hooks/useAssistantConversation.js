@@ -8,6 +8,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import {
+  ADMIN_ROLE,
+  STAFF_DASHBOARD_ROLES,
+} from '../../../auth/constants/authRoles';
+import {
   getAssistantStatus,
   sendAssistantMessage,
   isSafeInternalPath,
@@ -27,6 +31,28 @@ export const SUGGESTED_QUESTIONS = [
   'How do I book an appointment?',
   'How do I verify a certificate?',
 ];
+
+export const STAFF_SUGGESTED_QUESTIONS = [
+  'What is my staff profile?',
+  'Which center am I assigned to?',
+  'What is my staff role?',
+  'How do I use the staff dashboard?',
+];
+
+export function getSuggestedQuestions(user, isAuthenticated) {
+  if (!isAuthenticated || !Array.isArray(user?.roles)) {
+    return SUGGESTED_QUESTIONS;
+  }
+
+  const roles = user.roles
+    .map((role) => (typeof role === 'string' ? role : role?.code))
+    .filter(Boolean);
+  const isStaff = roles.some(
+    (role) => role === ADMIN_ROLE || STAFF_DASHBOARD_ROLES.includes(role)
+  );
+
+  return isStaff ? STAFF_SUGGESTED_QUESTIONS : SUGGESTED_QUESTIONS;
+}
 
 function generateId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -76,6 +102,7 @@ export function formatErrorMessage(err) {
 export function useAssistantConversation() {
   const { user, isAuthenticated } = useAuth() || {};
   const location = useLocation();
+  const suggestedQuestions = getSuggestedQuestions(user, isAuthenticated);
 
   // In-memory conversation state (strictly ephemeral; never persisted in browser storage)
   const [messages, setMessages] = useState(() => [createInitialGreeting()]);
@@ -266,5 +293,6 @@ export function useAssistantConversation() {
     isAvailable: status?.available ?? false,
     personalizedFeaturesAvailable: status?.personalizedFeaturesAvailable ?? false,
     disclaimer: status?.disclaimer || DEFAULT_DISCLAIMER,
+    suggestedQuestions,
   };
 }

@@ -9,6 +9,14 @@ public interface AssistantReadOnlyTool {
 
     boolean matchesIntent(String userMessage);
 
+    /**
+     * Citizen ownership is the safe default for the original personalized tools.
+     * Tools for other actor types must opt in explicitly.
+     */
+    default boolean supports(AssistantToolContext context) {
+        return context != null && context.isCitizen();
+    }
+
     AssistantToolResult execute(AssistantToolContext context);
 
     /**

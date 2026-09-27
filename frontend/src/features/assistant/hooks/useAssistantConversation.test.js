@@ -6,6 +6,7 @@ import {
   useAssistantConversation,
   INITIAL_ASSISTANT_MESSAGE,
   DEFAULT_DISCLAIMER,
+  STAFF_SUGGESTED_QUESTIONS,
   formatErrorMessage,
 } from './useAssistantConversation';
 import * as assistantApi from '../api/assistantApi';
@@ -69,6 +70,27 @@ describe('useAssistantConversation', () => {
     expect(result.current.isStatusLoading).toBe(false);
     expect(result.current.isAvailable).toBe(true);
     expect(result.current.disclaimer).toBe(DEFAULT_DISCLAIMER);
+  });
+
+  it('shows staff onboarding questions to an authenticated staff member', async () => {
+    authContextMock.current = {
+      user: {
+        id: 45,
+        email: 'staff45@example.com',
+        roles: ['ROLE_CENTER_MANAGER'],
+      },
+      isAuthenticated: true,
+    };
+
+    const { result } = renderHook(() => useAssistantConversation(), { wrapper });
+
+    await act(async () => {
+      // allow status promise to resolve
+    });
+
+    expect(result.current.suggestedQuestions).toEqual(STAFF_SUGGESTED_QUESTIONS);
+    expect(result.current.suggestedQuestions).toContain('What is my staff profile?');
+    expect(result.current.suggestedQuestions).toContain('Which center am I assigned to?');
   });
 
   it('submits a message, appends user turn and assistant reply', async () => {
