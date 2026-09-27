@@ -57,6 +57,7 @@ Environment variables and defaults are declared in `src/main/resources/applicati
 
 ```env
 SERVER_PORT=8080
+SERVER_FORWARD_HEADERS_STRATEGY=none
 DB_URL=jdbc:mysql://localhost:3306/vaccination_portal
 DB_USERNAME=vaccination_app
 DB_PASSWORD=replace_with_local_password
@@ -93,6 +94,88 @@ export JWT_SECRET=your_secure_random_jwt_secret_key
 ```
 
 *Note: Never commit `.env` or configuration files containing real passwords or keys to version control.*
+
+### Project-Wide AI Assistant
+
+The backend provides a secure, rate-limited, read-only conversational assistant integrated with a floating React widget across both public and authenticated pages.
+
+#### Assistant Endpoints
+
+- **`GET /api/v1/assistant/status`**: Public status endpoint returning provider availability, personalized capability flags, and clinical disclaimer.
+- **`POST /api/v1/assistant/messages`**: Conversational guidance endpoint returning structured answers, allowlisted role-filtered route actions, and request correlation IDs.
+
+```json
+// Status Response (GET /api/v1/assistant/status)
+{
+  "available": true,
+  "personalizedFeaturesAvailable": false,
+  "disclaimer": "This assistant explains portal services. It does not provide medical advice or emergency care."
+}
+
+// Message Request (POST /api/v1/assistant/messages)
+{
+  "message": "How do I book an appointment?",
+  "history": [],
+  "currentPath": "/"
+}
+
+// Message Response (POST /api/v1/assistant/messages)
+{
+  "answer": "Plain text answer",
+  "suggestedActions": [
+    {
+      "label": "Book Appointment",
+      "path": "/app/appointments/book"
+    }
+  ],
+  "requestId": "generated-request-id"
+}
+```
+
+#### Core Capabilities & Boundaries
+
+- **Disabled by default**: `AI_ASSISTANT_ENABLED` defaults to `false`. The portal starts and operates completely normally when the AI assistant is disabled.
+- **Selectable provider**: Use the OpenAI Responses API or a free local Ollama model without changing the frontend or assistant security pipeline.
+- **Backend-only secret**: When OpenAI is selected, `OPENAI_API_KEY` is strictly server-side. It is never exposed to the frontend or committed to version control. Ollama mode requires no API key.
+- **Test isolation**: Automated test suites use a deterministic fake provider (`DeterministicFakeAiResponseProvider`) and **never make live requests to OpenAI**.
+- **Deterministic safety policy**: Pre-evaluates clinical and mutation boundaries, immediately refusing medical diagnosis, prescription advice, and database modification requests.
+- **Authorized read-only citizen tools**:
+  1. `MyAppointmentsAssistantTool`: Returns only the appointment category requested (upcoming, past, check-in, waitlist, or combined status), with campaign/center details and authoritative MF-02 times formatted for Sri Lanka. Queue position uses a database count query and never loads another citizen's queue record into assistant context.
+  2. `MyEligibilityAssistantTool`: Retrieves recorded eligibility assessments (campaign ID, status (`ELIGIBLE`, `INELIGIBLE`, `EXPIRED`, `REVOKED`), reviewed time, validity time, and lifecycle state; up to 5 campaigns) for the authenticated citizen without making clinical determinations.
+  3. `MyProfileCompletionAssistantTool`: Reports account status and missing profile field names without exposing the profile's raw personal values.
+  4. `MyVaccinationSummaryAssistantTool`: Retrieves finalized vaccination record count, recent administered doses (dose number and date/time), and digital certificate status/issue date for the authenticated citizen without exposing verification tokens, clinical notes, or batch numbers.
+  *(All tools are strictly scoped to the verified `principal.getUserId()`; arbitrary citizen IDs in user prompts are ignored).*
+- **Deterministic navigation actions**: Personalized tool routes are converted to authorized action buttons on the server instead of relying on the model to generate them.
+- **English-only responses**: The assistant consistently answers in clear English while preserving all safety and privacy rules.
+- **Setup & Evaluation Guide**: See [docs/AI_ASSISTANT_SETUP_AND_DEMO.md](../docs/AI_ASSISTANT_SETUP_AND_DEMO.md) for full architecture, macOS setup, cURL examples, and evaluation walkthroughs.
+
+#### Reverse Proxy & Forwarded Headers Security
+
+By default, `server.forward-headers-strategy` is configured to `none` (`SERVER_FORWARD_HEADERS_STRATEGY=none`) so that direct deployments never blindly trust incoming `X-Forwarded-For` or `Forwarded` headers.
+
+When deploying behind a trusted reverse proxy (e.g., NGINX, Cloudflare, AWS Application Load Balancer):
+1. Configure `SERVER_FORWARD_HEADERS_STRATEGY=framework`.
+2. The reverse proxy **MUST** sanitize and overwrite incoming `X-Forwarded-For` headers with the real client IP.
+3. This ensures that the anonymous rate limiter (5 requests/minute) accurately identifies client IPs without permitting header spoofing rate-limit bypasses.
+
+#### Environment Variables
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `AI_ASSISTANT_ENABLED` | `false` | Enables the AI assistant (`true` or `false`). |
+| `AI_ASSISTANT_PROVIDER` | `openai` | Provider implementation: `openai` or `ollama`. |
+| `AI_ASSISTANT_MODEL` | *(empty)* | Model used by the selected provider. Takes precedence over legacy `OPENAI_MODEL`. |
+| `OPENAI_API_KEY` | *(empty)* | Official OpenAI API secret key. Must remain server-side. |
+| `OPENAI_MODEL` | *(empty)* | Legacy OpenAI-only model setting. |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama endpoint. Non-loopback URLs are rejected to protect authorized context. |
+| `AI_ASSISTANT_TIMEOUT` | `15s` | Provider HTTP request timeout. |
+| `AI_ASSISTANT_MAX_INPUT_CHARACTERS` | `1500` | Maximum allowed character length for incoming chat messages. |
+| `AI_ASSISTANT_MAX_HISTORY_MESSAGES` | `10` | Maximum conversation history turns processed. |
+| `AI_ASSISTANT_MAX_OUTPUT_TOKENS` | `500` | Maximum response token limit for model completions. |
+| `AI_ASSISTANT_ANONYMOUS_RPM` | `5` | Rate limit requests per minute for unauthenticated clients. |
+| `AI_ASSISTANT_AUTHENTICATED_RPM` | `15` | Rate limit requests per minute for authenticated callers. |
+
+
 
 ## Available Commands
 

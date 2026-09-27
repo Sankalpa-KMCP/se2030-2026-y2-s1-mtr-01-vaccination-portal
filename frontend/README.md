@@ -86,33 +86,56 @@ All active citizen and staff accounts authenticate through `/login`. Upon authen
 
 ### Protected Routes (`/app/*`)
 Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticated session. Users are automatically directed to their role-specific view:
-- `/app/citizen` - Citizen Dashboard (accessible to `ROLE_CITIZEN`)
+- `/app/citizen` - Citizen Dashboard (`ROLE_CITIZEN`)
+- `/app/citizen/profile` - Citizen profile management (`ROLE_CITIZEN`)
+- `/app/citizen/vaccinations` - Personal administered vaccination records and digital certificates (`ROLE_CITIZEN`, alias `/app/vaccinations`)
+- `/app/screening` - Citizen pre-vaccination screening campaigns (`ROLE_CITIZEN`)
+- `/app/screening/eligibility` - Citizen pre-vaccination eligibility status overview (`ROLE_CITIZEN`)
+- `/app/screening/history` - Screening history, details, and correction submissions (`ROLE_CITIZEN`)
 - `/app/appointments/book` - Vaccination session availability search and appointment booking (`ROLE_CITIZEN`)
 - `/app/appointments/mine` - Personal appointment listing, rescheduling, and cancellation management (`ROLE_CITIZEN`)
-- `/app/staff` - Staff Operations Dashboard (accessible to healthcare, campaign, and center staff)
+- `/app/appointments/waitlist` - Citizen waitlist status and registration (`ROLE_CITIZEN`)
+- `/app/staff` - Staff Operations Dashboard (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_HEALTHCARE_OFFICER`, `ROLE_INVENTORY_OFFICER`, `ROLE_MANAGEMENT_USER`, `ROLE_VACCINATOR`)
+- `/app/staff/vaccination-drafts` - Clinical vaccination draft recording and finalization (`ROLE_VACCINATOR`)
+- `/app/staff/screening/reviews` - Clinical screening review queue and history (`ROLE_HEALTHCARE_OFFICER`)
+- `/app/campaigns` - Vaccination campaign management and dose programme configuration (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_MANAGEMENT_USER`)
+- `/app/center-operations` - Center master data, operating hours, and closures (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_MANAGEMENT_USER`)
+- `/app/sessions` - Vaccination session planning, recurrence series, and staff rostering (`ROLE_ADMIN`, `ROLE_CENTER_MANAGER`, `ROLE_CAMPAIGN_OFFICER`)
+- `/app/analytics` - Operational analytics and program metrics visualization (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`)
+- `/app/checkin/queue` - Clinic arrival check-in queue management (`ROLE_ADMIN`, `ROLE_CENTER_MANAGER`, `ROLE_VACCINATOR`)
+- `/app/inventory` - Vaccine inventory, stock levels, and batch allocations (`ROLE_ADMIN`, `ROLE_INVENTORY_OFFICER`)
+- `/app/screening/questions` - Screening question configuration (`ROLE_HEALTHCARE_OFFICER`)
+- `/app/screening/questionnaires` - Screening questionnaire versioning (`ROLE_HEALTHCARE_OFFICER`)
 - `/app/admin` - System Administration Dashboard (`ROLE_ADMIN`)
 - `/app/admin/staff-requests` - Pending staff registration request management (`ROLE_ADMIN`)
-- `/app/campaigns` - Vaccination campaign management and dose programme configuration
-- `/app/center-operations` - Center master data, operating hours, and closures
-- `/app/sessions` - Vaccination session planning, recurrence series, and staff rostering
-- `/app/analytics` - Operational analytics and program metrics visualization
-- `/app/screening/questions` - Screening question configuration (`ROLE_ADMIN`)
-- `/app/screening/questionnaires` - Screening questionnaire versioning (`ROLE_ADMIN`)
 
 ## Implemented Feature Areas & Status
 
 | Feature Module | Directory | Current Implementation Status |
 | :--- | :--- | :--- |
+| **Project-Wide AI Assistant** | `src/features/assistant/` | **Implemented**: Floating `AssistantWidget` accessible on public and authenticated pages, in-memory conversation state, role-filtered route navigation pills, and personalized citizen queries. |
 | **Public Landing & Information** | `src/features/public-landing/` | **Implemented**: Multi-page informational experience (`/`, `/how-it-works`, `/about`), accessible navigation, journey timelines, and responsive styling. |
 | **Authentication & Access Control** | `src/auth/` | **Implemented**: Stateless JWT authentication, citizen registration, staff registration requests, admin review, and role-based route protection. |
+| **Pre-Vaccination Screening & Eligibility** | `src/features/screening/` | **Implemented**: Screening questions/questionnaires, citizen screening workflows, eligibility status, history tracking, and healthcare officer review queue. |
 | **Campaign Management** | `src/features/campaign-management/` | **Implemented**: Campaign lifecycle states, dose programme versions, target groups, and location targeting. |
 | **Center Operations** | `src/features/center-operations/` | **Implemented**: Vaccination center master records, operating calendars, and closure management. |
 | **Session Management** | `src/features/session-management/` | **Implemented**: Recurring session generation, time slots, operational capacity, and staff rostering. |
+| **Appointment Management** | `src/features/appointment-management/` | **Implemented**: Availability search, slot booking (`/app/appointments/book`), personal appointment management (`/app/appointments/mine`), citizen waitlist (`/app/appointments/waitlist`), and staff arrival check-in queue (`/app/checkin/queue`). |
+| **Vaccine Inventory** | `src/features/inventory-management/` | **Implemented**: Center inventory management, stock levels, lot allocations, and replenishment tracking. |
+| **Vaccination Administration** | `src/features/vaccination-administration/` | **Implemented**: Clinical vaccination draft recording, citizen vaccination history (`/app/citizen/vaccinations`), and public digital certificate verification (`/verify-certificate`). |
 | **Operational Analytics** | `src/features/analytics/` | **Implemented**: Interactive operations analytics view with filterable program metrics. |
-| **Screening & Eligibility** | `src/features/screening/` | **Implemented**: Screening question definition, answer options, and questionnaire version administration. |
-| **Vaccination Administration** | `src/features/vaccination-administration/` | **Partial**: Certificate verification form component implemented; complete clinical administration workflow UI is pending. |
-| **Appointment Management** | `src/features/appointment-management/` | **Partial**: Availability search, appointment booking (`/app/appointments/book`), appointment listing, rescheduling, and cancellation UI (`/app/appointments/mine`) implemented for citizens; waitlist join/management and staff check-in queue UI remain pending. |
-| **Vaccine Inventory** | `src/features/inventory-management/` | **Planned**: Not implemented in current frontend release. |
+
+## Project-Wide AI Assistant Widget
+
+The frontend incorporates a floating AI assistant widget (`AssistantWidget`) available across both public pages and authenticated portals:
+
+- **Universal Placement**: Mounted in `src/app/App.jsx` and anchored to the viewport; visible to anonymous visitors, citizens, and staff members.
+- **Backend Communication**: Communicates exclusively with backend REST endpoints (`GET /api/v1/assistant/status` and `POST /api/v1/assistant/messages`) through `apiClient.js`.
+- **Zero Frontend Secrets**: React **never receives or stores an OpenAI API key**. All model invocations and tool executions occur server-side.
+- **In-Memory Conversation Isolation**: Conversation dialogue is maintained strictly in React component state in browser memory. Conversation state automatically clears upon user logout, account switch, or manual reset to guarantee privacy across sessions.
+- **Graceful Disabled State**: If the backend reports `available: false` (or is unreachable), the widget displays an accessible notification banner, disables input, and provides a retry button while allowing all other portal features to remain fully operational.
+- **Role-Aware Suggested Actions**: Displays suggested route action pills that dynamically adapt based on caller role authorities, enabling quick navigation across the portal.
+- **Setup & Evaluation Guide**: See [docs/AI_ASSISTANT_SETUP_AND_DEMO.md](../docs/AI_ASSISTANT_SETUP_AND_DEMO.md) for full configuration and demonstration steps.
 
 ## Directory Structure
 
@@ -144,8 +167,15 @@ frontend/
     |-- features/
     |   |-- analytics/
     |   |-- appointment-management/
+    |   |-- assistant/
+    |   |   |-- api/
+    |   |   |-- components/
+    |   |   |-- hooks/
+    |   |   \-- styles/
     |   |-- campaign-management/
     |   |-- center-operations/
+    |   |-- citizen-profile/
+    |   |-- inventory-management/
     |   |-- public-landing/
     |   |-- screening/
     |   |-- session-management/
