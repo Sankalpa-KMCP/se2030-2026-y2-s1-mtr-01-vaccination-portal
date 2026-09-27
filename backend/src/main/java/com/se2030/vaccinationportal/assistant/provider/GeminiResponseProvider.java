@@ -186,13 +186,13 @@ public class GeminiResponseProvider implements AiResponseProvider, AutoCloseable
             }
         } catch (AssistantProviderException | AssistantTimeoutException ex) {
             throw ex;
-        } catch (Throwable t) {
-            if (isTimeout(t)) {
+        } catch (Exception ex) {
+            if (isTimeout(ex)) {
                 log.warn("Gemini assistant provider timeout occurred for requestId: {}", requestId);
                 throw new AssistantTimeoutException("Assistant provider request timed out");
             }
             log.error("Gemini assistant provider error occurred for requestId: {}, errorType: {}",
-                    requestId, t.getClass().getSimpleName());
+                    requestId, ex.getClass().getSimpleName());
             throw new AssistantProviderException("Assistant provider request failed");
         }
 

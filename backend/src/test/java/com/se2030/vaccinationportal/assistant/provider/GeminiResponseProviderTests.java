@@ -877,4 +877,29 @@ class GeminiResponseProviderTests {
             listAppender.stop();
         }
     }
+
+    @Test
+    @DisplayName("Scenario 26: JVM Error such as AssertionError propagates unchanged and is not wrapped as AssistantProviderException")
+    void testSynchronousAssertionError_propagatesUnchangedWithoutBeingWrapped() {
+        GeminiResponseProvider provider = new GeminiResponseProvider(
+                properties,
+                (model, contents, config) -> {
+                    throw new AssertionError("Corrupted internal state assertion failure");
+                },
+                objectMapper
+        );
+
+        AssertionError error = assertThrows(
+                AssertionError.class,
+                () -> provider.generateResponse(
+                        new AssistantChatRequest("test assertion error", Collections.emptyList()),
+                        "sys",
+                        "req-assertion-err",
+                        Collections.emptySet()
+                )
+        );
+
+        assertEquals("Corrupted internal state assertion failure", error.getMessage());
+        assertFalse((Object) error instanceof AssistantProviderException, "JVM Error must not be converted into AssistantProviderException");
+    }
 }
