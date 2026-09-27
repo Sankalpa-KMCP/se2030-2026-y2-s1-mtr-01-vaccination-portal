@@ -37,8 +37,6 @@ public record CreateCampaignRequest(
         Instant bookingOpenAt,
 
         @NotNull(message = "Booking close timestamp is required")
-        Instant bookingCloseAt,
-
-        Long questionnaireVersionId
+        Instant bookingCloseAt
 ) {
 }

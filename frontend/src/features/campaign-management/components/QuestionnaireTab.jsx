@@ -32,6 +32,10 @@ export default function QuestionnaireTab({
 
   const isTerminal = ['CANCELLED', 'COMPLETED', 'ARCHIVED'].includes(campaign?.status);
 
+  const activeOrLatestAssignment = currentAssignment || (assignments.length > 0 ? assignments[0] : null);
+  const assignedVersionId = activeOrLatestAssignment?.questionnaireVersionId || campaign?.questionnaireVersionId;
+  const assignedVersionInfo = assignedVersionId ? versionsMap[assignedVersionId] : null;
+
   const resolveVersionLabel = (versionId) => {
     const info = versionsMap[versionId];
     if (info) {
@@ -46,9 +50,9 @@ export default function QuestionnaireTab({
 
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div>
-          <h6 className="fw-bold text-dark mb-0">Citizen Screening Questionnaire Linkage</h6>
+          <h6 className="fw-bold text-dark mb-0">Screening Questionnaire</h6>
           <p className="text-secondary small mb-0">
-            Assign and version published clinical screening questionnaires for citizen appointment bookings.
+            Clinical screening questionnaire assigned for citizen appointment bookings.
           </p>
         </div>
 
@@ -69,42 +73,48 @@ export default function QuestionnaireTab({
       {loading ? (
         <LoadingSpinner message="Loading questionnaire assignments..." />
       ) : assignments.length === 0 ? (
-        <div className="text-center py-4 bg-light rounded border border-dashed">
-          <p className="text-muted mb-2">No screening questionnaire assigned to this campaign yet.</p>
-          <p className="small text-secondary mb-3">
-            An active published questionnaire version is required before scheduling or publishing this campaign.
-          </p>
+        <div className="p-3 bg-light rounded border text-start">
+          <div className="fw-bold text-dark mb-1">Citizen Screening Questionnaire</div>
+          <div className="fw-semibold text-muted mb-1">Not assigned yet</div>
+          <div className="form-text small text-muted mb-0">
+            A Healthcare Officer must configure the screening questionnaire before this campaign can be scheduled.
+          </div>
           {canManageAssignment && !isTerminal && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={onOpenAssignModal}
-            >
-              Assign Questionnaire
-            </button>
+            <div className="mt-3">
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={onOpenAssignModal}
+              >
+                Assign Questionnaire
+              </button>
+            </div>
           )}
         </div>
       ) : (
         <>
           {/* Active / Current Assignment Summary */}
-          {currentAssignment && (
+          {activeOrLatestAssignment && (
             <div className="card bg-light border-success border-opacity-50 mb-3 shadow-sm">
               <div className="card-body py-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <span className="badge bg-success">
-                    Active Screening Questionnaire
+                    {currentAssignment ? 'Active Screening Questionnaire' : 'Assigned Screening Questionnaire'}
                   </span>
                   <span className="small text-muted font-monospace">
-                    Effective: {formatDate(currentAssignment.activeFrom)} &rarr; {currentAssignment.activeTo ? formatDate(currentAssignment.activeTo) : 'Current'}
+                    Effective: {formatDate(activeOrLatestAssignment.activeFrom)} &rarr; {activeOrLatestAssignment.activeTo ? formatDate(activeOrLatestAssignment.activeTo) : 'Current'}
                   </span>
                 </div>
-                <div className="row g-2 small">
-                  <div className="col-md-6">
-                    <strong>Questionnaire:</strong> {resolveVersionLabel(currentAssignment.questionnaireVersionId)}
-                  </div>
-                  <div className="col-md-6 font-monospace">
-                    <strong>Version Ref ID:</strong> #{currentAssignment.questionnaireVersionId}
-                  </div>
+                <h5 className="fw-bold text-dark mb-1">
+                  {assignedVersionInfo?.questionnaireName ||
+                    assignedVersionInfo?.questionnaireCode ||
+                    `Questionnaire Version #${assignedVersionId}`}
+                </h5>
+                <div className="small text-secondary mb-1">
+                  Version {assignedVersionInfo?.versionNumber ?? assignedVersionId} · Published
+                </div>
+                <div className="form-text small text-muted mb-0">
+                  Clinical questionnaire managed by Healthcare Officer
                 </div>
               </div>
             </div>

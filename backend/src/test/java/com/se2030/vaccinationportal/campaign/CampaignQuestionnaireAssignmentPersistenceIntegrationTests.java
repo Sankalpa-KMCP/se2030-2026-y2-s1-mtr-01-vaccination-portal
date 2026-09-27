@@ -161,7 +161,7 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
                 LocalDate.of(2026, 12, 31),
                 Instant.parse("2026-08-15T08:00:00Z"),
                 Instant.parse("2026-12-30T18:00:00Z"),
-                CampaignStatus.PUBLISHED
+                CampaignStatus.DRAFT
         ));
     }
 
@@ -315,23 +315,13 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
     }
 
     @Test
-    @DisplayName("New version with effective date on or before current version's activeFrom is rejected")
-    void newVersionOnOrBeforeCurrentActiveFromRejected() {
+    @DisplayName("New version with effective date prior to current version's activeFrom is rejected")
+    void newVersionPriorToCurrentActiveFromRejected() {
         CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
                 campaignA.getId(),
                 100L,
                 LocalDate.of(2026, 9, 1)
         );
-
-        // Same start date
-        IllegalArgumentException exSame = assertThrows(IllegalArgumentException.class, () ->
-                assignmentService.assignQuestionnaireVersion(
-                        campaignA.getId(),
-                        101L,
-                        LocalDate.of(2026, 9, 1)
-                )
-        );
-        assertTrue(exSame.getMessage().contains("must be strictly after the current assignment activeFrom date"));
 
         // Prior start date
         IllegalArgumentException exBefore = assertThrows(IllegalArgumentException.class, () ->
@@ -346,6 +336,32 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
         // Verify version 1 activeTo remains null (unmodified)
         CampaignQuestionnaireAssignment refreshedV1 = assignmentRepository.findById(v1.getId()).orElseThrow();
         assertNull(refreshedV1.getActiveTo());
+    }
+
+    @Test
+    @DisplayName("Same-day DRAFT reassignment updates questionnaireVersionId in place")
+    void sameDayDraftReassignmentUpdatesInPlace() {
+        CampaignQuestionnaireAssignment v1 = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                100L,
+                LocalDate.of(2026, 9, 1)
+        );
+        Long originalId = v1.getId();
+
+        // Same start date on DRAFT campaign with 0 submissions updates in place
+        CampaignQuestionnaireAssignment updated = assignmentService.assignQuestionnaireVersion(
+                campaignA.getId(),
+                101L,
+                LocalDate.of(2026, 9, 1)
+        );
+
+        assertEquals(originalId, updated.getId());
+        assertEquals(101L, updated.getQuestionnaireVersionId());
+        assertEquals(LocalDate.of(2026, 9, 1), updated.getActiveFrom());
+        assertNull(updated.getActiveTo());
+
+        List<CampaignQuestionnaireAssignment> history = assignmentService.getAssignmentHistory(campaignA.getId());
+        assertEquals(1, history.size());
     }
 
     @Test
@@ -543,5 +559,28 @@ class CampaignQuestionnaireAssignmentPersistenceIntegrationTests {
         assertEquals(futureDate, refreshedV1.getActiveTo());
 
         assertEquals(2, assignmentService.getAssignmentHistory(campaignA.getId()).size());
+    }
+
+    @Test
+    @DisplayName("Assignment rejected when campaign is not in DRAFT status")
+    void nonDraftCampaignAssignmentRejected() {
+        VaccineType vt = vaccineTypeRepository.findAll().get(0);
+        TargetGroup tg = targetGroupRepository.findAll().get(0);
+        VaccinationCampaign scheduledCampaign = campaignRepository.saveAndFlush(CampaignTestFixtures.campaign(
+                "CMP-SCHED", "Scheduled Campaign", "Desc",
+                vt, tg,
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 12, 31),
+                Instant.parse("2026-08-15T08:00:00Z"), Instant.parse("2026-12-30T18:00:00Z"),
+                CampaignStatus.SCHEDULED
+        ));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                assignmentService.assignQuestionnaireVersion(
+                        scheduledCampaign.getId(),
+                        100L,
+                        LocalDate.of(2026, 9, 1)
+                )
+        );
+        assertTrue(ex.getMessage().contains("Questionnaire version cannot be assigned to campaign in SCHEDULED status"));
     }
 }

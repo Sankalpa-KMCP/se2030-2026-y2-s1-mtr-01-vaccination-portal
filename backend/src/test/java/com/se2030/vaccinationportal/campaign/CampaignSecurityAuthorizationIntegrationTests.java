@@ -21,6 +21,11 @@ import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.screening.model.Questionnaire;
+import com.se2030.vaccinationportal.screening.model.QuestionnaireVersion;
+import com.se2030.vaccinationportal.screening.model.QuestionnaireVersionStatus;
+import com.se2030.vaccinationportal.screening.repository.QuestionnaireRepository;
+import com.se2030.vaccinationportal.screening.repository.QuestionnaireVersionRepository;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -56,6 +61,8 @@ public class CampaignSecurityAuthorizationIntegrationTests {
     @Autowired private VaccinationCenterRepository centerRepository;
     @Autowired private VaccineTypeRepository vaccineTypeRepository;
     @Autowired private TargetGroupRepository targetGroupRepository;
+    @Autowired private QuestionnaireRepository questionnaireRepository;
+    @Autowired private QuestionnaireVersionRepository versionRepository;
 
     private VaccinationCampaign draftCampaign;
     private VaccinationCampaign activeCampaign;
@@ -63,6 +70,7 @@ public class CampaignSecurityAuthorizationIntegrationTests {
     private VaccinationCenter center;
     private VaccineType vaccine;
     private TargetGroup targetGroup;
+    private QuestionnaireVersion publishedVersion;
 
     private static final LocalDate START_DATE = LocalDate.of(2026, 11, 1);
     private static final LocalDate END_DATE = LocalDate.of(2026, 11, 30);
@@ -73,6 +81,9 @@ public class CampaignSecurityAuthorizationIntegrationTests {
     void setUp() {
         vaccine = vaccineTypeRepository.save(new VaccineType("VAX-H01-CMP", "H01 Campaign Vaccine"));
         targetGroup = targetGroupRepository.save(new TargetGroup("TG-H01-CMP", "H01 Campaign Target Group"));
+
+        Questionnaire q = questionnaireRepository.save(new Questionnaire("SEC-Q", "Security Questionnaire", "Desc"));
+        publishedVersion = versionRepository.save(new QuestionnaireVersion(q, 1, QuestionnaireVersionStatus.PUBLISHED));
 
         draftCampaign = campaignRepository.save(CampaignTestFixtures.campaign(
                 "CMP-H01-DFT", "Draft Campaign", "Desc",
@@ -690,6 +701,154 @@ public class CampaignSecurityAuthorizationIntegrationTests {
                             .content(payload))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.centerId", is(center.getId().intValue())));
+        }
+
+        @Test
+        @DisplayName("ROLE_CAMPAIGN_OFFICER POST questionnaire-assignments is denied 403")
+        void campaignOfficerQuestionnaireAssignmentDenied() throws Exception {
+            String auth = token(102L, "officer@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+            String payload = String.format("""
+                    {
+                        "questionnaireVersionId": %d,
+                        "effectiveStartDate": "%s"
+                    }
+                    """, publishedVersion.getId(), START_DATE);
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Anonymous POST questionnaire-assignments is denied 403")
+        void anonymousQuestionnaireAssignmentDenied() throws Exception {
+            String payload = String.format("""
+                    {
+                        "questionnaireVersionId": %d,
+                        "effectiveStartDate": "%s"
+                    }
+                    """, publishedVersion.getId(), START_DATE);
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_HEALTHCARE_OFFICER POST questionnaire-assignments succeeds 201")
+        void healthcareOfficerQuestionnaireAssignmentSucceeds() throws Exception {
+            String auth = token(104L, "hco@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+            String payload = String.format("""
+                    {
+                        "questionnaireVersionId": %d,
+                        "effectiveStartDate": "%s"
+                    }
+                    """, publishedVersion.getId(), START_DATE);
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.questionnaireVersionId", is(publishedVersion.getId().intValue())));
+        }
+
+        @Test
+        @DisplayName("ROLE_ADMIN POST questionnaire-assignments is denied 403")
+        void adminQuestionnaireAssignmentDenied() throws Exception {
+            String auth = token(101L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+            String payload = String.format("""
+                    {
+                        "questionnaireVersionId": %d,
+                        "effectiveStartDate": "%s"
+                    }
+                    """, publishedVersion.getId(), START_DATE);
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_SUPER_ADMIN POST questionnaire-assignments is denied 403")
+        void superAdminQuestionnaireAssignmentDenied() throws Exception {
+            String auth = token(110L, "superadmin@portal.gov", List.of("ROLE_SUPER_ADMIN"));
+            String payload = String.format("""
+                    {
+                        "questionnaireVersionId": %d,
+                        "effectiveStartDate": "%s"
+                    }
+                    """, publishedVersion.getId(), START_DATE);
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_CENTER_MANAGER POST questionnaire-assignments is denied 403")
+        void centerManagerQuestionnaireAssignmentDenied() throws Exception {
+            String auth = token(103L, "center_mgr@portal.gov", List.of("ROLE_CENTER_MANAGER"));
+            String payload = String.format("""
+                    {
+                        "questionnaireVersionId": %d,
+                        "effectiveStartDate": "%s"
+                    }
+                    """, publishedVersion.getId(), START_DATE);
+
+            mockMvc.perform(post("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, auth)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("ROLE_HEALTHCARE_OFFICER, ROLE_CAMPAIGN_OFFICER, ROLE_ADMIN, and ROLE_SUPER_ADMIN can GET questionnaire-assignments 200")
+        void authorizedRolesGetQuestionnaireAssignmentsAllowed() throws Exception {
+            String hcoAuth = token(104L, "hco@portal.gov", List.of("ROLE_HEALTHCARE_OFFICER"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, hcoAuth))
+                    .andExpect(status().isOk());
+
+            String coAuth = token(102L, "co@portal.gov", List.of("ROLE_CAMPAIGN_OFFICER"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, coAuth))
+                    .andExpect(status().isOk());
+
+            String adminAuth = token(101L, "admin@portal.gov", List.of("ROLE_ADMIN"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, adminAuth))
+                    .andExpect(status().isOk());
+
+            String superAdminAuth = token(110L, "superadmin@portal.gov", List.of("ROLE_SUPER_ADMIN"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, superAdminAuth))
+                    .andExpect(status().isOk());
+
+            String mgmtAuth = token(105L, "mgmt@portal.gov", List.of("ROLE_MANAGEMENT_USER"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, mgmtAuth))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("Anonymous and ROLE_CITIZEN GET questionnaire-assignments is denied 403")
+        void unauthorizedRolesGetQuestionnaireAssignmentsDenied() throws Exception {
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments"))
+                    .andExpect(status().isForbidden());
+
+            String citizenAuth = token(107L, "citizen@portal.gov", List.of("ROLE_CITIZEN"));
+            mockMvc.perform(get("/api/v1/campaigns/" + draftCampaign.getId() + "/questionnaire-assignments")
+                            .header(HttpHeaders.AUTHORIZATION, citizenAuth))
+                    .andExpect(status().isForbidden());
         }
     }
 

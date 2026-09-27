@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import {
-  listQuestionnaires,
-  listQuestionnaireVersions,
-  listScreeningReviewQueue,
-} from '../../api/screeningApi';
-import {
-  QUESTIONNAIRE_VERSION_STATUS,
-  SCREENING_SUBMISSION_STATUS,
-} from '../../constants/screeningConstants';
+import { listScreeningReviewQueue } from '../../api/screeningApi';
+import { listCampaigns } from '../../../campaign-management/api/campaignApi';
+import { SCREENING_SUBMISSION_STATUS } from '../../constants/screeningConstants';
 import HcoDashboardHeader from './HcoDashboardHeader';
 import HcoDashboardMetrics from './HcoDashboardMetrics';
 import HcoReviewQueuePreview from './HcoReviewQueuePreview';
@@ -27,8 +21,8 @@ function sortOldestFirst(submissions = []) {
 export default function HcoDashboardView({ user }) {
   const [submissions, setSubmissions] = useState([]);
   const [queueLoading, setQueueLoading] = useState(true);
-  const [draftCount, setDraftCount] = useState(null);
-  const [draftsLoading, setDraftsLoading] = useState(true);
+  const [awaitingQuestionnaireCount, setAwaitingQuestionnaireCount] = useState(null);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -51,47 +45,24 @@ export default function HcoDashboardView({ user }) {
         if (active) setQueueLoading(false);
       });
 
-    // 2. Fetch Questionnaires and count draft versions
-    setDraftsLoading(true);
-    listQuestionnaires()
-      .then(async (questionnaires) => {
+    // 2. Fetch Campaigns and count DRAFT campaigns awaiting screening questionnaire
+    setCampaignsLoading(true);
+    listCampaigns()
+      .then((campaigns) => {
         if (!active) return;
-        const qList = Array.isArray(questionnaires) ? questionnaires : [];
-        if (qList.length === 0) {
-          setDraftCount(0);
-          setDraftsLoading(false);
-          return;
-        }
-
-        // Only fetch versions if the number of questionnaires is reasonable (<= 10)
-        if (qList.length <= 10) {
-          try {
-            const versionResults = await Promise.allSettled(
-              qList.map((q) => listQuestionnaireVersions(q.id))
-            );
-            if (!active) return;
-            let drafts = 0;
-            versionResults.forEach((result) => {
-              if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-                drafts += result.value.filter(
-                  (v) => v.status === QUESTIONNAIRE_VERSION_STATUS.DRAFT
-                ).length;
-              }
-            });
-            setDraftCount(drafts);
-          } catch {
-            if (active) setDraftCount(null);
-          }
-        } else {
-          setDraftCount(null);
-        }
-        if (active) setDraftsLoading(false);
+        const list = Array.isArray(campaigns) ? campaigns : [];
+        const count = list.filter(
+          (c) => c.status === 'DRAFT' && c.questionnaireVersionId == null
+        ).length;
+        setAwaitingQuestionnaireCount(count);
       })
       .catch(() => {
         if (active) {
-          setDraftCount(null);
-          setDraftsLoading(false);
+          setAwaitingQuestionnaireCount(null);
         }
+      })
+      .finally(() => {
+        if (active) setCampaignsLoading(false);
       });
 
     return () => {
@@ -113,8 +84,8 @@ export default function HcoDashboardView({ user }) {
         {/* 4 Summary Cards */}
         <HcoDashboardMetrics
           pendingCount={pendingCount}
-          draftCount={draftCount}
-          loading={queueLoading || draftsLoading}
+          awaitingQuestionnaireCount={awaitingQuestionnaireCount}
+          loading={queueLoading || campaignsLoading}
         />
 
         {/* Main Grid: Review Queue (68%) + Today's Focus (32%) */}

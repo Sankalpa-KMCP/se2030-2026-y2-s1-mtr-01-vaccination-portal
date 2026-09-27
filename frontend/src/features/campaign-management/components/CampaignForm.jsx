@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import { listVaccineTypes, listTargetGroups } from '../api/campaignApi';
-import { getPublishedQuestionnaireVersions } from '../api/campaignConfigurationApi';
+import { getQuestionnaireVersion } from '../api/campaignConfigurationApi';
 
 /**
  * Formats a Date instance, ISO-8601 string, or local string into YYYY-MM-DDTHH:mm for datetime-local inputs.
@@ -38,12 +38,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
   const [serviceEndDate, setServiceEndDate] = useState(initialCampaign?.serviceEndDate || '');
   const [bookingOpenAt, setBookingOpenAt] = useState(formatForDateTimeLocal(initialCampaign?.bookingOpenAt));
   const [bookingCloseAt, setBookingCloseAt] = useState(formatForDateTimeLocal(initialCampaign?.bookingCloseAt));
-  const [questionnaireVersionId, setQuestionnaireVersionId] = useState(
-    initialCampaign?.questionnaireVersionId ? String(initialCampaign.questionnaireVersionId) : ''
-  );
-  const [publishedQuestionnaires, setPublishedQuestionnaires] = useState([]);
-  const [questionnairesLoading, setQuestionnairesLoading] = useState(false);
-  const [questionnairesError, setQuestionnairesError] = useState(null);
+  const [assignedVersion, setAssignedVersion] = useState(null);
   const [clientError, setClientError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -84,9 +79,6 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       setServiceEndDate(initialCampaign.serviceEndDate || '');
       setBookingOpenAt(formatForDateTimeLocal(initialCampaign.bookingOpenAt));
       setBookingCloseAt(formatForDateTimeLocal(initialCampaign.bookingCloseAt));
-      setQuestionnaireVersionId(
-        initialCampaign.questionnaireVersionId ? String(initialCampaign.questionnaireVersionId) : ''
-      );
       setFieldErrors({});
       setClientError(null);
     }
@@ -94,26 +86,21 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
 
   useEffect(() => {
     let isMounted = true;
-    if (typeof getPublishedQuestionnaireVersions === 'function') {
-      setQuestionnairesLoading(true);
-      setQuestionnairesError(null);
-      getPublishedQuestionnaireVersions()
+    if (initialCampaign?.questionnaireVersionId && typeof getQuestionnaireVersion === 'function') {
+      getQuestionnaireVersion(initialCampaign.questionnaireVersionId)
         .then((data) => {
-          if (!isMounted) return;
-          setPublishedQuestionnaires(Array.isArray(data) ? data : []);
+          if (isMounted) setAssignedVersion(data);
         })
-        .catch((err) => {
-          if (!isMounted) return;
-          setQuestionnairesError(err?.message || 'Failed to load published questionnaires.');
-        })
-        .finally(() => {
-          if (isMounted) setQuestionnairesLoading(false);
+        .catch(() => {
+          if (isMounted) setAssignedVersion(null);
         });
+    } else {
+      setAssignedVersion(null);
     }
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialCampaign?.questionnaireVersionId]);
 
   useEffect(() => {
     if (isEditMode) {
@@ -233,7 +220,6 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
         serviceEndDate,
         bookingOpenAt: new Date(bookingOpenAt).toISOString(),
         bookingCloseAt: new Date(bookingCloseAt).toISOString(),
-        questionnaireVersionId: questionnaireVersionId ? Number(questionnaireVersionId) : null,
       };
 
       onSubmit(payload);
@@ -251,7 +237,6 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       serviceEndDate,
       bookingOpenAt: new Date(bookingOpenAt).toISOString(),
       bookingCloseAt: new Date(bookingCloseAt).toISOString(),
-      questionnaireVersionId: questionnaireVersionId ? Number(questionnaireVersionId) : null,
     };
 
     onSubmit(payload);
@@ -270,10 +255,9 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       </div>
       <div className="card-body p-4">
         <ApiErrorAlert
-          error={clientError || (!isEditMode ? masterDataError : null) || questionnairesError || error}
+          error={clientError || (!isEditMode ? masterDataError : null) || error}
           onDismiss={() => {
             setClientError(null);
-            setQuestionnairesError(null);
           }}
         />
 
@@ -442,34 +426,32 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
               )}
             </div>
 
-            {/* Screening Questionnaire Selection */}
+            {/* Screening Questionnaire Read-Only View */}
             <div className="col-12">
-              <label htmlFor="questionnaireVersionId" className="form-label fw-semibold text-secondary small">
+              <label className="form-label fw-semibold text-secondary small">
                 Screening Questionnaire
               </label>
-              <select
-                id="questionnaireVersionId"
-                className="form-select"
-                value={questionnaireVersionId}
-                onChange={(e) => setQuestionnaireVersionId(e.target.value)}
-                disabled={questionnairesLoading}
-              >
-                <option value="">-- Select a published questionnaire --</option>
-                {isEditMode &&
-                  questionnaireVersionId &&
-                  !publishedQuestionnaires.some((qv) => String(qv.id) === String(questionnaireVersionId)) && (
-                    <option value={questionnaireVersionId}>
-                      Assigned Version #{questionnaireVersionId} (Current)
-                    </option>
-                  )}
-                {publishedQuestionnaires.map((qv) => (
-                  <option key={qv.id} value={qv.id}>
-                    {qv.questionnaireName} (v{qv.versionNumber}) - {qv.questionnaireCode}
-                  </option>
-                ))}
-              </select>
-              <div className="form-text small">
-                Select an active published clinical screening questionnaire version for this campaign.
+              <div className="p-3 bg-light rounded border">
+                {initialCampaign?.questionnaireVersionId ? (
+                  <>
+                    <div className="fw-semibold text-dark">
+                      {assignedVersion?.questionnaireName || `Questionnaire Version #${initialCampaign.questionnaireVersionId}`}
+                    </div>
+                    <div className="small text-secondary mb-1">
+                      Version {assignedVersion?.versionNumber ?? initialCampaign.questionnaireVersionId} · Published
+                    </div>
+                    <div className="form-text small text-muted mb-0">
+                      Clinical questionnaire managed by Healthcare Officer
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="fw-semibold text-muted mb-1">Not assigned yet</div>
+                    <div className="form-text small text-muted mb-0">
+                      A Healthcare Officer must configure the screening questionnaire before this campaign can be scheduled.
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
