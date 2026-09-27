@@ -89,9 +89,12 @@ public class AssistantService {
         }
         boolean personalizedAvailable = false;
         if (principal != null && principal.getAuthorities() != null) {
-            boolean isCitizen = principal.getAuthorities().stream()
-                    .anyMatch(a -> "ROLE_CITIZEN".equals(a.getAuthority()));
-            personalizedAvailable = isCitizen && toolRegistry.hasToolsAvailable();
+            Set<String> authorities = principal.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toUnmodifiableSet());
+            AssistantToolContext context = new AssistantToolContext("status", principal, authorities);
+            personalizedAvailable = toolRegistry.hasAuthorizedTool(context);
         }
         return AssistantStatusResponse.of(true, personalizedAvailable);
     }
@@ -151,9 +154,9 @@ public class AssistantService {
             throw new AssistantDisabledException("The AI assistant is currently disabled or unavailable.");
         }
 
-        // 5. Authorized citizen read-only personalized tool execution
+        // 5. Authorized read-only personalized tool execution
         AssistantPersonalizedContextResult personalizedResult = null;
-        if (isAuthenticated && callerAuthorities.contains("ROLE_CITIZEN")) {
+        if (isAuthenticated) {
             AssistantToolContext toolContext = new AssistantToolContext(requestId, principal, callerAuthorities);
             personalizedResult = personalizedContextBuilder
                     .buildPersonalizedResult(request.message(), toolContext)

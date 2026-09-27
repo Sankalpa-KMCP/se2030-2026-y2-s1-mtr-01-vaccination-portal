@@ -170,7 +170,8 @@ class AssistantRouteCatalogTests {
         assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/reviews/rev-101", healthcareOfficer));
         assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/history/sub-789", healthcareOfficer));
 
-        // Admin-only caller must NOT be authorized for screening routes (matching frontend route guards)
+        // Admin-only caller must NOT be authorized for staff dashboard or screening routes (matching frontend route guards)
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/staff", adminOnly));
         assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/reviews", adminOnly));
         assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/screening/questions", adminOnly));
         assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/screening/questionnaires", adminOnly));

@@ -8,7 +8,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useAssistantConversation,
-  SUGGESTED_QUESTIONS,
 } from '../hooks/useAssistantConversation';
 import { isSafeInternalPath, MAX_MESSAGE_LENGTH } from '../api/assistantApi';
 import '../styles/assistant.css';
@@ -31,6 +30,7 @@ export default function AssistantWidget() {
     isAvailable,
     personalizedFeaturesAvailable,
     disclaimer,
+    suggestedQuestions,
   } = useAssistantConversation();
 
   const launcherRef = useRef(null);
@@ -185,7 +185,7 @@ export default function AssistantWidget() {
           {personalizedFeaturesAvailable && (
             <div className="assistant-privacy-banner" role="note">
               <i className="bi bi-shield-lock-fill" aria-hidden="true" />
-              <span>Personal information is shown only for your signed-in citizen account.</span>
+              <span>Personal information is shown only for your verified signed-in account.</span>
             </div>
           )}
 
@@ -241,7 +241,7 @@ export default function AssistantWidget() {
                 {/* Initial suggested questions chips under initial greeting */}
                 {msg.isGreeting && (
                   <div className="assistant-suggested-questions">
-                    {SUGGESTED_QUESTIONS.map((q, qIdx) => (
+                    {suggestedQuestions.map((q, qIdx) => (
                       <button
                         key={`sq-${qIdx}`}
                         type="button"

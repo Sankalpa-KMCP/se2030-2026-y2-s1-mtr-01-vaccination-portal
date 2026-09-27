@@ -41,8 +41,25 @@ public class AssistantToolRegistry {
         return Optional.empty();
     }
 
+    public Optional<AssistantReadOnlyTool> findMatchingTool(
+            String userMessage,
+            AssistantToolContext context
+    ) {
+        if (userMessage == null || userMessage.isBlank() || context == null) {
+            return Optional.empty();
+        }
+        return tools.stream()
+                .filter(tool -> tool.supports(context))
+                .filter(tool -> tool.matchesIntent(userMessage))
+                .findFirst();
+    }
+
     public boolean hasToolsAvailable() {
         return !tools.isEmpty();
+    }
+
+    public boolean hasAuthorizedTool(AssistantToolContext context) {
+        return context != null && tools.stream().anyMatch(tool -> tool.supports(context));
     }
 
     public Optional<AssistantReadOnlyTool> getTool(AssistantToolId toolId) {

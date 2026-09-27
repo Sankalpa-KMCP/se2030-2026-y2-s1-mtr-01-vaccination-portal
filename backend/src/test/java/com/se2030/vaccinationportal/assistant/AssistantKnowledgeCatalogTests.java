@@ -228,6 +228,27 @@ class AssistantKnowledgeCatalogTests {
         );
         assertThat(vaccinatorEntries).isNotEmpty();
         assertEquals("VACCINATION_ADMINISTRATION_DRAFTS", vaccinatorEntries.get(0).id());
+
+        // Staff onboarding guide is available to staff roles (Healthcare Officer, Super Admin) but strictly NOT to Admin
+        List<AssistantKnowledgeEntry> hcoOnboarding = AssistantKnowledgeCatalog.findRelevantEntries(
+                "staff dashboard getting started staff guide",
+                Set.of(AssistantRouteCatalog.ROLE_HEALTHCARE_OFFICER),
+                3
+        );
+        assertTrue(hcoOnboarding.stream().anyMatch(e -> e.id().equals("STAFF_ONBOARDING")));
+        String hcoContext = AssistantKnowledgeContextBuilder.buildKnowledgeContext(
+                hcoOnboarding, Set.of(AssistantRouteCatalog.ROLE_HEALTHCARE_OFFICER));
+        assertThat(hcoContext).contains("/app/staff");
+
+        List<AssistantKnowledgeEntry> adminOnboarding = AssistantKnowledgeCatalog.findRelevantEntries(
+                "staff dashboard getting started staff guide",
+                Set.of(AssistantRouteCatalog.ROLE_ADMIN),
+                3
+        );
+        assertTrue(adminOnboarding.stream().noneMatch(e -> e.id().equals("STAFF_ONBOARDING")));
+        String adminContext = AssistantKnowledgeContextBuilder.buildKnowledgeContext(
+                adminOnboarding, Set.of(AssistantRouteCatalog.ROLE_ADMIN));
+        assertThat(adminContext).doesNotContain("/app/staff");
     }
 
     @Test

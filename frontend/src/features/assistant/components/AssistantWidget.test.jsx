@@ -101,7 +101,7 @@ describe('AssistantWidget component', () => {
 
     await openPanel('/app/citizen');
 
-    expect(await screen.findByText(/personal information is shown only for your signed-in citizen account/i))
+    expect(await screen.findByText(/personal information is shown only for your verified signed-in account/i))
       .toBeTruthy();
   });
 
