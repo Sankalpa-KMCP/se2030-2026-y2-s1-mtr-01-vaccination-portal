@@ -46,6 +46,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -126,6 +127,11 @@ class Mf02ConcurrencyIntegrationTests {
         centerRepository.deleteAllInBatch();
         targetGroupRepository.deleteAllInBatch();
         vaccineTypeRepository.deleteAllInBatch();
+    }
+
+    @AfterEach
+    void tearDownPersistedState() {
+        clearPersistedState();
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.appointment.service;
 
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
@@ -92,6 +93,7 @@ class AppointmentWaitlistEndToEndIntegrationTests {
     @Autowired private AppointmentCancellationService cancellationService;
     @Autowired private CheckInService                 checkInService;
     @Autowired private WaitlistJoinService            joinService;
+    @Autowired private WaitlistLeaveService           leaveService;
 
     @Autowired private AppointmentRepository                 appointmentRepository;
     @Autowired private WaitlistRepository                    waitlistRepository;
@@ -122,6 +124,8 @@ class AppointmentWaitlistEndToEndIntegrationTests {
         // Session is not yet full — citizenA may book
         slotCapacityPortDouble.setSessionFull(SESSION_ID, false);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
+        slotCapacityPortDouble.setSlotSession(SLOT_ID, SESSION_ID);
+        slotCapacityPortDouble.setSlotCampaign(SLOT_ID, CAMPAIGN_ID);
     }
 
     @AfterEach
@@ -320,5 +324,76 @@ class AppointmentWaitlistEndToEndIntegrationTests {
                 .toList();
         assertTrue(remainingWaiting.isEmpty(),
                 "No WAITING waitlist entries must remain after the full no-show scenario completes");
+    }
+
+    // -------------------------------------------------------------------------
+    // Test 3 — Policy A invariant: active waitlist entry rejects direct booking until citizen leaves
+    // -------------------------------------------------------------------------
+
+    /**
+     * Verifies Policy A cross-table invariant (F05):
+     * <ol>
+     *   <li>citizenA is on the waitlist with status WAITING for Campaign 1.</li>
+     *   <li>A slot opens up or has capacity (slotWithCapacity).</li>
+     *   <li>citizenA attempts direct booking for Campaign 1 &rarr; rejected with {@link DuplicateWaitlistEntryException}.</li>
+     *   <li>Waitlist entry remains WAITING in database, no appointment created, slot capacity untouched.</li>
+     *   <li>citizenA leaves the waitlist voluntarily via {@link WaitlistLeaveService#leaveWaitlist}.</li>
+     *   <li>citizenA attempts direct booking again &rarr; booking succeeds with status CONFIRMED.</li>
+     * </ol>
+     */
+    @Test
+    void policyA_activeWaitlistEntryRejectsDirectBookingUntilWaitlistLeft() {
+        Long slotWithCapacity = 5002L;
+        Long otherSessionId = 9002L;
+        slotCapacityPortDouble.setAvailableCapacity(slotWithCapacity, 2);
+        slotCapacityPortDouble.setSlotStartTime(slotWithCapacity, SLOT_START);
+        slotCapacityPortDouble.setSlotSession(slotWithCapacity, otherSessionId);
+        slotCapacityPortDouble.setSlotCampaign(slotWithCapacity, CAMPAIGN_ID);
+
+        // Session 9001 is full so citizenA can join its waitlist
+        slotCapacityPortDouble.setSessionFull(SESSION_ID, true);
+
+        // Step 1: Citizen A joins waitlist for Campaign 1 (Session 9001)
+        WaitlistEntry entryA = joinService.joinWaitlist(
+                CITIZEN_A, CAMPAIGN_ID, SESSION_ID, BEFORE_24H_WINDOW);
+        assertNotNull(entryA.getId());
+        assertEquals(WaitlistStatus.WAITING, entryA.getStatus());
+
+        // Step 2: Citizen A attempts direct booking in slotWithCapacity for the same Campaign 1
+        DuplicateWaitlistEntryException ex = assertThrows(
+                DuplicateWaitlistEntryException.class,
+                () -> bookingService.bookAppointment(CITIZEN_A, CAMPAIGN_ID, slotWithCapacity),
+                "Citizen with active WAITING waitlist entry must be rejected from booking directly"
+        );
+        assertTrue(ex.getMessage().contains("already has an active waitlist entry for this campaign"));
+
+        // Step 3: Invariant check - waitlist entry is still WAITING in DB, no appointment created, slot capacity untouched
+        WaitlistEntry entryAfterFailedBook = waitlistRepository.findById(entryA.getId()).orElseThrow();
+        assertEquals(WaitlistStatus.WAITING, entryAfterFailedBook.getStatus(),
+                "Waitlist entry must remain WAITING after rejected direct booking attempt");
+
+        List<Appointment> apptsAfterFailedBook = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
+                CITIZEN_A, CAMPAIGN_ID, List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN));
+        assertTrue(apptsAfterFailedBook.isEmpty(),
+                "No appointment must be created for citizenA after rejected booking attempt");
+
+        assertEquals(2, slotCapacityPortDouble.getAvailableCapacity(slotWithCapacity),
+                "Slot capacity must remain completely untouched after rejected booking attempt");
+
+        // Step 4: Citizen A leaves waitlist voluntarily
+        WaitlistEntry leftEntry = leaveService.leaveWaitlist(entryA.getId(), CITIZEN_A);
+        assertEquals(WaitlistStatus.CANCELLED, leftEntry.getStatus(),
+                "Waitlist entry must transition to CANCELLED upon leaving");
+
+        // Step 5: Citizen A attempts direct booking again -> now succeeds
+        Appointment apptA = bookingService.bookAppointment(CITIZEN_A, CAMPAIGN_ID, slotWithCapacity);
+        assertNotNull(apptA.getId());
+        assertEquals(CITIZEN_A, apptA.getCitizenId());
+        assertEquals(CAMPAIGN_ID, apptA.getCampaignId());
+        assertEquals(slotWithCapacity, apptA.getSlotId());
+        assertEquals(AppointmentStatus.CONFIRMED, apptA.getStatus(),
+                "Direct booking must succeed after citizen has left the waitlist");
+        assertEquals(1, slotCapacityPortDouble.getAvailableCapacity(slotWithCapacity),
+                "Slot capacity must be decremented by 1 after successful booking");
     }
 }

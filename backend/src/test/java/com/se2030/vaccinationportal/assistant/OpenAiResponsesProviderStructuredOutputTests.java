@@ -10,6 +10,7 @@ import com.openai.models.responses.ResponseOutputText;
 import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatRequest;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
+import com.se2030.vaccinationportal.assistant.dto.AssistantMessageDto;
 import com.se2030.vaccinationportal.assistant.policy.AssistantRefusalPolicy;
 import com.se2030.vaccinationportal.assistant.provider.OpenAiResponsesProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -150,7 +151,7 @@ class OpenAiResponsesProviderStructuredOutputTests {
     }
 
     @Test
-    @DisplayName("Oversized answer is truncated to MAX_ANSWER_CHARACTERS")
+    @DisplayName("Oversized answer is truncated to MAX_ANSWER_CHARACTERS (1500) and fits AssistantMessageDto constraint")
     void testOversizedAnswerTruncated() {
         String longText = "A".repeat(2500);
         String json = String.format("{\"answer\":\"%s\",\"suggestedActions\":[]}", longText);
@@ -158,27 +159,32 @@ class OpenAiResponsesProviderStructuredOutputTests {
         Response response = createMockResponseWithText(json);
         AssistantChatResponse chatResponse = provider.parseResponse(response, "req-4", Collections.emptySet());
 
-        assertTrue(chatResponse.answer().length() <= OpenAiResponsesProvider.MAX_ANSWER_CHARACTERS + 3);
+        assertTrue(chatResponse.answer().length() <= OpenAiResponsesProvider.MAX_ANSWER_CHARACTERS);
         assertTrue(chatResponse.answer().endsWith("..."));
+
+        // Prove valid next-turn history submission
+        AssistantMessageDto historyItem = new AssistantMessageDto("assistant", chatResponse.answer());
+        assertEquals(chatResponse.answer(), historyItem.content());
     }
 
     @Test
-    @DisplayName("Answer truncation does not split Unicode surrogate pairs")
+    @DisplayName("Answer truncation does not split Unicode surrogate pairs at 1500 character boundary")
     void testAnswerTruncationPreservesSurrogatePairs() {
-        // Build a string with an emoji (surrogate pair) right at the boundary index 2000
-        // E.g., 1999 ASCII characters + 😀 (2 chars in UTF-16: \uD83D\uDE00) + 100 extra chars
-        String prefix = "X".repeat(1999);
+        // Build a string with an emoji (surrogate pair) right at the boundary targetIndex (1497)
+        // 1496 ASCII characters + 😀 (2 chars in UTF-16: \uD83D\uDE00) + 100 extra chars
+        String prefix = "X".repeat(1496);
         String emoji = "\uD83D\uDE00";
         String suffix = "Y".repeat(100);
         String fullAnswer = prefix + emoji + suffix;
 
-        String truncated = OpenAiResponsesProvider.safeTruncate(fullAnswer, 2000);
+        String truncated = OpenAiResponsesProvider.safeTruncate(fullAnswer, 1500);
 
+        assertTrue(truncated.length() <= 1500);
         assertTrue(truncated.endsWith("..."));
         String withoutEllipsis = truncated.substring(0, truncated.length() - 3);
 
-        // The length must be 1999 (stepped back to avoid splitting the surrogate pair)
-        assertEquals(1999, withoutEllipsis.length());
+        // The length must be 1496 (stepped back to avoid splitting the surrogate pair)
+        assertEquals(1496, withoutEllipsis.length());
         assertFalse(Character.isHighSurrogate(withoutEllipsis.charAt(withoutEllipsis.length() - 1)));
         assertFalse(Character.isLowSurrogate(withoutEllipsis.charAt(withoutEllipsis.length() - 1)));
     }
@@ -241,5 +247,30 @@ class OpenAiResponsesProviderStructuredOutputTests {
         assertEquals(2, chatAdmin.suggestedActions().size());
         assertEquals("/about", chatAdmin.suggestedActions().get(0).path());
         assertEquals("/app/admin/staff-requests", chatAdmin.suggestedActions().get(1).path());
+    }
+    @Test
+    @DisplayName("Screening routes in suggested actions are stripped for Admin but retained for Healthcare Officer")
+    void testScreeningRouteStrippedForAdminRetainedForHealthcareOfficer() {
+        String jsonWithScreening = """
+                {
+                  "answer": "Here is the screening queue.",
+                  "suggestedActions": [
+                    { "label": "Review Queue", "path": "/app/staff/screening/reviews" },
+                    { "label": "Screening Questions", "path": "/app/screening/questions" }
+                  ]
+                }
+                """;
+
+        // Admin caller: screening routes must be stripped
+        Response respAdmin = createMockResponseWithText(jsonWithScreening);
+        AssistantChatResponse chatAdmin = provider.parseResponse(respAdmin, "req-admin-scr", Set.of("ROLE_ADMIN"));
+        assertTrue(chatAdmin.suggestedActions().isEmpty(), "Screening routes must be stripped for ROLE_ADMIN");
+
+        // Healthcare Officer caller: screening routes must be retained
+        Response respHco = createMockResponseWithText(jsonWithScreening);
+        AssistantChatResponse chatHco = provider.parseResponse(respHco, "req-hco-scr", Set.of("ROLE_HEALTHCARE_OFFICER"));
+        assertEquals(2, chatHco.suggestedActions().size(), "Screening routes must be retained for ROLE_HEALTHCARE_OFFICER");
+        assertEquals("/app/staff/screening/reviews", chatHco.suggestedActions().get(0).path());
+        assertEquals("/app/screening/questions", chatHco.suggestedActions().get(1).path());
     }
 }

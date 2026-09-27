@@ -157,6 +157,43 @@ class AssistantRouteCatalogTests {
     }
 
     @Test
+    @DisplayName("Screening routes are authorized for Healthcare Officer and Super Admin, but strictly NOT for Admin")
+    void testScreeningRouteRoleAuthorization() {
+        Set<String> healthcareOfficer = Set.of(AssistantRouteCatalog.ROLE_HEALTHCARE_OFFICER);
+        Set<String> adminOnly = Set.of(AssistantRouteCatalog.ROLE_ADMIN);
+        Set<String> citizen = Set.of(AssistantRouteCatalog.ROLE_CITIZEN);
+
+        // Healthcare Officer is authorized for screening review and configuration routes
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/reviews", healthcareOfficer));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/screening/questions", healthcareOfficer));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/screening/questionnaires", healthcareOfficer));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/reviews/rev-101", healthcareOfficer));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/history/sub-789", healthcareOfficer));
+
+        // Admin-only caller must NOT be authorized for staff dashboard or screening routes (matching frontend route guards)
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/staff", adminOnly));
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/reviews", adminOnly));
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/screening/questions", adminOnly));
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/screening/questionnaires", adminOnly));
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/reviews/rev-101", adminOnly));
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/history/sub-789", adminOnly));
+
+        // Citizen caller must NOT be authorized for staff screening routes
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/staff/screening/reviews", citizen));
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/screening/questions", citizen));
+        assertFalse(AssistantRouteCatalog.isAuthorizedRoute("/app/screening/questionnaires", citizen));
+
+        // Unrelated Admin routes remain authorized for Admin
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/admin", adminOnly));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/admin/staff-requests", adminOnly));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/campaigns", adminOnly));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/center-operations", adminOnly));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/sessions", adminOnly));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/analytics", adminOnly));
+        assertTrue(AssistantRouteCatalog.isAuthorizedRoute("/app/inventory", adminOnly));
+    }
+
+    @Test
     @DisplayName("Super Admin inherits all staff and management roles, but never citizen self-service identity")
     void testSuperAdminAuthorization() {
         Set<String> superAdmin = Set.of(AssistantRouteCatalog.ROLE_SUPER_ADMIN);

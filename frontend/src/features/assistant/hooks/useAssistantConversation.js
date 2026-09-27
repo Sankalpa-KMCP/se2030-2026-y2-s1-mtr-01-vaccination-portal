@@ -40,6 +40,12 @@ export const STAFF_SUGGESTED_QUESTIONS = [
   'How do I use the staff dashboard?',
 ];
 
+export const ADMIN_SUGGESTED_QUESTIONS = [
+  'What is my staff profile?',
+  'What should I do today?',
+  'How do I review pending staff requests?',
+  'How does administrator management work?',
+];
 export function getSuggestedQuestions(user, isAuthenticated) {
   if (!isAuthenticated || !Array.isArray(user?.roles)) {
     return SUGGESTED_QUESTIONS;
@@ -48,11 +54,19 @@ export function getSuggestedQuestions(user, isAuthenticated) {
   const roles = user.roles
     .map((role) => (typeof role === 'string' ? role : role?.code))
     .filter(Boolean);
-  const isStaff = roles.some(
-    (role) => role === ADMIN_ROLE || STAFF_DASHBOARD_ROLES.includes(role)
+  const hasStaffDashboardAccess = roles.some((role) =>
+    STAFF_DASHBOARD_ROLES.includes(role)
   );
+  if (hasStaffDashboardAccess) {
+    return STAFF_SUGGESTED_QUESTIONS;
+  }
 
-  return isStaff ? STAFF_SUGGESTED_QUESTIONS : SUGGESTED_QUESTIONS;
+  const isAdmin = roles.includes(ADMIN_ROLE);
+  if (isAdmin) {
+    return ADMIN_SUGGESTED_QUESTIONS;
+  }
+
+  return SUGGESTED_QUESTIONS;
 }
 
 function generateId() {

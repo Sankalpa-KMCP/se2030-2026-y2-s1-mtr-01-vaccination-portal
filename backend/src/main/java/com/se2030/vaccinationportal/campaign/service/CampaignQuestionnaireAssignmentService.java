@@ -85,6 +85,19 @@ public class CampaignQuestionnaireAssignmentService {
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
+        if (publicationPort.hasCampaignSubmissions(campaignId)) {
+            throw new IllegalStateException(
+                    "Cannot change questionnaire assignment for a campaign with existing citizen screening submissions"
+            );
+        }
+
+        if (campaign.getStatus() != CampaignStatus.DRAFT) {
+            throw new IllegalStateException(
+                    "Questionnaire version cannot be assigned to campaign in " + campaign.getStatus() +
+                    " status. Questionnaire assignment is locked once a campaign is scheduled, active, or closed."
+            );
+        }
+
         LocalDate today = LocalDate.now(clock);
         if (effectiveStartDate.isBefore(today)) {
             throw new IllegalArgumentException(
@@ -101,23 +114,16 @@ public class CampaignQuestionnaireAssignmentService {
                 return current;
             }
 
-            if (publicationPort.hasCampaignSubmissions(campaignId)) {
-                throw new IllegalStateException(
-                        "Cannot change questionnaire assignment for a campaign with existing citizen screening submissions"
-                );
+            boolean isInitialSingleAssignment = assignmentRepository.findByCampaignIdOrderByActiveFromDescIdDesc(campaignId).size() <= 1;
+            if (isInitialSingleAssignment && effectiveStartDate.equals(current.getActiveFrom())) {
+                current.setQuestionnaireVersionId(questionnaireVersionId);
+                return assignmentRepository.save(current);
             }
 
             if (!effectiveStartDate.isAfter(current.getActiveFrom())) {
                 throw new IllegalArgumentException(
                         "Effective start date (" + effectiveStartDate +
                         ") must be strictly after the current assignment activeFrom date (" + current.getActiveFrom() + ")"
-                );
-            }
-
-        } else {
-            if (publicationPort.hasCampaignSubmissions(campaignId)) {
-                throw new IllegalStateException(
-                        "Cannot change questionnaire assignment for a campaign with existing citizen screening submissions"
                 );
             }
         }

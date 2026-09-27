@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.assistant.tool;
 
+import com.se2030.vaccinationportal.assistant.policy.AssistantRouteCatalog;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -90,13 +92,20 @@ public class MyStaffScheduleAssistantTool implements AssistantReadOnlyTool {
                 .limit(MAX_ASSIGNMENTS)
                 .toList();
 
+        List<String> suggestedRoutes = new ArrayList<>();
+        if (AssistantRouteCatalog.isAuthorizedRoute("/app/staff", context.authorities())) {
+            suggestedRoutes.add("/app/staff");
+        }
+        if (AssistantRouteCatalog.isAuthorizedRoute("/app/sessions", context.authorities())) {
+            suggestedRoutes.add("/app/sessions");
+        }
         if (assignments.isEmpty()) {
             String period = todayOnly ? "today" : "current or upcoming";
             return AssistantToolResult.empty(
                     AssistantToolId.MY_STAFF_SCHEDULE,
                     "No " + period + " session assignment was found for the verified signed-in staff account. "
                             + "This does not change the staff member's account or center-roster status.",
-                    List.of("/app/staff", "/app/sessions")
+                    suggestedRoutes
             );
         }
 
@@ -125,14 +134,17 @@ public class MyStaffScheduleAssistantTool implements AssistantReadOnlyTool {
                 true,
                 assignments.size(),
                 summary.toString(),
-                List.of("/app/staff", "/app/sessions")
+                suggestedRoutes
         );
     }
 
     private boolean isActiveAssignment(StaffAssignment assignment, Instant now, boolean todayOnly) {
         if (assignment == null || assignment.getSession() == null
-                || assignment.getStartAt() == null || assignment.getEndAt() == null
-                || assignment.getSession().getLifecycleStatus() == SessionLifecycleStatus.CANCELLED) {
+                || assignment.getStartAt() == null || assignment.getEndAt() == null) {
+            return false;
+        }
+        SessionLifecycleStatus lifecycleStatus = assignment.getSession().getLifecycleStatus();
+        if (lifecycleStatus == SessionLifecycleStatus.CANCELLED || lifecycleStatus == SessionLifecycleStatus.COMPLETED) {
             return false;
         }
         if (!todayOnly) {

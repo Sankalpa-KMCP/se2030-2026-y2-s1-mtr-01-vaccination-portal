@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.assistant.config;
 
 import com.se2030.vaccinationportal.assistant.provider.AiResponseProvider;
 import com.se2030.vaccinationportal.assistant.provider.DisabledAiResponseProvider;
+import com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider;
 import com.se2030.vaccinationportal.assistant.provider.OpenAiResponsesProvider;
 import com.se2030.vaccinationportal.assistant.provider.OllamaChatProvider;
 import org.slf4j.Logger;
@@ -40,6 +41,10 @@ public class AssistantConfig {
             return new OpenAiResponsesProvider(properties);
         }
 
+        if ("gemini".equals(properties.getProvider())) {
+            log.info("AI Assistant initialized with Google Gemini provider.");
+            return new GeminiResponseProvider(properties);
+        }
         log.warn("AI Assistant provider is unsupported. Registered DisabledAiResponseProvider.");
         return new DisabledAiResponseProvider();
     }

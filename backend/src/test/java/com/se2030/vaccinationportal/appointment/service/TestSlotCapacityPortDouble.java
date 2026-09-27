@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.appointment.service;
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -72,13 +73,78 @@ public class TestSlotCapacityPortDouble implements SlotCapacityPort {
     }
 
     private final ConcurrentMap<Long, Boolean> sessionFullMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Long> slotCampaignMap = new ConcurrentHashMap<>();
+    private boolean defaultSlotCampaignMatch = true;
 
     public void setSessionFull(Long sessionId, boolean full) {
         sessionFullMap.put(sessionId, full);
     }
 
+    public void setSlotCampaign(Long slotId, Long campaignId) {
+        if (slotId != null && campaignId != null) {
+            slotCampaignMap.put(slotId, campaignId);
+        }
+    }
+
+    public void setDefaultSlotCampaignMatch(boolean defaultSlotCampaignMatch) {
+        this.defaultSlotCampaignMatch = defaultSlotCampaignMatch;
+    }
+
+    public void clearSlotCampaignMap() {
+        slotCampaignMap.clear();
+    }
+
+    public int getAvailableCapacity(Long slotId) {
+        AtomicInteger remaining = slotCapacityMap.get(slotId);
+        return remaining != null ? remaining.get() : 0;
+    }
+
     @Override
     public boolean isSessionFull(Long sessionId) {
         return sessionFullMap.getOrDefault(sessionId, true);
+    }
+
+    @Override
+    public boolean isSlotInCampaign(Long slotId, Long campaignId) {
+        if (slotId == null || campaignId == null) {
+            return false;
+        }
+        Long mappedCampaign = slotCampaignMap.get(slotId);
+        if (mappedCampaign != null) {
+            return mappedCampaign.equals(campaignId);
+        }
+        return defaultSlotCampaignMatch;
+    }
+
+    private final ConcurrentMap<Long, Long> slotSessionMap = new ConcurrentHashMap<>();
+    private Long defaultSessionId = null;
+
+    public void setSlotSession(Long slotId, Long sessionId) {
+        if (slotId != null && sessionId != null) {
+            slotSessionMap.put(slotId, sessionId);
+        }
+    }
+
+    public void setDefaultSessionId(Long defaultSessionId) {
+        this.defaultSessionId = defaultSessionId;
+    }
+
+    public void clearSlotSessionMap() {
+        slotSessionMap.clear();
+    }
+
+    @Override
+    public Optional<Long> getSessionIdForSlot(Long slotId) {
+        if (slotId == null) {
+            return Optional.empty();
+        }
+        Long mappedSession = slotSessionMap.get(slotId);
+        if (mappedSession != null) {
+            return Optional.of(mappedSession);
+        }
+        if (defaultSessionId != null) {
+            return Optional.of(defaultSessionId);
+        }
+        return Optional.empty();
     }
 }

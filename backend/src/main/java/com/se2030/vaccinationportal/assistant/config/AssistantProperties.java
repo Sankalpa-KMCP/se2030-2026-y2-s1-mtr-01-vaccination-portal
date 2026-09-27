@@ -25,6 +25,8 @@ public class AssistantProperties {
 
     private String apiKey = "";
 
+    private String googleApiKey = "";
+
     private String model = "";
 
     private String baseUrl = "http://localhost:11434";
@@ -106,6 +108,27 @@ public class AssistantProperties {
         this.apiKey = apiKey != null ? apiKey.trim() : "";
     }
 
+    public String getGoogleApiKey() {
+        return googleApiKey;
+    }
+
+    public void setGoogleApiKey(String googleApiKey) {
+        this.googleApiKey = googleApiKey != null ? googleApiKey.trim() : "";
+    }
+
+    public String getEffectiveGoogleApiKey() {
+        return googleApiKey != null ? googleApiKey.trim() : "";
+    }
+
+    public String getEffectiveModel() {
+        if (model != null && !model.isBlank()) {
+            return model.trim();
+        }
+        if ("gemini".equalsIgnoreCase(provider)) {
+            return "gemini-flash-latest";
+        }
+        return "";
+    }
     public String getModel() {
         return model;
     }
@@ -166,6 +189,7 @@ public class AssistantProperties {
         return switch (provider) {
             case "openai" -> enabled && !apiKey.isEmpty() && !model.isEmpty();
             case "ollama" -> enabled && isLoopbackBaseUrl() && !model.isEmpty();
+            case "gemini" -> enabled && !getEffectiveGoogleApiKey().isEmpty() && !getEffectiveModel().isEmpty();
             default -> false;
         };
     }
@@ -194,6 +218,7 @@ public class AssistantProperties {
                 "enabled=" + enabled +
                 ", provider='" + provider + '\'' +
                 ", apiKey='" + (apiKey.isEmpty() ? "<empty>" : "<redacted>") + '\'' +
+                ", googleApiKey='" + (getEffectiveGoogleApiKey().isEmpty() ? "<empty>" : "<redacted>") + '\'' +
                 ", model='" + model + '\'' +
                 ", baseUrl='" + baseUrl + '\'' +
                 ", timeout=" + timeout +

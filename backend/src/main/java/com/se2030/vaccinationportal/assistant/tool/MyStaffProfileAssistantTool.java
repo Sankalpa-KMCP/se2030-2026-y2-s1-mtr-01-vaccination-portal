@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.assistant.tool;
 
+import com.se2030.vaccinationportal.assistant.policy.AssistantRouteCatalog;
 import com.se2030.vaccinationportal.campaign.model.OperationalStaffRoster;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
 import org.springframework.stereotype.Component;
@@ -86,9 +87,15 @@ public class MyStaffProfileAssistantTool implements AssistantReadOnlyTool {
         summary.append("Any staff ID written in the chat message was ignored; this result uses only the signed-in account identity.");
 
         List<String> suggestedRoutes = new ArrayList<>();
-        suggestedRoutes.add("/app/staff");
-        suggestedRoutes.add("/app/center-operations");
-        suggestedRoutes.add("/app/sessions");
+        if (AssistantRouteCatalog.isAuthorizedRoute("/app/staff", context.authorities())) {
+            suggestedRoutes.add("/app/staff");
+        }
+        if (AssistantRouteCatalog.isAuthorizedRoute("/app/center-operations", context.authorities())) {
+            suggestedRoutes.add("/app/center-operations");
+        }
+        if (AssistantRouteCatalog.isAuthorizedRoute("/app/sessions", context.authorities())) {
+            suggestedRoutes.add("/app/sessions");
+        }
 
         return new AssistantToolResult(
                 AssistantToolId.MY_STAFF_PROFILE_AND_ASSIGNMENTS,

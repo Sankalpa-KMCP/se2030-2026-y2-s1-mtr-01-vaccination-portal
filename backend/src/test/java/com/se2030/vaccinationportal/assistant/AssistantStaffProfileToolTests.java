@@ -131,6 +131,33 @@ class AssistantStaffProfileToolTests {
     }
 
     @Test
+    @DisplayName("admin-only caller receives no /app/staff navigation from staff profile tool")
+    void adminOnlyCallerExcludesStaffRoute() {
+        UserPrincipal admin = staffPrincipal(95L, "ROLE_ADMIN");
+        AssistantToolContext context = new AssistantToolContext(
+                "staff-request-admin", admin, Set.of("ROLE_ADMIN"));
+        when(rosterRepository.findByUserIdOrderByCenterIdAsc(95L)).thenReturn(List.of());
+
+        // 1. Direct tool execution result excludes /app/staff
+        AssistantToolResult toolResult = tool.execute(context);
+        assertThat(toolResult.suggestedRoutes()).doesNotContain("/app/staff");
+        assertThat(toolResult.suggestedRoutes()).containsExactlyInAnyOrder(
+                "/app/center-operations", "/app/sessions");
+
+        // 2. Personalized context builder also strictly excludes /app/staff
+        AssistantPersonalizedContextBuilder builder = new AssistantPersonalizedContextBuilder(
+                new AssistantToolRegistry(List.of(tool)));
+        var result = builder.buildPersonalizedResult("What is my staff profile?", context);
+
+        assertThat(result).isPresent();
+        assertThat(result.orElseThrow().authorizedRoutes()).doesNotContain("/app/staff");
+        assertThat(result.orElseThrow().authorizedRoutes()).containsExactlyInAnyOrder(
+                "/app/center-operations", "/app/sessions");
+        assertThat(result.orElseThrow().promptContext())
+                .doesNotContain("/app/staff");
+    }
+
+    @Test
     @DisplayName("assistant status enables personalized features only when a compatible staff tool exists")
     void advertisesStaffPersonalizationWhenToolIsAvailable() {
         AssistantToolRegistry registry = new AssistantToolRegistry(List.of(tool));

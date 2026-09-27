@@ -161,6 +161,108 @@ class MyStaffScheduleAssistantToolTests {
         assertThat(registry.findMatchingTool("What should I do today?", citizenContext)).isEmpty();
     }
 
+    @Test
+    @DisplayName("excludes COMPLETED session with future scheduled end time from current and upcoming schedule")
+    void excludesCompletedSessionWithFutureEndTime() {
+        StaffAssignment completedFutureEnd = assignment(
+                701L,
+                NOW.minusSeconds(1800),
+                NOW.plusSeconds(3600), // end time is in the future!
+                SessionLifecycleStatus.COMPLETED
+        );
+        StaffAssignment scheduledUpcoming = assignment(
+                702L,
+                NOW.plusSeconds(3600),
+                NOW.plusSeconds(7200),
+                SessionLifecycleStatus.SCHEDULED
+        );
+        when(assignmentRepository.findByUserIdOrderByStartAtAscIdAsc(78L))
+                .thenReturn(List.of(completedFutureEnd, scheduledUpcoming));
+
+        AssistantToolResult result = tool.execute(
+                staffContext(78L, "ROLE_CENTER_MANAGER"),
+                "Show my upcoming sessions"
+        );
+
+        assertThat(result.resultCount()).isEqualTo(1);
+        assertThat(result.contextSnippet())
+                .contains("Session ID: 702")
+                .doesNotContain("Session ID: 701");
+    }
+
+    @Test
+    @DisplayName("excludes COMPLETED session during today's date from today's guidance")
+    void excludesCompletedSessionDuringToday() {
+        StaffAssignment completedToday = assignment(
+                801L,
+                Instant.parse("2026-09-27T01:00:00Z"),
+                Instant.parse("2026-09-27T04:00:00Z"), // overlaps today and now (NOW = 03:30:00Z)
+                SessionLifecycleStatus.COMPLETED
+        );
+        StaffAssignment activeToday = assignment(
+                802L,
+                Instant.parse("2026-09-27T02:00:00Z"),
+                Instant.parse("2026-09-27T06:00:00Z"), // active now
+                SessionLifecycleStatus.IN_PROGRESS
+        );
+        when(assignmentRepository.findByUserIdOrderByStartAtAscIdAsc(88L))
+                .thenReturn(List.of(completedToday, activeToday));
+
+        AssistantToolResult result = tool.execute(
+                staffContext(88L, "ROLE_HEALTHCARE_OFFICER"),
+                "What should I do today?"
+        );
+
+        assertThat(result.resultCount()).isEqualTo(1);
+        assertThat(result.contextSnippet())
+                .contains("Session ID: 802")
+                .contains("IN_PROGRESS")
+                .doesNotContain("Session ID: 801");
+    }
+
+    @Test
+    @DisplayName("admin-only caller receives /app/sessions and strictly excludes /app/staff navigation")
+    void adminOnlyCallerExcludesStaffRoute() {
+        StaffAssignment upcoming = assignment(
+                901L,
+                NOW.plusSeconds(3600),
+                NOW.plusSeconds(7200),
+                SessionLifecycleStatus.SCHEDULED
+        );
+        when(assignmentRepository.findByUserIdOrderByStartAtAscIdAsc(99L))
+                .thenReturn(List.of(upcoming));
+
+        AssistantToolResult result = tool.execute(
+                staffContext(99L, "ROLE_ADMIN"),
+                "Show my schedule"
+        );
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.suggestedRoutes()).doesNotContain("/app/staff");
+        assertThat(result.suggestedRoutes()).containsExactly("/app/sessions");
+    }
+
+    @Test
+    @DisplayName("permitted staff caller receives /app/staff navigation")
+    void permittedStaffCallerReceivesStaffRoute() {
+        StaffAssignment upcoming = assignment(
+                902L,
+                NOW.plusSeconds(3600),
+                NOW.plusSeconds(7200),
+                SessionLifecycleStatus.SCHEDULED
+        );
+        when(assignmentRepository.findByUserIdOrderByStartAtAscIdAsc(100L))
+                .thenReturn(List.of(upcoming));
+
+        AssistantToolResult result = tool.execute(
+                staffContext(100L, "ROLE_CENTER_MANAGER"),
+                "Show my schedule"
+        );
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.suggestedRoutes()).contains("/app/staff");
+        assertThat(result.suggestedRoutes()).contains("/app/sessions");
+    }
     private StaffAssignment assignment(
             Long sessionId,
             Instant start,

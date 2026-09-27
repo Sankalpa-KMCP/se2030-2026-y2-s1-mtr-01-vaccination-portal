@@ -8,6 +8,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ApiError } from '../../../services/apiClient';
 
 const apiMocks = vi.hoisted(() => ({
@@ -35,7 +36,29 @@ const apiMocks = vi.hoisted(() => ({
   listQuestions: vi.fn(),
 }));
 
+const campaignApiMocks = vi.hoisted(() => ({
+  listCampaigns: vi.fn(),
+}));
+
+const campaignConfigMocks = vi.hoisted(() => ({
+  assignQuestionnaire: vi.fn(),
+  getPublishedQuestionnaireVersions: vi.fn(),
+  getScreeningQuestionnaires: vi.fn(),
+  getQuestionnaireVersions: vi.fn(),
+}));
+
+const authMocks = vi.hoisted(() => ({
+  currentUser: { id: 99, email: 'officer@example.com', roles: ['ROLE_HEALTHCARE_OFFICER'] },
+}));
+
 vi.mock('../api/screeningApi', () => apiMocks);
+vi.mock('../../campaign-management/api/campaignApi', () => campaignApiMocks);
+vi.mock('../../campaign-management/api/campaignConfigurationApi', () => campaignConfigMocks);
+vi.mock('../../../auth/context/AuthContext', () => ({
+  useAuth: () => ({
+    user: authMocks.currentUser,
+  }),
+}));
 
 import ScreeningQuestionnairesPage from './ScreeningQuestionnairesPage';
 
@@ -89,8 +112,12 @@ const draftVersion = {
   rules: [eligibilityRule],
 };
 
-function renderPage() {
-  return render(<ScreeningQuestionnairesPage />);
+function renderPage(initialEntries = ['/app/screening/questionnaires']) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <ScreeningQuestionnairesPage />
+    </MemoryRouter>
+  );
 }
 
 async function openDraft() {
@@ -115,6 +142,7 @@ function fillOption(row, { code, label, typedValue }) {
 describe('ScreeningQuestionnairesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authMocks.currentUser = { id: 99, email: 'officer@example.com', roles: ['ROLE_HEALTHCARE_OFFICER'] };
     apiMocks.listQuestionnaires.mockResolvedValue([questionnaire]);
     apiMocks.getQuestionnaire.mockResolvedValue(questionnaire);
     apiMocks.listQuestions.mockResolvedValue([ageQuestion, travelQuestion]);
@@ -122,6 +150,72 @@ describe('ScreeningQuestionnairesPage', () => {
     apiMocks.getQuestionnaireVersion.mockResolvedValue(draftVersion);
     apiMocks.listEligibilityRules.mockResolvedValue([eligibilityRule]);
     apiMocks.listAnswerOptions.mockResolvedValue([]);
+    campaignApiMocks.listCampaigns.mockResolvedValue([
+      {
+        id: 10,
+        code: 'CAMP-DRAFT-NO-Q',
+        name: 'Draft Campaign Without Q',
+        status: 'DRAFT',
+        vaccineTypeCode: 'VAX-01',
+        vaccineTypeName: 'Vaccine One',
+        targetGroupCode: 'ADULT',
+        serviceStartDate: '2026-11-01',
+        serviceEndDate: '2026-11-30',
+        questionnaireVersionId: null,
+      },
+      {
+        id: 20,
+        code: 'CAMP-DRAFT-WITH-Q',
+        name: 'Draft Campaign With Q',
+        status: 'DRAFT',
+        vaccineTypeCode: 'VAX-02',
+        vaccineTypeName: 'Vaccine Two',
+        targetGroupCode: 'ELDERLY',
+        serviceStartDate: '2026-11-01',
+        serviceEndDate: '2026-11-30',
+        questionnaireVersionId: 101,
+      },
+      {
+        id: 30,
+        code: 'CAMP-ACTIVE',
+        name: 'Active Campaign',
+        status: 'ACTIVE',
+        vaccineTypeCode: 'VAX-01',
+        vaccineTypeName: 'Vaccine One',
+        targetGroupCode: 'GENERAL',
+        serviceStartDate: '2026-10-01',
+        serviceEndDate: '2026-10-31',
+        questionnaireVersionId: 101,
+      },
+    ]);
+    campaignConfigMocks.getPublishedQuestionnaireVersions.mockResolvedValue([
+      {
+        id: 101,
+        questionnaireId: 7,
+        questionnaireCode: 'ADULT_SCREENING',
+        questionnaireName: 'Adult Screening',
+        versionNumber: 1,
+        status: 'PUBLISHED',
+      },
+    ]);
+    campaignConfigMocks.getScreeningQuestionnaires.mockResolvedValue([questionnaire]);
+    campaignConfigMocks.getQuestionnaireVersions.mockResolvedValue([
+      {
+        id: 101,
+        questionnaireId: 7,
+        questionnaireCode: 'ADULT_SCREENING',
+        questionnaireName: 'Adult Screening',
+        versionNumber: 1,
+        status: 'PUBLISHED',
+      },
+    ]);
+    campaignConfigMocks.assignQuestionnaire.mockResolvedValue({
+      id: 1,
+      campaignId: 10,
+      questionnaireVersionId: 101,
+      activeFrom: '2026-11-01',
+      activeTo: null,
+    });
   });
 
   afterEach(() => cleanup());
@@ -549,5 +643,121 @@ describe('ScreeningQuestionnairesPage', () => {
 
     await waitFor(() => expect(apiMocks.reorderQuestionnaireItems).toHaveBeenCalledWith(12, [102, 101]));
     expect(await screen.findByText('Questionnaire item order updated.')).toBeTruthy();
+  });
+
+  describe('Campaign Assignments tab', () => {
+    it('switches between Questionnaire Library and Campaign Assignments tabs', async () => {
+      renderPage();
+
+      expect(screen.getByRole('button', { name: 'Questionnaire Library' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Campaign Assignments' })).toBeTruthy();
+      expect(await screen.findByText('Adult Screening')).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Campaign Assignments' }));
+
+      expect(await screen.findByText('Campaign Questionnaire Assignments')).toBeTruthy();
+      expect(campaignApiMocks.listCampaigns).toHaveBeenCalledTimes(1);
+      expect(campaignConfigMocks.getPublishedQuestionnaireVersions).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens Campaign Assignments tab directly when tab=campaigns is in search query', async () => {
+      renderPage(['/app/screening/questionnaires?tab=campaigns']);
+
+      expect(await screen.findByText('Campaign Questionnaire Assignments')).toBeTruthy();
+      expect(campaignApiMocks.listCampaigns).toHaveBeenCalledTimes(1);
+      expect(campaignConfigMocks.getPublishedQuestionnaireVersions).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders campaign rows with accurate assignment status and actions', async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Campaign Assignments' }));
+
+      // Draft without Q
+      const draftNoQRow = (await screen.findByText('Draft Campaign Without Q')).closest('tr');
+      expect(within(draftNoQRow).getByText('Not assigned yet')).toBeTruthy();
+      expect(within(draftNoQRow).getByRole('button', { name: 'Assign Questionnaire' })).toBeTruthy();
+
+      // Draft with Q (resolved in-memory from publishedVersions)
+      const draftWithQRow = screen.getByText('Draft Campaign With Q').closest('tr');
+      expect(within(draftWithQRow).getByText('Adult Screening')).toBeTruthy();
+      expect(within(draftWithQRow).getByText('(v1)')).toBeTruthy();
+      expect(within(draftWithQRow).getByRole('button', { name: 'Change' })).toBeTruthy();
+
+      // Active campaign (non-draft)
+      const activeRow = screen.getByText('Active Campaign').closest('tr');
+      expect(within(activeRow).getByText('Assignment locked (ACTIVE)')).toBeTruthy();
+    });
+
+    it('opens assignment modal and submits assignment', async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Campaign Assignments' }));
+
+      const draftNoQRow = (await screen.findByText('Draft Campaign Without Q')).closest('tr');
+      fireEvent.click(within(draftNoQRow).getByRole('button', { name: 'Assign Questionnaire' }));
+
+      // QuestionnaireAssignmentFormModal opens
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText(/Assign Screening Questionnaire/i)).toBeTruthy();
+
+      // Wait for version to load and enable submit
+      await waitFor(() => {
+        expect(within(dialog).getByRole('button', { name: 'Assign Questionnaire' }).disabled).toBe(false);
+      });
+
+      // Submit assignment
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Assign Questionnaire' }));
+
+      await waitFor(() => {
+        expect(campaignConfigMocks.assignQuestionnaire).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({
+            questionnaireVersionId: 101,
+          })
+        );
+      });
+
+      expect(await screen.findByText('Screening questionnaire assigned successfully.')).toBeTruthy();
+    });
+
+    it('hides assignment buttons for Super Admin and shows placeholder dash', async () => {
+      authMocks.currentUser = {
+        id: 1,
+        email: 'superadmin@example.com',
+        roles: ['ROLE_SUPER_ADMIN'],
+      };
+
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Campaign Assignments' }));
+
+      // Draft rows should not have action buttons
+      const draftNoQRow = (await screen.findByText('Draft Campaign Without Q')).closest('tr');
+      expect(within(draftNoQRow).getByText('Not assigned yet')).toBeTruthy();
+      expect(within(draftNoQRow).queryByRole('button', { name: 'Assign Questionnaire' })).toBeNull();
+      expect(within(draftNoQRow).getByText('—')).toBeTruthy();
+
+      const draftWithQRow = screen.getByText('Draft Campaign With Q').closest('tr');
+      expect(within(draftWithQRow).getByText('Adult Screening')).toBeTruthy();
+      expect(within(draftWithQRow).queryByRole('button', { name: 'Change' })).toBeNull();
+      expect(within(draftWithQRow).getByText('—')).toBeTruthy();
+
+      // Active campaign still shows locked badge
+      const activeRow = screen.getByText('Active Campaign').closest('tr');
+      expect(within(activeRow).getByText('Assignment locked (ACTIVE)')).toBeTruthy();
+    });
+
+    it('hides assignment buttons for Admin user without Healthcare Officer role', async () => {
+      authMocks.currentUser = {
+        id: 2,
+        email: 'admin@example.com',
+        roles: ['ROLE_ADMIN'],
+      };
+
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Campaign Assignments' }));
+
+      const draftNoQRow = (await screen.findByText('Draft Campaign Without Q')).closest('tr');
+      expect(within(draftNoQRow).queryByRole('button', { name: 'Assign Questionnaire' })).toBeNull();
+      expect(within(draftNoQRow).getByText('—')).toBeTruthy();
+    });
   });
 });

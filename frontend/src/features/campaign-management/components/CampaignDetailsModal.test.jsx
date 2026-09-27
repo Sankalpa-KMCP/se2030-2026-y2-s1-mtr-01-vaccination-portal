@@ -74,34 +74,29 @@ describe('CampaignDetailsModal questionnaire assignment authorization', () => {
 
   afterEach(cleanup);
 
-  it.each(['ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER'])(
-    'shows assignment history and mutation controls to %s',
+  it.each([
+    'ROLE_ADMIN',
+    'ROLE_SUPER_ADMIN',
+    'ROLE_CAMPAIGN_OFFICER',
+    'ROLE_MANAGEMENT_USER',
+  ])(
+    'shows %s questionnaire information and assignment history without mutation controls',
     async (role) => {
       renderDetails(role);
 
       fireEvent.click(screen.getByRole('button', { name: /Questionnaire/ }));
 
       expect(await screen.findByText('Assignment Version History')).toBeTruthy();
-      expect(screen.getByRole('button', { name: '+ Reassign / Update Version' })).toBeTruthy();
+      expect(screen.getAllByText('Questionnaire Version #101').length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryByRole('button', { name: '+ Reassign / Update Version' })).toBeNull();
+      expect(screen.queryByRole('button', { name: '+ Assign Screening Questionnaire' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Assign Questionnaire' })).toBeNull();
+      expect(screen.queryByRole('button', { name: /reassign|update version|change/i })).toBeNull();
       expect(apiMocks.getQuestionnaireAssignments).toHaveBeenCalledWith(10);
     },
   );
 
-  it('shows Management User assignment history without mutation controls', async () => {
-    renderDetails('ROLE_MANAGEMENT_USER');
-
-    fireEvent.click(screen.getByRole('button', { name: /Questionnaire/ }));
-
-    expect(await screen.findByText('Assignment Version History')).toBeTruthy();
-    expect(screen.getAllByText('Questionnaire Version #101')).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: '+ Reassign / Update Version' })).toBeNull();
-    expect(screen.queryByRole('button', { name: '+ Assign Screening Questionnaire' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Assign Questionnaire' })).toBeNull();
-    expect(apiMocks.getQuestionnaireAssignments).toHaveBeenCalledWith(10);
-  });
-
   it.each([
-    'ROLE_HEALTHCARE_OFFICER',
     'ROLE_CENTER_MANAGER',
     'ROLE_SYSTEM_ADMINISTRATOR',
     'ROLE_CITIZEN',

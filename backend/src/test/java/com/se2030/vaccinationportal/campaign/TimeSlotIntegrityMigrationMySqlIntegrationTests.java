@@ -57,6 +57,7 @@ class TimeSlotIntegrityMigrationMySqlIntegrationTests extends AbstractMySqlTestC
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
             statement.execute("DELETE FROM time_slots");
+            statement.execute("DELETE FROM session_change_events");
         } catch (Exception ignored) {
         }
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {

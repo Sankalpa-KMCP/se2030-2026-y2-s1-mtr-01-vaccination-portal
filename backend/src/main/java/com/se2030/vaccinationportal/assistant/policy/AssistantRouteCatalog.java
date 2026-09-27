@@ -32,7 +32,6 @@ public final class AssistantRouteCatalog {
      * Standard staff dashboard roles as defined in authRoles.js and SecurityConfig.
      */
     public static final Set<String> STAFF_DASHBOARD_ROLES = Set.of(
-            ROLE_ADMIN,
             ROLE_SUPER_ADMIN,
             ROLE_CAMPAIGN_OFFICER,
             ROLE_CENTER_MANAGER,
@@ -80,9 +79,8 @@ public final class AssistantRouteCatalog {
     );
 
     public static final Set<String> SCREENING_STAFF_ROLES = Set.of(
-            ROLE_ADMIN,
-            ROLE_SUPER_ADMIN,
-            ROLE_HEALTHCARE_OFFICER
+            ROLE_HEALTHCARE_OFFICER,
+            ROLE_SUPER_ADMIN
     );
 
     public static final Set<String> ADMIN_ROLES = Set.of(

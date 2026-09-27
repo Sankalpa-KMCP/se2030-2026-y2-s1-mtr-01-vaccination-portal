@@ -33,6 +33,39 @@ public interface AiResponseProvider {
     }
 
     /**
+     * Maximum character limit for assistant responses to ensure subsequent history submission
+     * complies with the 1,500-character AssistantMessageDto constraint.
+     */
+    int MAX_ANSWER_CHARACTERS = 1500;
+
+    /**
+     * Safely truncates response text to maxCharacters, preserving valid Unicode surrogate pairs
+     * and appending an ellipsis if truncation occurred. The resulting string is guaranteed to be
+     * <= maxCharacters in length.
+     */
+    static String safeTruncate(String text, int maxCharacters) {
+        if (text == null || text.length() <= maxCharacters) {
+            return text;
+        }
+
+        int targetIndex = maxCharacters - 3;
+        if (targetIndex < 0) {
+            targetIndex = 0;
+        }
+
+        // Step back if targetIndex splits a UTF-16 surrogate pair (orphaned high surrogate)
+        if (targetIndex > 0 && Character.isHighSurrogate(text.charAt(targetIndex - 1))) {
+            targetIndex--;
+        }
+
+        return text.substring(0, targetIndex) + "...";
+    }
+
+    static String safeTruncate(String text) {
+        return safeTruncate(text, MAX_ANSWER_CHARACTERS);
+    }
+
+    /**
      * Indicates whether the provider is active and ready to service requests.
      */
     boolean isAvailable();

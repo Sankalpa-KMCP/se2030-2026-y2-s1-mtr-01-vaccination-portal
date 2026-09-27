@@ -28,6 +28,38 @@ class AssistantRefusalPolicyTests {
     }
 
     @Test
+    @DisplayName("Sinhala and Tamil emergency prompts return emergency guidance (F-AI-01)")
+    void testMultilingualEmergencyPromptsReturnEmergencyGuidance() {
+        // Sinhala breathing difficulty & chest pain
+        String sinhalaPrompt = "මට හුස්ම ගන්න අමාරුයි සහ පපුවේ කැක්කුම තියෙනවා";
+        Optional<AssistantChatResponse> sinhalaResp = AssistantRefusalPolicy.evaluatePolicy(sinhalaPrompt, Collections.emptySet(), "req-si-1");
+        assertTrue(sinhalaResp.isPresent());
+        assertThat(sinhalaResp.get().answer()).contains("medical emergency or immediate harm");
+
+        // Tamil breathing difficulty & chest pain
+        String tamilPrompt = "எனக்கு மூச்சுத்திணறல் மற்றும் நெஞ்சு வலி இருக்கிறது";
+        Optional<AssistantChatResponse> tamilResp = AssistantRefusalPolicy.evaluatePolicy(tamilPrompt, Collections.emptySet(), "req-ta-1");
+        assertTrue(tamilResp.isPresent());
+        assertThat(tamilResp.get().answer()).contains("medical emergency or immediate harm");
+    }
+
+    @Test
+    @DisplayName("Sinhala and Tamil medical diagnosis prompts return medical boundary message (F-AI-01)")
+    void testMultilingualMedicalDiagnosisPromptsReturnMedicalBoundary() {
+        // Sinhala symptom diagnosis
+        String sinhalaMedical = "මගේ රෝග විනිශ්චය කරලා කොවිඩ් තියෙනවද කියන්න";
+        Optional<AssistantChatResponse> sinhalaResp = AssistantRefusalPolicy.evaluatePolicy(sinhalaMedical, Collections.emptySet(), "req-si-2");
+        assertTrue(sinhalaResp.isPresent());
+        assertThat(sinhalaResp.get().answer()).contains("cannot provide medical advice, symptom diagnoses");
+
+        // Tamil symptom diagnosis
+        String tamilMedical = "நோய் கண்டறிதல் செய்து எனக்கு என்ன நோய் என்று சொல்லுங்கள்";
+        Optional<AssistantChatResponse> tamilResp = AssistantRefusalPolicy.evaluatePolicy(tamilMedical, Collections.emptySet(), "req-ta-2");
+        assertTrue(tamilResp.isPresent());
+        assertThat(tamilResp.get().answer()).contains("cannot provide medical advice, symptom diagnoses");
+    }
+
+    @Test
     @DisplayName("Clinical / medical diagnosis requests return medical boundary message without emergency wording")
     void testClinicalRequestReturnsMedicalBoundaryMessage() {
         String clinicalPrompt = "Can you diagnose my rash and tell me if I have COVID-19 or flu?";

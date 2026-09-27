@@ -7,6 +7,7 @@ import {
   INITIAL_ASSISTANT_MESSAGE,
   DEFAULT_DISCLAIMER,
   STAFF_SUGGESTED_QUESTIONS,
+  ADMIN_SUGGESTED_QUESTIONS,
   formatErrorMessage,
 } from './useAssistantConversation';
 import * as assistantApi from '../api/assistantApi';
@@ -92,6 +93,51 @@ describe('useAssistantConversation', () => {
     expect(result.current.suggestedQuestions).toContain('What is my staff profile?');
     expect(result.current.suggestedQuestions).toContain('What should I do today?');
     expect(result.current.suggestedQuestions).toContain('Which center am I assigned to?');
+    expect(result.current.suggestedQuestions).toContain('How do I use the staff dashboard?');
+  });
+
+  it('shows admin-tailored questions to an authenticated admin-only user and strictly excludes staff dashboard question', async () => {
+    authContextMock.current = {
+      user: {
+        id: 46,
+        email: 'admin46@example.com',
+        roles: ['ROLE_ADMIN'],
+      },
+      isAuthenticated: true,
+    };
+
+    const { result } = renderHook(() => useAssistantConversation(), { wrapper });
+
+    await act(async () => {
+      // allow status promise to resolve
+    });
+
+    expect(result.current.suggestedQuestions).toEqual(ADMIN_SUGGESTED_QUESTIONS);
+    expect(result.current.suggestedQuestions).toContain('What is my staff profile?');
+    expect(result.current.suggestedQuestions).toContain('What should I do today?');
+    expect(result.current.suggestedQuestions).toContain('How do I review pending staff requests?');
+    expect(result.current.suggestedQuestions).toContain('How does administrator management work?');
+    expect(result.current.suggestedQuestions).not.toContain('How do I use the staff dashboard?');
+  });
+
+  it('shows staff suggested questions to a super admin inheriting staff dashboard access', async () => {
+    authContextMock.current = {
+      user: {
+        id: 47,
+        email: 'superadmin@example.com',
+        roles: ['ROLE_SUPER_ADMIN'],
+      },
+      isAuthenticated: true,
+    };
+
+    const { result } = renderHook(() => useAssistantConversation(), { wrapper });
+
+    await act(async () => {
+      // allow status promise to resolve
+    });
+
+    expect(result.current.suggestedQuestions).toEqual(STAFF_SUGGESTED_QUESTIONS);
+    expect(result.current.suggestedQuestions).toContain('How do I use the staff dashboard?');
   });
 
   it('submits a message, appends user turn and assistant reply', async () => {

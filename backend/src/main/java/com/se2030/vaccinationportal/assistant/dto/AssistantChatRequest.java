@@ -42,4 +42,7 @@ public record AssistantChatRequest(
             currentPath = currentPath.trim();
         }
     }
+    public AssistantChatRequest(String message, List<AssistantMessageDto> history) {
+        this(message, history, null);
+    }
 }

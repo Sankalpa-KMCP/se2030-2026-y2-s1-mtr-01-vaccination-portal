@@ -47,30 +47,17 @@ public class CampaignController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> createCampaign(@Valid @RequestBody CreateCampaignRequest request) {
-        VaccinationCampaign created = request.questionnaireVersionId() != null
-                ? campaignService.createCampaign(
-                        request.code(),
-                        request.name(),
-                        request.description(),
-                        request.vaccineTypeId(),
-                        request.targetGroupId(),
-                        request.serviceStartDate(),
-                        request.serviceEndDate(),
-                        request.bookingOpenAt(),
-                        request.bookingCloseAt(),
-                        request.questionnaireVersionId()
-                )
-                : campaignService.createCampaign(
-                        request.code(),
-                        request.name(),
-                        request.description(),
-                        request.vaccineTypeId(),
-                        request.targetGroupId(),
-                        request.serviceStartDate(),
-                        request.serviceEndDate(),
-                        request.bookingOpenAt(),
-                        request.bookingCloseAt()
-                );
+        VaccinationCampaign created = campaignService.createCampaign(
+                request.code(),
+                request.name(),
+                request.description(),
+                request.vaccineTypeId(),
+                request.targetGroupId(),
+                request.serviceStartDate(),
+                request.serviceEndDate(),
+                request.bookingOpenAt(),
+                request.bookingCloseAt()
+        );
 
         URI location = URI.create("/api/v1/campaigns/" + created.getId());
         return ResponseEntity.created(location).body(toResponseWithQuestionnaire(created));
@@ -89,26 +76,15 @@ public class CampaignController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateCampaignRequest request
     ) {
-        VaccinationCampaign updated = request.questionnaireVersionId() != null
-                ? campaignService.updateCampaign(
-                        id,
-                        request.name(),
-                        request.description(),
-                        request.serviceStartDate(),
-                        request.serviceEndDate(),
-                        request.bookingOpenAt(),
-                        request.bookingCloseAt(),
-                        request.questionnaireVersionId()
-                )
-                : campaignService.updateCampaign(
-                        id,
-                        request.name(),
-                        request.description(),
-                        request.serviceStartDate(),
-                        request.serviceEndDate(),
-                        request.bookingOpenAt(),
-                        request.bookingCloseAt()
-                );
+        VaccinationCampaign updated = campaignService.updateCampaign(
+                id,
+                request.name(),
+                request.description(),
+                request.serviceStartDate(),
+                request.serviceEndDate(),
+                request.bookingOpenAt(),
+                request.bookingCloseAt()
+        );
         return ResponseEntity.ok(toResponseWithQuestionnaire(updated));
     }
 
@@ -125,10 +101,7 @@ public class CampaignController {
     public ResponseEntity<List<CampaignSummaryResponse>> getCampaigns(
             @RequestParam(required = false) CampaignStatus status
     ) {
-        List<VaccinationCampaign> campaigns = campaignService.getCampaigns(status);
-        List<CampaignSummaryResponse> response = campaigns.stream()
-                .map(CampaignDtoMapper::toSummaryResponse)
-                .toList();
+        List<CampaignSummaryResponse> response = campaignService.getCampaignSummaries(status);
         return ResponseEntity.ok(response);
     }
 

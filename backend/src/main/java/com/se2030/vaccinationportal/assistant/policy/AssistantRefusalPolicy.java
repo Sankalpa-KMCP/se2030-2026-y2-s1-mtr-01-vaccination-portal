@@ -43,7 +43,11 @@ public final class AssistantRefusalPolicy {
             Pattern.compile("\\b(anaphylaxis|severe\\s+allergic\\s+reaction)\\b", Pattern.CASE_INSENSITIVE),
             Pattern.compile("\\b(unconscious|passed\\s+out|collaps(ed|ing)|faint(ed|ing))\\b", Pattern.CASE_INSENSITIVE),
             Pattern.compile("\\b(medical\\s+emergency|immediate\\s+harm|kill\\s+myself|suicid(e|al))\\b", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("\\b(bleeding\\s+heavily|profuse\\s+bleeding|severe\\s+hemorrhage)\\b", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("\\b(bleeding\\s+heavily|profuse\\s+bleeding|severe\\s+hemorrhage)\\b", Pattern.CASE_INSENSITIVE),
+            // Multilingual emergency patterns (Sinhala)
+            Pattern.compile("(හුස්ම\\s*ගන්න\\s*අමාරු|හුස්ම\\s*ගැනීමේ\\s*අපහසු|හුස්ම\\s*හිර|පපුවේ\\s*කැක්කුම|හෘදයාබාධ|සිහි\\s*නැති|සිහිය\\s*නැති|ක්ලාන්ත|කලන්ත|දිවි\\s*නසා|රුධිර\\s*වහනය|අසාත්මිකතා)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE),
+            // Multilingual emergency patterns (Tamil)
+            Pattern.compile("(மூச்சுத்திணறல்|மூச்சு\\s*திணறல்|மூச்சு\\s*விட\\s*சிரமம்|நெஞ்சு\\s*வலி|மாரடைப்பு|மயக்கம்|நினைவிழந்த|மயங்கி|தற்கொலை|இரத்தப்போக்கு|ரத்தப்போக்கு|ஒவ்வாமை)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE)
     );
 
     // Patterns for medical diagnosis, symptom interpretation, clinical recommendation
@@ -53,7 +57,11 @@ public final class AssistantRefusalPolicy {
             Pattern.compile("\\b(which\\s+vaccine\\s+should\\s+i\\s+take|which\\s+vaccine\\s+is\\s+(best|better)\\s+for\\s+my)\\b", Pattern.CASE_INSENSITIVE),
             Pattern.compile("\\b(should\\s+i\\s+take\\s+(pfizer|moderna|astrazeneca|sinopharm))\\b", Pattern.CASE_INSENSITIVE),
             Pattern.compile("\\b(prescribe|prescription\\s+for|what\\s+medicine\\s+should\\s+i\\s+take|dosage\\s+for\\s+me)\\b", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("\\b(is\\s+it\\s+safe\\s+for\\s+me\\s+to\\s+(take|get)\\s+the\\s+vaccine\\s+with\\s+my)\\b", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("\\b(is\\s+it\\s+safe\\s+for\\s+me\\s+to\\s+(take|get)\\s+the\\s+vaccine\\s+with\\s+my)\\b", Pattern.CASE_INSENSITIVE),
+            // Multilingual medical diagnosis / clinical advice patterns (Sinhala)
+            Pattern.compile("(රෝග\\s*විනිශ්චය|මට\\s*ලෙඩක්ද|කොවිඩ්\\s*තියෙනවද|උණට\\s*බෙහෙත්|මොන\\s*එන්නතද\\s*හොඳ|බෙහෙත්\\s*වට්ටෝරුව|බෙහෙත්\\s*මාත්‍රාව)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE),
+            // Multilingual medical diagnosis / clinical advice patterns (Tamil)
+            Pattern.compile("(நோய்\\s*கண்டறிதல்|எனக்கு\\s*என்ன\\s*நோய்|எந்த\\s*தடுப்பூசி\\s*நல்லது|மருந்து\\s*பரிந்துரை|மருந்து\\s*அளவு)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE)
     );
 
     // Patterns for data mutation commands (distinguished from asking "how do I book?")

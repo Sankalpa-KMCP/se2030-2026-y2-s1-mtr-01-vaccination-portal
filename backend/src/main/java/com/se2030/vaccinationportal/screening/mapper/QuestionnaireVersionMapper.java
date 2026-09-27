@@ -14,9 +14,13 @@ import java.util.List;
 public class QuestionnaireVersionMapper {
 
     public QuestionnaireVersionResponse toResponse(QuestionnaireVersion version) {
+        String questionnaireCode = version.getQuestionnaire() != null ? version.getQuestionnaire().getCode() : null;
+        String questionnaireName = version.getQuestionnaire() != null ? version.getQuestionnaire().getName() : null;
         return new QuestionnaireVersionResponse(
                 version.getId(),
-                version.getQuestionnaire().getId(),
+                version.getQuestionnaire() != null ? version.getQuestionnaire().getId() : null,
+                questionnaireCode,
+                questionnaireName,
                 version.getVersionNumber(),
                 version.getStatus(),
                 version.getPublishedAt(),

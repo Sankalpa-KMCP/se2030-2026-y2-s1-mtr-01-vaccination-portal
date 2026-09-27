@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import PageHeader from '../../../components/common/PageHeader';
 import SuccessAlert from '../../../components/common/SuccessAlert';
-import { questionnaireVersionStatusVariants } from '../../../components/common/statusVariants';
+import {
+  campaignStatusVariants,
+  questionnaireVersionStatusVariants,
+} from '../../../components/common/statusVariants';
 import StatusBadge from '../../../components/common/StatusBadge';
 import {
   addQuestionnaireItem,
@@ -33,6 +37,14 @@ import ChangeQuestionnaireItemModal from '../components/ChangeQuestionnaireItemM
 import EligibilityRuleFormModal from '../components/EligibilityRuleFormModal';
 import QuestionnaireActionModal from '../components/QuestionnaireActionModal';
 import QuestionnaireFormModal from '../components/QuestionnaireFormModal';
+import { listCampaigns } from '../../campaign-management/api/campaignApi';
+import {
+  assignQuestionnaire,
+  getPublishedQuestionnaireVersions,
+} from '../../campaign-management/api/campaignConfigurationApi';
+import QuestionnaireAssignmentFormModal from '../../campaign-management/components/QuestionnaireAssignmentFormModal';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { canManageQuestionnaireAssignments } from '../../../auth/utils/roleUtils';
 import { parseEligibilityRuleExpression } from '../utils/eligibilityRuleExpression';
 import {
   PRELIMINARY_SCREENING_RESULT_LABELS,
@@ -53,6 +65,9 @@ function sortRules(rules = []) {
 }
 
 export default function ScreeningQuestionnairesPage() {
+  const { user } = useAuth();
+  const canManageAssignments = canManageQuestionnaireAssignments(user);
+
   const [questionnaires, setQuestionnaires] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +89,72 @@ export default function ScreeningQuestionnairesPage() {
   const [processing, setProcessing] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
+
+  // Top-level tab state ('library' | 'campaigns')
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() =>
+    searchParams.get('tab') === 'campaigns' ? 'campaigns' : 'library'
+  );
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'campaigns' && activeTab !== 'campaigns') {
+      setActiveTab('campaigns');
+    } else if (tabParam === 'library' && activeTab !== 'library') {
+      setActiveTab('library');
+    }
+  }, [searchParams, activeTab]);
+
+  const handleSelectTab = (tab) => {
+    setActiveTab(tab);
+    setSearchParams(tab === 'campaigns' ? { tab: 'campaigns' } : {});
+  };
+  const [campaigns, setCampaigns] = useState([]);
+  const [publishedVersions, setPublishedVersions] = useState([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
+  const [campaignsError, setCampaignsError] = useState(null);
+  const [selectedCampaignForAssignment, setSelectedCampaignForAssignment] = useState(null);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  const [assignmentError, setAssignmentError] = useState(null);
+
+  const fetchCampaignAssignments = async () => {
+    setCampaignsLoading(true);
+    setCampaignsError(null);
+    try {
+      const [campaignList, pubVers] = await Promise.all([
+        listCampaigns(),
+        getPublishedQuestionnaireVersions(),
+      ]);
+      setCampaigns(Array.isArray(campaignList) ? campaignList : []);
+      setPublishedVersions(Array.isArray(pubVers) ? pubVers : []);
+    } catch (err) {
+      setCampaignsError(err);
+    } finally {
+      setCampaignsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'campaigns') {
+      fetchCampaignAssignments();
+    }
+  }, [activeTab]);
+
+  const handleAssignSubmit = async (payload) => {
+    if (!selectedCampaignForAssignment || !canManageAssignments) return;
+    setAssignmentLoading(true);
+    setAssignmentError(null);
+    try {
+      await assignQuestionnaire(selectedCampaignForAssignment.id, payload);
+      setSelectedCampaignForAssignment(null);
+      setSuccessMessage('Screening questionnaire assigned successfully.');
+      await fetchCampaignAssignments();
+    } catch (err) {
+      setAssignmentError(err);
+    } finally {
+      setAssignmentLoading(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -497,19 +578,43 @@ export default function ScreeningQuestionnairesPage() {
       <PageHeader
         id="screeningQuestionnairesTitle"
         title="Screening Questionnaires"
-        subtitle="Build versioned screening questionnaires and their eligibility rules."
-        actions={(
+        subtitle="Build versioned screening questionnaires and assign them to vaccination campaigns."
+        actions={activeTab === 'library' ? (
           <button type="button" className="btn btn-primary btn-sm fw-semibold" onClick={() => { setFormError(null); setQuestionnaireFormOpen(true); }}>Create Questionnaire</button>
-        )}
+        ) : null}
       />
+
+      <ul className="nav nav-tabs mb-4" role="tablist">
+        <li className="nav-item" role="presentation">
+          <button
+            type="button"
+            className={`nav-link fw-semibold ${activeTab === 'library' ? 'active' : ''}`}
+            onClick={() => handleSelectTab('library')}
+          >
+            Questionnaire Library
+          </button>
+        </li>
+        <li className="nav-item" role="presentation">
+          <button
+            type="button"
+            className={`nav-link fw-semibold ${activeTab === 'campaigns' ? 'active' : ''}`}
+            onClick={() => handleSelectTab('campaigns')}
+          >
+            Campaign Assignments
+          </button>
+        </li>
+      </ul>
 
       {successMessage && (
         <SuccessAlert message={successMessage} onDismiss={() => setSuccessMessage(null)} />
       )}
-      <ApiErrorAlert error={loadError} onDismiss={() => setLoadError(null)} />
 
-      {loading ? (
-        <LoadingSpinner message="Loading screening questionnaires..." />
+      {activeTab === 'library' && (
+        <>
+          <ApiErrorAlert error={loadError} onDismiss={() => setLoadError(null)} />
+
+          {loading ? (
+            <LoadingSpinner message="Loading screening questionnaires..." />
       ) : questionnaires.length === 0 ? (
         <div className="card border-0 shadow-sm">
           <div className="card-body text-center py-5">
@@ -737,6 +842,135 @@ export default function ScreeningQuestionnairesPage() {
           </div>
         </div>
       )}
+        </>
+      )}
+
+      {activeTab === 'campaigns' && (
+        <div className="card border-0 shadow-sm">
+          <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h2 className="h5 mb-0">Campaign Questionnaire Assignments</h2>
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm"
+              onClick={fetchCampaignAssignments}
+              disabled={campaignsLoading}
+            >
+              Refresh
+            </button>
+          </div>
+          <div className="card-body p-0">
+            <ApiErrorAlert error={campaignsError} onDismiss={() => setCampaignsError(null)} />
+
+            {campaignsLoading ? (
+              <div className="py-5">
+                <LoadingSpinner message="Loading campaign assignments..." />
+              </div>
+            ) : campaigns.length === 0 ? (
+              <div className="text-center py-5 text-muted">
+                No vaccination campaigns found.
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover align-middle mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th scope="col">Campaign</th>
+                      <th scope="col">Vaccine</th>
+                      <th scope="col">Target Group</th>
+                      <th scope="col">Service Window</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Screening Questionnaire</th>
+                      <th scope="col" className="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {campaigns.map((camp) => {
+                      const assignedQv = camp.questionnaireVersionId
+                        ? publishedVersions.find((v) => v.id === camp.questionnaireVersionId)
+                        : null;
+                      const isDraftStatus = camp.status === 'DRAFT';
+
+                      return (
+                        <tr key={camp.id}>
+                          <td>
+                            <div className="fw-semibold text-dark">{camp.name}</div>
+                            <div className="small font-monospace text-muted">{camp.code}</div>
+                          </td>
+                          <td>
+                            {camp.vaccineTypeName
+                              ? `${camp.vaccineTypeName} (${camp.vaccineTypeCode || ''})`
+                              : camp.vaccineTypeCode || '—'}
+                          </td>
+                          <td>{camp.targetGroupCode || '—'}</td>
+                          <td className="small">
+                            {camp.serviceStartDate} &rarr; {camp.serviceEndDate}
+                          </td>
+                          <td>
+                            <StatusBadge status={camp.status} variants={campaignStatusVariants} />
+                          </td>
+                          <td>
+                            {assignedQv ? (
+                              <div>
+                                <span className="fw-semibold text-dark">
+                                  {assignedQv.questionnaireName}
+                                </span>{' '}
+                                <span className="text-muted small">
+                                  (v{assignedQv.versionNumber})
+                                </span>
+                              </div>
+                            ) : camp.questionnaireVersionId ? (
+                              <span className="text-dark small">
+                                Version #{camp.questionnaireVersionId} · Published
+                              </span>
+                            ) : (
+                              <span className="text-muted small fst-italic">
+                                Not assigned yet
+                              </span>
+                            )}
+                          </td>
+                          <td className="text-end">
+                            {canManageAssignments && isDraftStatus ? (
+                              camp.questionnaireVersionId ? (
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-primary btn-sm"
+                                  onClick={() => {
+                                    setAssignmentError(null);
+                                    setSelectedCampaignForAssignment(camp);
+                                  }}
+                                >
+                                  Change
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => {
+                                    setAssignmentError(null);
+                                    setSelectedCampaignForAssignment(camp);
+                                  }}
+                                >
+                                  Assign Questionnaire
+                                </button>
+                              )
+                            ) : !isDraftStatus ? (
+                              <span className="small text-muted">
+                                Assignment locked ({camp.status})
+                              </span>
+                            ) : (
+                              <span className="small text-muted">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <QuestionnaireFormModal show={questionnaireFormOpen} processing={processing} apiError={formError} onClose={() => !processing && setQuestionnaireFormOpen(false)} onSubmit={handleCreateQuestionnaire} />
       <AddQuestionnaireItemModal
@@ -768,6 +1002,24 @@ export default function ScreeningQuestionnairesPage() {
         onClose={() => !processing && setChangeItemTarget(null)}
         onSubmit={handleReplaceItem}
       />
+
+      {canManageAssignments && selectedCampaignForAssignment && (
+        <QuestionnaireAssignmentFormModal
+          campaign={selectedCampaignForAssignment}
+          currentAssignment={
+            selectedCampaignForAssignment.questionnaireVersionId
+              ? { questionnaireVersionId: selectedCampaignForAssignment.questionnaireVersionId }
+              : null
+          }
+          onSubmit={handleAssignSubmit}
+          onCancel={() => {
+            setSelectedCampaignForAssignment(null);
+            setAssignmentError(null);
+          }}
+          loading={assignmentLoading}
+          error={assignmentError}
+        />
+      )}
     </section>
   );
 }

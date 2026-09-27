@@ -193,6 +193,8 @@ class CheckInServiceTests {
 
         slotCapacityPortDouble.setAvailableCapacity(slotId, 1);
         slotCapacityPortDouble.setSlotStartTime(slotId, slotStart);
+        slotCapacityPortDouble.setSlotSession(slotId, sessionId);
+        slotCapacityPortDouble.setSlotCampaign(slotId, campaignId);
 
         // Citizen 1 books the only available slot
         Appointment appt1 = bookingService.bookAppointment(citizen1, campaignId, slotId);

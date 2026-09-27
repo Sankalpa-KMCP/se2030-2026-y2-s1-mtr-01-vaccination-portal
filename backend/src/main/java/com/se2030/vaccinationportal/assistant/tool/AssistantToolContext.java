@@ -35,7 +35,8 @@ public record AssistantToolContext(
     public boolean isStaff() {
         return principal != null
                 && authorities != null
-                && authorities.stream().anyMatch(AssistantRouteCatalog.STAFF_DASHBOARD_ROLES::contains);
+                && (authorities.stream().anyMatch(AssistantRouteCatalog.STAFF_DASHBOARD_ROLES::contains)
+                        || authorities.stream().anyMatch(AssistantRouteCatalog.ADMIN_ROLES::contains));
     }
 
     public boolean supportsPersonalizedTools() {

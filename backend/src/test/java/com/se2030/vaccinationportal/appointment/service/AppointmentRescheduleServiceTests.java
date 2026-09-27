@@ -82,6 +82,7 @@ class AppointmentRescheduleServiceTests {
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
+        slotCapacityPortDouble.clearSlotCampaignMap();
     }
 
     @AfterEach
@@ -125,6 +126,85 @@ class AppointmentRescheduleServiceTests {
         // Verify old slot capacity released (+1) and new slot capacity reserved (-1)
         assertTrue(slotCapacityPortDouble.hasAvailableCapacity(oldSlotId));
         assertTrue(slotCapacityPortDouble.hasAvailableCapacity(newSlotId));
+    }
+
+    @Test
+    void rescheduleAppointment_validCampaignSlot_succeeds() {
+        Long citizenId = 1009L;
+        Long campaignId = 2001L;
+        Long oldSlotId = 3001L;
+        Long newSlotId = 3002L;
+
+        Instant now = Instant.parse("2026-10-01T10:00:00Z");
+        Instant oldSlotStart = now.plus(48, ChronoUnit.HOURS);
+        Instant newSlotStart = now.plus(72, ChronoUnit.HOURS);
+
+        slotCapacityPortDouble.setAvailableCapacity(oldSlotId, 5);
+        slotCapacityPortDouble.setSlotStartTime(oldSlotId, oldSlotStart);
+        slotCapacityPortDouble.setSlotCampaign(oldSlotId, campaignId);
+
+        slotCapacityPortDouble.setAvailableCapacity(newSlotId, 2);
+        slotCapacityPortDouble.setSlotStartTime(newSlotId, newSlotStart);
+        slotCapacityPortDouble.setSlotCampaign(newSlotId, campaignId);
+
+        Appointment original = bookingService.bookAppointment(citizenId, campaignId, oldSlotId);
+        assertNotNull(original);
+        assertEquals(4, slotCapacityPortDouble.getAvailableCapacity(oldSlotId));
+
+        Appointment rescheduled = rescheduleService.rescheduleAppointment(original.getId(), citizenId, newSlotId, now);
+
+        assertNotNull(rescheduled);
+        assertEquals(newSlotId, rescheduled.getSlotId());
+        // Old slot capacity released back (+1 -> 5)
+        assertEquals(5, slotCapacityPortDouble.getAvailableCapacity(oldSlotId));
+        // New slot capacity reserved (-1 -> 1)
+        assertEquals(1, slotCapacityPortDouble.getAvailableCapacity(newSlotId));
+
+        Appointment persisted = appointmentRepository.findById(original.getId()).orElseThrow();
+        assertEquals(newSlotId, persisted.getSlotId());
+    }
+
+    @Test
+    void rescheduleAppointment_mismatchedCampaignSlot_rejectsWithIllegalArgumentExceptionAndPreservesState() {
+        Long citizenId = 1010L;
+        Long campaignId = 2001L;
+        Long differentCampaignId = 2002L;
+        Long oldSlotId = 3001L;
+        Long mismatchedSlotId = 3005L;
+
+        Instant now = Instant.parse("2026-10-01T10:00:00Z");
+        Instant oldSlotStart = now.plus(48, ChronoUnit.HOURS);
+        Instant newSlotStart = now.plus(72, ChronoUnit.HOURS);
+
+        slotCapacityPortDouble.setAvailableCapacity(oldSlotId, 5);
+        slotCapacityPortDouble.setSlotStartTime(oldSlotId, oldSlotStart);
+        slotCapacityPortDouble.setSlotCampaign(oldSlotId, campaignId);
+
+        // Mismatched slot belongs to different campaign
+        slotCapacityPortDouble.setAvailableCapacity(mismatchedSlotId, 3);
+        slotCapacityPortDouble.setSlotStartTime(mismatchedSlotId, newSlotStart);
+        slotCapacityPortDouble.setSlotCampaign(mismatchedSlotId, differentCampaignId);
+
+        Appointment original = bookingService.bookAppointment(citizenId, campaignId, oldSlotId);
+        assertNotNull(original);
+        int oldSlotCapAfterBooking = slotCapacityPortDouble.getAvailableCapacity(oldSlotId); // 4
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> rescheduleService.rescheduleAppointment(original.getId(), citizenId, mismatchedSlotId, now)
+        );
+        assertTrue(ex.getMessage().contains("does not belong to campaign " + campaignId));
+
+        // Verify target slot capacity is NOT reserved (remains 3)
+        assertEquals(3, slotCapacityPortDouble.getAvailableCapacity(mismatchedSlotId));
+
+        // Verify old slot capacity is NOT released (remains 4)
+        assertEquals(oldSlotCapAfterBooking, slotCapacityPortDouble.getAvailableCapacity(oldSlotId));
+
+        // Verify existing appointment entity remains unchanged
+        Appointment reloaded = appointmentRepository.findById(original.getId()).orElseThrow();
+        assertEquals(oldSlotId, reloaded.getSlotId());
+        assertEquals(AppointmentStatus.CONFIRMED, reloaded.getStatus());
     }
 
     @Test

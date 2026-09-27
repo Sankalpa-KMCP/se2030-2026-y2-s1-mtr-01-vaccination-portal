@@ -85,14 +85,57 @@ class AssistantPropertiesValidationTests {
     }
 
     @Test
+    @DisplayName("Gemini configuration validates effective Google API key and default model")
+    void testGeminiConfiguration() {
+        AssistantProperties props = new AssistantProperties();
+        props.setEnabled(true);
+        props.setProvider("gemini");
+
+        // Missing key: not configured
+        assertFalse(props.isConfiguredForLiveProvider());
+
+        // Canonical googleApiKey supplied: model defaults to gemini-flash-latest
+        props.setGoogleApiKey("AIzaSyTestGoogleKey123");
+        assertEquals("gemini-flash-latest", props.getEffectiveModel());
+        assertTrue(props.isConfiguredForLiveProvider());
+
+        // Explicit model overrides default
+        props.setModel("gemini-2.5-flash");
+        assertEquals("gemini-2.5-flash", props.getEffectiveModel());
+        assertTrue(props.isConfiguredForLiveProvider());
+    }
+
+    @Test
+    @DisplayName("Gemini provider strictly rejects OpenAI credentials and fails closed when Google API key is blank")
+    void testGeminiMustNeverReceiveOpenAiCredentials() {
+        AssistantProperties props = new AssistantProperties();
+        props.setEnabled(true);
+        props.setProvider("gemini");
+
+        // Generic OpenAI apiKey is populated, but Google key is blank
+        props.setApiKey("sk-proj-super-secret-openai-key-999");
+        props.setGoogleApiKey("");
+
+        assertEquals("", props.getEffectiveGoogleApiKey(), "Gemini must never fall back to OpenAI apiKey");
+        assertFalse(props.isConfiguredForLiveProvider(), "Gemini must fail closed when Google API key is missing");
+
+        // OpenAI provider configuration remains valid with its own key
+        props.setProvider("openai");
+        props.setModel("gpt-4o");
+        assertTrue(props.isConfiguredForLiveProvider(), "OpenAI provider behavior must remain unchanged");
+    }
+
+    @Test
     @DisplayName("toString() masks the API key and prevents credential leaking")
     void testApiKeyMaskingInToString() {
         AssistantProperties props = new AssistantProperties();
         props.setApiKey("secret-openai-api-key-12345");
+        props.setGoogleApiKey("secret-google-api-key-67890");
         props.setModel("test-model");
 
         String str = props.toString();
         assertFalse(str.contains("secret-openai-api-key-12345"), "API key must be redacted in toString()");
+        assertFalse(str.contains("secret-google-api-key-67890"), "Google API key must be redacted in toString()");
         assertTrue(str.contains("<redacted>"), "toString() should explicitly mark API key as redacted");
     }
 

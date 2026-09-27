@@ -1,7 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function HcoDashboardMetrics({ pendingCount, draftCount, loading }) {
+export default function HcoDashboardMetrics({
+  pendingCount,
+  awaitingQuestionnaireCount,
+  loading,
+}) {
   return (
     <div className="row g-3 mb-3">
       {/* 1. Pending Reviews */}
@@ -47,9 +51,9 @@ export default function HcoDashboardMetrics({ pendingCount, draftCount, loading 
             </div>
             <div className="min-w-0">
               <div className="hco-metric-label text-truncate">Corrections Required</div>
-              <div className="hco-metric-action-label">Review queue</div>
+              <div className="hco-metric-action-label">Awaiting citizen updates</div>
               <div className="hco-metric-link-text">
-                <span>Review submissions</span>
+                <span>Review queue</span>
                 <i className="bi bi-arrow-right" aria-hidden="true" />
               </div>
             </div>
@@ -71,7 +75,7 @@ export default function HcoDashboardMetrics({ pendingCount, draftCount, loading 
             </div>
             <div className="min-w-0">
               <div className="hco-metric-label text-truncate">Eligibility Decisions</div>
-              <div className="hco-metric-action-label">Review queue</div>
+              <div className="hco-metric-action-label">Record decisions</div>
               <div className="hco-metric-link-text">
                 <span>Review screenings</span>
                 <i className="bi bi-arrow-right" aria-hidden="true" />
@@ -82,28 +86,28 @@ export default function HcoDashboardMetrics({ pendingCount, draftCount, loading 
         </Link>
       </div>
 
-      {/* 4. Draft Questionnaires */}
+      {/* 4. Campaigns Awaiting Questionnaire */}
       <div className="col-12 col-sm-6 col-xl-3">
         <Link
-          to="/app/screening/questionnaires"
+          to="/app/screening/questionnaires?tab=campaigns"
           className="hco-metric-card"
-          aria-label="Draft Questionnaires metric, navigate to questionnaires"
+          aria-label="Campaigns Awaiting Questionnaire metric, navigate to campaign assignments"
         >
           <div className="d-flex align-items-center gap-3 min-w-0">
             <div className="hco-metric-icon-container hco-icon-drafts" aria-hidden="true">
-              <i className="bi bi-journal-text" />
+              <i className="bi bi-calendar-check" />
             </div>
             <div className="min-w-0">
-              <div className="hco-metric-label text-truncate">Draft Questionnaires</div>
+              <div className="hco-metric-label text-truncate">Campaigns Awaiting Questionnaire</div>
               <div className="hco-metric-value">
                 {loading ? (
                   <span className="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true" />
                 ) : (
-                  draftCount !== null && draftCount !== undefined ? draftCount : 'Manage'
+                  awaitingQuestionnaireCount ?? 0
                 )}
               </div>
               <div className="hco-metric-link-text">
-                <span>Manage</span>
+                <span>Assign</span>
                 <i className="bi bi-arrow-right" aria-hidden="true" />
               </div>
             </div>

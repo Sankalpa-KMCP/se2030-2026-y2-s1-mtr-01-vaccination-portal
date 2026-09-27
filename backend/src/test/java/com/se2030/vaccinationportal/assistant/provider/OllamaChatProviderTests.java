@@ -107,4 +107,17 @@ class OllamaChatProviderTests {
         assertThat(response.answer()).isEqualTo(OpenAiResponsesProvider.OPERATIONAL_FALLBACK);
         assertThat(response.suggestedActions()).isEmpty();
     }
+    @Test
+    void truncatesAnswersLongerThan1500Characters() {
+        String longText = "A".repeat(1650);
+        String output = String.format("{\"answer\":\"%s\",\"suggestedActions\":[]}", longText);
+
+        AssistantChatResponse response = provider.parseStructuredOutput(output, "request-4", Set.of());
+
+        assertThat(response.answer().length()).isLessThanOrEqualTo(1500);
+        assertThat(response.answer()).endsWith("...");
+
+        AssistantMessageDto history = new AssistantMessageDto("assistant", response.answer());
+        assertThat(history.content()).isEqualTo(response.answer());
+    }
 }

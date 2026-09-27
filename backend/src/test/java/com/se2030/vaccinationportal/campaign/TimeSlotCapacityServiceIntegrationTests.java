@@ -286,6 +286,44 @@ class TimeSlotCapacityServiceIntegrationTests {
     }
 
     @Test
+    @DisplayName("isSlotInCampaign returns true when slot belongs to campaign and session is SCHEDULED")
+    void isSlotInCampaign_trueWhenBelongsAndScheduled() {
+        TimeSlot slot = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 5);
+        slot = timeSlotRepository.save(slot);
+
+        assertTrue(slotCapacityService.isSlotInCampaign(slot.getId(), testCampaign.getId()));
+    }
+
+    @Test
+    @DisplayName("isSlotInCampaign returns false when campaign does not match")
+    void isSlotInCampaign_falseWhenCampaignMismatched() {
+        TimeSlot slot = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 5);
+        slot = timeSlotRepository.save(slot);
+
+        assertFalse(slotCapacityService.isSlotInCampaign(slot.getId(), 999999L));
+    }
+
+    @Test
+    @DisplayName("isSlotInCampaign returns false when slot ID or campaign ID is null or slot not found")
+    void isSlotInCampaign_falseWhenNullOrNotFound() {
+        TimeSlot slot = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 5);
+        slot = timeSlotRepository.save(slot);
+
+        assertFalse(slotCapacityService.isSlotInCampaign(null, testCampaign.getId()));
+        assertFalse(slotCapacityService.isSlotInCampaign(slot.getId(), null));
+        assertFalse(slotCapacityService.isSlotInCampaign(999999L, testCampaign.getId()));
+    }
+
+    @Test
+    @DisplayName("isSlotInCampaign returns false when session is not in SCHEDULED lifecycle status")
+    void isSlotInCampaign_falseWhenSessionNotScheduled() {
+        TimeSlot slot = new TimeSlot(draftSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 5);
+        slot = timeSlotRepository.save(slot);
+
+        assertFalse(slotCapacityService.isSlotInCampaign(slot.getId(), testCampaign.getId()));
+    }
+
+    @Test
     @DisplayName("isSessionFull returns false when at least one slot has available capacity")
     void isSessionFull_falseWhenAtLeastOneSlotHasCapacity() {
         TimeSlot slotA = new TimeSlot(scheduledSession, baseStart, baseStart.plus(1, ChronoUnit.HOURS), 5);

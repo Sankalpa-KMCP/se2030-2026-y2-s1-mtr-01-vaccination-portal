@@ -33,7 +33,7 @@ class VaccinationCenterPersistenceIntegrationTests {
 
     @BeforeEach
     void setUp() {
-        // Clear any previous state if needed (transactional rollback will clean up per test)
+        centerRepository.deleteAll();
     }
 
     @Test

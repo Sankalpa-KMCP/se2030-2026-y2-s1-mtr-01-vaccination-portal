@@ -8,10 +8,9 @@ import { SCREENING_SUBMISSION_STATUS } from '../../constants/screeningConstants'
 
 const screeningApiState = vi.hoisted(() => ({
   queue: [],
-  questionnaires: [],
-  versionsByQuestionnaire: {},
+  campaigns: [],
   queueError: null,
-  questionnairesError: null,
+  campaignsError: null,
 }));
 
 vi.mock('../../api/screeningApi', () => ({
@@ -19,12 +18,12 @@ vi.mock('../../api/screeningApi', () => ({
     if (screeningApiState.queueError) throw screeningApiState.queueError;
     return screeningApiState.queue;
   }),
-  listQuestionnaires: vi.fn(async () => {
-    if (screeningApiState.questionnairesError) throw screeningApiState.questionnairesError;
-    return screeningApiState.questionnaires;
-  }),
-  listQuestionnaireVersions: vi.fn(async (qId) => {
-    return screeningApiState.versionsByQuestionnaire[qId] || [];
+}));
+
+vi.mock('../../../campaign-management/api/campaignApi', () => ({
+  listCampaigns: vi.fn(async () => {
+    if (screeningApiState.campaignsError) throw screeningApiState.campaignsError;
+    return screeningApiState.campaigns;
   }),
 }));
 
@@ -44,10 +43,9 @@ afterEach(() => {
 
 beforeEach(() => {
   screeningApiState.queue = [];
-  screeningApiState.questionnaires = [];
-  screeningApiState.versionsByQuestionnaire = {};
+  screeningApiState.campaigns = [];
   screeningApiState.queueError = null;
-  screeningApiState.questionnairesError = null;
+  screeningApiState.campaignsError = null;
 });
 
 describe('Healthcare Officer Dashboard (HcoDashboardView)', () => {
@@ -113,21 +111,28 @@ describe('Healthcare Officer Dashboard (HcoDashboardView)', () => {
     });
   });
 
-  it('displays draft questionnaire count when available from questionnaires API', async () => {
-    screeningApiState.questionnaires = [
-      { id: 1, name: 'COVID Screening' },
-      { id: 2, name: 'Influenza Screening' },
+  it('counts Campaigns Awaiting Questionnaire strictly from DRAFT campaigns without questionnaireVersionId', async () => {
+    screeningApiState.campaigns = [
+      // 1. DRAFT without questionnaire -> should count
+      { id: 1, name: 'Draft Campaign 1', status: 'DRAFT', questionnaireVersionId: null },
+      // 2. DRAFT without questionnaire -> should count
+      { id: 2, name: 'Draft Campaign 2', status: 'DRAFT', questionnaireVersionId: undefined },
+      // 3. DRAFT with assigned questionnaire -> should NOT count
+      { id: 3, name: 'Draft Campaign 3', status: 'DRAFT', questionnaireVersionId: 42 },
+      // 4. SCHEDULED without questionnaire -> should NOT count
+      { id: 4, name: 'Scheduled Campaign', status: 'SCHEDULED', questionnaireVersionId: null },
+      // 5. ACTIVE without questionnaire -> should NOT count
+      { id: 5, name: 'Active Campaign', status: 'ACTIVE', questionnaireVersionId: null },
+      // 6. COMPLETED -> should NOT count
+      { id: 6, name: 'Completed Campaign', status: 'COMPLETED', questionnaireVersionId: 10 },
     ];
-    screeningApiState.versionsByQuestionnaire = {
-      1: [{ id: 11, status: 'DRAFT' }, { id: 12, status: 'PUBLISHED' }],
-      2: [{ id: 21, status: 'DRAFT' }],
-    };
 
     renderComponent(<HcoDashboardView user={{ fullName: 'HCO' }} />);
 
     await waitFor(() => {
-      const metricCard = screen.getByRole('link', { name: /draft questionnaires metric/i });
+      const metricCard = screen.getByRole('link', { name: /campaigns awaiting questionnaire metric/i });
       expect(within(metricCard).getByText('2')).toBeTruthy();
+      expect(metricCard.getAttribute('href')).toBe('/app/screening/questionnaires?tab=campaigns');
     });
   });
 
@@ -136,10 +141,12 @@ describe('Healthcare Officer Dashboard (HcoDashboardView)', () => {
 
     const correctionsCard = screen.getByRole('link', { name: /corrections required action card/i });
     expect(correctionsCard.getAttribute('href')).toBe('/app/staff/screening/reviews');
-    expect(within(correctionsCard).getByText('Review submissions')).toBeTruthy();
+    expect(within(correctionsCard).getByText('Awaiting citizen updates')).toBeTruthy();
+    expect(within(correctionsCard).getByText('Review queue')).toBeTruthy();
 
     const decisionsCard = screen.getByRole('link', { name: /eligibility decisions action card/i });
     expect(decisionsCard.getAttribute('href')).toBe('/app/staff/screening/reviews');
+    expect(within(decisionsCard).getByText('Record decisions')).toBeTruthy();
     expect(within(decisionsCard).getByText('Review screenings')).toBeTruthy();
 
     // Verify absolutely no fabricated comparison strings exist anywhere
@@ -234,7 +241,7 @@ describe('Healthcare Officer Dashboard (HcoDashboardView)', () => {
 
   it('degrades gracefully when API calls fail without breaking dashboard navigation', async () => {
     screeningApiState.queueError = new Error('Network error');
-    screeningApiState.questionnairesError = new Error('Service down');
+    screeningApiState.campaignsError = new Error('Service down');
 
     renderComponent(<HcoDashboardView user={{ fullName: 'HCO' }} />);
 

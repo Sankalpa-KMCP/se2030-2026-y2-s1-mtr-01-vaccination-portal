@@ -27,6 +27,47 @@ class AssistantProviderSelectionTests {
     }
 
     @Test
+    void selectsGeminiWithGoogleApiKey() {
+        AssistantProperties properties = new AssistantProperties();
+        properties.setEnabled(true);
+        properties.setProvider("gemini");
+        properties.setGoogleApiKey("AIzaSyTestFakeGoogleKeyForSelectionTest");
+
+        AiResponseProvider provider = config.aiResponseProvider(properties);
+
+        assertThat(provider).isInstanceOf(com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider.class);
+        assertThat(provider.isAvailable()).isTrue();
+    }
+
+    @Test
+    void geminiWithoutApiKeyFailsClosedToDisabledProvider() {
+        AssistantProperties properties = new AssistantProperties();
+        properties.setEnabled(true);
+        properties.setProvider("gemini");
+        properties.setGoogleApiKey("");
+        properties.setApiKey("");
+
+        AiResponseProvider provider = config.aiResponseProvider(properties);
+
+        assertThat(provider).isInstanceOf(DisabledAiResponseProvider.class);
+        assertThat(provider.isAvailable()).isFalse();
+    }
+
+    @Test
+    void geminiWithOnlyOpenAiApiKeyFailsClosedToDisabledProvider() {
+        AssistantProperties properties = new AssistantProperties();
+        properties.setEnabled(true);
+        properties.setProvider("gemini");
+        properties.setGoogleApiKey("");
+        properties.setApiKey("sk-proj-only-openai-key-present");
+
+        AiResponseProvider provider = config.aiResponseProvider(properties);
+
+        assertThat(provider).isInstanceOf(DisabledAiResponseProvider.class);
+        assertThat(provider.isAvailable()).isFalse();
+    }
+
+    @Test
     void unsupportedOrRemoteProviderConfigurationFailsClosed() {
         AssistantProperties properties = new AssistantProperties();
         properties.setEnabled(true);
