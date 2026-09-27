@@ -17,6 +17,7 @@ import com.se2030.vaccinationportal.assistant.dto.AssistantActionDto;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatRequest;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
 import com.se2030.vaccinationportal.assistant.dto.AssistantMessageDto;
+import com.se2030.vaccinationportal.assistant.exception.AssistantProviderException;
 import com.se2030.vaccinationportal.assistant.exception.AssistantTimeoutException;
 import com.se2030.vaccinationportal.assistant.policy.AssistantRefusalPolicy;
 import com.se2030.vaccinationportal.assistant.policy.AssistantRouteCatalog;
@@ -176,8 +177,24 @@ public class GeminiResponseProvider implements AiResponseProvider, AutoCloseable
 
         String model = properties.getEffectiveModel();
 
-        CompletableFuture<GenerateContentResponse> future =
-                contentGenerator.generateContent(model, contents, config);
+        CompletableFuture<GenerateContentResponse> future;
+        try {
+            future = contentGenerator.generateContent(model, contents, config);
+            if (future == null) {
+                log.error("Gemini assistant provider returned null future for requestId: {}", requestId);
+                throw new AssistantProviderException("Assistant provider request failed");
+            }
+        } catch (AssistantProviderException | AssistantTimeoutException ex) {
+            throw ex;
+        } catch (Throwable t) {
+            if (isTimeout(t)) {
+                log.warn("Gemini assistant provider timeout occurred for requestId: {}", requestId);
+                throw new AssistantTimeoutException("Assistant provider request timed out");
+            }
+            log.error("Gemini assistant provider error occurred for requestId: {}, errorType: {}",
+                    requestId, t.getClass().getSimpleName());
+            throw new AssistantProviderException("Assistant provider request failed");
+        }
 
         try {
             GenerateContentResponse response = future.get(properties.getTimeout().toMillis(), TimeUnit.MILLISECONDS);

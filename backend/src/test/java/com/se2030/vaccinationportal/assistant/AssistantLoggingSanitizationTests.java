@@ -233,4 +233,95 @@ class AssistantLoggingSanitizationTests {
             geminiLogger.detachAppender(listAppender);
         }
     }
+
+    @Test
+    void geminiSynchronousFailure_doesNotLogUpstreamDiagnosticsOrSensitiveMarkers_andPropagatesSanitizedDomainException() throws Exception {
+        Logger geminiLogger = (Logger) LoggerFactory.getLogger(com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider.class);
+        Logger handlerLogger = (Logger) LoggerFactory.getLogger(com.se2030.vaccinationportal.assistant.controller.AssistantExceptionHandler.class);
+        geminiLogger.addAppender(listAppender);
+        handlerLogger.addAppender(listAppender);
+
+        try {
+            AssistantProperties properties = new AssistantProperties();
+            properties.setEnabled(true);
+            properties.setProvider("gemini");
+            properties.setGoogleApiKey("AIzaSyTestKey");
+
+            String sensitiveMarker = "SECRET_SYNC_GEMINI_DETAIL_456";
+            RuntimeException rootCause = new RuntimeException("Raw upstream connection dump: " + sensitiveMarker);
+            RuntimeException syncException = new RuntimeException("Synchronous SDK exception: " + sensitiveMarker, rootCause);
+
+            com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider provider =
+                    new com.se2030.vaccinationportal.assistant.provider.GeminiResponseProvider(
+                            properties,
+                            (model, contents, config) -> {
+                                throw syncException;
+                            },
+                            new com.fasterxml.jackson.databind.ObjectMapper()
+                    );
+
+            // 1. Direct provider boundary check:
+            // - Marker does not appear in Gemini provider logs
+            // - Marker does not appear in propagated exception message
+            // - Propagated exception does not retain raw SDK exception as cause
+            assertThatThrownBy(() -> provider.generateResponse(
+                    new AssistantChatRequest("test message", List.of(), "/"),
+                    "sys",
+                    "req-gemini-sync-test",
+                    Set.of()
+            ))
+                    .isInstanceOf(AssistantProviderException.class)
+                    .hasMessage("Assistant provider request failed")
+                    .hasNoCause();
+
+            // 2. Controller-advice safety check:
+            // Wire full service, controller, and AssistantExceptionHandler with MockMvc
+            AssistantRateLimiter rateLimiter = mock(AssistantRateLimiter.class);
+            when(rateLimiter.tryAcquire(anyString(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(true);
+
+            AssistantService service = new AssistantService(provider, rateLimiter);
+            com.se2030.vaccinationportal.assistant.controller.AssistantController controller =
+                    new com.se2030.vaccinationportal.assistant.controller.AssistantController(service);
+
+            org.springframework.test.web.servlet.MockMvc mockMvc =
+                    org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
+                            .setControllerAdvice(new com.se2030.vaccinationportal.assistant.controller.AssistantExceptionHandler())
+                            .build();
+
+            org.springframework.test.web.servlet.MvcResult mvcResult = mockMvc.perform(
+                            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/assistant/messages")
+                                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                                    .content("{\"message\":\"Hello\",\"history\":[]}"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadGateway())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.status").value(502))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("PROVIDER_UNAVAILABLE"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message").value("The assistant service is temporarily unavailable. Please try again later."))
+                    .andReturn();
+
+            // 3. Verify externally returned error body remains generic/safe and does not leak marker
+            String responseBody = mvcResult.getResponse().getContentAsString();
+            assertThat(responseBody).doesNotContain(sensitiveMarker);
+            assertThat(responseBody).doesNotContain("Synchronous SDK exception");
+            assertThat(responseBody).doesNotContain("Raw upstream connection dump");
+
+            // 4. Verify all captured logs across provider, service, and controller advice do NOT contain the sensitive marker or raw exception
+            List<String> logMessages = listAppender.list.stream()
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .toList();
+
+            assertThat(logMessages).isNotEmpty();
+            for (String msg : logMessages) {
+                assertThat(msg).doesNotContain(sensitiveMarker);
+                assertThat(msg).doesNotContain("Synchronous SDK exception");
+                assertThat(msg).doesNotContain("Raw upstream connection dump");
+            }
+
+            for (ILoggingEvent event : listAppender.list) {
+                assertThat(event.getThrowableProxy()).isNull();
+            }
+        } finally {
+            geminiLogger.detachAppender(listAppender);
+            handlerLogger.detachAppender(listAppender);
+        }
+    }
 }

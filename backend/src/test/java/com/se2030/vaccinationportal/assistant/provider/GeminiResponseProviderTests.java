@@ -12,6 +12,7 @@ import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatRequest;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
 import com.se2030.vaccinationportal.assistant.dto.AssistantMessageDto;
+import com.se2030.vaccinationportal.assistant.exception.AssistantProviderException;
 import com.se2030.vaccinationportal.assistant.exception.AssistantTimeoutException;
 import com.se2030.vaccinationportal.assistant.policy.AssistantRefusalPolicy;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -769,5 +770,111 @@ class GeminiResponseProviderTests {
         assertEquals(2, hcoResponse.suggestedActions().size(), "Screening routes must be retained for Healthcare Officer");
         assertEquals("/app/staff/screening/reviews", hcoResponse.suggestedActions().get(0).path());
         assertEquals("/app/screening/questions", hcoResponse.suggestedActions().get(1).path());
+    }
+
+    @Test
+    @DisplayName("Scenario 24: Synchronous exception in generateContent is sanitized and does not leak sensitive details")
+    void testSynchronousException_sanitizedAndDoesNotLeakSensitiveDetails() {
+        Logger providerLogger = (Logger) LoggerFactory.getLogger(GeminiResponseProvider.class);
+        ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        listAppender.start();
+        providerLogger.addAppender(listAppender);
+
+        try {
+            String sensitiveMarker = "SECRET_SYNC_GEMINI_DETAIL_456";
+            RuntimeException rootCause = new RuntimeException("Nested root failure with " + sensitiveMarker);
+            RuntimeException syncException = new RuntimeException("Synchronous Google SDK error: " + sensitiveMarker, rootCause);
+
+            GeminiResponseProvider provider = new GeminiResponseProvider(
+                    properties,
+                    (model, contents, config) -> {
+                        throw syncException;
+                    },
+                    objectMapper
+            );
+
+            AssistantProviderException thrown = assertThrows(
+                    AssistantProviderException.class,
+                    () -> provider.generateResponse(
+                            new AssistantChatRequest("test sync failure", Collections.emptyList()),
+                            "sys",
+                            "req-sync-fail",
+                            Collections.emptySet()
+                    )
+            );
+
+            // 1. Marker does not appear in propagated exception message
+            assertNotNull(thrown.getMessage());
+            assertFalse(thrown.getMessage().contains(sensitiveMarker), "Exception message must not contain sensitive marker");
+            assertFalse(thrown.getMessage().contains("Synchronous Google SDK error"));
+            assertEquals("Assistant provider request failed", thrown.getMessage());
+
+            // 2. Propagated exception does not retain the raw SDK/runtime exception as cause
+            assertNull(thrown.getCause(), "Propagated exception must not retain raw SDK exception as cause");
+
+            // 3. Marker does not appear in Gemini provider logs
+            List<String> logMessages = listAppender.list.stream()
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .toList();
+
+            assertFalse(logMessages.isEmpty(), "Error log event must be recorded for provider failure");
+
+            for (ILoggingEvent event : listAppender.list) {
+                String formatted = event.getFormattedMessage();
+                assertFalse(formatted.contains(sensitiveMarker), "Log message must not contain sensitive marker");
+                assertFalse(formatted.contains("Synchronous Google SDK error"), "Log message must not contain raw error message");
+                assertNull(event.getThrowableProxy(), "Throwable proxy must not be passed to logger");
+            }
+        } finally {
+            providerLogger.detachAppender(listAppender);
+            listAppender.stop();
+        }
+    }
+
+    @Test
+    @DisplayName("Scenario 25: Synchronous timeout in generateContent is sanitized and throws AssistantTimeoutException without cause")
+    void testSynchronousTimeout_sanitizedAndThrowsAssistantTimeoutExceptionWithoutCause() {
+        Logger providerLogger = (Logger) LoggerFactory.getLogger(GeminiResponseProvider.class);
+        ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        listAppender.start();
+        providerLogger.addAppender(listAppender);
+
+        try {
+            String sensitiveMarker = "SECRET_TIMEOUT_TOKEN_789";
+            java.net.SocketTimeoutException timeoutException =
+                    new java.net.SocketTimeoutException("Connection timed out: " + sensitiveMarker);
+
+            GeminiResponseProvider provider = new GeminiResponseProvider(
+                    properties,
+                    (model, contents, config) -> {
+                        throw new RuntimeException("Wrapped timeout", timeoutException);
+                    },
+                    objectMapper
+            );
+
+            AssistantTimeoutException thrown = assertThrows(
+                    AssistantTimeoutException.class,
+                    () -> provider.generateResponse(
+                            new AssistantChatRequest("test sync timeout", Collections.emptyList()),
+                            "sys",
+                            "req-sync-timeout",
+                            Collections.emptySet()
+                    )
+            );
+
+            assertNotNull(thrown.getMessage());
+            assertFalse(thrown.getMessage().contains(sensitiveMarker));
+            assertEquals("Assistant provider request timed out", thrown.getMessage());
+            assertNull(thrown.getCause(), "Timeout exception must not retain raw cause");
+
+            for (ILoggingEvent event : listAppender.list) {
+                String formatted = event.getFormattedMessage();
+                assertFalse(formatted.contains(sensitiveMarker));
+                assertNull(event.getThrowableProxy());
+            }
+        } finally {
+            providerLogger.detachAppender(listAppender);
+            listAppender.stop();
+        }
     }
 }
