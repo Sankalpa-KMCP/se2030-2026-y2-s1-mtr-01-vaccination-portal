@@ -92,6 +92,18 @@ public final class AssistantKnowledgeCatalog {
                 "src/auth/pages/AdminDashboardPage.jsx / PendingStaffRequestsPage.jsx"
         ));
 
+        list.add(new AssistantKnowledgeEntry(
+                "STAFF_ONBOARDING",
+                "SHARED",
+                "Staff Getting Started Guide",
+                Set.of("new staff", "staff dashboard", "getting started", "my role", "what can i do", "staff help", "staff guide"),
+                "Signed-in staff can use the Staff Dashboard as their starting point. The assistant can explain role-authorized workflows, show the verified account's staff profile and center-roster association, and summarize current or upcoming session assignments. It remains read-only and cannot approve, assign, check in, or alter records.",
+                false,
+                AssistantRouteCatalog.STAFF_DASHBOARD_ROLES,
+                List.of("/app/staff"),
+                "src/auth/pages/StaffDashboardPage.jsx / assistant read-only staff tools"
+        ));
+
         // -------------------------------------------------------------
         // MF-02: CAMPAIGN, CENTER & SESSION MANAGEMENT
         // -------------------------------------------------------------

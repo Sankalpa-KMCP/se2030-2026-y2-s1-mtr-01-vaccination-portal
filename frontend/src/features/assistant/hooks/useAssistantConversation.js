@@ -34,6 +34,7 @@ export const SUGGESTED_QUESTIONS = [
 
 export const STAFF_SUGGESTED_QUESTIONS = [
   'What is my staff profile?',
+  'What should I do today?',
   'Which center am I assigned to?',
   'What is my staff role?',
   'How do I use the staff dashboard?',

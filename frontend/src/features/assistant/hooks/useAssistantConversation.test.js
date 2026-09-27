@@ -90,6 +90,7 @@ describe('useAssistantConversation', () => {
 
     expect(result.current.suggestedQuestions).toEqual(STAFF_SUGGESTED_QUESTIONS);
     expect(result.current.suggestedQuestions).toContain('What is my staff profile?');
+    expect(result.current.suggestedQuestions).toContain('What should I do today?');
     expect(result.current.suggestedQuestions).toContain('Which center am I assigned to?');
   });
 
