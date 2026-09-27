@@ -27,6 +27,7 @@ Spring AssistantController (/api/v1/assistant/messages)
     │      └── Grounded repository documentation, MF-01..MF-05 capabilities & routes
     │
     ├── 5. Selected Backend Provider (AiResponseProvider)
+    │      ├── GeminiResponseProvider (server-side Google Gen AI SDK)
     │      ├── OpenAiResponsesProvider (server-side API key)
     │      └── OllamaChatProvider (free local model; loopback only)
     │
@@ -189,6 +190,28 @@ echo
 > - Never hardcode or echo `OPENAI_API_KEY` into shell configuration files (`.zshrc`), scripts, or commits.
 > - Do not include a real API key in `.env.example` or documentation.
 > - `OPENAI_API_KEY` is strictly server-side and must never be provided to the frontend.
+
+### Step 2C: Google Gemini Provider (Official Google Gen AI Java SDK)
+
+To configure the Google Gemini provider using Google AI Studio / Gemini Developer API keys, use a hidden terminal prompt (`read -s`) to export your API key without echoing to history:
+
+```zsh
+# Enable the assistant and select the Gemini provider
+export AI_ASSISTANT_ENABLED="true"
+export AI_ASSISTANT_PROVIDER="gemini"
+
+# Optional: override default model (defaults to gemini-flash-latest)
+export AI_ASSISTANT_MODEL="gemini-flash-latest"
+
+# Securely input Google API key (canonical GOOGLE_API_KEY, fallback GEMINI_API_KEY)
+read -s "GOOGLE_API_KEY?Google AI Studio / Gemini API key: "
+export GOOGLE_API_KEY
+echo
+```
+
+> **IMPORTANT**:
+> - Never commit `GOOGLE_API_KEY` or `GEMINI_API_KEY` to Git or expose it to frontend code.
+> - The provider uses Google's official Java SDK (`com.google.genai:google-genai:1.57.0`) and requires only server-side configuration.
 
 ---
 

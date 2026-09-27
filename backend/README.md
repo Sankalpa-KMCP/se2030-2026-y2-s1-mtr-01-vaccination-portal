@@ -135,10 +135,10 @@ The backend provides a secure, rate-limited, read-only conversational assistant 
 #### Core Capabilities & Boundaries
 
 - **Disabled by default**: `AI_ASSISTANT_ENABLED` defaults to `false`. The portal starts and operates completely normally when the AI assistant is disabled.
-- **Selectable provider**: Use the OpenAI Responses API or a free local Ollama model without changing the frontend or assistant security pipeline.
-- **Backend-only secret**: When OpenAI is selected, `OPENAI_API_KEY` is strictly server-side. It is never exposed to the frontend or committed to version control. Ollama mode requires no API key.
-- **Test isolation**: Automated test suites use a deterministic fake provider (`DeterministicFakeAiResponseProvider`) and **never make live requests to OpenAI**.
-- **Deterministic safety policy**: Pre-evaluates clinical and mutation boundaries, immediately refusing medical diagnosis, prescription advice, and database modification requests.
+- **Selectable provider**: Use Google Gemini (official Google Gen AI Java SDK), OpenAI Responses API, or a free local Ollama model without changing the frontend or assistant security pipeline.
+- **Backend-only secret**: When OpenAI or Gemini is selected, `OPENAI_API_KEY` or `GOOGLE_API_KEY` is strictly server-side. It is never exposed to the frontend or committed to version control. Ollama mode requires no API key.
+- **Test isolation**: Automated test suites use deterministic fake/mock providers (`DeterministicFakeAiResponseProvider`, mock `GeminiContentGenerator`) and **never make live requests to external AI APIs**.
+- **Deterministic safety policy**: Pre-evaluates clinical, emergency (multilingual Sinhala, Tamil, English), and mutation boundaries, immediately refusing medical diagnosis, prescription advice, and database modification requests.
 - **Authorized read-only citizen tools**:
   1. `MyAppointmentsAssistantTool`: Returns only the appointment category requested (upcoming, past, check-in, waitlist, or combined status), with campaign/center details and authoritative MF-02 times formatted for Sri Lanka. Queue position uses a database count query and never loads another citizen's queue record into assistant context.
   2. `MyEligibilityAssistantTool`: Retrieves recorded eligibility assessments (campaign ID, status (`ELIGIBLE`, `INELIGIBLE`, `EXPIRED`, `REVOKED`), reviewed time, validity time, and lifecycle state; up to 5 campaigns) for the authenticated citizen without making clinical determinations.
@@ -163,8 +163,10 @@ When deploying behind a trusted reverse proxy (e.g., NGINX, Cloudflare, AWS Appl
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `AI_ASSISTANT_ENABLED` | `false` | Enables the AI assistant (`true` or `false`). |
-| `AI_ASSISTANT_PROVIDER` | `openai` | Provider implementation: `openai` or `ollama`. |
-| `AI_ASSISTANT_MODEL` | *(empty)* | Model used by the selected provider. Takes precedence over legacy `OPENAI_MODEL`. |
+| `AI_ASSISTANT_PROVIDER` | `openai` | Provider implementation: `openai`, `ollama`, or `gemini`. |
+| `AI_ASSISTANT_MODEL` | *(empty)* | Model used by the selected provider (for Gemini, defaults to `gemini-flash-latest`). |
+| `GOOGLE_API_KEY` | *(empty)* | Canonical Google Gemini Developer / AI Studio API key (server-side only). |
+| `GEMINI_API_KEY` | *(empty)* | Fallback environment variable for Google Gemini API key. |
 | `OPENAI_API_KEY` | *(empty)* | Official OpenAI API secret key. Must remain server-side. |
 | `OPENAI_MODEL` | *(empty)* | Legacy OpenAI-only model setting. |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama endpoint. Non-loopback URLs are rejected to protect authorized context. |
