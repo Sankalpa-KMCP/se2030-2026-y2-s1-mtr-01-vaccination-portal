@@ -47,9 +47,18 @@ const campaignConfigMocks = vi.hoisted(() => ({
   getQuestionnaireVersions: vi.fn(),
 }));
 
+const authMocks = vi.hoisted(() => ({
+  currentUser: { id: 99, email: 'officer@example.com', roles: ['ROLE_HEALTHCARE_OFFICER'] },
+}));
+
 vi.mock('../api/screeningApi', () => apiMocks);
 vi.mock('../../campaign-management/api/campaignApi', () => campaignApiMocks);
 vi.mock('../../campaign-management/api/campaignConfigurationApi', () => campaignConfigMocks);
+vi.mock('../../../auth/context/AuthContext', () => ({
+  useAuth: () => ({
+    user: authMocks.currentUser,
+  }),
+}));
 
 import ScreeningQuestionnairesPage from './ScreeningQuestionnairesPage';
 
@@ -133,6 +142,7 @@ function fillOption(row, { code, label, typedValue }) {
 describe('ScreeningQuestionnairesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authMocks.currentUser = { id: 99, email: 'officer@example.com', roles: ['ROLE_HEALTHCARE_OFFICER'] };
     apiMocks.listQuestionnaires.mockResolvedValue([questionnaire]);
     apiMocks.getQuestionnaire.mockResolvedValue(questionnaire);
     apiMocks.listQuestions.mockResolvedValue([ageQuestion, travelQuestion]);
@@ -707,6 +717,47 @@ describe('ScreeningQuestionnairesPage', () => {
       });
 
       expect(await screen.findByText('Screening questionnaire assigned successfully.')).toBeTruthy();
+    });
+
+    it('hides assignment buttons for Super Admin and shows placeholder dash', async () => {
+      authMocks.currentUser = {
+        id: 1,
+        email: 'superadmin@example.com',
+        roles: ['ROLE_SUPER_ADMIN'],
+      };
+
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Campaign Assignments' }));
+
+      // Draft rows should not have action buttons
+      const draftNoQRow = (await screen.findByText('Draft Campaign Without Q')).closest('tr');
+      expect(within(draftNoQRow).getByText('Not assigned yet')).toBeTruthy();
+      expect(within(draftNoQRow).queryByRole('button', { name: 'Assign Questionnaire' })).toBeNull();
+      expect(within(draftNoQRow).getByText('—')).toBeTruthy();
+
+      const draftWithQRow = screen.getByText('Draft Campaign With Q').closest('tr');
+      expect(within(draftWithQRow).getByText('Adult Screening')).toBeTruthy();
+      expect(within(draftWithQRow).queryByRole('button', { name: 'Change' })).toBeNull();
+      expect(within(draftWithQRow).getByText('—')).toBeTruthy();
+
+      // Active campaign still shows locked badge
+      const activeRow = screen.getByText('Active Campaign').closest('tr');
+      expect(within(activeRow).getByText('Assignment locked (ACTIVE)')).toBeTruthy();
+    });
+
+    it('hides assignment buttons for Admin user without Healthcare Officer role', async () => {
+      authMocks.currentUser = {
+        id: 2,
+        email: 'admin@example.com',
+        roles: ['ROLE_ADMIN'],
+      };
+
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Campaign Assignments' }));
+
+      const draftNoQRow = (await screen.findByText('Draft Campaign Without Q')).closest('tr');
+      expect(within(draftNoQRow).queryByRole('button', { name: 'Assign Questionnaire' })).toBeNull();
+      expect(within(draftNoQRow).getByText('—')).toBeTruthy();
     });
   });
 });

@@ -350,16 +350,6 @@
 .auth-access-section > header p { margin: 0; color: var(--auth-muted); font-size: 0.72rem; }
 .auth-access-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
 
-.auth-access-card { border: 1px solid var(--auth-line); border-radius: 10px; background: white; transition: border-color 180ms ease, box-shadow 220ms ease, transform 220ms var(--auth-ease); }
-.auth-access-card:hover { border-color: #aab5b1; box-shadow: 0 10px 24px rgba(19, 33, 38, 0.07); transform: translateY(-2px); }
-.auth-access-card > a { display: grid; grid-template-columns: 38px minmax(0, 1fr) 18px; gap: 0.8rem; align-items: center; min-height: 76px; padding: 0.75rem; color: var(--auth-ink); text-decoration: none; }
-.auth-access-card__icon { display: grid; width: 38px; height: 38px; place-items: center; color: var(--auth-accent); border-radius: 8px; background: #edf5f3; }
-.auth-access-card__copy { display: grid; gap: 0.15rem; min-width: 0; }
-.auth-access-card__copy b { font-size: 0.8rem; font-weight: 680; }
-.auth-access-card__copy small { overflow: hidden; color: var(--auth-muted); font-size: 0.65rem; text-overflow: ellipsis; white-space: nowrap; }
-.auth-access-card svg:last-child { color: #7f8d89; transition: transform 200ms var(--auth-ease); }
-.auth-access-card:hover svg:last-child { transform: translateX(3px); }
-
 .auth-registration-links { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; margin-top: 1.15rem; color: var(--auth-muted); font-size: 0.7rem; }
 .auth-registration-links a { color: var(--auth-accent); font-weight: 650; text-decoration: none; }
 .auth-registration-links a:hover { text-decoration: underline; }
@@ -544,7 +534,6 @@
   .auth-form-group { margin-bottom: 0.95rem; }
   .auth-form-group:not(:first-of-type) { padding-top: 0.8rem; }
   .auth-form-group__legend { margin-bottom: 0.7rem; font-size: 0.64rem; }
-  .auth-access-card > a { min-height: 70px; }
   .auth-next-step > div { align-items: flex-start; flex-direction: column; gap: 0.55rem; }
   .auth-panel__footer a:last-child { width: 100%; margin: 0.35rem 0 0; }
 }
@@ -561,11 +550,9 @@
   }
 
   .auth-route-layer,
-  .auth-primary-action,
-  .auth-access-card { transform: none !important; }
+  .auth-primary-action { transform: none !important; }
 }
 
 @media (hover: none) {
-  .auth-access-card:hover,
   .auth-primary-action:hover { transform: none; }
 }

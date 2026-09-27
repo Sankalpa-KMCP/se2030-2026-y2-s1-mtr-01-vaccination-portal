@@ -43,6 +43,8 @@ import {
   getPublishedQuestionnaireVersions,
 } from '../../campaign-management/api/campaignConfigurationApi';
 import QuestionnaireAssignmentFormModal from '../../campaign-management/components/QuestionnaireAssignmentFormModal';
+import { useAuth } from '../../../auth/context/AuthContext';
+import { canManageQuestionnaireAssignments } from '../../../auth/utils/roleUtils';
 import { parseEligibilityRuleExpression } from '../utils/eligibilityRuleExpression';
 import {
   PRELIMINARY_SCREENING_RESULT_LABELS,
@@ -63,6 +65,9 @@ function sortRules(rules = []) {
 }
 
 export default function ScreeningQuestionnairesPage() {
+  const { user } = useAuth();
+  const canManageAssignments = canManageQuestionnaireAssignments(user);
+
   const [questionnaires, setQuestionnaires] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,7 +141,7 @@ export default function ScreeningQuestionnairesPage() {
   }, [activeTab]);
 
   const handleAssignSubmit = async (payload) => {
-    if (!selectedCampaignForAssignment) return;
+    if (!selectedCampaignForAssignment || !canManageAssignments) return;
     setAssignmentLoading(true);
     setAssignmentError(null);
     try {
@@ -924,7 +929,7 @@ export default function ScreeningQuestionnairesPage() {
                             )}
                           </td>
                           <td className="text-end">
-                            {isDraftStatus ? (
+                            {canManageAssignments && isDraftStatus ? (
                               camp.questionnaireVersionId ? (
                                 <button
                                   type="button"
@@ -948,10 +953,12 @@ export default function ScreeningQuestionnairesPage() {
                                   Assign Questionnaire
                                 </button>
                               )
-                            ) : (
+                            ) : !isDraftStatus ? (
                               <span className="small text-muted">
                                 Assignment locked ({camp.status})
                               </span>
+                            ) : (
+                              <span className="small text-muted">—</span>
                             )}
                           </td>
                         </tr>
@@ -996,7 +1003,7 @@ export default function ScreeningQuestionnairesPage() {
         onSubmit={handleReplaceItem}
       />
 
-      {selectedCampaignForAssignment && (
+      {canManageAssignments && selectedCampaignForAssignment && (
         <QuestionnaireAssignmentFormModal
           campaign={selectedCampaignForAssignment}
           currentAssignment={
