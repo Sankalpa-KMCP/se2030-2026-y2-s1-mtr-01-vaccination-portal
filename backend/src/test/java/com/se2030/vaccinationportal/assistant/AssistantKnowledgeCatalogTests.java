@@ -364,4 +364,37 @@ class AssistantKnowledgeCatalogTests {
         assertTrue(refusal.isPresent());
         assertThat(refusal.get().answer()).contains("cannot provide medical advice, symptom diagnoses");
     }
+
+    @Test
+    @DisplayName("Citizen registration knowledge entry accurately reflects registration fields, pending verification status, and email verification requirement")
+    void testCitizenRegistrationKnowledgeGrounding() {
+        AssistantKnowledgeEntry entry = AssistantKnowledgeCatalog.ALL_ENTRIES.stream()
+                .filter(e -> "CITIZEN_REGISTRATION".equals(e.id()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("CITIZEN_REGISTRATION entry missing in catalog"));
+
+        String explanation = entry.explanation();
+
+        // Must not claim NIC is required for citizen registration
+        assertThat(explanation).doesNotContain("NIC");
+        assertThat(explanation).doesNotContain("National Identity Card");
+
+        // Must not claim immediate activation
+        assertThat(explanation).doesNotContain("immediately active");
+        assertThat(explanation).doesNotContain("immediately can sign in");
+
+        // Must reflect email verification requirement and pending status
+        assertThat(explanation).containsIgnoringCase("email verification");
+        assertThat(explanation).containsIgnoringCase("pending verification");
+
+        // Must describe only supported registration fields
+        assertThat(explanation).containsIgnoringCase("full name");
+        assertThat(explanation).containsIgnoringCase("email");
+        assertThat(explanation).containsIgnoringCase("phone number");
+        assertThat(explanation).containsIgnoringCase("password");
+
+        // Must retain correct public routes and visibility
+        assertTrue(entry.isPublic());
+        assertThat(entry.relevantRoutes()).containsExactly("/register/citizen", "/login");
+    }
 }

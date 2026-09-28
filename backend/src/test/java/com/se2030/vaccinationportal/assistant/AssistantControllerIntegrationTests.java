@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -401,5 +402,48 @@ class AssistantControllerIntegrationTests {
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.status").value(503))
                 .andExpect(jsonPath("$.code").value("ASSISTANT_DISABLED"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/assistant/messages grounds citizen registration query with accurate verification flow and routes without NIC")
+    void testCitizenRegistrationGroundingContext() throws Exception {
+        fakeProvider.setCannedAnswer("To register as a citizen, provide your full name, email, phone number, and password, then verify your email address before signing in.");
+        fakeProvider.setCannedActions(List.of(
+                new AssistantActionDto("Register Citizen Account", "/register/citizen"),
+                new AssistantActionDto("Sign In", "/login")
+        ));
+
+        AssistantChatRequest request = new AssistantChatRequest(
+                "How can I register as a citizen on the portal?",
+                Collections.emptyList(),
+                "/register/citizen"
+        );
+
+        mockMvc.perform(post("/api/v1/assistant/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value(containsString("verify your email address before signing in")))
+                .andExpect(jsonPath("$.answer").value(not(containsString("NIC"))))
+                .andExpect(jsonPath("$.answer").value(not(containsString("immediately active"))))
+                .andExpect(jsonPath("$.suggestedActions", hasSize(2)))
+                .andExpect(jsonPath("$.suggestedActions[0].path").value("/register/citizen"))
+                .andExpect(jsonPath("$.suggestedActions[1].path").value("/login"));
+
+        assertEquals(1, fakeProvider.getRecordedSystemInstructions().size());
+        String systemInstruction = fakeProvider.getRecordedSystemInstructions().get(0);
+
+        // Grounding context passed to provider must be accurate
+        assertThat(systemInstruction).contains("Citizen Account Registration");
+        assertThat(systemInstruction).contains("pending verification");
+        assertThat(systemInstruction).contains("email verification");
+        assertThat(systemInstruction).contains("/register/citizen");
+        assertThat(systemInstruction).contains("/login");
+
+        // Grounding context must NOT claim NIC or immediate activation
+        assertThat(systemInstruction).doesNotContain("NIC");
+        assertThat(systemInstruction).doesNotContain("National Identity Card");
+        assertThat(systemInstruction).doesNotContain("immediately active");
+        assertThat(systemInstruction).doesNotContain("immediately can sign in");
     }
 }

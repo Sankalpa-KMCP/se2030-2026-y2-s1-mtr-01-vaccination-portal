@@ -37,11 +37,11 @@ public final class AssistantKnowledgeCatalog {
                 "MF-01",
                 "Citizen Account Registration",
                 Set.of("register", "registration", "citizen sign up", "create account", "new citizen", "register as citizen"),
-                "Citizens register self-service accounts by providing full name, National Identity Card (NIC), email, mobile number, and password. Once registered, accounts are immediately active and can sign in.",
+                "Citizens register self-service accounts by providing full name, email, phone number, and password. Newly created accounts are in pending verification status and require email verification via a sent verification link before signing in.",
                 true,
                 Set.of(AssistantRouteCatalog.ROLE_CITIZEN),
                 List.of("/register/citizen", "/login"),
-                "src/auth/pages/CitizenRegistrationPage.jsx / CitizenRegistrationController"
+                "src/auth/pages/CitizenRegistrationPage.jsx / AuthController"
         ));
 
         list.add(new AssistantKnowledgeEntry(
