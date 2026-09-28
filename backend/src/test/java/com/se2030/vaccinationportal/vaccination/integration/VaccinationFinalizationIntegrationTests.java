@@ -36,6 +36,7 @@ import com.se2030.vaccinationportal.inventory.repository.StockTransactionReposit
 import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
 import com.se2030.vaccinationportal.vaccination.dto.FinalizeVaccinationResponse;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationBatchVaccineTypeMismatchException;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
@@ -229,6 +230,55 @@ class VaccinationFinalizationIntegrationTests {
         // 5. Verify Draft transitioned to FINALIZED
         VaccinationDraft updatedDraft = draftRepository.findById(draft.getId()).orElseThrow();
         assertEquals(VaccinationDraftStatus.FINALIZED, updatedDraft.getStatus());
+    }
+
+    @Test
+    void mismatchedBatchVaccineType_abortsFinalizationBeforeAnyIrreversibleStep() {
+        // A batch of an unrelated vaccine type must never finalize: no record, no stock deduction,
+        // no appointment completion, no certificate (R02 regression).
+        VaccineType otherType = vaccineTypeRepository.save(new VaccineType(
+                "VT-OTHER-" + UUID.randomUUID().toString().substring(0, 8), "Other Vaccine"));
+        Manufacturer manufacturer = manufacturerRepository.save(new Manufacturer(
+                "MF-OTHER-" + UUID.randomUUID().toString().substring(0, 8), "Other Maker"));
+        VaccineBatch unrelatedBatch = batchRepository.save(new VaccineBatch(
+                manufacturer.getId(), otherType.getId(), "BATCH-OTHER-" + UUID.randomUUID().toString().substring(0, 8),
+                LocalDate.now().minusDays(10), LocalDate.now().plusMonths(12),
+                BatchStatus.ACTIVE
+        ));
+        centerInventoryRepository.save(new CenterInventory(center.getId(), unrelatedBatch.getId(), 5));
+
+        VaccinationDraft draft = new VaccinationDraft(appointment.getId());
+        draft.setVaccinatorId(501L);
+        draft.setVaccineBatchId(unrelatedBatch.getId());
+        draft.setDoseNumber(1);
+        draft.setAdministrationTime(Instant.now().minusSeconds(120));
+        draft.setPhysicalAdministrationConfirmed(true);
+        draft.setStatus(VaccinationDraftStatus.READY_FOR_FINALIZATION);
+        draft = draftRepository.saveAndFlush(draft);
+
+        Long draftId = draft.getId();
+
+        assertThatThrownBy(() -> finalizationService.finalizeDraft(draftId, 501L))
+                .isInstanceOf(VaccinationBatchVaccineTypeMismatchException.class);
+
+        // No vaccination record created
+        assertThat(recordRepository.existsByAppointmentId(appointment.getId())).isFalse();
+
+        // Zero stock mutation on the unrelated batch
+        CenterInventory unrelatedInventory = centerInventoryRepository
+                .findByCenterIdAndBatchId(center.getId(), unrelatedBatch.getId()).orElseThrow();
+        assertEquals(5, unrelatedInventory.getQuantity());
+
+        // Appointment remains CHECKED_IN
+        Appointment currentAppointment = appointmentRepository.findById(appointment.getId()).orElseThrow();
+        assertEquals(AppointmentStatus.CHECKED_IN, currentAppointment.getStatus());
+
+        // No digital certificate issued
+        assertThat(certificateRepository.findAll()).isEmpty();
+
+        // Draft remains READY_FOR_FINALIZATION
+        VaccinationDraft currentDraft = draftRepository.findById(draftId).orElseThrow();
+        assertEquals(VaccinationDraftStatus.READY_FOR_FINALIZATION, currentDraft.getStatus());
     }
 
     @Test

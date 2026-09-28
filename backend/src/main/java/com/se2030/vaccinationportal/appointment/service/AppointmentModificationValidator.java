@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.appointment.service;
 
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
+import com.se2030.vaccinationportal.appointment.exception.InvalidAppointmentStateException;
 import com.se2030.vaccinationportal.appointment.exception.RequiresStaffOverrideException;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
@@ -10,7 +11,8 @@ import java.time.Instant;
 
 /**
  * Shared validator enforcing common appointment modification rules across cancellation and rescheduling:
- * completion immutability (MF03-BR-11) and 24-hour window staff-override requirements (MF03-BR-04).
+ * completion immutability (MF03-BR-11), NO_SHOW terminality (capacity ownership), and 24-hour window
+ * staff-override requirements (MF03-BR-04).
  *
  * <p><b>User Story:</b>
  * <ul>
@@ -22,6 +24,9 @@ import java.time.Instant;
  *   <li>MF03-BR-04: Citizen self-service modifications are permitted only until 24 hours prior to slot start time.
  *       Inside the 24-hour window, changes require authorized staff override with a mandatory explanation reason.</li>
  *   <li>MF03-BR-11: COMPLETED appointments are legally/clinically final and cannot be cancelled or rescheduled.</li>
+ *   <li>NO_SHOW capacity ownership: a NO_SHOW appointment already released its slot reservation when it was marked
+ *       as a no-show, so it no longer owns capacity and must not be cancelled or rescheduled — both transitions would
+ *       release (or move) capacity it does not hold, driving reserved counters below the number of real reservations.</li>
  * </ul>
  */
 public class AppointmentModificationValidator {
@@ -66,6 +71,14 @@ public class AppointmentModificationValidator {
 
         if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
             throw new AppointmentAlreadyCompletedException("A completed appointment cannot be modified (appointment ID: " + appointment.getId() + ")");
+        }
+
+        // NO_SHOW already released its capacity when the no-show was recorded (CheckInService.markNoShow).
+        // It no longer owns a slot reservation, so cancelling or rescheduling it would release/move
+        // capacity a second time and corrupt the slot's reserved counter.
+        if (appointment.getStatus() == AppointmentStatus.NO_SHOW) {
+            throw new InvalidAppointmentStateException("Appointment " + appointment.getId()
+                    + " is marked NO_SHOW and can no longer be cancelled or rescheduled because its capacity was already released");
         }
 
         if (slotCapacityPort == null) {

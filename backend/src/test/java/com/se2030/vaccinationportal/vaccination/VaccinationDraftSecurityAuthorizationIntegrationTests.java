@@ -138,4 +138,44 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
 
         verify(draftService).deleteDraft(1L, "SuperAdmin cleanup", 999L);
     }
+
+    @Test
+    void confirmAdministration_whenBatchNotFound_returns404ControlledEnvelope() throws Exception {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccinatorId(201L);
+        when(draftService.getDraftById(1L)).thenReturn(draft);
+        when(draftService.confirmPhysicalAdministration(1L)).thenThrow(
+                new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.BATCH_NOT_FOUND
+                )
+        );
+
+        String vaccinator = token("ROLE_VACCINATOR");
+        mockMvc.perform(MockMvcRequestBuilders.post(BASE + "/1/confirm-administration")
+                        .header(HttpHeaders.AUTHORIZATION, vaccinator))
+                .andExpect(status().isNotFound())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.status", org.hamcrest.Matchers.is(404)))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.error", org.hamcrest.Matchers.is("Not Found")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message", org.hamcrest.Matchers.containsString("BATCH_NOT_FOUND")));
+    }
+
+    @Test
+    void confirmAdministration_whenBatchUnavailable_returns409ControlledEnvelope() throws Exception {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccinatorId(201L);
+        when(draftService.getDraftById(1L)).thenReturn(draft);
+        when(draftService.confirmPhysicalAdministration(1L)).thenThrow(
+                new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.EXPIRED_BATCH
+                )
+        );
+
+        String vaccinator = token("ROLE_VACCINATOR");
+        mockMvc.perform(MockMvcRequestBuilders.post(BASE + "/1/confirm-administration")
+                        .header(HttpHeaders.AUTHORIZATION, vaccinator))
+                .andExpect(status().isConflict())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.status", org.hamcrest.Matchers.is(409)))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.error", org.hamcrest.Matchers.is("Conflict")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message", org.hamcrest.Matchers.containsString("EXPIRED_BATCH")));
+    }
 }

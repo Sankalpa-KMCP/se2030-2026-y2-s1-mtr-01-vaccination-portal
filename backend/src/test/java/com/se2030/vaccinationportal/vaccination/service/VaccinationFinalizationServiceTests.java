@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.vaccination.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,6 +23,7 @@ import com.se2030.vaccinationportal.vaccination.dto.FinalizeVaccinationResponse;
 import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationBatchVaccineTypeMismatchException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
@@ -90,7 +92,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
-                42L, true, 501L, 601L, 701L, 10L
+                42L, true, 501L, 601L, 701L, 10L, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
 
@@ -183,7 +185,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot notCheckedIn = new AppointmentValidationSnapshot(
-                42L, false, 501L, 601L, 701L, 10L
+                42L, false, 501L, 601L, 701L, 10L, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(notCheckedIn));
 
@@ -213,7 +215,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
-                42L, true, null, 601L, 701L, 10L
+                42L, true, null, 601L, 701L, 10L, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
 
@@ -231,7 +233,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
-                42L, true, 501L, null, 701L, 10L
+                42L, true, 501L, null, 701L, 10L, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
 
@@ -249,7 +251,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
-                42L, true, 501L, 601L, 701L, null
+                42L, true, 501L, 601L, 701L, null, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
 
@@ -268,7 +270,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
-                42L, true, 501L, 601L, 701L, 10L
+                42L, true, 501L, 601L, 701L, 10L, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
         BatchAvailability available = new BatchAvailability(
@@ -290,7 +292,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
-                42L, true, 501L, 601L, 701L, 10L
+                42L, true, 501L, 601L, 701L, 10L, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
 
@@ -313,7 +315,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
-                42L, true, 501L, 601L, 701L, 10L
+                42L, true, 501L, 601L, 701L, 10L, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
 
@@ -345,7 +347,7 @@ class VaccinationFinalizationServiceTests {
         when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
 
         AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
-                42L, true, 501L, 601L, 701L, 10L
+                42L, true, 501L, 601L, 701L, 10L, 1L
         );
         when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
 
@@ -381,5 +383,126 @@ class VaccinationFinalizationServiceTests {
         draft.setPhysicalAdministrationConfirmed(true);
         draft.setStatus(VaccinationDraftStatus.READY_FOR_FINALIZATION);
         return draft;
+    }
+
+    @Test
+    void finalize_batchVaccineTypeMatchesCampaign_completesAllFinalizationSteps() {
+        VaccinationDraft draft = readyDraft(101L, 42L);
+        when(draftRepository.findById(101L)).thenReturn(Optional.of(draft));
+        when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
+
+        AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
+                42L, true, 501L, 601L, 701L, 10L, 7L
+        );
+        when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
+
+        BatchAvailability available = new BatchAvailability(
+                12L, 7L, BatchStatus.ACTIVE, LocalDate.of(2027, 1, 1), 50, BatchAvailabilityReason.AVAILABLE
+        );
+        when(inventoryPort.getBatchAvailability(10L, 12L)).thenReturn(available);
+
+        VaccinationRecord savedRecord = new VaccinationRecord(
+                42L, 501L, 601L, 10L, 201L, 12L, 1, NOW, null, "Authorized notes", NOW
+        );
+        ReflectionTestUtils.setField(savedRecord, "id", 777L);
+        when(recordRepository.saveAndFlush(any(VaccinationRecord.class))).thenReturn(savedRecord);
+
+        DigitalCertificate certificate = new DigitalCertificate(
+                savedRecord.getId(), "CERT-2026-MATCH", "tok_match_123", NOW
+        );
+        when(certificateService.issueCertificateForVaccinationRecord(savedRecord.getId())).thenReturn(certificate);
+
+        FinalizeVaccinationResponse response = finalizationService.finalizeDraft(101L, 201L);
+
+        assertNotNull(response);
+        verify(inventoryPort).deductVaccinationDose(10L, 12L, 777L);
+        verify(appointmentPort).completeAppointment(42L);
+        verify(certificateService).issueCertificateForVaccinationRecord(777L);
+        verify(draftRepository).saveAndFlush(draft);
+    }
+
+    @Test
+    void finalize_batchVaccineTypeMismatch_abortsBeforeAnyIrreversibleStep() {
+        VaccinationDraft draft = readyDraft(101L, 42L);
+        when(draftRepository.findById(101L)).thenReturn(Optional.of(draft));
+        when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
+
+        // Campaign expects vaccine type 7; the selected batch holds vaccine type 1 (an unrelated type)
+        AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
+                42L, true, 501L, 601L, 701L, 10L, 7L
+        );
+        when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
+
+        BatchAvailability available = new BatchAvailability(
+                12L, 1L, BatchStatus.ACTIVE, LocalDate.of(2027, 1, 1), 50, BatchAvailabilityReason.AVAILABLE
+        );
+        when(inventoryPort.getBatchAvailability(10L, 12L)).thenReturn(available);
+
+        VaccinationBatchVaccineTypeMismatchException ex = assertThrows(
+                VaccinationBatchVaccineTypeMismatchException.class,
+                () -> finalizationService.finalizeDraft(101L, 201L)
+        );
+        assertTrue(ex.getMessage().contains("7"));
+
+        verify(recordRepository, never()).saveAndFlush(any(VaccinationRecord.class));
+        verify(inventoryPort, never()).deductVaccinationDose(any(), any(), any());
+        verify(appointmentPort, never()).completeAppointment(any());
+        verify(certificateService, never()).issueCertificateForVaccinationRecord(any());
+        verify(draftRepository, never()).saveAndFlush(argThat(d -> d.getStatus() == VaccinationDraftStatus.FINALIZED));
+    }
+
+    @Test
+    void finalize_batchVaccineTypeMismatch_doesNotMutateStockOrAppointment() {
+        VaccinationDraft draft = readyDraft(101L, 42L);
+        when(draftRepository.findById(101L)).thenReturn(Optional.of(draft));
+        when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
+
+        AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
+                42L, true, 501L, 601L, 701L, 10L, 2L
+        );
+        when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
+
+        BatchAvailability available = new BatchAvailability(
+                12L, 9L, BatchStatus.ACTIVE, LocalDate.of(2027, 1, 1), 50, BatchAvailabilityReason.AVAILABLE
+        );
+        when(inventoryPort.getBatchAvailability(10L, 12L)).thenReturn(available);
+
+        assertThrows(
+                VaccinationBatchVaccineTypeMismatchException.class,
+                () -> finalizationService.finalizeDraft(101L, 201L)
+        );
+
+        // Zero stock mutation and zero appointment mutation on mismatch
+        verify(inventoryPort, never()).deductVaccinationDose(any(), any(), any());
+        verify(appointmentPort, never()).completeAppointment(any());
+        assertEquals(VaccinationDraftStatus.READY_FOR_FINALIZATION, draft.getStatus());
+    }
+
+    @Test
+    void finalize_missingCampaignVaccineType_throwsException() {
+        VaccinationDraft draft = readyDraft(101L, 42L);
+        when(draftRepository.findById(101L)).thenReturn(Optional.of(draft));
+        when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
+
+        AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
+                42L, true, 501L, 601L, 701L, 10L, null
+        );
+        when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
+
+        BatchAvailability available = new BatchAvailability(
+                12L, 1L, BatchStatus.ACTIVE, LocalDate.of(2027, 1, 1), 50, BatchAvailabilityReason.AVAILABLE
+        );
+        when(inventoryPort.getBatchAvailability(10L, 12L)).thenReturn(available);
+
+        InvalidVaccinationDraftException ex = assertThrows(
+                InvalidVaccinationDraftException.class,
+                () -> finalizationService.finalizeDraft(101L, 201L)
+        );
+        assertEquals(
+                "Campaign vaccine type could not be resolved for finalization of appointment: 42",
+                ex.getMessage()
+        );
+        verify(recordRepository, never()).saveAndFlush(any());
+        verify(inventoryPort, never()).deductVaccinationDose(any(), any(), any());
     }
 }

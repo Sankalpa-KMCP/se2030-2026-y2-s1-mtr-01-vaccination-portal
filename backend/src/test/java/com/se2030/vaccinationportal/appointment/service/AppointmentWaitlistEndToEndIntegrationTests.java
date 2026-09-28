@@ -126,6 +126,9 @@ class AppointmentWaitlistEndToEndIntegrationTests {
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
         slotCapacityPortDouble.setSlotSession(SLOT_ID, SESSION_ID);
         slotCapacityPortDouble.setSlotCampaign(SLOT_ID, CAMPAIGN_ID);
+        // Authoritative campaign/session relationship for R01 admission/promotion validation
+        slotCapacityPortDouble.setSessionCampaign(SESSION_ID, CAMPAIGN_ID);
+        slotCapacityPortDouble.setSessionCampaign(9002L, CAMPAIGN_ID);
     }
 
     @AfterEach

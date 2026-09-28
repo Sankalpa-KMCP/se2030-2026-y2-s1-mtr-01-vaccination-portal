@@ -209,15 +209,22 @@ public class CheckInService {
             }
         }
 
+        // Release capacity on slot and trigger waitlist promotion (same pattern as cancellation)
+        // Viva note: The unused place is immediately reclaimed and allocated to the next FIFO waitlist candidate.
+        boolean ownsReservation = appointment.ownsSlotReservation();
+        if (ownsReservation) {
+            if (slotCapacityPort != null) {
+                boolean released = slotCapacityPort.releaseCapacity(appointment.getSlotId());
+                if (!released) {
+                    throw new IllegalStateException("Failed to release slot capacity for slot ID: " + appointment.getSlotId());
+                }
+            }
+        }
+
         appointment.markNoShow();
         Appointment saved = appointmentRepository.save(appointment);
 
-        // Release capacity on slot and trigger waitlist promotion (same pattern as cancellation)
-        // Viva note: The unused place is immediately reclaimed and allocated to the next FIFO waitlist candidate.
-        if (slotCapacityPort != null) {
-            slotCapacityPort.releaseCapacity(appointment.getSlotId());
-        }
-        if (promotionService != null) {
+        if (ownsReservation && promotionService != null) {
             promotionService.promoteNextForSlot(appointment.getCampaignId(), appointment.getSlotId(), effectiveNow);
         }
 

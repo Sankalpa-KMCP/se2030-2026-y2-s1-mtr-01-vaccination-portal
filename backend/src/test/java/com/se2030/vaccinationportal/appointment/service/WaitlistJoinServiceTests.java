@@ -87,6 +87,9 @@ class WaitlistJoinServiceTests {
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
+        // Authoritative campaign/session relationships for R01 admission validation
+        slotCapacityPortDouble.setSessionCampaign(3001L, 2001L);
+        slotCapacityPortDouble.setSessionCampaign(5001L, 4001L);
     }
 
     @AfterEach
@@ -94,6 +97,7 @@ class WaitlistJoinServiceTests {
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
+        slotCapacityPortDouble.clearSessionCampaignMap();
     }
 
     @Test

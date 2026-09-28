@@ -204,6 +204,19 @@ public class WaitlistEntry {
     }
 
     /**
+     * Marks this waitlist entry as SKIPPED_MALFORMED (MF03 / F3).
+     * <p>
+     * <b>Viva Note:</b> Terminal state reached when promotion evaluates an entry whose recorded campaign
+     * does not match the authoritative campaign of its session. Transitioning away from WAITING sets
+     * active_campaign_id to NULL, releasing the active waitlist unique constraint so the citizen is not
+     * permanently locked out.
+     * </p>
+     */
+    public void markSkippedMalformed() {
+        this.status = WaitlistStatus.SKIPPED_MALFORMED;
+    }
+
+    /**
      * Cancels this waitlist entry upon voluntary citizen withdrawal (US-05).
      * <p>
      * <b>Viva Note:</b> Terminal state reached when a citizen leaves the queue, releasing their hold.

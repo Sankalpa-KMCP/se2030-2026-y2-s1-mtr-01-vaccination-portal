@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundExceptio
 import com.se2030.vaccinationportal.screening.model.*;
 import com.se2030.vaccinationportal.screening.repository.*;
 import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -127,8 +128,11 @@ public class ScreeningSubmissionService {
         if (consentNoticeVersionId == null) throw new IllegalArgumentException("Consent Notice Version ID is required");
         if (answerMap == null || answerMap.isEmpty()) throw new IllegalArgumentException("Screening answers are required");
 
-        // 1. Guard: Check for existing active submission
-        Optional<ScreeningSubmission> existingActive = submissionRepository.findActiveSubmission(citizenId, campaignId, ACTIVE_SUBMISSION_STATUSES);
+        // 1. Guard: Check for existing active submission under a pessimistic write lock (R05).
+        // The locking read serializes concurrent submissions for the same citizen/campaign pair so
+        // two requests cannot both observe "no active submission" and insert two active rows.
+        Optional<ScreeningSubmission> existingActive = submissionRepository.findActiveSubmissionForUpdate(
+                citizenId, campaignId, ACTIVE_SUBMISSION_STATUSES);
         if (existingActive.isPresent()) {
             throw new IllegalStateException("An active submission already exists for this citizen and campaign");
         }
@@ -176,11 +180,22 @@ public class ScreeningSubmissionService {
                 answerValidator.validateAndNormalize(versionId, items, answerMap);
 
         // 7. Create Submission Entity
+        // The uk_screening_submission_active_citizen_campaign constraint is the database-level backstop
+        // (R05): if a concurrent transaction inserts an active submission between the locking check and
+        // this insert, the unique violation is translated into the same controlled rejection.
         Instant now = Instant.now();
         ScreeningSubmission submission = new ScreeningSubmission(citizenId, campaignId, version, consentNotice, now);
         submission.setStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
         submission.setSubmittedAt(now);
-        ScreeningSubmission savedSubmission = submissionRepository.save(submission);
+        ScreeningSubmission savedSubmission;
+        try {
+            savedSubmission = submissionRepository.saveAndFlush(submission);
+        } catch (DataIntegrityViolationException exception) {
+            if (isDuplicateActiveSubmissionViolation(exception)) {
+                throw new IllegalStateException("An active submission already exists for this citizen and campaign", exception);
+            }
+            throw exception;
+        }
 
         // 8. Persist Answers
         List<ScreeningAnswer> persistedAnswers = new ArrayList<>();
@@ -301,5 +316,29 @@ public class ScreeningSubmissionService {
     private ScreeningSubmission initializeResponseRelations(ScreeningSubmission submission) {
         submission.getAnswers().size();
         return submission;
+    }
+
+    private boolean isDuplicateActiveSubmissionViolation(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String msg = current.getMessage();
+            if (msg != null && msg.toLowerCase(java.util.Locale.ROOT).contains("uk_screening_submission_active_citizen_campaign")) {
+                return true;
+            }
+            if (current instanceof org.hibernate.exception.ConstraintViolationException cve) {
+                String constraintName = cve.getConstraintName();
+                if (constraintName != null && constraintName.toLowerCase(java.util.Locale.ROOT).contains("uk_screening_submission_active_citizen_campaign")) {
+                    return true;
+                }
+            }
+            if (current instanceof java.sql.SQLException sqlEx) {
+                String sqlMsg = sqlEx.getMessage();
+                if (sqlMsg != null && sqlMsg.toLowerCase(java.util.Locale.ROOT).contains("uk_screening_submission_active_citizen_campaign")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

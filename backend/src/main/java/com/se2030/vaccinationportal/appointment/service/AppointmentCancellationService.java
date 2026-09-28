@@ -111,14 +111,19 @@ public class AppointmentCancellationService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new AppointmentNotFoundException("Appointment not found with ID: " + appointmentId));
 
-        // Ownership, completion status (MF03-BR-11), and 24-hour rule (MF03-BR-04) validation
+        // Ownership, completion status (MF03-BR-11), NO_SHOW terminality, and 24-hour rule (MF03-BR-04) validation
         AppointmentModificationValidator.validateModificationWindow(
                 appointment, requestingCitizenId, isStaffOverride, staffReason, effectiveNow, slotCapacityPort);
 
-        // Step 2d: MF03-BR-05 - Atomic capacity release and status transition to CANCELLED
-        boolean released = slotCapacityPort.releaseCapacity(appointment.getSlotId());
-        if (!released) {
-            throw new IllegalStateException("Failed to release slot capacity for slot ID: " + appointment.getSlotId());
+        // Step 2d: MF03-BR-05 - Atomic capacity release gated on current state ownership (R04):
+        // capacity may only be released if the appointment state still holds its reservation
+        // (CONFIRMED or CHECKED_IN). NO_SHOW already released its capacity and cannot reach here.
+        boolean ownsReservation = appointment.ownsSlotReservation();
+        if (ownsReservation) {
+            boolean released = slotCapacityPort.releaseCapacity(appointment.getSlotId());
+            if (!released) {
+                throw new IllegalStateException("Failed to release slot capacity for slot ID: " + appointment.getSlotId());
+            }
         }
 
         appointment.cancel(effectiveNow);
@@ -130,7 +135,7 @@ public class AppointmentCancellationService {
         // freed slot via a direct booking request, starving the waitlisted citizen who has been waiting in FIFO order!
         // By running promotion synchronously within the cancellation transaction, the released capacity is immediately
         // claimed by the earliest eligible FIFO waitlist entry before other transactions can observe the unreserved capacity.
-        if (promotionService != null) {
+        if (ownsReservation && promotionService != null) {
             promotionService.promoteNextForSlot(appointment.getCampaignId(), appointment.getSlotId(), effectiveNow);
         }
 

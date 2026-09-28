@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.appointment.service;
 
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityLookupPort;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.appointment.dependency.SlotBookability;
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
@@ -84,6 +85,16 @@ public class WaitlistPromotionService {
         }
         Instant effectiveNow = (now != null) ? now : Instant.now();
 
+        // Request-level campaign/session/slot consistency (R01): the freed slot must authoritatively
+        // belong to the requested session. Promotion is strictly session-scoped, so a slot that cannot
+        // be resolved to this session must never receive a promoted appointment.
+        if (slotCapacityPort != null) {
+            Optional<Long> authoritativeSlotSession = slotCapacityPort.getSessionIdForSlot(slotId);
+            if (authoritativeSlotSession.isEmpty() || !sessionId.equals(authoritativeSlotSession.get())) {
+                return Optional.empty();
+            }
+        }
+
         List<WaitlistEntry> waitingEntries = waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(
                 sessionId, WaitlistStatus.WAITING);
 
@@ -164,9 +175,37 @@ public class WaitlistPromotionService {
             return Optional.empty();
         }
 
+        // Authoritative bookability of the destination slot (R03). Promotion follows a deliberate,
+        // narrower policy than direct booking (see SlotCapacityPort#evaluateBookabilityForWaitlistPromotion):
+        // session lifecycle and campaign intake status are enforced, while booking suspension, booking
+        // cutoff, and future-slot-time are not, because freed capacity from cancellations and no-shows
+        // occurs at/after slot start and must stay reachable by the FIFO queue. A non-bookable slot
+        // stops the promotion attempt without touching any queue entry or capacity counter.
+        if (slotCapacityPort != null) {
+            SlotBookability bookability = slotCapacityPort.evaluateBookabilityForWaitlistPromotion(slotId, effectiveNow);
+            if (bookability != SlotBookability.BOOKABLE) {
+                return Optional.empty();
+            }
+        }
+
         for (WaitlistEntry entry : candidates) {
             Long citizenId = entry.getCitizenId();
             Long campaignId = entry.getCampaignId();
+
+            // Step 1a-0: Structural campaign/session integrity of the queue entry itself (R01, F3).
+            // A malformed historical entry whose campaign does not authoritatively match its session
+            // must never be promoted: it would create an appointment pairing the entry's campaign with
+            // capacity from another campaign's session. The entry is marked SKIPPED_MALFORMED and saved,
+            // which sets active_campaign_id to NULL, releasing the unique constraint and queue position
+            // without blocking FIFO promotion of valid waiters.
+            if (slotCapacityPort != null) {
+                Optional<Long> authoritativeCampaign = slotCapacityPort.getCampaignIdForSession(entry.getSessionId());
+                if (authoritativeCampaign.isEmpty() || !campaignId.equals(authoritativeCampaign.get())) {
+                    entry.markSkippedMalformed();
+                    waitlistRepository.save(entry);
+                    continue;
+                }
+            }
 
             // Step 1a: Acquire pessimistic write lock for citizen+campaign (Canonical Section 12.4).
             // Viva note: Ensures mutual exclusion against concurrent citizen bookings during promotion evaluation.
@@ -194,9 +233,9 @@ public class WaitlistPromotionService {
                 continue; // Skip waiter with active appointment and evaluate next candidate
             }
 
-            // Step 1d: Reserve capacity place on slotId
+            // Step 1d: Reserve capacity place on slotId with promotion bookability check under lock (F1)
             if (slotCapacityPort != null) {
-                SlotReservationResult res = slotCapacityPort.reserveCapacity(slotId);
+                SlotReservationResult res = slotCapacityPort.reserveCapacityForWaitlistPromotion(slotId, effectiveNow);
                 if (res != SlotReservationResult.SUCCESS) {
                     // Capacity could not be reserved (e.g. slot full or error), stop promotion attempt
                     return Optional.empty();

@@ -140,6 +140,23 @@ public class Appointment {
         return status;
     }
 
+    /**
+     * Indicates whether this appointment's current state owns one reserved place on its slot.
+     * <p>
+     * <b>Capacity Ownership Semantics (R04):</b> CONFIRMED and CHECKED_IN appointments each hold exactly one
+     * reservation, so their cancellation releases capacity exactly once and their rescheduling moves exactly one
+     * reservation. NO_SHOW releases its reservation at the moment the no-show is recorded
+     * ({@code CheckInService.markNoShow}) and therefore no longer owns capacity — cancelling, rescheduling, or
+     * otherwise transitioning a NO_SHOW appointment must never release capacity again. CANCELLED, COMPLETED, and
+     * NO_SHOW states do not own a reservation.
+     * </p>
+     *
+     * @return {@code true} if the current state holds one slot reservation that a transition may release or move
+     */
+    public boolean ownsSlotReservation() {
+        return status == AppointmentStatus.CONFIRMED || status == AppointmentStatus.CHECKED_IN;
+    }
+
     public Instant getBookedAt() {
         return bookedAt;
     }

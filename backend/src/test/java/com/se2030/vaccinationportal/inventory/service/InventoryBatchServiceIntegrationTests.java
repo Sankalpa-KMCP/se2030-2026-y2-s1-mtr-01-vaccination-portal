@@ -22,6 +22,7 @@ import com.se2030.vaccinationportal.inventory.repository.ManufacturerRepository;
 import com.se2030.vaccinationportal.inventory.repository.StockTransactionRepository;
 import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,9 +82,12 @@ class InventoryBatchServiceIntegrationTests {
         VaccineBatch batch = batches.findById(batchId).orElseThrow();
         // Expiry is immutable lot data. Create an already-expired batch instead.
         String suffix = UUID.randomUUID().toString().substring(0, 8);
+        // The service evaluates expiry against the production UTC clock, so the expired batch
+        // must be created relative to the UTC date to stay deterministic across time zones.
         VaccineBatch expired = batches.save(new VaccineBatch(
                 manufacturerId, batch.getVaccineTypeId(),
-                "EXP-" + suffix, LocalDate.now().minusDays(60), LocalDate.now().minusDays(1),
+                "EXP-" + suffix, LocalDate.now(ZoneOffset.UTC).minusDays(60),
+                LocalDate.now(ZoneOffset.UTC).minusDays(1),
                 BatchStatus.ACTIVE));
         inventories.save(new CenterInventory(centerId, expired.getId(), 2));
         assertUnavailable(expired.getId(), 11003L, BatchAvailabilityReason.EXPIRED_BATCH);

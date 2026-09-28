@@ -349,6 +349,114 @@ class AuthActionTokenConcurrencyIntegrationTests {
                 () -> authService.resetPassword(new ResetPasswordRequest(usedRawToken, "NewPassword123!")));
     }
 
+    @Test
+    @DisplayName("F2-DOS: concurrent same-account recovery requests issue at most one active token")
+    void forgotPassword_concurrentRequests_issueAtMostOneActiveToken() throws Exception {
+        UserAccount user = createPendingCitizen("concurrent.forgot@example.com");
+        int threadCount = 8;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch ready = new CountDownLatch(threadCount);
+        CountDownLatch start = new CountDownLatch(1);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                ready.countDown();
+                try {
+                    start.await();
+                    authService.forgotPassword(new com.se2030.vaccinationportal.shared.auth.dto.ForgotPasswordRequest(user.getEmail()));
+                } catch (Exception ignored) {
+                }
+            });
+        }
+        ready.await();
+        start.countDown();
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+
+        List<PasswordResetToken> tokens = passwordResetTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
+        assertEquals(1, tokens.size(), "Concurrent recovery requests for same real account must mint at most one token");
+    }
+
+    @Test
+    @DisplayName("F2-ALIAS: concurrent alias requests for same account issue at most one active reset token")
+    void forgotPassword_concurrentAliases_issueAtMostOneActiveToken() throws Exception {
+        UserAccount user = createPendingCitizen("concurrent.alias.forgot@example.com");
+        int threadCount = 8;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch ready = new CountDownLatch(threadCount);
+        CountDownLatch start = new CountDownLatch(1);
+
+        String[] aliases = {
+                "concurrent.alias.forgot@example.com",
+                "CONCURRENT.ALIAS.FORGOT@EXAMPLE.COM",
+                "  concurrent.alias.forgot@example.com  ",
+                "Concurrent.Alias.Forgot@Example.Com",
+                "CONCURRENT.alias.forgot@example.com",
+                "concurrent.ALIAS.FORGOT@example.com",
+                "  CONCURRENT.ALIAS.FORGOT@EXAMPLE.COM  ",
+                "cOnCuRrEnT.aLiAs.FoRgOt@ExAmPlE.cOm"
+        };
+
+        for (int i = 0; i < threadCount; i++) {
+            final String alias = aliases[i];
+            executor.submit(() -> {
+                ready.countDown();
+                try {
+                    start.await();
+                    authService.forgotPassword(new com.se2030.vaccinationportal.shared.auth.dto.ForgotPasswordRequest(alias));
+                } catch (Exception ignored) {
+                }
+            });
+        }
+        ready.await();
+        start.countDown();
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+
+        List<PasswordResetToken> tokens = passwordResetTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
+        assertEquals(1, tokens.size(), "Concurrent requests across distinct aliases for same account must mint at most one token (F2-ALIAS)");
+    }
+
+    @Test
+    @DisplayName("F2-ALIAS: concurrent alias requests for same account issue at most one active verification token")
+    void resendVerification_concurrentAliases_issueAtMostOneActiveToken() throws Exception {
+        UserAccount user = createPendingCitizen("concurrent.alias.resend@example.com");
+        int threadCount = 8;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch ready = new CountDownLatch(threadCount);
+        CountDownLatch start = new CountDownLatch(1);
+
+        String[] aliases = {
+                "concurrent.alias.resend@example.com",
+                "CONCURRENT.ALIAS.RESEND@EXAMPLE.COM",
+                "  concurrent.alias.resend@example.com  ",
+                "Concurrent.Alias.Resend@Example.Com",
+                "CONCURRENT.alias.resend@example.com",
+                "concurrent.ALIAS.RESEND@example.com",
+                "  CONCURRENT.ALIAS.RESEND@EXAMPLE.COM  ",
+                "cOnCuRrEnT.aLiAs.ReSeNd@ExAmPlE.cOm"
+        };
+
+        for (int i = 0; i < threadCount; i++) {
+            final String alias = aliases[i];
+            executor.submit(() -> {
+                ready.countDown();
+                try {
+                    start.await();
+                    authService.resendVerification(new com.se2030.vaccinationportal.shared.auth.dto.ResendVerificationRequest(alias));
+                } catch (Exception ignored) {
+                }
+            });
+        }
+        ready.await();
+        start.countDown();
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+
+        List<EmailVerificationToken> tokens = emailVerificationTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
+        assertEquals(1, tokens.size(), "Concurrent verification resend requests across distinct aliases must mint at most one token (F2-ALIAS)");
+    }
+
     private UserAccount createPendingCitizen(String email) {
         UserAccount user = new UserAccount(email, passwordEncoder.encode(DEFAULT_PASSWORD), AccountStatus.PENDING_VERIFICATION);
         user.setFullName("Pending Citizen");

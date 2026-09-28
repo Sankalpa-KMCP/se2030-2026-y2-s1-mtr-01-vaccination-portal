@@ -8,6 +8,12 @@ import java.util.List;
 @Entity
 @Table(
     name = "screening_submission",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_screening_submission_active_citizen_campaign",
+            columnNames = {"citizen_id", "active_campaign_id"}
+        )
+    },
     indexes = {
         @Index(name = "idx_sub_citizen_campaign", columnList = "citizen_id, campaign_id"),
         @Index(name = "idx_sub_status", columnList = "status")
@@ -127,6 +133,22 @@ public class ScreeningSubmission {
 
     public Instant getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(Instant submittedAt) { this.submittedAt = submittedAt; }
+
+    /**
+     * Database generated active campaign ID column (R05).
+     * Evaluates to campaign_id while status IN ('DRAFT','PENDING_REVIEW','CORRECTIONS_REQUIRED'),
+     * and NULL otherwise, so the {@code uk_screening_submission_active_citizen_campaign} unique
+     * constraint only applies to active submissions. Read-only in JPA.
+     */
+    @Column(
+        name = "active_campaign_id",
+        insertable = false,
+        updatable = false,
+        columnDefinition = "BIGINT GENERATED ALWAYS AS (CASE WHEN status IN ('DRAFT','PENDING_REVIEW','CORRECTIONS_REQUIRED') THEN campaign_id ELSE NULL END)"
+    )
+    private Long activeCampaignId;
+
+    public Long getActiveCampaignId() { return activeCampaignId; }
 
     public String getCorrectionInstructions() { return correctionInstructions; }
     public void setCorrectionInstructions(String correctionInstructions) { this.correctionInstructions = correctionInstructions; }

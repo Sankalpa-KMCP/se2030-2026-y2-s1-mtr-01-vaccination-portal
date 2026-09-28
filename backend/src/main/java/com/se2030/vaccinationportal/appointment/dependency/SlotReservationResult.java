@@ -26,5 +26,6 @@ package com.se2030.vaccinationportal.appointment.dependency;
 public enum SlotReservationResult {
     SUCCESS,
     SLOT_FULL,
-    SLOT_NOT_FOUND
+    SLOT_NOT_FOUND,
+    NOT_BOOKABLE
 }

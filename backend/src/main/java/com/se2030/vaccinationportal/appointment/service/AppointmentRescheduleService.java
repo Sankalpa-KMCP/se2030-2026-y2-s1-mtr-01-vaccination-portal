@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.appointment.service;
 
+import com.se2030.vaccinationportal.appointment.dependency.SlotBookability;
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
@@ -165,13 +166,26 @@ public class AppointmentRescheduleService {
             throw new IllegalArgumentException("Target time slot " + newSlotId + " does not belong to campaign " + appointment.getCampaignId());
         }
 
-        // Step 1f: CRITICAL VIVA PROBE: "Reserve-Before-Release" Ordering (MF03-BR-05)
+        // Step 1e-2: Enforce the authoritative bookability policy on the destination slot (R03).
+        // Viva note: A reschedule destination is a new reservation mutation — it must obey the same
+        // restrictions as direct booking (session lifecycle, campaign booking window, suspension,
+        // cutoff, future slot time, capacity). The 24h staff-override rule governs the SOURCE
+        // appointment only; it never legitimizes an unbookable destination.
+        SlotBookability bookability = slotCapacityPort.evaluateBookabilityForNewBooking(newSlotId, effectiveNow);
+        if (bookability != SlotBookability.BOOKABLE) {
+            throw new IllegalArgumentException("Target time slot " + newSlotId + " is not bookable: " + bookability);
+        }
+
+        // Step 1f: CRITICAL VIVA PROBE: "Reserve-Before-Release" Ordering (MF03-BR-05, F1)
         // Why reserve newSlotId BEFORE releasing oldSlotId?
         // If we released the old slot first and then attempted to reserve the new slot only to find it full
         // (or failing due to a concurrent booking race), the citizen would be left stranded with NEITHER slot!
-        // By reserving newSlotId first, any failure (SlotFullException) leaves the citizen's existing slot
-        // and appointment completely intact.
-        SlotReservationResult reservationResult = slotCapacityPort.reserveCapacity(newSlotId);
+        // By reserving newSlotId first, any failure (SlotFullException / IllegalArgumentException) leaves the
+        // citizen's existing slot and appointment completely intact.
+        SlotReservationResult reservationResult = slotCapacityPort.reserveCapacityForNewBooking(newSlotId, effectiveNow);
+        if (reservationResult == SlotReservationResult.NOT_BOOKABLE) {
+            throw new IllegalArgumentException("Target time slot " + newSlotId + " is not bookable");
+        }
         if (reservationResult != SlotReservationResult.SUCCESS) {
             throw new SlotFullException("Target time slot " + newSlotId + " capacity reservation failed with result: " + reservationResult);
         }

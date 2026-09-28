@@ -134,6 +134,119 @@ describe('shared API response and error handling', () => {
     unsubscribe();
   });
 
+  it('does not clear a newer session when a stale request finishes with 401 (R07)', async () => {
+    // Request starts under session A...
+    setToken('token-a');
+    const listener = vi.fn(() => clearToken());
+    const unsubscribe = onUnauthorized(listener);
+
+    let resolveStale;
+    fetch.mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve; }));
+    const staleRequest = apiRequestData('/v1/protected');
+
+    // ...and the user logs in as B while the request is in flight
+    setToken('token-b');
+
+    resolveStale(response({
+      body: '{"message":"Unauthorized"}',
+      status: 401,
+      statusText: 'Unauthorized',
+    }));
+    await expect(staleRequest).rejects.toBeInstanceOf(ApiError);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(getToken()).toBe('token-b');
+    unsubscribe();
+  });
+
+  it('still invokes normal unauthorized handling for a current-session 401 (R07)', async () => {
+    setToken('token-b');
+    const listener = vi.fn(() => clearToken());
+    const unsubscribe = onUnauthorized(listener);
+    fetch.mockResolvedValueOnce(response({
+      body: '{"message":"Unauthorized"}',
+      status: 401,
+      statusText: 'Unauthorized',
+    }));
+
+    await expect(apiRequestData('/v1/protected')).rejects.toBeInstanceOf(ApiError);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(getToken()).toBeNull();
+    unsubscribe();
+  });
+
+  it('does not notify again when a request finishes with 401 after the user already logged out (R07)', async () => {
+    setToken('token-a');
+    const listener = vi.fn(() => clearToken());
+    const unsubscribe = onUnauthorized(listener);
+
+    let resolveStale;
+    fetch.mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve; }));
+    const staleRequest = apiRequestData('/v1/protected');
+
+    // Explicit logout happens while the request is in flight
+    clearToken();
+
+    resolveStale(response({
+      body: '{"message":"Unauthorized"}',
+      status: 401,
+      statusText: 'Unauthorized',
+    }));
+    await expect(staleRequest).rejects.toBeInstanceOf(ApiError);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(getToken()).toBeNull();
+    unsubscribe();
+  });
+
+  it('keeps anonymous 401 behavior intact when no token was ever stored (R07)', async () => {
+    const listener = vi.fn(() => clearToken());
+    const unsubscribe = onUnauthorized(listener);
+    fetch.mockResolvedValueOnce(response({
+      body: '{"message":"Unauthorized"}',
+      status: 401,
+      statusText: 'Unauthorized',
+    }));
+
+    await expect(apiRequestData('/v1/protected')).rejects.toBeInstanceOf(ApiError);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('concurrent stale 401s never disturb a newer login (R07)', async () => {
+    setToken('token-a');
+    const listener = vi.fn(() => clearToken());
+    const unsubscribe = onUnauthorized(listener);
+
+    let resolveFirst;
+    let resolveSecond;
+    fetch.mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }));
+    fetch.mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve; }));
+
+    const first = apiRequestData('/v1/protected');
+    const second = apiRequestData('/v1/profile');
+
+    // Login as B while both A-session requests are in flight
+    setToken('token-b');
+
+    const unauthorized = response({
+      body: '{"message":"Unauthorized"}',
+      status: 401,
+      statusText: 'Unauthorized',
+    });
+    resolveFirst(unauthorized);
+    resolveSecond(unauthorized);
+
+    await expect(first).rejects.toBeInstanceOf(ApiError);
+    await expect(second).rejects.toBeInstanceOf(ApiError);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(getToken()).toBe('token-b');
+    unsubscribe();
+  });
+
   it('does not clear or report the authenticated session as unauthorized on 403', async () => {
     setToken('valid-token');
     const listener = vi.fn();

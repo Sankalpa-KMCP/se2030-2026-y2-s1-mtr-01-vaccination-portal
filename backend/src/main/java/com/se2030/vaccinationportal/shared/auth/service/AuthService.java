@@ -80,6 +80,7 @@ public class AuthService {
     private final JwtTokenService jwtTokenService;
     private final AuthActionTokenService authActionTokenService;
     private final AuthLinkDeliveryService authLinkDeliveryService;
+    private final AuthLinkIssuanceThrottle authLinkIssuanceThrottle;
     private final int verificationTokenExpirationHours;
     private final int resetTokenExpirationMinutes;
 
@@ -94,6 +95,7 @@ public class AuthService {
             JwtTokenService jwtTokenService,
             AuthActionTokenService authActionTokenService,
             AuthLinkDeliveryService authLinkDeliveryService,
+            AuthLinkIssuanceThrottle authLinkIssuanceThrottle,
             @Value("${app.security.auth.verification-token-expiration-hours:24}") int verificationTokenExpirationHours,
             @Value("${app.security.auth.reset-token-expiration-minutes:30}") int resetTokenExpirationMinutes
     ) {
@@ -107,6 +109,7 @@ public class AuthService {
         this.jwtTokenService = jwtTokenService;
         this.authActionTokenService = authActionTokenService;
         this.authLinkDeliveryService = authLinkDeliveryService;
+        this.authLinkIssuanceThrottle = authLinkIssuanceThrottle;
         this.verificationTokenExpirationHours = verificationTokenExpirationHours;
         this.resetTokenExpirationMinutes = resetTokenExpirationMinutes;
     }
@@ -238,6 +241,15 @@ public class AuthService {
         if (userOpt.isPresent()) {
             UserAccount user = userOpt.get();
             if (user.getAccountStatus() == AccountStatus.PENDING_VERIFICATION) {
+                // Bounded abuse protection (R06 / F2-DOS / F2-ALIAS): the cooldown is keyed to the
+                // resolved account's immutable primary key (user.getId()), not request-supplied text.
+                // Collation-equivalent aliases (e.g. accents, case, Unicode under utf8mb4_unicode_ci)
+                // resolve to the same account and share one cooldown, while nonexistent identities
+                // never consume throttle capacity.
+                if (!authLinkIssuanceThrottle.tryRecordIssuance(user.getId(), Instant.now())) {
+                    return new MessageResponse(GENERIC_RESEND_VERIFICATION_MESSAGE);
+                }
+
                 Instant now = Instant.now();
                 List<EmailVerificationToken> existingTokens = emailVerificationTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
                 for (EmailVerificationToken existingToken : existingTokens) {
@@ -267,6 +279,13 @@ public class AuthService {
         if (userOpt.isPresent()) {
             UserAccount user = userOpt.get();
             if (user.getAccountStatus() != AccountStatus.REJECTED) {
+                // Bounded abuse protection (R06 / F2-DOS / F2-ALIAS): same per-account cooldown gate as
+                // resend-verification — keyed to the immutable user.getId() so collation aliases, alternate
+                // spellings, and formatting variants cannot bypass the cooldown or rotate reset tokens.
+                if (!authLinkIssuanceThrottle.tryRecordIssuance(user.getId(), Instant.now())) {
+                    return new MessageResponse(GENERIC_FORGOT_PASSWORD_MESSAGE);
+                }
+
                 Instant now = Instant.now();
                 List<PasswordResetToken> existingTokens = passwordResetTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
                 for (PasswordResetToken existingToken : existingTokens) {

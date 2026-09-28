@@ -321,6 +321,73 @@ class VaccinationDraftServiceTests {
                 () -> service.confirmPhysicalAdministration(999L));
     }
 
+    @Test
+    void confirmPhysicalAdministration_whenBatchTypeMismatched_throwsExceptionAndDraftRemainsUnconfirmedAndEditable() {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccineBatchId(301L);
+        draft.setDoseNumber(1);
+        draft.setStatus(VaccinationDraftStatus.IN_PROGRESS);
+        draft.setPhysicalAdministrationConfirmed(false);
+
+        when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
+        doThrow(new com.se2030.vaccinationportal.vaccination.exception.VaccinationBatchVaccineTypeMismatchException(10L, 20L))
+                .when(integrationValidator).validateBatchCompatibility(101L, 301L);
+
+        assertThrows(
+                com.se2030.vaccinationportal.vaccination.exception.VaccinationBatchVaccineTypeMismatchException.class,
+                () -> service.confirmPhysicalAdministration(1L)
+        );
+
+        assertFalse(draft.isPhysicalAdministrationConfirmed(), "Draft must remain unconfirmed on type mismatch");
+        assertEquals(VaccinationDraftStatus.IN_PROGRESS, draft.getStatus(), "Draft status must not transition");
+        verify(draftRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmPhysicalAdministration_whenBatchUnavailable_throwsExceptionAndDraftRemainsUnconfirmedAndEditable() {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccineBatchId(301L);
+        draft.setDoseNumber(1);
+        draft.setStatus(VaccinationDraftStatus.IN_PROGRESS);
+        draft.setPhysicalAdministrationConfirmed(false);
+
+        when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
+        doThrow(new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.BATCH_NOT_FOUND))
+                .when(integrationValidator).validateBatchCompatibility(101L, 301L);
+
+        assertThrows(
+                com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException.class,
+                () -> service.confirmPhysicalAdministration(1L)
+        );
+
+        assertFalse(draft.isPhysicalAdministrationConfirmed(), "Draft must remain unconfirmed when batch is unavailable");
+        assertEquals(VaccinationDraftStatus.IN_PROGRESS, draft.getStatus(), "Draft status must not transition");
+        verify(draftRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmPhysicalAdministration_whenExpectedCampaignTypeNull_throwsExceptionAndDraftRemainsUnconfirmedAndEditable() {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setVaccineBatchId(301L);
+        draft.setDoseNumber(1);
+        draft.setStatus(VaccinationDraftStatus.IN_PROGRESS);
+        draft.setPhysicalAdministrationConfirmed(false);
+
+        when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
+        doThrow(new InvalidVaccinationDraftException("Campaign expected vaccine type could not be resolved"))
+                .when(integrationValidator).validateBatchCompatibility(101L, 301L);
+
+        assertThrows(
+                InvalidVaccinationDraftException.class,
+                () -> service.confirmPhysicalAdministration(1L)
+        );
+
+        assertFalse(draft.isPhysicalAdministrationConfirmed(), "Draft must remain unconfirmed when campaign type is null");
+        assertEquals(VaccinationDraftStatus.IN_PROGRESS, draft.getStatus(), "Draft status must not transition");
+        verify(draftRepository, never()).save(any());
+    }
+
     private CreateVaccinationDraftRequest createRequest(Long appointmentId) {
         return new CreateVaccinationDraftRequest(
                 appointmentId,

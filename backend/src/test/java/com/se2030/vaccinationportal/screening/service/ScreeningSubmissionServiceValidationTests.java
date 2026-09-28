@@ -115,11 +115,13 @@ class ScreeningSubmissionServiceValidationTests {
         QuestionnaireItem item = new QuestionnaireItem(version, question, 1, null);
         stubSubmissionPrerequisites(List.of(item));
         stubEffectiveAssignment(20L);
-        when(submissionRepository.save(any(ScreeningSubmission.class))).thenAnswer(invocation -> {
+        when(submissionRepository.saveAndFlush(any(ScreeningSubmission.class))).thenAnswer(invocation -> {
             ScreeningSubmission submission = invocation.getArgument(0);
             submission.setId(50L);
             return submission;
         });
+        when(submissionRepository.save(any(ScreeningSubmission.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         when(answerRepository.save(any(ScreeningAnswer.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(preliminaryScreeningService.evaluateAnswers(any(), any())).thenReturn(
                 new PreliminaryScreeningService.RuleEvaluationResult(
@@ -141,11 +143,13 @@ class ScreeningSubmissionServiceValidationTests {
         QuestionnaireItem item = new QuestionnaireItem(version, question, 1, null);
         stubSubmissionPrerequisites(List.of(item));
         stubEffectiveAssignment(20L);
-        when(submissionRepository.save(any(ScreeningSubmission.class))).thenAnswer(invocation -> {
+        when(submissionRepository.saveAndFlush(any(ScreeningSubmission.class))).thenAnswer(invocation -> {
             ScreeningSubmission submission = invocation.getArgument(0);
             submission.setId(50L);
             return submission;
         });
+        when(submissionRepository.save(any(ScreeningSubmission.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         when(answerRepository.save(any(ScreeningAnswer.class))).thenAnswer(invocation -> invocation.getArgument(0));
         EligibilityRule sourceRule = new EligibilityRule();
         sourceRule.setId(60L);
@@ -220,11 +224,13 @@ class ScreeningSubmissionServiceValidationTests {
         QuestionnaireItem item = new QuestionnaireItem(version, question, 1, null);
         stubSubmissionPrerequisites(List.of(item));
         stubEffectiveAssignment(20L);
-        when(submissionRepository.save(any(ScreeningSubmission.class))).thenAnswer(invocation -> {
+        when(submissionRepository.saveAndFlush(any(ScreeningSubmission.class))).thenAnswer(invocation -> {
             ScreeningSubmission submission = invocation.getArgument(0);
             submission.setId(50L);
             return submission;
         });
+        lenient().when(submissionRepository.save(any(ScreeningSubmission.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         when(answerRepository.save(any(ScreeningAnswer.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(preliminaryScreeningService.evaluateAnswers(any(), any()))
                 .thenThrow(new IllegalStateException("evaluation failed"));
@@ -360,7 +366,7 @@ class ScreeningSubmissionServiceValidationTests {
     void submitScreeningRejectsExistingActiveSubmissionBeforeDownstreamWorkOrPersistence() {
         ScreeningSubmission activeSubmission = new ScreeningSubmission();
         activeSubmission.setId(50L);
-        when(submissionRepository.findActiveSubmission(any(), any(), any()))
+        when(submissionRepository.findActiveSubmissionForUpdate(any(), any(), any()))
                 .thenReturn(Optional.of(activeSubmission));
 
         assertThatThrownBy(() ->
@@ -387,7 +393,7 @@ class ScreeningSubmissionServiceValidationTests {
     }
 
     private void stubPublishedVersionPrerequisites() {
-        when(submissionRepository.findActiveSubmission(any(), any(), any())).thenReturn(Optional.empty());
+        when(submissionRepository.findActiveSubmissionForUpdate(any(), any(), any())).thenReturn(Optional.empty());
         when(versionRepository.findById(20L)).thenReturn(Optional.of(version));
     }
 

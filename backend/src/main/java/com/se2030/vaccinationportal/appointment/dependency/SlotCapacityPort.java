@@ -92,4 +92,71 @@ public interface SlotCapacityPort {
      *         empty otherwise
      */
     Optional<Long> getSessionIdForSlot(Long slotId);
+
+    /**
+     * Resolves the authoritative campaign ID for the specified session (R01).
+     * Used to validate that a waitlist admission's campaign/session pair is authoritative
+     * instead of trusting two independently supplied IDs.
+     *
+     * @param sessionId Identifier of the vaccination session
+     * @return {@link Optional} containing the campaign ID if the session exists and belongs to a
+     *         scheduled campaign relationship; empty otherwise
+     */
+    Optional<Long> getCampaignIdForSession(Long sessionId);
+
+    /**
+     * Authoritatively evaluates whether a NEW direct booking may currently be made into the slot
+     * (R03). Enforces the full booking policy: session lifecycle, campaign booking openness,
+     * session booking suspension, session booking cutoff, future slot time, and remaining capacity.
+     * Must be enforced at every reservation mutation boundary — the availability/search path alone
+     * cannot guarantee mutation safety.
+     *
+     * @param slotId Identifier of the time slot
+     * @param now    Current evaluation instant
+     * @return {@link SlotBookability#BOOKABLE} if a new booking is permitted; the specific failure
+     *         reason otherwise
+     */
+    SlotBookability evaluateBookabilityForNewBooking(Long slotId, Instant now);
+
+    /**
+     * Authoritatively evaluates whether a WAITLIST PROMOTION may currently reserve the slot (R03).
+     * Promotion fulfils an already-permitted queue join, so it deliberately does NOT re-apply the
+     * direct-booking restrictions that would strand legitimate waiters: the session booking cutoff,
+     * session booking suspension, and future-slot-time rules are not enforced here. Freed capacity
+     * from cancellations and no-shows (which occur at or after slot start, past the cutoff) must
+     * remain reachable by the FIFO queue. What IS enforced: slot existence, session lifecycle, and
+     * campaign intake status (operationally closed campaigns reject promotion).
+     *
+     * @param slotId Identifier of the time slot
+     * @param now    Current evaluation instant
+     * @return {@link SlotBookability#BOOKABLE} if promotion may reserve the slot; the specific
+     *         failure reason otherwise
+     */
+    SlotBookability evaluateBookabilityForWaitlistPromotion(Long slotId, Instant now);
+
+    /**
+     * Atomically validates bookability under lock and reserves one place of capacity for a new booking (F1).
+     * Enforces session lock, authoritative bookability, and capacity reservation inside the transaction to
+     * prevent TOCTOU races.
+     *
+     * @param slotId Identifier of the time slot
+     * @param now    Current evaluation instant
+     * @return {@link SlotReservationResult#SUCCESS} if reserved;
+     *         {@link SlotReservationResult#NOT_BOOKABLE} if not currently bookable;
+     *         {@link SlotReservationResult#SLOT_FULL} if capacity exhausted;
+     *         {@link SlotReservationResult#SLOT_NOT_FOUND} if slot/session does not exist
+     */
+    SlotReservationResult reserveCapacityForNewBooking(Long slotId, Instant now);
+
+    /**
+     * Atomically validates bookability under lock and reserves one place of capacity for waitlist promotion (F1).
+     *
+     * @param slotId Identifier of the time slot
+     * @param now    Current evaluation instant
+     * @return {@link SlotReservationResult#SUCCESS} if reserved;
+     *         {@link SlotReservationResult#NOT_BOOKABLE} if not bookable for promotion;
+     *         {@link SlotReservationResult#SLOT_FULL} if capacity exhausted;
+     *         {@link SlotReservationResult#SLOT_NOT_FOUND} if slot/session does not exist
+     */
+    SlotReservationResult reserveCapacityForWaitlistPromotion(Long slotId, Instant now);
 }

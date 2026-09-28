@@ -416,4 +416,100 @@ class VaccinationDraftControllerTests {
         mockMvc.perform(post("/api/v1/vaccination/drafts/1/finalize"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void confirmAdministration_nonexistentBatch_returns404WithVaccinationEnvelope() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(draftService.confirmPhysicalAdministration(1L)).thenThrow(
+                new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.BATCH_NOT_FOUND
+                )
+        );
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/confirm-administration"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString("BATCH_NOT_FOUND")))
+                .andExpect(jsonPath("$.path", is("/api/v1/vaccination/drafts/1/confirm-administration")));
+    }
+
+    @Test
+    void confirmAdministration_unavailableBatchExpired_returns409WithVaccinationEnvelope() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(draftService.confirmPhysicalAdministration(1L)).thenThrow(
+                new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.EXPIRED_BATCH
+                )
+        );
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/confirm-administration"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("EXPIRED_BATCH")))
+                .andExpect(jsonPath("$.path", is("/api/v1/vaccination/drafts/1/confirm-administration")));
+    }
+
+    @Test
+    void confirmAdministration_unavailableBatchInsufficientStock_returns409WithVaccinationEnvelope() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(draftService.confirmPhysicalAdministration(1L)).thenThrow(
+                new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.INSUFFICIENT_STOCK
+                )
+        );
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/confirm-administration"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("INSUFFICIENT_STOCK")));
+    }
+
+    @Test
+    void confirmAdministration_vaccineTypeMismatch_returns409WithVaccinationEnvelope() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(draftService.confirmPhysicalAdministration(1L)).thenThrow(
+                new com.se2030.vaccinationportal.vaccination.exception.VaccinationBatchVaccineTypeMismatchException(10L, 20L)
+        );
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/confirm-administration"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("Selected vaccine batch type 20 does not match the campaign vaccine type 10")));
+    }
+
+    @Test
+    void finalizeDraft_nonexistentBatch_returns404WithVaccinationEnvelope() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(finalizationService.finalizeDraft(1L, 201L)).thenThrow(
+                new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.BATCH_NOT_FOUND
+                )
+        );
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/finalize"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString("BATCH_NOT_FOUND")));
+    }
+
+    @Test
+    void finalizeDraft_unavailableBatch_returns409WithVaccinationEnvelope() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(finalizationService.finalizeDraft(1L, 201L)).thenThrow(
+                new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.INACTIVE_BATCH
+                )
+        );
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/finalize"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("INACTIVE_BATCH")));
+    }
 }

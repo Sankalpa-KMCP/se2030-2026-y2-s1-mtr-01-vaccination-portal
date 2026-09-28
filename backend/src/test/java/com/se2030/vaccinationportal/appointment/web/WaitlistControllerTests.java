@@ -103,6 +103,8 @@ class WaitlistControllerTests {
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
+        // Authoritative campaign/session relationship for R01 admission validation
+        slotCapacityPortDouble.setSessionCampaign(3001L, 2001L);
 
         WaitlistController waitlistController = new WaitlistController(joinService, leaveService, waitlistRepository);
         this.mockMvc = MockMvcBuilders.standaloneSetup(waitlistController)
@@ -116,6 +118,7 @@ class WaitlistControllerTests {
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
+        slotCapacityPortDouble.clearSessionCampaignMap();
         SecurityContextHolder.clearContext();
     }
 

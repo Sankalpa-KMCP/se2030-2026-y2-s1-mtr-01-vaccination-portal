@@ -134,8 +134,10 @@ export async function apiRequest(endpoint, options = {}) {
     'Accept': 'application/json',
   };
 
+  let requestToken = null;
   if (auth) {
     const token = getToken();
+    requestToken = token;
     if (token) {
       defaultHeaders['Authorization'] = `Bearer ${token}`;
     }
@@ -160,7 +162,13 @@ export async function apiRequest(endpoint, options = {}) {
   }
 
   if (response.status === 401 && handleUnauthorized !== false) {
-    notifyUnauthorized();
+    // Tie unauthorized handling to the authentication identity that originated the request (R07):
+    // a request started under session A must never clear session B if the user logged in (or out)
+    // while the request was in flight. Notify only when the stored token is still the exact token
+    // this request was sent with; anonymous requests (no token) keep their existing behavior.
+    if (getToken() === requestToken) {
+      notifyUnauthorized();
+    }
   }
 
   return response;

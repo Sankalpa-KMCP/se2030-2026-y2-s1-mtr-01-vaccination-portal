@@ -15,7 +15,10 @@ import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraf
 import com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.exception.NoValidDigitalCertificateException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationBatchVaccineTypeMismatchException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
+import com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason;
+import com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -108,6 +111,25 @@ public class VaccinationExceptionHandler {
             HttpServletRequest request
     ) {
         return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(VaccinationBatchVaccineTypeMismatchException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleBatchVaccineTypeMismatch(
+            VaccinationBatchVaccineTypeMismatchException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(BatchUnavailableException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleBatchUnavailable(
+            BatchUnavailableException ex,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = ex.getReason() == BatchAvailabilityReason.BATCH_NOT_FOUND
+                ? HttpStatus.NOT_FOUND
+                : HttpStatus.CONFLICT;
+        return response(status, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler(InvalidVaccinationDraftException.class)

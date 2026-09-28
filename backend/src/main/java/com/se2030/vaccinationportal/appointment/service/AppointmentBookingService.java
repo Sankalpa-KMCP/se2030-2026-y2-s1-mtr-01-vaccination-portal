@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.appointment.service;
 
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityLookupPort;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.appointment.dependency.SlotBookability;
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
@@ -152,9 +153,22 @@ public class AppointmentBookingService {
             throw new IllegalArgumentException("Time slot " + slotId + " does not belong to campaign " + campaignId);
         }
 
-        // Step 1e: Reserve capacity on MF-02 time slot (MF03-BR-03).
-        // Viva note: Atomic decrement performed inside MF-02's domain ensures no two users claim the last place.
-        SlotReservationResult reservationResult = slotCapacityPort.reserveCapacity(slotId);
+        // Step 1d-2: Enforce the authoritative bookability policy at the mutation boundary (R03).
+        // Viva note: The availability/search endpoint cannot guarantee mutation safety. Direct booking must obey
+        // the same authoritative restrictions the search path advertises: session lifecycle, campaign booking
+        // window, session booking suspension, session booking cutoff, future slot time, and capacity.
+        SlotBookability bookability = slotCapacityPort.evaluateBookabilityForNewBooking(slotId, Instant.now());
+        if (bookability != SlotBookability.BOOKABLE) {
+            throw new IllegalArgumentException("Time slot " + slotId + " is not bookable: " + bookability);
+        }
+
+        // Step 1e: Reserve capacity on MF-02 time slot (MF03-BR-03, F1).
+        // Viva note: Atomic decrement performed inside MF-02's domain ensures no two users claim the last place,
+        // and re-evaluates bookability under session+slot locks to prevent TOCTOU races.
+        SlotReservationResult reservationResult = slotCapacityPort.reserveCapacityForNewBooking(slotId, Instant.now());
+        if (reservationResult == SlotReservationResult.NOT_BOOKABLE) {
+            throw new IllegalArgumentException("Time slot " + slotId + " is not bookable");
+        }
         if (reservationResult != SlotReservationResult.SUCCESS) {
             throw new SlotFullException("Time slot " + slotId + " capacity reservation failed with result: " + reservationResult);
         }

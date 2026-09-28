@@ -83,6 +83,8 @@ class CheckInServiceTests {
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
+        // Authoritative campaign/session relationship for R01 admission validation
+        slotCapacityPortDouble.setSessionCampaign(3001L, 2001L);
     }
 
     @AfterEach
@@ -90,6 +92,7 @@ class CheckInServiceTests {
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
+        slotCapacityPortDouble.clearSessionCampaignMap();
     }
 
     @Test

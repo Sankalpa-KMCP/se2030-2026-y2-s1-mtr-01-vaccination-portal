@@ -76,7 +76,8 @@ The portal provides verifiable digital vaccination certificates with privacy-pre
 ### Prerequisites
 
 - **Java**: JDK 21 or higher
-- **Node.js**: v18+ or v20+ (v24 recommended; npm v9+)
+- **Node.js**: Node 22.x (22.22.2 or newer), Node 24.x (24.15.0 or newer), or Node 26+ (npm v9+) — matches the locked
+  frontend toolchain engines; Node 18/20 and odd-numbered majors (21, 23, 25) are not supported (see `frontend/README.md`)
 - **Container Engine**: Docker Desktop or Docker Engine with Docker Compose (for local database)
 - **Database**: MySQL 8.4 LTS (or local Docker Compose container)
 

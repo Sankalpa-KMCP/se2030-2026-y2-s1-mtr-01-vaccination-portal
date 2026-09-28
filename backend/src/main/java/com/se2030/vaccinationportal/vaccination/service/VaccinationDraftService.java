@@ -142,6 +142,7 @@ public class VaccinationDraftService {
         }
 
         integrationValidator.validateAppointment(draft.getAppointmentId());
+        integrationValidator.validateBatchCompatibility(draft.getAppointmentId(), draft.getVaccineBatchId());
 
         draft.setPhysicalAdministrationConfirmed(true);
         if (draft.getAdministrationTime() == null) {

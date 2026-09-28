@@ -77,6 +77,8 @@ class WaitlistLeaveServiceTests {
 
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
+        // Authoritative campaign/session relationship for R01 admission validation
+        slotCapacityPortDouble.setSessionCampaign(SESSION_ID, CAMPAIGN_ID);
     }
 
     @AfterEach
@@ -84,6 +86,7 @@ class WaitlistLeaveServiceTests {
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
+        slotCapacityPortDouble.clearSessionCampaignMap();
     }
 
     @Test
@@ -137,14 +140,14 @@ class WaitlistLeaveServiceTests {
 
         Instant now = Instant.now();
         WaitlistEntry entryA = joinService.joinWaitlist(CITIZEN_A, CAMPAIGN_ID, SESSION_ID, now);
-        WaitlistEntry entryB = joinService.joinWaitlist(CITIZEN_B, CAMPAIGN_ID + 1, SESSION_ID, now.plusSeconds(10));
+        WaitlistEntry entryB = joinService.joinWaitlist(CITIZEN_B, CAMPAIGN_ID, SESSION_ID, now.plusSeconds(10));
 
         Optional<WaitlistEntry> foundA = leaveService.getWaitlistStatus(CITIZEN_A, CAMPAIGN_ID);
         assertTrue(foundA.isPresent());
         assertEquals(entryA.getId(), foundA.get().getId());
         assertEquals(1, leaveService.getQueuePosition(foundA.get()));
 
-        Optional<WaitlistEntry> foundB = leaveService.getWaitlistStatus(CITIZEN_B, CAMPAIGN_ID + 1);
+        Optional<WaitlistEntry> foundB = leaveService.getWaitlistStatus(CITIZEN_B, CAMPAIGN_ID);
         assertTrue(foundB.isPresent());
         assertEquals(entryB.getId(), foundB.get().getId());
         assertEquals(2, leaveService.getQueuePosition(foundB.get()));

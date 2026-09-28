@@ -91,11 +91,17 @@ public class InventoryManagementService {
 
     @Transactional
     public VaccineBatchResponse updateBatch(Long id, VaccineBatchRequest request) {
-        validateBatchRequest(request);
         VaccineBatch batch = batch(id);
-        boolean lotFactsChanged = !batch.getManufacturerId().equals(request.manufacturerId())
-                || !batch.getVaccineTypeId().equals(request.vaccineTypeId())
-                || !batch.getBatchNumber().equals(clean(request.batchNumber()))
+        // Manufacturer and vaccine type are the batch identity (uk_vaccine_batch_identity) and are
+        // immutable after creation; the entity update path cannot change them, so a requested identity
+        // change must be rejected instead of silently persisted as the pre-update identity.
+        if (!batch.getManufacturerId().equals(request.manufacturerId())
+                || !batch.getVaccineTypeId().equals(request.vaccineTypeId())) {
+            throw new InventoryConflictException(
+                    "Batch manufacturer and vaccine type are immutable and cannot be changed after batch creation");
+        }
+        validateBatchRequest(request);
+        boolean lotFactsChanged = !batch.getBatchNumber().equals(clean(request.batchNumber()))
                 || !batch.getManufactureDate().equals(request.manufactureDate())
                 || !batch.getExpiryDate().equals(request.expiryDate());
         if (lotFactsChanged && batchHasTransactions(id)) {

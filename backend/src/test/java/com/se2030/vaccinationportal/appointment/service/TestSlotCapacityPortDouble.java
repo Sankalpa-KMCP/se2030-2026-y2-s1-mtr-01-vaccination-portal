@@ -1,5 +1,6 @@
 package com.se2030.vaccinationportal.appointment.service;
 
+import com.se2030.vaccinationportal.appointment.dependency.SlotBookability;
 import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
 import java.time.Instant;
@@ -146,5 +147,89 @@ public class TestSlotCapacityPortDouble implements SlotCapacityPort {
             return Optional.of(defaultSessionId);
         }
         return Optional.empty();
+    }
+
+    private final ConcurrentMap<Long, Long> sessionCampaignMap = new ConcurrentHashMap<>();
+    private Long defaultSessionCampaignId = null;
+    private final ConcurrentMap<Long, SlotBookability> newBookingBookabilityOverrides = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, SlotBookability> promotionBookabilityOverrides = new ConcurrentHashMap<>();
+
+    /** Maps a session to its authoritative campaign (R01 admission/promotion validation). */
+    public void setSessionCampaign(Long sessionId, Long campaignId) {
+        if (sessionId != null && campaignId != null) {
+            sessionCampaignMap.put(sessionId, campaignId);
+        }
+    }
+
+    public void setDefaultSessionCampaignId(Long defaultSessionCampaignId) {
+        this.defaultSessionCampaignId = defaultSessionCampaignId;
+    }
+
+    public void clearSessionCampaignMap() {
+        sessionCampaignMap.clear();
+    }
+
+    /** Forces the new-booking bookability verdict for a slot (R03 rejection scenarios). */
+    public void setNewBookingBookability(Long slotId, SlotBookability bookability) {
+        if (slotId != null) {
+            newBookingBookabilityOverrides.put(slotId, bookability);
+        }
+    }
+
+    /** Forces the waitlist-promotion bookability verdict for a slot (R03 rejection scenarios). */
+    public void setPromotionBookability(Long slotId, SlotBookability bookability) {
+        if (slotId != null) {
+            promotionBookabilityOverrides.put(slotId, bookability);
+        }
+    }
+
+    public void clearBookabilityOverrides() {
+        newBookingBookabilityOverrides.clear();
+        promotionBookabilityOverrides.clear();
+    }
+
+    @Override
+    public Optional<Long> getCampaignIdForSession(Long sessionId) {
+        if (sessionId == null) {
+            return Optional.empty();
+        }
+        Long mappedCampaign = sessionCampaignMap.get(sessionId);
+        if (mappedCampaign != null) {
+            return Optional.of(mappedCampaign);
+        }
+        if (defaultSessionCampaignId != null) {
+            return Optional.of(defaultSessionCampaignId);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public SlotBookability evaluateBookabilityForNewBooking(Long slotId, Instant now) {
+        SlotBookability override = newBookingBookabilityOverrides.get(slotId);
+        return override != null ? override : SlotBookability.BOOKABLE;
+    }
+
+    @Override
+    public SlotBookability evaluateBookabilityForWaitlistPromotion(Long slotId, Instant now) {
+        SlotBookability override = promotionBookabilityOverrides.get(slotId);
+        return override != null ? override : SlotBookability.BOOKABLE;
+    }
+
+    @Override
+    public SlotReservationResult reserveCapacityForNewBooking(Long slotId, Instant now) {
+        SlotBookability bookability = evaluateBookabilityForNewBooking(slotId, now);
+        if (bookability != SlotBookability.BOOKABLE) {
+            return SlotReservationResult.NOT_BOOKABLE;
+        }
+        return reserveCapacity(slotId);
+    }
+
+    @Override
+    public SlotReservationResult reserveCapacityForWaitlistPromotion(Long slotId, Instant now) {
+        SlotBookability bookability = evaluateBookabilityForWaitlistPromotion(slotId, now);
+        if (bookability != SlotBookability.BOOKABLE) {
+            return SlotReservationResult.NOT_BOOKABLE;
+        }
+        return reserveCapacity(slotId);
     }
 }

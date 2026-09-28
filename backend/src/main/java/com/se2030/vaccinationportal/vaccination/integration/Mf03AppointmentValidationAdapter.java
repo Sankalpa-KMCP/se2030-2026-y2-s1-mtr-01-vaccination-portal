@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.service.CheckInService;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationPort;
 import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationSnapshot;
 import java.util.Optional;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Resolves the minimal MF-03 appointment state required by MF-05 validation and finalization.
+ * The campaign vaccine type is resolved from the authoritative campaign record (never from
+ * client-supplied data) so finalization can verify batch compatibility.
  */
 @Component
 public class Mf03AppointmentValidationAdapter implements AppointmentValidationPort {
@@ -19,20 +22,23 @@ public class Mf03AppointmentValidationAdapter implements AppointmentValidationPo
     private final AppointmentRepository appointmentRepository;
     private final CheckInService checkInService;
     private final TimeSlotRepository timeSlotRepository;
+    private final VaccinationCampaignRepository campaignRepository;
 
     @Autowired
     public Mf03AppointmentValidationAdapter(
             AppointmentRepository appointmentRepository,
             CheckInService checkInService,
-            TimeSlotRepository timeSlotRepository
+            TimeSlotRepository timeSlotRepository,
+            VaccinationCampaignRepository campaignRepository
     ) {
         this.appointmentRepository = appointmentRepository;
         this.checkInService = checkInService;
         this.timeSlotRepository = timeSlotRepository;
+        this.campaignRepository = campaignRepository;
     }
 
     public Mf03AppointmentValidationAdapter(AppointmentRepository appointmentRepository) {
-        this(appointmentRepository, null, null);
+        this(appointmentRepository, null, null, null);
     }
 
     @Override
@@ -47,13 +53,22 @@ public class Mf03AppointmentValidationAdapter implements AppointmentValidationPo
                                         : null)
                                 .orElse(null);
                     }
+                    Long campaignVaccineTypeId = null;
+                    if (campaignRepository != null && appointment.getCampaignId() != null) {
+                        campaignVaccineTypeId = campaignRepository.findById(appointment.getCampaignId())
+                                .map(campaign -> campaign.getVaccineType() != null
+                                        ? campaign.getVaccineType().getId()
+                                        : null)
+                                .orElse(null);
+                    }
                     return new AppointmentValidationSnapshot(
                             appointment.getId(),
                             appointment.getStatus() == AppointmentStatus.CHECKED_IN,
                             appointment.getCitizenId(),
                             appointment.getCampaignId(),
                             appointment.getSlotId(),
-                            centerId
+                            centerId,
+                            campaignVaccineTypeId
                     );
                 });
     }

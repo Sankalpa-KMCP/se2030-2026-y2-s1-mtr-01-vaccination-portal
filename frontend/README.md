@@ -14,7 +14,9 @@ The frontend application for the Web-Based Vaccination Portal is a single-page a
 
 ## Prerequisites
 
-- **Node.js**: v18+ or v20+ recommended (verified on Node.js v24.x)
+- **Node.js**: Node 22.x (22.22.2 or newer), Node 24.x (24.15.0 or newer), or Node 26+ (verified on Node.js v24.x).
+  These ranges follow the locked toolchain engine declarations: Vite requires `^20.19.0 || >=22.12.0`, and JSDOM (used by the
+  test suite) requires `^22.22.2 || ^24.15.0 || >=26.0.0`, which excludes Node 18/20 and odd-numbered majors (21, 23, 25).
 - **npm**: v9+ or v10+ recommended (verified on npm v11.x)
 
 ## Environment Setup

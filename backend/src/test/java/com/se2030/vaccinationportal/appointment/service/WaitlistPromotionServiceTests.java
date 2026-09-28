@@ -86,6 +86,9 @@ class WaitlistPromotionServiceTests {
         slotCapacityPortDouble.clearSlotCampaignMap();
         slotCapacityPortDouble.clearSlotSessionMap();
         slotCapacityPortDouble.setDefaultSessionId(null);
+        // Authoritative campaign/session relationships for R01 admission/promotion validation
+        slotCapacityPortDouble.setSessionCampaign(3001L, 2001L);
+        slotCapacityPortDouble.setSessionCampaign(3002L, 2001L);
     }
 
     @AfterEach
@@ -96,6 +99,7 @@ class WaitlistPromotionServiceTests {
         slotCapacityPortDouble.clearSlotCampaignMap();
         slotCapacityPortDouble.clearSlotSessionMap();
         slotCapacityPortDouble.setDefaultSessionId(null);
+        slotCapacityPortDouble.clearSessionCampaignMap();
     }
 
     @Test
@@ -109,6 +113,7 @@ class WaitlistPromotionServiceTests {
         eligibilityPortDouble.setEligibility(citizenId, campaignId, EligibilityStatus.ELIGIBLE);
         slotCapacityPortDouble.setAvailableCapacity(slotId, 1);
         slotCapacityPortDouble.setSessionFull(sessionId, true);
+        slotCapacityPortDouble.setSlotSession(slotId, sessionId);
 
         WaitlistEntry entry = joinService.joinWaitlist(citizenId, campaignId, sessionId, now);
         assertNotNull(entry);
@@ -142,6 +147,7 @@ class WaitlistPromotionServiceTests {
 
         slotCapacityPortDouble.setSessionFull(sessionId, true);
         slotCapacityPortDouble.setAvailableCapacity(slotId, 1);
+        slotCapacityPortDouble.setSlotSession(slotId, sessionId);
 
         WaitlistEntry entry1 = joinService.joinWaitlist(citizen1, campaignId, sessionId, t0);
         WaitlistEntry entry2 = joinService.joinWaitlist(citizen2, campaignId, sessionId, t1);
@@ -172,6 +178,7 @@ class WaitlistPromotionServiceTests {
 
         slotCapacityPortDouble.setSessionFull(sessionId, true);
         slotCapacityPortDouble.setAvailableCapacity(slotId, 1);
+        slotCapacityPortDouble.setSlotSession(slotId, sessionId);
 
         // Both join while ELIGIBLE
         WaitlistEntry entry1 = joinService.joinWaitlist(citizenIneligible, campaignId, sessionId, t0);

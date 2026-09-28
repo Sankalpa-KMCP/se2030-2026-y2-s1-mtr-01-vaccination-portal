@@ -11,6 +11,7 @@ import com.se2030.vaccinationportal.vaccination.dto.FinalizeVaccinationResponse;
 import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationBatchVaccineTypeMismatchException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationDraftNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
 import com.se2030.vaccinationportal.vaccination.mapper.DigitalCertificateMapper;
@@ -134,6 +135,21 @@ public class VaccinationFinalizationService {
             throw new BatchUnavailableException(
                     availability != null ? availability.reason() : BatchAvailabilityReason.BATCH_NOT_FOUND
             );
+        }
+
+        // Batch/campaign vaccine type compatibility must be enforced before any irreversible
+        // finalization step (record creation, stock deduction, appointment completion, certificate
+        // issuance). The expected type is resolved from the authoritative campaign record via the
+        // appointment integration port — never from client-supplied draft data.
+        Long expectedVaccineTypeId = appointment.campaignVaccineTypeId();
+        if (expectedVaccineTypeId == null) {
+            throw new InvalidVaccinationDraftException(
+                    "Campaign vaccine type could not be resolved for finalization of appointment: "
+                            + draft.getAppointmentId()
+            );
+        }
+        if (!expectedVaccineTypeId.equals(availability.vaccineTypeId())) {
+            throw new VaccinationBatchVaccineTypeMismatchException(expectedVaccineTypeId, availability.vaccineTypeId());
         }
 
         Long effectiveVaccinator = draft.getVaccinatorId() != null

@@ -291,7 +291,7 @@ class ScreeningSubmissionEligibilityLifecycleTests {
 
         CampaignQuestionnaireAssignment assignment = mock(CampaignQuestionnaireAssignment.class);
         lenient().when(assignment.getQuestionnaireVersionId()).thenReturn(VERSION_ID);
-        lenient().when(submissionRepository.findActiveSubmission(any(), any(), any()))
+        lenient().when(submissionRepository.findActiveSubmissionForUpdate(any(), any(), any()))
                 .thenReturn(Optional.empty());
         lenient().when(versionRepository.findById(VERSION_ID)).thenReturn(Optional.of(version));
         lenient().when(assignmentService.getEffectiveAssignmentAt(eq(CAMPAIGN_ID), any(LocalDate.class)))
@@ -304,6 +304,8 @@ class ScreeningSubmissionEligibilityLifecycleTests {
                         question,
                         "No current contraindications"
                 )));
+        lenient().when(submissionRepository.saveAndFlush(any(ScreeningSubmission.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(submissionRepository.save(any(ScreeningSubmission.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(answerRepository.save(any(ScreeningAnswer.class)))

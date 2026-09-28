@@ -41,6 +41,9 @@ import org.springframework.transaction.annotation.Transactional;
  *       (CONFIRMED or CHECKED_IN) for the same campaign.</li>
  *   <li>MF03-BR-06: Allowed only when all time slots of the session have zero remaining capacity;
  *       at most one active WAITING entry per citizen per campaign.</li>
+ *   <li>R01 campaign/session integrity: the requested session's authoritative campaign (resolved via
+ *       the {@link com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort}) must match the
+ *       requested campaign before any queue or capacity effects.</li>
  * </ul>
  */
 @Service
@@ -106,6 +109,22 @@ public class WaitlistJoinService {
             throw new IllegalArgumentException("Session ID is required");
         }
         Instant effectiveNow = (now != null) ? now : Instant.now();
+
+        // Step 2a-0: Authoritative campaign/session consistency (R01).
+        // Campaign identity and session identity are never trusted merely because each exists: the
+        // session's authoritative campaign (resolved from MF-02 backend data) must equal the requested
+        // campaign. A mismatched pair is rejected BEFORE the guard-row insert, eligibility checks, or
+        // any queue/capacity effects, so no waitlist entry can ever represent a non-authoritative
+        // campaign/session pairing. Sessions that cannot be resolved to a campaign (nonexistent or not
+        // scheduled) fall through unchanged to the authoritative session-state validation below, which
+        // preserves the pre-existing error contract for those cases.
+        if (slotCapacityPort == null) {
+            throw new IllegalStateException("SlotCapacityPort implementation (MF-02) is unavailable");
+        }
+        Optional<Long> authoritativeCampaignId = slotCapacityPort.getCampaignIdForSession(sessionId);
+        if (authoritativeCampaignId.isPresent() && !campaignId.equals(authoritativeCampaignId.get())) {
+            throw new IllegalArgumentException("Session " + sessionId + " does not belong to campaign " + campaignId);
+        }
 
         // Step 2a: Acquire pessimistic write lock on CitizenCampaignBookingGuard (Canonical Section 12.4).
         // Viva note: Must be acquired first to prevent race conditions against concurrent booking or promotion threads.
