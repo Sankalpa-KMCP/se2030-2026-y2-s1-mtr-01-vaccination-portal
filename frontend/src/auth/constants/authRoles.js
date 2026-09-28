@@ -17,13 +17,11 @@ export const REQUESTABLE_STAFF_ROLE_CODES = Object.freeze(
 
 export const APPROVABLE_STAFF_ROLES = Object.freeze([
   ...REQUESTABLE_STAFF_ROLES,
-  { code: 'ROLE_VACCINATOR', label: 'Vaccinator' },
 ]);
 
 export const STAFF_DASHBOARD_ROLES = Object.freeze([
   ...REQUESTABLE_STAFF_ROLE_CODES,
   'ROLE_MANAGEMENT_USER',
-  'ROLE_VACCINATOR',
   SUPER_ADMIN_ROLE,
 ]);
 
