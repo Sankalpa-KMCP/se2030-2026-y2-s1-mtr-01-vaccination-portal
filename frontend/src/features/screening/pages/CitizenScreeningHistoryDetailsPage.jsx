@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
-import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenErrorState from '../../../shared/ui/citizen/CitizenErrorState';
+import CitizenPageHeader from '../../../shared/ui/citizen/CitizenPageHeader';
 import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
 import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
+import '../citizen-screening.css';
 import { listCitizenCampaigns } from '../../campaign-management/api/campaignApi';
 import { getEligibilityAssessmentBySubmission, getScreeningHistoryDetails } from '../api/screeningApi';
 import RecordedEligibilityAssessment from '../components/RecordedEligibilityAssessment';

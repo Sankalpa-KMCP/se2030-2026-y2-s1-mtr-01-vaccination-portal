@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
+import CitizenErrorState from '../../../shared/ui/citizen/CitizenErrorState';
 import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
 import { getCitizenCampaignEligibility } from '../api/screeningApi';
 import {

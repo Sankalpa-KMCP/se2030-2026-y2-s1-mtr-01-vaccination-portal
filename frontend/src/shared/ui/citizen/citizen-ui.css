@@ -276,7 +276,6 @@
   .citizen-page-header--hero .citizen-page-header__layout {
     grid-template-columns: minmax(0, 1fr);
   }
-
   .citizen-page-header__aside {
     justify-content: flex-start;
   }
@@ -562,8 +561,7 @@
   transform: none;
 }
 
-.citizen-page :is(a, button, input, textarea, select):focus-visible,
-.citizen-action:focus-visible {
+.citizen-page :is(a, button, input, textarea, select):focus-visible, .citizen-action:focus-visible {
   outline: 3px solid var(--citizen-green, #206245);
   outline-offset: 3px;
 }
@@ -604,17 +602,6 @@
   color: var(--citizen-ink);
   font-size: 0.9rem;
 }
-
-/* Campaign directory */
-.citizen-campaign-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .citizen-campaign-card {
   position: relative;
   display: grid;
@@ -629,7 +616,6 @@
   box-shadow: var(--citizen-shadow-sm);
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms var(--citizen-ui-ease);
 }
-
 .citizen-campaign-card::before {
   position: absolute;
   inset: 0 0 auto;
@@ -637,71 +623,11 @@
   background: linear-gradient(90deg, var(--citizen-green), var(--citizen-teal));
   content: "";
 }
-
 .citizen-campaign-card:hover {
   border-color: var(--citizen-border-strong);
   box-shadow: var(--citizen-shadow-md);
   transform: translateY(-2px);
 }
-
-.citizen-campaign-card__heading {
-  display: flex;
-  gap: 0.8rem;
-  align-items: start;
-  justify-content: space-between;
-}
-
-.citizen-campaign-card__heading h3 {
-  margin: 0;
-  color: var(--citizen-ink);
-  font-size: clamp(1.05rem, 2vw, 1.3rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.citizen-campaign-card__code {
-  margin: 0.28rem 0 0;
-  color: var(--citizen-muted);
-  font-size: 0.72rem;
-}
-
-.citizen-data-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.6rem;
-  margin: 0;
-}
-
-.citizen-data-grid > div {
-  min-width: 0;
-  padding: 0.75rem;
-  border-radius: var(--citizen-radius-sm);
-  background: #f4f7f5;
-}
-
-.citizen-data-grid dt {
-  color: var(--citizen-muted);
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.citizen-data-grid dd {
-  margin: 0.22rem 0 0;
-  overflow-wrap: anywhere;
-  color: var(--citizen-ink);
-  font-size: 0.8rem;
-  font-weight: 650;
-}
-
-.citizen-campaign-card__footer {
-  align-self: end;
-  padding-top: 0.2rem;
-  border-top: 1px solid var(--citizen-border);
-}
-
-/* Screening form and record system */
 .citizen-workflow-guide {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -774,7 +700,6 @@
 }
 
 .citizen-form-panel,
-.citizen-record-card,
 .citizen-detail-panel {
   min-width: 0;
   overflow: hidden;
@@ -807,8 +732,7 @@
 }
 
 .citizen-form-panel__header .citizen-ui-eyebrow,
-.citizen-detail-panel__header .citizen-ui-eyebrow,
-.citizen-record-card__identity .citizen-ui-eyebrow {
+.citizen-detail-panel__header .citizen-ui-eyebrow {
   margin: 0 0 0.32rem;
   color: var(--citizen-green);
   font-size: 0.68rem;
@@ -817,334 +741,6 @@
 .citizen-form-panel__body,
 .citizen-detail-panel__body {
   padding: clamp(1rem, 2.5vw, 1.5rem);
-}
-
-.citizen-question-list {
-  display: grid;
-  gap: 1rem;
-  counter-reset: citizen-question;
-}
-
-.citizen-question-list > .card {
-  position: relative;
-  margin: 0 !important;
-  padding-left: 3.2rem;
-  border: 1px solid var(--citizen-border) !important;
-  border-radius: var(--citizen-radius-md);
-  background: #ffffff !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 14px rgba(16, 47, 58, 0.025);
-  counter-increment: citizen-question;
-  transition: border-color 180ms ease, box-shadow 180ms ease;
-}
-
-.citizen-question-list > .card:hover,
-.citizen-question-list > .card:focus-within {
-  border-color: var(--citizen-border-strong) !important;
-  box-shadow: 0 4px 18px rgba(16, 47, 58, 0.05);
-}
-
-.citizen-question-list > .card::before {
-  position: absolute;
-  inset: 1.25rem auto auto 1.15rem;
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  color: var(--citizen-green);
-  border: 1.5px solid var(--citizen-border-strong);
-  border-radius: 50%;
-  background: var(--citizen-green-soft);
-  content: counter(citizen-question, decimal-leading-zero);
-  font-size: 0.68rem;
-  font-weight: 800;
-}
-
-.citizen-question-list fieldset {
-  min-width: 0;
-}
-
-.citizen-question-list legend,
-.citizen-question-list .form-label {
-  color: var(--citizen-ink);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.45;
-  margin-bottom: 0.6rem;
-}
-
-.citizen-question-list .d-flex.gap-4 {
-  display: flex;
-  gap: 0.75rem !important;
-  flex-wrap: wrap;
-}
-
-.citizen-question-list .d-flex.gap-4 > .form-check {
-  flex: 1 1 140px;
-  margin-top: 0;
-}
-
-.citizen-question-list .form-check {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 46px;
-  margin-top: 0.5rem;
-  padding: 0.65rem 1rem 0.65rem 2.85rem;
-  border: 1.5px solid var(--citizen-border);
-  border-radius: var(--citizen-radius-sm);
-  background: #ffffff;
-  cursor: pointer;
-  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms var(--citizen-ui-ease);
-}
-
-.citizen-question-list .form-check:hover {
-  border-color: var(--citizen-border-strong);
-  background: #f8fbf9;
-}
-
-.citizen-question-list .form-check:has(.form-check-input:checked) {
-  border-color: var(--citizen-green);
-  background: var(--citizen-green-soft);
-  box-shadow: 0 2px 8px rgba(15, 110, 91, 0.08);
-}
-
-.citizen-question-list .form-check .form-check-input {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  margin: 0;
-  width: 1.15rem;
-  height: 1.15rem;
-  cursor: pointer;
-  accent-color: var(--citizen-green);
-}
-
-.citizen-question-list .form-check-label {
-  cursor: pointer;
-  font-size: 0.88rem;
-  font-weight: 550;
-  color: var(--citizen-ink);
-  user-select: none;
-  width: 100%;
-}
-
-.citizen-question-list .form-check:has(.form-check-input:checked) .form-check-label {
-  color: var(--citizen-green-deep);
-  font-weight: 650;
-}
-
-.citizen-question-list .form-control {
-  min-height: 44px;
-  border: 1.5px solid var(--citizen-border);
-  border-radius: var(--citizen-radius-sm);
-  background: #fff;
-  padding: 0.6rem 0.85rem;
-  font-size: 0.88rem;
-  transition: border-color 180ms ease, box-shadow 180ms ease;
-}
-
-.citizen-question-list .form-control:focus,
-.citizen-appointment-flow .form-control:focus,
-.citizen-waitlist-filter .form-control:focus {
-  border-color: var(--citizen-green);
-  box-shadow: 0 0 0 0.2rem rgba(32, 98, 69, 0.13);
-}
-
-.citizen-consent-panel {
-  border-color: var(--citizen-border-strong);
-  background: #ffffff;
-}
-
-.citizen-consent-copy {
-  max-height: 240px;
-  overflow-y: auto;
-  padding: 1.15rem;
-  color: var(--citizen-ink);
-  border: 1px solid var(--citizen-border);
-  border-radius: var(--citizen-radius-sm);
-  background: #fbfdfc;
-  font-size: 0.82rem;
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
-
-.citizen-consent-panel .form-check {
-  border: 1.5px solid var(--citizen-border);
-  border-radius: var(--citizen-radius-sm);
-  background: #fff;
-  transition: border-color 180ms ease, background-color 180ms ease;
-}
-
-.citizen-consent-panel .form-check:has(.form-check-input:checked) {
-  border-color: var(--citizen-green);
-  background: var(--citizen-green-soft);
-}
-
-.citizen-submit-bar {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.15rem 1.4rem;
-  border: 1px solid var(--citizen-border-strong);
-  border-radius: var(--citizen-radius-md);
-  background: linear-gradient(110deg, #f9fbf9, #edf5ef);
-  box-shadow: 0 4px 16px rgba(16, 47, 58, 0.04);
-}
-
-.citizen-submit-bar p {
-  margin: 0;
-  color: var(--citizen-muted);
-  font-size: 0.78rem;
-}
-
-.citizen-record-list {
-  display: grid;
-  gap: 0.8rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.citizen-record-card {
-  display: grid;
-  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr) auto;
-  gap: 1rem;
-  align-items: center;
-  padding: 1rem 1.15rem;
-}
-
-.citizen-record-card__identity h3 {
-  margin: 0;
-  color: var(--citizen-ink);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.citizen-record-card__identity p {
-  margin: 0.25rem 0 0;
-  color: var(--citizen-muted);
-  font-size: 0.72rem;
-}
-
-.citizen-record-card__facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(100px, 1fr));
-  gap: 0.6rem;
-  min-width: 0;
-}
-
-.citizen-record-card__fact {
-  min-width: 0;
-}
-
-.citizen-record-card__fact span {
-  display: block;
-  color: var(--citizen-muted);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.citizen-record-card__fact strong {
-  display: block;
-  margin-top: 0.25rem;
-  overflow-wrap: anywhere;
-  color: var(--citizen-ink);
-  font-size: 0.76rem;
-  font-weight: 650;
-}
-
-.citizen-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-  gap: 0.75rem;
-  margin: 0;
-}
-
-.citizen-detail-grid > div {
-  padding: 0.8rem 0;
-  border-bottom: 1px solid var(--citizen-border);
-}
-
-.citizen-detail-grid dt {
-  color: var(--citizen-muted);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.citizen-detail-grid dd {
-  margin: 0.25rem 0 0;
-  overflow-wrap: anywhere;
-  font-size: 0.82rem;
-  font-weight: 650;
-}
-
-.citizen-answer-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: citizen-answer;
-}
-
-.citizen-answer-list li {
-  position: relative;
-  min-width: 0;
-  padding: 1rem 0 1rem 2.5rem;
-  border-top: 1px solid var(--citizen-border);
-  counter-increment: citizen-answer;
-}
-
-.citizen-answer-list li:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.citizen-answer-list li::before {
-  position: absolute;
-  inset: 1rem auto auto 0;
-  color: var(--citizen-teal);
-  content: counter(citizen-answer, decimal-leading-zero);
-  font-size: 0.66rem;
-  font-weight: 800;
-}
-
-.citizen-answer-list li:first-child::before {
-  top: 0;
-}
-
-.citizen-answer-list h3 {
-  margin: 0;
-  color: var(--citizen-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.citizen-answer-list p {
-  margin: 0.3rem 0 0;
-  overflow-wrap: anywhere;
-  color: var(--citizen-ink);
-  font-size: 0.86rem;
-  line-height: 1.55;
-  white-space: pre-wrap;
-}
-
-.citizen-screening-result .card {
-  margin: 0;
-  border: 1px solid var(--citizen-border-strong) !important;
-  border-radius: var(--citizen-radius-lg);
-  background: linear-gradient(120deg, var(--citizen-green-soft), #fff 48%);
-  box-shadow: var(--citizen-shadow-sm) !important;
-}
-
-.citizen-active-screening .citizen-detail-panel__header h2 {
-  margin-top: 0.65rem;
 }
 
 .citizen-page .citizen-detail-panel .alert {
@@ -1177,276 +773,41 @@
   font-size: 0.82rem;
 }
 
-/* Appointment and waitlist wrappers: presentation only around existing workflow components. */
-.citizen-appointment-flow .availability-search-container,
-.citizen-appointment-flow .results-section,
-.citizen-appointments-list,
-.citizen-waitlist-content {
-  display: grid;
-  gap: 1rem;
-}
-
-.citizen-appointment-flow .availability-search-container > .card,
-.citizen-appointments-list > .card,
-.citizen-waitlist-content > .card,
-.citizen-waitlist-filter {
-  overflow: hidden;
-  margin: 0 !important;
-  border: 1px solid var(--citizen-border) !important;
-  border-radius: var(--citizen-radius-lg) !important;
-  background: var(--citizen-surface);
-  box-shadow: var(--citizen-shadow-sm) !important;
-}
-
-.citizen-appointment-flow .card-header {
-  color: var(--citizen-ink) !important;
-  border-bottom: 1px solid var(--citizen-border);
-  background: linear-gradient(110deg, #f7faf7, #edf5ef) !important;
-}
-
-.citizen-appointment-flow .form-label,
-.citizen-waitlist-filter label {
-  color: var(--citizen-ink);
-  font-size: 0.75rem;
-}
-
-.citizen-appointment-flow .form-control,
-.citizen-waitlist-filter .form-control {
-  min-height: 44px;
-  border-color: var(--citizen-border);
-  border-radius: var(--citizen-radius-sm);
-}
-
-.citizen-appointment-flow .btn-primary,
-.citizen-waitlist-filter .btn-primary {
-  min-height: 44px;
-  border-color: var(--citizen-green);
-  border-radius: var(--citizen-radius-sm);
-  background: var(--citizen-green);
-  box-shadow: none !important;
-}
-
-.citizen-appointment-flow .session-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-}
-
-.citizen-appointment-flow .session-list > .card {
-  height: 100%;
-  margin: 0 !important;
-  border: 1px solid var(--citizen-border) !important;
-  border-radius: var(--citizen-radius-md);
-  box-shadow: var(--citizen-shadow-sm) !important;
-}
-
-.citizen-appointment-flow .session-list .card-title,
-.citizen-appointments-list .card-title,
-.citizen-waitlist-content .card-title {
-  color: var(--citizen-ink) !important;
-}
-
-.citizen-appointment-flow .session-list .bg-light,
-.citizen-appointments-list .bg-light,
-.citizen-waitlist-content .bg-light {
-  background: #f4f7f5 !important;
-}
-
-.citizen-appointments-list > .card {
-  position: relative;
-}
-
-.citizen-appointments-list > .card::before,
-.citizen-waitlist-content > .card::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background: var(--citizen-teal);
-  content: "";
-}
-
-.citizen-appointments-list .badge,
-.citizen-waitlist-content .badge,
-.citizen-appointment-flow .session-list .badge {
-  border-radius: 999px;
-  box-shadow: none !important;
-  font-size: 0.68rem !important;
-}
-
-.citizen-appointment-flow .text-center.py-5,
-.citizen-appointments-page .text-center.py-5 {
-  padding: 1.5rem !important;
-  border: 1px solid var(--citizen-border);
-  border-radius: var(--citizen-radius-md);
-  background: var(--citizen-paper);
-}
-
-.citizen-appointment-flow .text-center.py-5 .spinner-border,
-.citizen-appointments-page .text-center.py-5 .spinner-border {
-  width: 1.1rem !important;
-  height: 1.1rem !important;
-  color: var(--citizen-green) !important;
-  border-width: 0.16em;
-}
-
-.citizen-appointment-flow .btn,
-.citizen-appointments-page .btn,
-.waitlist-page .btn {
-  min-height: 40px;
-  border-radius: var(--citizen-radius-sm);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.citizen-appointment-flow .btn-primary,
-.citizen-appointments-page .btn-primary,
-.waitlist-page .btn-primary {
-  border-color: var(--citizen-green);
-  background: var(--citizen-green);
-}
-
-.citizen-appointment-flow .btn-outline-danger,
-.citizen-appointments-page .btn-outline-danger,
-.waitlist-page .btn-outline-danger {
-  color: var(--citizen-danger);
-  border-color: #dcaeb1;
-}
-
-.citizen-appointment-flow .badge.bg-success,
-.citizen-appointments-page .badge.bg-success,
-.waitlist-page .badge.bg-success {
-  color: #174d36 !important;
-  border: 1px solid var(--citizen-border-strong);
-  background: var(--citizen-green-soft) !important;
-}
-
-.citizen-appointment-flow .badge.bg-secondary,
-.citizen-appointments-page .badge.bg-secondary,
-.waitlist-page .badge.bg-secondary {
-  color: var(--citizen-ink) !important;
-  border: 1px solid var(--citizen-border);
-  background: #edf1ef !important;
-}
-
-.citizen-appointment-flow .badge.bg-danger,
-.citizen-appointments-page .badge.bg-danger,
-.waitlist-page .badge.bg-danger {
-  color: var(--citizen-danger) !important;
-  border: 1px solid #e4bfc1;
-  background: var(--citizen-danger-soft) !important;
-}
-
-.waitlist-page .badge.bg-warning {
-  color: var(--citizen-warning) !important;
-  border: 1px solid #e3c881;
-  background: var(--citizen-warning-soft) !important;
-}
-
-.citizen-appointment-flow .alert,
-.citizen-page__notice .alert,
-.citizen-page__notice.alert {
-  margin: 0;
-  border: 1px solid var(--citizen-border) !important;
-  border-radius: var(--citizen-radius-md);
-  box-shadow: none !important;
-}
-
-.citizen-waitlist-filter .card-body {
-  padding: 1rem 1.15rem !important;
-}
-
-.citizen-waitlist-lookup {
-  display: grid;
-  gap: 0.45rem;
-  max-width: 620px;
-}
-
-.citizen-waitlist-lookup__label {
-  margin: 0;
-  font-weight: 700;
-}
-
-.citizen-waitlist-lookup__controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.7rem;
-  align-items: stretch;
-}
-
-.citizen-waitlist-lookup__controls .form-control {
-  width: 100%;
-}
-
 @keyframes citizen-ui-pulse {
   0%, 100% { opacity: 0.5; transform: scale(0.85); }
   50% { opacity: 1; transform: scale(1); }
 }
 
 @media (max-width: 900px) {
-  .citizen-page__split,
-  .citizen-record-card {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .citizen-record-card__facts {
-    order: 2;
-  }
-
-  .citizen-record-card__action {
-    order: 3;
-    justify-self: start;
-  }
-
-  .citizen-appointment-flow .session-list {
+  .citizen-page__split {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 680px) {
-  .citizen-section__header,
-  .citizen-submit-bar {
+  .citizen-section__header {
     display: grid;
     align-items: start;
   }
-
   .citizen-state {
     grid-template-columns: auto minmax(0, 1fr);
   }
-
   .citizen-state__actions {
     grid-column: 1 / -1;
   }
-
-  .citizen-campaign-grid,
-  .citizen-record-card__facts {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .citizen-workflow-guide {
     grid-template-columns: minmax(0, 1fr);
   }
-
   .citizen-summary-strip > div {
     border-top: 1px solid var(--citizen-border);
     border-left: 0;
   }
-
   .citizen-summary-strip > div:first-child {
     border-top: 0;
   }
-
-  .citizen-waitlist-lookup__controls {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .citizen-waitlist-lookup__controls .btn {
-    width: 100%;
-  }
-
   .citizen-detail-panel__body > dl.row {
     grid-template-columns: minmax(0, 1fr);
   }
-
   .citizen-detail-panel__body > dl.row > dd {
     padding-top: 0;
   }
@@ -1456,29 +817,14 @@
   .citizen-workflow-guide ol {
     gap: 0.45rem;
   }
-
   .citizen-workflow-guide li {
     grid-template-columns: minmax(0, 1fr);
     align-content: start;
   }
-
   .citizen-action,
   .citizen-state__actions,
   .citizen-state__actions > * {
     width: 100%;
-  }
-
-  .citizen-question-list > .card {
-    padding-left: 0;
-  }
-
-  .citizen-question-list > .card::before {
-    position: static;
-    margin: 0.8rem 0 0 0.8rem;
-  }
-
-  .citizen-question-list > .card .card-body {
-    padding-top: 0.6rem;
   }
 }
 

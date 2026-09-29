@@ -41,4 +41,34 @@ describe('ApiErrorAlert', () => {
 
     expect(screen.getByText('Citizen ID is required')).toBeTruthy();
   });
+
+  it.each([
+    [404, 'Not Found'],
+    [409, 'Request Conflict'],
+    [400, 'Request Error'],
+    [401, 'Request Error'],
+  ])('keeps the generic title and server message for status %s', (status, title) => {
+    render(<ApiErrorAlert error={new ApiError('Server message', status)} />);
+    expect(screen.getByText(title)).toBeTruthy();
+    expect(screen.getByText('Server message')).toBeTruthy();
+  });
+
+  it('renders nothing without an error and preserves its fallback wording', () => {
+    const view = render(<ApiErrorAlert error={null} />);
+    expect(view.container.firstChild).toBeNull();
+    view.rerender(<ApiErrorAlert error={{ status: 500, data: { fieldErrors: 'malformed' } }} />);
+    expect(screen.getByText('An unexpected error occurred')).toBeTruthy();
+  });
+
+  it('keeps field-error order and the dismiss action', () => {
+    let dismissed = false;
+    const view = render(<ApiErrorAlert
+      error={{ status: 400, message: 'Invalid', data: { fieldErrors: { first: ['A', 'B'], second: 'C' } } }}
+      onDismiss={() => { dismissed = true; }}
+    />);
+    expect([...view.container.querySelectorAll('li')].map((item) => item.textContent))
+      .toEqual(['first: A', 'first: B', 'second: C']);
+    screen.getByRole('button', { name: 'Close' }).click();
+    expect(dismissed).toBe(true);
+  });
 });

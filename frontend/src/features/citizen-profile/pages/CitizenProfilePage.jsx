@@ -3,7 +3,7 @@ import { useAuth } from '../../../auth/context/AuthContext';
 import { INVALID_PHONE_NUMBER_MESSAGE, isValidPhoneNumber } from '../../../auth/utils/contactValidation';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
-import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
+import CitizenPageHeader from '../../../shared/ui/citizen/CitizenPageHeader';
 import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
 import { getCitizenProfile, updateCitizenProfile } from '../api/citizenProfileApi';
 import '../citizen-profile.css';

@@ -1,4 +1,5 @@
 import React from 'react';
+import '../../../shared/ui/citizen/citizen-ui.css';
 
 export default function CitizenSection({
   eyebrow,

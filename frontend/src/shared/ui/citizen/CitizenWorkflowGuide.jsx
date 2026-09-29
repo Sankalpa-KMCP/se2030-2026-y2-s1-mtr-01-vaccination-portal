@@ -1,4 +1,5 @@
 import React from 'react';
+import './citizen-ui.css';
 
 export default function CitizenWorkflowGuide({ titleId, steps }) {
   return (
