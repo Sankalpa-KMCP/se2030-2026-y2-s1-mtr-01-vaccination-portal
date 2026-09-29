@@ -1,10 +1,9 @@
 package com.se2030.vaccinationportal.screening.service;
 
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
-import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
-import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningSnapshot;
+import com.se2030.vaccinationportal.campaign.api.screening.QuestionnaireAssignmentSnapshot;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningFormResponse;
 import com.se2030.vaccinationportal.screening.model.AnswerOption;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
@@ -43,9 +42,7 @@ class ScreeningFormServiceTests {
     private static final LocalDate TODAY = LocalDate.of(2026, 9, 3);
 
     @Mock
-    private VaccinationCampaignService campaignService;
-    @Mock
-    private CampaignQuestionnaireAssignmentService assignmentService;
+    private CampaignScreeningReader campaignReader;
     @Mock
     private QuestionnaireVersionRepository versionRepository;
     @Mock
@@ -56,22 +53,22 @@ class ScreeningFormServiceTests {
     private ScreeningConsentNoticeService consentNoticeService;
 
     private ScreeningFormService service;
-    private VaccinationCampaign campaign;
+    private CampaignScreeningSnapshot campaign;
     private QuestionnaireVersion version;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         service = new ScreeningFormService(
-                campaignService,
-                assignmentService,
+                campaignReader,
                 versionRepository,
                 itemRepository,
                 answerOptionRepository,
                 consentNoticeService,
                 clock
         );
-        campaign = org.mockito.Mockito.mock(VaccinationCampaign.class);
+        campaign = new CampaignScreeningSnapshot(CAMPAIGN_ID, TODAY.plusDays(30),
+                NOW.minusSeconds(3600), NOW.plusSeconds(3600), true);
         version = new QuestionnaireVersion();
         version.setId(VERSION_ID);
         version.setVersionNumber(3);
@@ -142,8 +139,9 @@ class ScreeningFormServiceTests {
 
     @Test
     void rejectsCampaignOutsideExistingScreeningWindow() {
-        when(campaignService.getRequiredCampaignById(CAMPAIGN_ID)).thenReturn(campaign);
-        when(campaign.isBookingWindowOpenAt(NOW)).thenReturn(false);
+        when(campaignReader.getRequiredCampaign(CAMPAIGN_ID)).thenReturn(
+                new CampaignScreeningSnapshot(CAMPAIGN_ID, TODAY.plusDays(30),
+                        NOW.plusSeconds(1), NOW.plusSeconds(3600), true));
 
         assertThatThrownBy(() -> service.getFormForCampaign(CAMPAIGN_ID))
                 .isInstanceOf(IllegalStateException.class)
@@ -152,9 +150,8 @@ class ScreeningFormServiceTests {
 
     @Test
     void reportsCampaignWithoutEffectiveQuestionnaireAssignment() {
-        when(campaignService.getRequiredCampaignById(CAMPAIGN_ID)).thenReturn(campaign);
-        when(campaign.isBookingWindowOpenAt(NOW)).thenReturn(true);
-        when(assignmentService.getEffectiveAssignmentAt(CAMPAIGN_ID, TODAY)).thenReturn(Optional.empty());
+        when(campaignReader.getRequiredCampaign(CAMPAIGN_ID)).thenReturn(campaign);
+        when(campaignReader.getEffectiveAssignmentAt(CAMPAIGN_ID, TODAY)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getFormForCampaign(CAMPAIGN_ID))
                 .isInstanceOf(IllegalStateException.class)
@@ -163,7 +160,7 @@ class ScreeningFormServiceTests {
 
     @Test
     void preservesInvalidCampaignNotFoundBehavior() {
-        when(campaignService.getRequiredCampaignById(CAMPAIGN_ID))
+        when(campaignReader.getRequiredCampaign(CAMPAIGN_ID))
                 .thenThrow(new ResourceNotFoundException("Campaign not found with ID: 2"));
 
         assertThatThrownBy(() -> service.getFormForCampaign(CAMPAIGN_ID))
@@ -192,11 +189,9 @@ class ScreeningFormServiceTests {
     }
 
     private void stubApplicableCampaign() {
-        when(campaignService.getRequiredCampaignById(CAMPAIGN_ID)).thenReturn(campaign);
-        when(campaign.isBookingWindowOpenAt(NOW)).thenReturn(true);
-        CampaignQuestionnaireAssignment assignment = org.mockito.Mockito.mock(CampaignQuestionnaireAssignment.class);
-        when(assignment.getQuestionnaireVersionId()).thenReturn(VERSION_ID);
-        when(assignmentService.getEffectiveAssignmentAt(CAMPAIGN_ID, TODAY)).thenReturn(Optional.of(assignment));
+        when(campaignReader.getRequiredCampaign(CAMPAIGN_ID)).thenReturn(campaign);
+        QuestionnaireAssignmentSnapshot assignment = new QuestionnaireAssignmentSnapshot(1L, CAMPAIGN_ID, VERSION_ID);
+        when(campaignReader.getEffectiveAssignmentAt(CAMPAIGN_ID, TODAY)).thenReturn(Optional.of(assignment));
     }
 
     private ScreeningQuestion question(Long id, String code, String text, boolean defaultRequired) {

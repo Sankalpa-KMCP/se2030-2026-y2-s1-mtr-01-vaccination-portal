@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.campaign;
 
 import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
+import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.DoseCategory;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -74,10 +78,20 @@ public class CampaignScreeningCrossModuleIntegrationTests {
     @Autowired private ConsentNoticeVersionRepository consentNoticeVersionRepository;
     @Autowired private ScreeningSubmissionRepository submissionRepository;
     @Autowired private Clock clock;
+    @Autowired private CampaignScreeningReader campaignReader;
+    @Autowired private ApplicationContext applicationContext;
 
     private VaccineType vaccineType;
     private TargetGroup targetGroup;
     private ConsentNoticeVersion consentNotice;
+
+    @Test
+    void campaignReaderPreservesMissingCampaignBehavior() {
+        assertThrows(ResourceNotFoundException.class,
+                () -> campaignReader.getRequiredCampaign(Long.MAX_VALUE));
+        assertTrue(campaignReader.getEffectiveAssignmentAt(Long.MAX_VALUE, LocalDate.now(clock)).isEmpty());
+        assertTrue(campaignReader.getEffectiveAssignmentAt(null, LocalDate.now(clock)).isEmpty());
+    }
 
     @BeforeEach
     void setUp() {
@@ -154,6 +168,15 @@ public class CampaignScreeningCrossModuleIntegrationTests {
         campaign.publish();
         campaignRepository.saveAndFlush(campaign);
 
+        assertEquals(1, applicationContext.getBeansOfType(CampaignScreeningReader.class).size());
+        assertTrue(campaignReader.getRequiredCampaign(campaign.getId()).isBookingWindowOpenAt(clock.instant()));
+        assertEquals(serviceEndDate, campaignReader.getRequiredCampaign(campaign.getId()).serviceEndDate());
+        var assignmentSnapshot = campaignReader.getEffectiveAssignmentAt(campaign.getId(), today).orElseThrow();
+        assertNotNull(assignmentSnapshot.id());
+        assertEquals(campaign.getId(), assignmentSnapshot.campaignId());
+        assertEquals(versionB.getId(), assignmentSnapshot.questionnaireVersionId());
+        assertTrue(campaignReader.getEffectiveAssignmentAt(Long.MAX_VALUE, today).isEmpty());
+
         // 3. Resolve the citizen screening questionnaire for that campaign
         ScreeningFormResponse screeningForm = screeningFormService.getFormForCampaign(campaign.getId());
 
@@ -215,6 +238,8 @@ public class CampaignScreeningCrossModuleIntegrationTests {
                 clock.instant().plusSeconds(86400 * 30),
                 null
         );
+        assertFalse(campaignReader.getRequiredCampaign(campaign.getId()).isBookingWindowOpenAt(clock.instant()));
+        assertTrue(campaignReader.getEffectiveAssignmentAt(campaign.getId(), today).isEmpty());
 
         // Add dose programme so scheduling and publishing proceed to the questionnaire assignment prerequisite check
         doseProgrammeRepository.saveAndFlush(new CampaignDoseProgramme(

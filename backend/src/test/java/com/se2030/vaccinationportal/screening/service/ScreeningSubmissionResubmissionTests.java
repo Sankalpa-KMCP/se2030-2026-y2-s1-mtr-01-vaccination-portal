@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.EligibilityRule;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
@@ -82,7 +82,7 @@ class ScreeningSubmissionResubmissionTests {
     private ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
 
     @Mock
-    private CampaignQuestionnaireAssignmentService campaignQuestionnaireAssignmentService;
+    private CampaignScreeningReader campaignQuestionnaireAssignmentService;
 
     @Mock
     private EligibilityReviewService eligibilityReviewService;

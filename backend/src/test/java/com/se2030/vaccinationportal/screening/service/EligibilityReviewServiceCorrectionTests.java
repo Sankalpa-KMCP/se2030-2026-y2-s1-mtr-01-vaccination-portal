@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.screening.mapper.ScreeningReviewDetailsMapper;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
@@ -58,7 +58,7 @@ class EligibilityReviewServiceCorrectionTests {
     private ScreeningReviewDetailsMapper reviewDetailsMapper;
 
     @Mock
-    private VaccinationCampaignService campaignService;
+    private CampaignScreeningReader campaignService;
 
     @Mock
     private UserAccountRepository userAccountRepository;

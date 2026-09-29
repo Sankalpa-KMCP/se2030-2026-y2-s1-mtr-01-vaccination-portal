@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
-import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
+import com.se2030.vaccinationportal.campaign.api.screening.QuestionnaireAssignmentSnapshot;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.EligibilityRule;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
@@ -74,7 +74,7 @@ class ScreeningSubmissionServiceValidationTests {
     @Mock
     private ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
     @Mock
-    private CampaignQuestionnaireAssignmentService assignmentService;
+    private CampaignScreeningReader assignmentService;
     @Mock
     private EligibilityReviewService eligibilityReviewService;
 
@@ -398,8 +398,7 @@ class ScreeningSubmissionServiceValidationTests {
     }
 
     private void stubEffectiveAssignment(Long questionnaireVersionId) {
-        CampaignQuestionnaireAssignment assignment = mock(CampaignQuestionnaireAssignment.class);
-        lenient().when(assignment.getQuestionnaireVersionId()).thenReturn(questionnaireVersionId);
+        QuestionnaireAssignmentSnapshot assignment = new QuestionnaireAssignmentSnapshot(1L, 2L, questionnaireVersionId);
         lenient().when(assignmentService.getEffectiveAssignmentAt(eq(2L), any(LocalDate.class)))
                 .thenReturn(Optional.of(assignment));
     }

@@ -1,7 +1,6 @@
 package com.se2030.vaccinationportal.inventory.service;
 
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.api.reference.CampaignReferenceDataReader;
 import com.se2030.vaccinationportal.inventory.dto.request.CenterInventoryRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.ManufacturerRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.VaccineBatchRequest;
@@ -36,18 +35,16 @@ public class InventoryManagementService {
     private final VaccineBatchRepository batches;
     private final CenterInventoryRepository inventories;
     private final StockTransactionRepository transactions;
-    private final VaccineTypeRepository vaccineTypes;
-    private final VaccinationCenterRepository centers;
+    private final CampaignReferenceDataReader campaignReferences;
 
     public InventoryManagementService(ManufacturerRepository manufacturers, VaccineBatchRepository batches,
             CenterInventoryRepository inventories, StockTransactionRepository transactions,
-            VaccineTypeRepository vaccineTypes, VaccinationCenterRepository centers) {
+            CampaignReferenceDataReader campaignReferences) {
         this.manufacturers = manufacturers;
         this.batches = batches;
         this.inventories = inventories;
         this.transactions = transactions;
-        this.vaccineTypes = vaccineTypes;
-        this.centers = centers;
+        this.campaignReferences = campaignReferences;
     }
 
     @Transactional(readOnly = true)
@@ -210,10 +207,10 @@ public class InventoryManagementService {
 
     @Transactional(readOnly = true)
     public InventoryReferenceDataResponse referenceData() {
-        List<ReferenceItem> types = vaccineTypes.findAll().stream()
-                .map(type -> new ReferenceItem(type.getId(), type.getCode(), type.getName())).toList();
-        List<ReferenceItem> centerItems = centers.findAll().stream()
-                .map(center -> new ReferenceItem(center.getId(), center.getCode(), center.getName())).toList();
+        List<ReferenceItem> types = campaignReferences.vaccineTypes().stream()
+                .map(type -> new ReferenceItem(type.id(), type.code(), type.name())).toList();
+        List<ReferenceItem> centerItems = campaignReferences.centers().stream()
+                .map(center -> new ReferenceItem(center.id(), center.code(), center.name())).toList();
         return new InventoryReferenceDataResponse(types, centerItems);
     }
 
@@ -222,13 +219,13 @@ public class InventoryManagementService {
             throw new IllegalArgumentException("Manufacture date must be before expiry date");
         }
         manufacturer(request.manufacturerId());
-        if (!vaccineTypes.existsById(request.vaccineTypeId())) {
+        if (!campaignReferences.vaccineTypeExists(request.vaccineTypeId())) {
             throw new IllegalArgumentException("Vaccine type not found: " + request.vaccineTypeId());
         }
     }
 
     private void requireReferences(CenterInventoryRequest request) {
-        if (!centers.existsById(request.centerId())) throw new IllegalArgumentException("Center not found");
+        if (!campaignReferences.centerExists(request.centerId())) throw new IllegalArgumentException("Center not found");
         batch(request.batchId());
     }
 

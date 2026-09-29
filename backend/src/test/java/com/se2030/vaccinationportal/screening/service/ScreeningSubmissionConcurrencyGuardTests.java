@@ -11,8 +11,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
-import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
+import com.se2030.vaccinationportal.campaign.api.screening.QuestionnaireAssignmentSnapshot;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
 import com.se2030.vaccinationportal.screening.model.QuestionType;
@@ -67,7 +67,7 @@ class ScreeningSubmissionConcurrencyGuardTests {
     @Mock
     private ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
     @Mock
-    private CampaignQuestionnaireAssignmentService assignmentService;
+    private CampaignScreeningReader assignmentService;
     @Mock
     private EligibilityReviewService eligibilityReviewService;
 
@@ -107,8 +107,7 @@ class ScreeningSubmissionConcurrencyGuardTests {
         when(consentNoticeService.getCurrentScreeningConsentNotice()).thenReturn(consent);
         lenient().when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(20L))
                 .thenReturn(List.of(new QuestionnaireItem(version, question, 1, null)));
-        CampaignQuestionnaireAssignment assignment = mock(CampaignQuestionnaireAssignment.class);
-        lenient().when(assignment.getQuestionnaireVersionId()).thenReturn(20L);
+        QuestionnaireAssignmentSnapshot assignment = new QuestionnaireAssignmentSnapshot(1L, 2L, 20L);
         lenient().when(assignmentService.getEffectiveAssignmentAt(eq(2L), any(LocalDate.class)))
                 .thenReturn(Optional.of(assignment));
     }

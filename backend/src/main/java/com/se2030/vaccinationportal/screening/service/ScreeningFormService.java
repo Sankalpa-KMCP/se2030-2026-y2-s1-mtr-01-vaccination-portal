@@ -1,9 +1,8 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
-import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningSnapshot;
+import com.se2030.vaccinationportal.campaign.api.screening.QuestionnaireAssignmentSnapshot;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningFormAnswerOptionResponse;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningFormConsentNoticeResponse;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningFormQuestionResponse;
@@ -29,8 +28,7 @@ import java.util.List;
 @Service
 public class ScreeningFormService {
 
-    private final VaccinationCampaignService campaignService;
-    private final CampaignQuestionnaireAssignmentService assignmentService;
+    private final CampaignScreeningReader campaignReader;
     private final QuestionnaireVersionRepository versionRepository;
     private final QuestionnaireItemRepository itemRepository;
     private final AnswerOptionRepository answerOptionRepository;
@@ -38,16 +36,14 @@ public class ScreeningFormService {
     private final Clock clock;
 
     public ScreeningFormService(
-            VaccinationCampaignService campaignService,
-            CampaignQuestionnaireAssignmentService assignmentService,
+            CampaignScreeningReader campaignReader,
             QuestionnaireVersionRepository versionRepository,
             QuestionnaireItemRepository itemRepository,
             AnswerOptionRepository answerOptionRepository,
             ScreeningConsentNoticeService consentNoticeService,
             Clock clock
     ) {
-        this.campaignService = campaignService;
-        this.assignmentService = assignmentService;
+        this.campaignReader = campaignReader;
         this.versionRepository = versionRepository;
         this.itemRepository = itemRepository;
         this.answerOptionRepository = answerOptionRepository;
@@ -57,7 +53,7 @@ public class ScreeningFormService {
 
     @Transactional(readOnly = true)
     public ScreeningFormResponse getFormForCampaign(Long campaignId) {
-        VaccinationCampaign campaign = campaignService.getRequiredCampaignById(campaignId);
+        CampaignScreeningSnapshot campaign = campaignReader.getRequiredCampaign(campaignId);
         if (!campaign.isBookingWindowOpenAt(clock.instant())) {
             throw new IllegalStateException(
                     "Campaign " + campaignId + " is not currently accepting screening submissions"
@@ -65,13 +61,13 @@ public class ScreeningFormService {
         }
 
         LocalDate effectiveDate = LocalDate.now(clock);
-        CampaignQuestionnaireAssignment assignment = assignmentService
+        QuestionnaireAssignmentSnapshot assignment = campaignReader
                 .getEffectiveAssignmentAt(campaignId, effectiveDate)
                 .orElseThrow(() -> new IllegalStateException(
                         "Campaign " + campaignId + " has no effective questionnaire assignment on " + effectiveDate
                 ));
 
-        Long versionId = assignment.getQuestionnaireVersionId();
+        Long versionId = assignment.questionnaireVersionId();
         QuestionnaireVersion version = versionRepository.findById(versionId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Questionnaire version not found with ID: " + versionId

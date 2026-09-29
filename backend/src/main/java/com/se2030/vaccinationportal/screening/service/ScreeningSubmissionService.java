@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
-import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
+import com.se2030.vaccinationportal.campaign.api.screening.QuestionnaireAssignmentSnapshot;
 import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.model.*;
 import com.se2030.vaccinationportal.screening.repository.*;
@@ -44,7 +44,7 @@ public class ScreeningSubmissionService {
     private final PreliminaryScreeningService preliminaryScreeningService;
     private final EligibilityRuleRepository eligibilityRuleRepository;
     private final ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
-    private final CampaignQuestionnaireAssignmentService assignmentService;
+    private final CampaignScreeningReader campaignReader;
     private final EligibilityReviewService eligibilityReviewService;
     private final Clock clock;
 
@@ -58,7 +58,7 @@ public class ScreeningSubmissionService {
             PreliminaryScreeningService preliminaryScreeningService,
             EligibilityRuleRepository eligibilityRuleRepository,
             ScreeningTriggeredRuleEvidenceRepository evidenceRepository,
-            CampaignQuestionnaireAssignmentService assignmentService,
+            CampaignScreeningReader campaignReader,
             EligibilityReviewService eligibilityReviewService,
             Clock clock
     ) {
@@ -71,7 +71,7 @@ public class ScreeningSubmissionService {
         this.preliminaryScreeningService = preliminaryScreeningService;
         this.eligibilityRuleRepository = eligibilityRuleRepository;
         this.evidenceRepository = evidenceRepository;
-        this.assignmentService = assignmentService;
+        this.campaignReader = campaignReader;
         this.eligibilityReviewService = eligibilityReviewService;
         this.clock = clock;
     }
@@ -150,17 +150,17 @@ public class ScreeningSubmissionService {
 
         // 4. Validate that the submitted version is effective for the campaign today
         LocalDate effectiveDate = LocalDate.now(clock);
-        CampaignQuestionnaireAssignment effectiveAssignment = assignmentService
+        QuestionnaireAssignmentSnapshot effectiveAssignment = campaignReader
                 .getEffectiveAssignmentAt(campaignId, effectiveDate)
                 .orElseThrow(() -> new IllegalStateException(
                         "Campaign " + campaignId + " has no effective questionnaire assignment on " + effectiveDate
                 ));
 
-        if (!Objects.equals(effectiveAssignment.getQuestionnaireVersionId(), versionId)) {
+        if (!Objects.equals(effectiveAssignment.questionnaireVersionId(), versionId)) {
             throw new IllegalStateException(
                     "Questionnaire version " + versionId + " is not assigned to campaign " + campaignId
                             + " on " + effectiveDate + "; effective version is "
-                            + effectiveAssignment.getQuestionnaireVersionId()
+                            + effectiveAssignment.questionnaireVersionId()
             );
         }
 

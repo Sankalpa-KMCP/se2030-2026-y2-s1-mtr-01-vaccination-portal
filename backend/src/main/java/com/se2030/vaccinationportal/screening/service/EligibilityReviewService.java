@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningSnapshot;
 import com.se2030.vaccinationportal.screening.dto.response.ScreeningReviewDetailsResponse;
 import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.mapper.ScreeningReviewDetailsMapper;
@@ -41,7 +41,7 @@ public class EligibilityReviewService {
     private final AnswerOptionRepository answerOptionRepository;
     private final ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
     private final ScreeningReviewDetailsMapper reviewDetailsMapper;
-    private final VaccinationCampaignService campaignService;
+    private final CampaignScreeningReader campaignReader;
     private final Clock clock;
     private final UserAccountRepository userAccountRepository;
 
@@ -52,7 +52,7 @@ public class EligibilityReviewService {
             AnswerOptionRepository answerOptionRepository,
             ScreeningTriggeredRuleEvidenceRepository evidenceRepository,
             ScreeningReviewDetailsMapper reviewDetailsMapper,
-            VaccinationCampaignService campaignService,
+            CampaignScreeningReader campaignReader,
             Clock clock,
             UserAccountRepository userAccountRepository
     ) {
@@ -62,7 +62,7 @@ public class EligibilityReviewService {
         this.answerOptionRepository = answerOptionRepository;
         this.evidenceRepository = evidenceRepository;
         this.reviewDetailsMapper = reviewDetailsMapper;
-        this.campaignService = campaignService;
+        this.campaignReader = campaignReader;
         this.clock = clock;
         this.userAccountRepository = userAccountRepository;
     }
@@ -367,8 +367,8 @@ public class EligibilityReviewService {
             return false;
         }
 
-        VaccinationCampaign campaign = campaignService.getRequiredCampaignById(campaignId);
-        LocalDate serviceEndDate = campaign.getServiceEndDate();
+        CampaignScreeningSnapshot campaign = campaignReader.getRequiredCampaign(campaignId);
+        LocalDate serviceEndDate = campaign.serviceEndDate();
         return serviceEndDate == null || !LocalDate.now(clock).isAfter(serviceEndDate);
     }
 

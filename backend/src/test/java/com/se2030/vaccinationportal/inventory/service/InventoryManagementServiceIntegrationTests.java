@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.inventory.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.se2030.vaccinationportal.campaign.api.reference.CampaignReferenceDataReader;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccineType;
@@ -20,6 +21,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
@@ -28,6 +30,8 @@ class InventoryManagementServiceIntegrationTests {
     @Autowired InventoryManagementService service;
     @Autowired VaccineTypeRepository vaccineTypes;
     @Autowired VaccinationCenterRepository centers;
+    @Autowired CampaignReferenceDataReader campaignReferences;
+    @Autowired ApplicationContext applicationContext;
 
     @Test
     void performsManufacturerBatchAndCenterStockCrud() {
@@ -40,6 +44,21 @@ class InventoryManagementServiceIntegrationTests {
         VaccineType type = vaccineTypes.save(new VaccineType("CRUD-VT-" + suffix, "CRUD Vaccine"));
         VaccinationCenter center = centers.save(new VaccinationCenter("CRUD-C-" + suffix, "CRUD Center",
                 "1 Test Road", "test@example.test", CenterStatus.ACTIVE, 10, 20, "UTC"));
+        assertThat(applicationContext.getBeansOfType(CampaignReferenceDataReader.class)).hasSize(1);
+        assertThat(campaignReferences.centerExists(center.getId())).isTrue();
+        assertThat(campaignReferences.vaccineTypeExists(type.getId())).isTrue();
+        assertThat(campaignReferences.centerExists(Long.MAX_VALUE)).isFalse();
+        assertThat(campaignReferences.vaccineTypeExists(Long.MAX_VALUE)).isFalse();
+        assertThat(service.referenceData().centers()).anySatisfy(item -> {
+            assertThat(item.id()).isEqualTo(center.getId());
+            assertThat(item.code()).isEqualTo(center.getCode());
+            assertThat(item.name()).isEqualTo(center.getName());
+        });
+        assertThat(service.referenceData().vaccineTypes()).anySatisfy(item -> {
+            assertThat(item.id()).isEqualTo(type.getId());
+            assertThat(item.code()).isEqualTo(type.getCode());
+            assertThat(item.name()).isEqualTo(type.getName());
+        });
         var batch = service.createBatch(new VaccineBatchRequest(manufacturer.id(), type.getId(),
                 "CRUD-LOT-" + suffix, LocalDate.now().minusDays(2), LocalDate.now().plusYears(1), BatchStatus.ACTIVE));
         batch = service.updateBatch(batch.id(), new VaccineBatchRequest(manufacturer.id(), type.getId(),
@@ -58,6 +77,19 @@ class InventoryManagementServiceIntegrationTests {
         assertThat(service.listInventories()).noneMatch(item -> item.id().equals(stockId));
         assertThat(service.listBatches()).noneMatch(item -> item.id().equals(batchId));
         assertThat(service.listManufacturers()).noneMatch(item -> item.id().equals(manufacturerId));
+    }
+
+    @Test
+    void invalidCampaignReferenceIdsKeepInventoryValidationMessages() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var manufacturer = service.createManufacturer(new ManufacturerRequest("BAD-" + suffix, "Bad Reference Maker"));
+        assertThatThrownBy(() -> service.createBatch(new VaccineBatchRequest(manufacturer.id(), Long.MAX_VALUE,
+                "BAD-LOT-" + suffix, LocalDate.now().minusDays(2), LocalDate.now().plusYears(1), BatchStatus.ACTIVE)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Vaccine type not found: " + Long.MAX_VALUE);
+        assertThatThrownBy(() -> service.createInventory(new CenterInventoryRequest(Long.MAX_VALUE, Long.MAX_VALUE, 0)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Center not found");
     }
 
     @Test

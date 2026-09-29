@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
@@ -70,7 +70,7 @@ class EligibilityReviewServiceReviewDetailsTests {
     private ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
 
     @Mock
-    private VaccinationCampaignService campaignService;
+    private CampaignScreeningReader campaignService;
 
     @Mock
     private UserAccountRepository userAccountRepository;

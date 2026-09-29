@@ -1,9 +1,8 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
-import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningSnapshot;
+import com.se2030.vaccinationportal.campaign.api.screening.QuestionnaireAssignmentSnapshot;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.screening.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
@@ -90,7 +89,7 @@ class ScreeningSubmissionEligibilityLifecycleTests {
     private ScreeningTriggeredRuleEvidenceRepository evidenceRepository;
 
     @Mock
-    private CampaignQuestionnaireAssignmentService assignmentService;
+    private CampaignScreeningReader campaignReader;
 
     @Mock
     private EligibilityAssessmentRepository assessmentRepository;
@@ -100,9 +99,6 @@ class ScreeningSubmissionEligibilityLifecycleTests {
 
     @Mock
     private ScreeningReviewDetailsMapper reviewDetailsMapper;
-
-    @Mock
-    private VaccinationCampaignService campaignService;
 
     @Mock
     private UserAccountRepository userAccountRepository;
@@ -120,7 +116,7 @@ class ScreeningSubmissionEligibilityLifecycleTests {
                 answerOptionRepository,
                 evidenceRepository,
                 reviewDetailsMapper,
-                campaignService,
+                campaignReader,
                 clock,
                 userAccountRepository
         );
@@ -134,7 +130,7 @@ class ScreeningSubmissionEligibilityLifecycleTests {
                 preliminaryScreeningService,
                 eligibilityRuleRepository,
                 evidenceRepository,
-                assignmentService,
+                campaignReader,
                 eligibilityReviewService,
                 clock
         );
@@ -289,12 +285,11 @@ class ScreeningSubmissionEligibilityLifecycleTests {
         );
         question.setId(QUESTION_ID);
 
-        CampaignQuestionnaireAssignment assignment = mock(CampaignQuestionnaireAssignment.class);
-        lenient().when(assignment.getQuestionnaireVersionId()).thenReturn(VERSION_ID);
+        QuestionnaireAssignmentSnapshot assignment = new QuestionnaireAssignmentSnapshot(1L, CAMPAIGN_ID, VERSION_ID);
         lenient().when(submissionRepository.findActiveSubmissionForUpdate(any(), any(), any()))
                 .thenReturn(Optional.empty());
         lenient().when(versionRepository.findById(VERSION_ID)).thenReturn(Optional.of(version));
-        lenient().when(assignmentService.getEffectiveAssignmentAt(eq(CAMPAIGN_ID), any(LocalDate.class)))
+        lenient().when(campaignReader.getEffectiveAssignmentAt(eq(CAMPAIGN_ID), any(LocalDate.class)))
                 .thenReturn(Optional.of(assignment));
         lenient().when(consentNoticeService.getCurrentScreeningConsentNotice()).thenReturn(consent);
         lenient().when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
@@ -335,17 +330,11 @@ class ScreeningSubmissionEligibilityLifecycleTests {
     private void stubLatestAssessment(EligibilityAssessment assessment, LocalDate serviceEndDate) {
         lenient().when(assessmentRepository.findByCitizenIdAndCampaignId(CITIZEN_ID, CAMPAIGN_ID))
                 .thenReturn(List.of(assessment));
-        VaccinationCampaign campaign = new VaccinationCampaign(
-                "CAMPAIGN-2",
-                "Campaign 2",
-                null,
-                null,
-                null,
-                serviceEndDate.minusDays(30),
-                serviceEndDate,
+        CampaignScreeningSnapshot campaign = new CampaignScreeningSnapshot(
+                CAMPAIGN_ID, serviceEndDate,
                 serviceEndDate.minusDays(30).atStartOfDay(ZoneOffset.UTC).toInstant(),
-                serviceEndDate.atTime(23, 59, 59).toInstant(ZoneOffset.UTC)
+                serviceEndDate.atTime(23, 59, 59).toInstant(ZoneOffset.UTC), true
         );
-        lenient().when(campaignService.getRequiredCampaignById(CAMPAIGN_ID)).thenReturn(campaign);
+        lenient().when(campaignReader.getRequiredCampaign(CAMPAIGN_ID)).thenReturn(campaign);
     }
 }

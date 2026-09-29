@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.screening.service;
 
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.service.VaccinationCampaignService;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningSnapshot;
+import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
@@ -54,7 +54,7 @@ class EligibilityReviewServiceLifecycleTests {
     private ScreeningSubmissionRepository submissionRepository;
 
     @Mock
-    private VaccinationCampaignService campaignService;
+    private CampaignScreeningReader campaignService;
 
     @Spy
     private Clock clock = Clock.fixed(REVIEWED_AT, ZoneOffset.UTC);
@@ -571,7 +571,7 @@ class EligibilityReviewServiceLifecycleTests {
         stubCampaignEndingOn(LocalDate.of(2026, 8, 24));
 
         assertThat(service.isCitizenCurrentlyEligible(CITIZEN_ID, CAMPAIGN_ID)).isTrue();
-        verify(campaignService).getRequiredCampaignById(CAMPAIGN_ID);
+        verify(campaignService).getRequiredCampaign(CAMPAIGN_ID);
     }
 
     @Test
@@ -643,17 +643,11 @@ class EligibilityReviewServiceLifecycleTests {
     }
 
     private void stubCampaignEndingOn(LocalDate serviceEndDate) {
-        VaccinationCampaign campaign = new VaccinationCampaign(
-                "CAMPAIGN-20",
-                "Campaign 20",
-                null,
-                null,
-                null,
-                serviceEndDate.minusDays(30),
-                serviceEndDate,
+        CampaignScreeningSnapshot campaign = new CampaignScreeningSnapshot(
+                CAMPAIGN_ID, serviceEndDate,
                 serviceEndDate.minusDays(30).atStartOfDay(ZoneOffset.UTC).toInstant(),
-                serviceEndDate.atTime(23, 59, 59).toInstant(ZoneOffset.UTC)
+                serviceEndDate.atTime(23, 59, 59).toInstant(ZoneOffset.UTC), true
         );
-        lenient().when(campaignService.getRequiredCampaignById(CAMPAIGN_ID)).thenReturn(campaign);
+        lenient().when(campaignService.getRequiredCampaign(CAMPAIGN_ID)).thenReturn(campaign);
     }
 }
