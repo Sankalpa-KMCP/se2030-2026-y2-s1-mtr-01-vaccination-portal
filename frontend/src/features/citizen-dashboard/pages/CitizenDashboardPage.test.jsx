@@ -8,8 +8,8 @@ const mocks = vi.hoisted(() => ({
   dashboardData: null,
 }));
 
-vi.mock('../context/AuthContext', () => ({ useAuth: () => mocks.auth }));
-vi.mock('../../features/citizen-dashboard/hooks/useCitizenDashboardData', () => ({
+vi.mock('../../../auth/context/AuthContext', () => ({ useAuth: () => mocks.auth }));
+vi.mock('../hooks/useCitizenDashboardData', () => ({
   default: () => mocks.dashboardData,
 }));
 

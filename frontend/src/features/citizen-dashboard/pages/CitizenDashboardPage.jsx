@@ -1,15 +1,15 @@
 import React from 'react';
-import { useAuth } from '../context/AuthContext';
-import CitizenWelcome from '../../features/citizen-dashboard/components/CitizenWelcome';
-import VaccinationJourneyStepper from '../../features/citizen-dashboard/components/VaccinationJourneyStepper';
-import ScreeningOverview from '../../features/citizen-dashboard/components/ScreeningOverview';
-import AppointmentOverview from '../../features/citizen-dashboard/components/AppointmentOverview';
-import QuickActions from '../../features/citizen-dashboard/components/QuickActions';
-import AvailableCampaigns from '../../features/citizen-dashboard/components/AvailableCampaigns';
-import RecentActivity from '../../features/citizen-dashboard/components/RecentActivity';
-import BottomHealthBanner from '../../features/citizen-dashboard/components/BottomHealthBanner';
-import useCitizenDashboardData from '../../features/citizen-dashboard/hooks/useCitizenDashboardData';
-import '../../features/citizen-dashboard/citizen-dashboard.css';
+import { useAuth } from '../../../auth/context/AuthContext';
+import CitizenWelcome from '../components/CitizenWelcome';
+import VaccinationJourneyStepper from '../components/VaccinationJourneyStepper';
+import ScreeningOverview from '../components/ScreeningOverview';
+import AppointmentOverview from '../components/AppointmentOverview';
+import QuickActions from '../components/QuickActions';
+import AvailableCampaigns from '../components/AvailableCampaigns';
+import RecentActivity from '../components/RecentActivity';
+import BottomHealthBanner from '../components/BottomHealthBanner';
+import useCitizenDashboardData from '../hooks/useCitizenDashboardData';
+import '../citizen-dashboard.css';
 
 export default function CitizenDashboardPage() {
   const { user } = useAuth();
