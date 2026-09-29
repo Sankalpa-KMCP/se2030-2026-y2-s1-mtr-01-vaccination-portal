@@ -6,8 +6,8 @@ import { getMyAppointments, cancelAppointment } from '../api/appointmentApi';
 import { useAuth } from '../../../auth/context/AuthContext';
 import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
-import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
 
 /**
  * Citizen My Appointments Page (US-03).

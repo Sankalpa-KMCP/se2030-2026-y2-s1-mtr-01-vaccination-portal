@@ -4,7 +4,7 @@ import { INVALID_PHONE_NUMBER_MESSAGE, isValidPhoneNumber } from '../../../auth/
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
-import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
+import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
 import { getCitizenProfile, updateCitizenProfile } from '../api/citizenProfileApi';
 import '../citizen-profile.css';
 

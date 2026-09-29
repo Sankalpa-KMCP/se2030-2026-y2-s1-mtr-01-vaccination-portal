@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import CitizenSection from './CitizenSection';
 import CitizenErrorState from './CitizenErrorState';
-import CitizenStatePanel from './CitizenStatePanel';
-import CitizenStatusBadge from './CitizenStatusBadge';
-import CitizenWorkflowGuide from './CitizenWorkflowGuide';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
+import CitizenWorkflowGuide from '../../../shared/ui/citizen/CitizenWorkflowGuide';
 
 afterEach(cleanup);
 

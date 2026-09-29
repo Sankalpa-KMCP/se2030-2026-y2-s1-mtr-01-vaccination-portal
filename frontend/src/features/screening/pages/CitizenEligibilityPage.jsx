@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
 import { getCitizenCampaignEligibility } from '../api/screeningApi';
 import {
   CITIZEN_PRELIMINARY_RESULT_LABELS,

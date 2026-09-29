@@ -3,9 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
-import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
-import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
+import CitizenWorkflowGuide from '../../../shared/ui/citizen/CitizenWorkflowGuide';
 import {
   getActiveScreeningSubmission,
   getCitizenScreeningForm,

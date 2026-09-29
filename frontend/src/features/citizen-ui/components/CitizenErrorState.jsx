@@ -1,6 +1,6 @@
 import React from 'react';
 import { PERMISSION_DENIED_MESSAGE } from '../../../services/apiClient';
-import CitizenStatePanel from './CitizenStatePanel';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
 
 function errorTitle(status) {
   if (status === 0) return 'Connection unavailable';

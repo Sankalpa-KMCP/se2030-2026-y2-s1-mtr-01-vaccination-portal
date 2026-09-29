@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenSection from '../../citizen-ui/components/CitizenSection';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
-import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
 import { listCitizenCampaigns } from '../../campaign-management/api/campaignApi';
 
 const CITIZEN_INTAKE_STATUSES = new Set(['PUBLISHED', 'ACTIVE']);
