@@ -5,6 +5,8 @@ import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -74,5 +76,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findBySlotIdInAndStatusIn(
             Collection<Long> slotIds,
             Collection<AppointmentStatus> statuses
+    );
+
+    @Query("SELECT COUNT(a) FROM Appointment a WHERE a.slotId IN " +
+            "(SELECT ts.id FROM TimeSlot ts WHERE ts.session.id = :sessionId) " +
+            "AND a.status IN :statuses")
+    long countBySessionIdAndStatusIn(
+            @Param("sessionId") Long sessionId,
+            @Param("statuses") Collection<AppointmentStatus> statuses
     );
 }

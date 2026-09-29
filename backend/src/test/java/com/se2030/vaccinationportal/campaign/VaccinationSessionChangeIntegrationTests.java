@@ -1,5 +1,11 @@
 package com.se2030.vaccinationportal.campaign;
 
+import com.se2030.vaccinationportal.appointment.model.Appointment;
+import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
+import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
+import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterClosure;
@@ -13,6 +19,7 @@ import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
 import com.se2030.vaccinationportal.campaign.model.SessionScheduleSnapshot;
 import com.se2030.vaccinationportal.campaign.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
@@ -23,6 +30,7 @@ import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository
 import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
 import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
 import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
@@ -56,6 +64,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -80,6 +89,9 @@ class VaccinationSessionChangeIntegrationTests {
     @Autowired private CenterClosureRepository closureRepository;
     @Autowired private VaccinationSessionValidator validator;
     @Autowired private Clock clock;
+    @Autowired private AppointmentRepository appointmentRepository;
+    @Autowired private WaitlistRepository waitlistRepository;
+    @Autowired private TimeSlotRepository timeSlotRepository;
 
     private VaccinationCampaign campaign;
     private VaccinationCenter centerA;
@@ -312,6 +324,46 @@ class VaccinationSessionChangeIntegrationTests {
         assertEquals(1, events.size());
         assertEquals(12, events.get(0).getAffectedAppointmentCount());
         assertEquals(4, events.get(0).getAffectedWaitlistCount());
+    }
+
+    @Test
+    void changedPersistedImpactMakesScheduledSessionPreviewStale() {
+        Instant start = Instant.parse("2026-10-15T09:00:00Z");
+        Instant end = Instant.parse("2026-10-15T12:00:00Z");
+        VaccinationSession session = createDraftSession(start, end, start.minusSeconds(3600));
+        session.transitionLifecycleStatus(SessionLifecycleStatus.SCHEDULED);
+        sessionRepository.saveAndFlush(session);
+        TimeSlot slot = timeSlotRepository.saveAndFlush(new TimeSlot(session, start, start.plusSeconds(3600), 10));
+
+        appointmentRepository.saveAndFlush(new Appointment(
+                9101L, campaign.getId(), slot.getId(), AppointmentStatus.CONFIRMED, start));
+        waitlistRepository.saveAndFlush(new WaitlistEntry(
+                9201L, campaign.getId(), session.getId(), WaitlistStatus.WAITING, start));
+
+        Instant proposedStart = Instant.parse("2026-10-15T14:00:00Z");
+        Instant proposedEnd = Instant.parse("2026-10-15T17:00:00Z");
+        SessionChangePreview preview = sessionService.previewReschedule(
+                session.getId(), proposedStart, proposedEnd, null);
+        assertEquals(1, preview.affectedAppointmentCount());
+        assertEquals(1, preview.affectedWaitlistCount());
+
+        appointmentRepository.saveAndFlush(new Appointment(
+                9102L, campaign.getId(), slot.getId(), AppointmentStatus.CHECKED_IN, start));
+        waitlistRepository.saveAndFlush(new WaitlistEntry(
+                9202L, campaign.getId(), session.getId(), WaitlistStatus.WAITING, start));
+
+        SessionChangePreview refreshed = sessionService.previewReschedule(
+                session.getId(), proposedStart, proposedEnd, null);
+        assertEquals(2, refreshed.affectedAppointmentCount());
+        assertEquals(2, refreshed.affectedWaitlistCount());
+        assertNotEquals(preview.previewToken(), refreshed.previewToken());
+
+        IllegalStateException stalePreview = assertThrows(IllegalStateException.class, () -> sessionService.confirmReschedule(
+                session.getId(), proposedStart, proposedEnd, null, preview.previewToken(),
+                "Schedule changed", "ACTOR-1"));
+        assertTrue(stalePreview.getMessage().contains("Preview token is stale"));
+        assertEquals(start, sessionRepository.findById(session.getId()).orElseThrow().getStartAt());
+        assertTrue(sessionChangeEventRepository.findBySessionIdOrderByCreatedAtAscIdAsc(session.getId()).isEmpty());
     }
 
     @Test
