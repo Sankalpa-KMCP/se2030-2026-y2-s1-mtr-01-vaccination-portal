@@ -6,7 +6,7 @@ import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPort
 import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistJoinService;
 
 
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
 import com.se2030.vaccinationportal.appointment.exception.InvalidAppointmentStateException;
 import com.se2030.vaccinationportal.appointment.exception.InvalidCheckInWindowException;

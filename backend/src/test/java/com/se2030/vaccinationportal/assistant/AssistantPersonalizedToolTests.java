@@ -32,11 +32,11 @@ import com.se2030.vaccinationportal.assistant.tool.MyVaccinationSummaryAssistant
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.api.appointment.JpaTimeSlotDisplayReader;
-import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
-import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
-import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
-import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
-import com.se2030.vaccinationportal.screening.api.query.JpaCitizenEligibilityQuery;
+import com.se2030.vaccinationportal.screening.eligibility.model.EligibilityAssessment;
+import com.se2030.vaccinationportal.screening.eligibility.model.EligibilityAssessmentStatus;
+import com.se2030.vaccinationportal.screening.submission.model.PreliminaryScreeningResult;
+import com.se2030.vaccinationportal.screening.eligibility.repository.EligibilityAssessmentRepository;
+import com.se2030.vaccinationportal.screening.query.JpaCitizenEligibilityQuery;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.vaccination.dto.CitizenCertificateResponse;
 import com.se2030.vaccinationportal.vaccination.dto.CitizenVaccinationRecordResponse;

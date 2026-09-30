@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;

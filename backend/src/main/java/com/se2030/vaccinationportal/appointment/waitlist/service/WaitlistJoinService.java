@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.appointment.waitlist.service;
 
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityLookupPort;
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityLookupPort;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;

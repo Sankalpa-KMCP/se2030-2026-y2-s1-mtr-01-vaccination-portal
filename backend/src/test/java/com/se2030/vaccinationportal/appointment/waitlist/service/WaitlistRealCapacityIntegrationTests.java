@@ -3,7 +3,7 @@ package com.se2030.vaccinationportal.appointment.waitlist.service;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 
 
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;

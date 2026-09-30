@@ -8,7 +8,7 @@ import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistJoinSer
 
 
 import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;

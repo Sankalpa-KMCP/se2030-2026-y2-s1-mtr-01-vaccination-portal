@@ -5,7 +5,7 @@ import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLooku
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
 
 
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;

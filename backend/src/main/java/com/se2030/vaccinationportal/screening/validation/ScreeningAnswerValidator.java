@@ -1,10 +1,10 @@
 package com.se2030.vaccinationportal.screening.validation;
 
-import com.se2030.vaccinationportal.screening.model.AnswerOption;
-import com.se2030.vaccinationportal.screening.model.QuestionType;
-import com.se2030.vaccinationportal.screening.model.QuestionnaireItem;
-import com.se2030.vaccinationportal.screening.model.ScreeningQuestion;
-import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
+import com.se2030.vaccinationportal.screening.questionnaire.model.AnswerOption;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionType;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireItem;
+import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuestion;
+import com.se2030.vaccinationportal.screening.questionnaire.repository.AnswerOptionRepository;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;

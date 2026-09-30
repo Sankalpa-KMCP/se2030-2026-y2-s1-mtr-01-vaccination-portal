@@ -4,7 +4,7 @@ import com.se2030.vaccinationportal.appointment.web.AppointmentExceptionHandler;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.waitlist.dto.WaitlistJoinRequest;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;

@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotBookability;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotReservationResult;
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;

@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.appointment.testsupport;
 
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityLookupPort;
-import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityLookupPort;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
