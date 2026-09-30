@@ -20,7 +20,7 @@ import {
   latestCampaignRecords,
   screeningWorkflowLabel,
 } from '../utils/screeningHistory';
-import citizenHealthBanner from '../../citizen-dashboard/assets/citizen-health-banner.png';
+import citizenHealthBanner from '../../../shared/assets/citizen-health-banner.png';
 import './CitizenEligibilityPage.css';
 
 function getCampaignActivityEvents(submission, assessment) {
