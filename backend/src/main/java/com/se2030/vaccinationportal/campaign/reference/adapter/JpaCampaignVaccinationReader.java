@@ -1,8 +1,8 @@
 package com.se2030.vaccinationportal.campaign.reference.adapter;
 
 import com.se2030.vaccinationportal.campaign.api.vaccination.CampaignVaccinationReader;
-import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaignRepository;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 

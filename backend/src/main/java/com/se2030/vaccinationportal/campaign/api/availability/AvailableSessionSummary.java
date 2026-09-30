@@ -11,9 +11,9 @@ import java.time.Instant;
  * </ul>
  *
  * <p>Fields are sourced exclusively from fields that are verified to exist on
- * {@link com.se2030.vaccinationportal.campaign.model.VaccinationSession} and
- * {@link com.se2030.vaccinationportal.campaign.model.VaccinationCenter} and
- * {@link com.se2030.vaccinationportal.campaign.model.TimeSlot}.
+ * {@link com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession} and
+ * {@link com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter} and
+ * {@link com.se2030.vaccinationportal.campaign.session.planning.model.TimeSlot}.
  * Do not add fields that are not backed by those entities.
  *
  * <p>This record is the value type crossing the MF-02 → MF-03 port boundary.

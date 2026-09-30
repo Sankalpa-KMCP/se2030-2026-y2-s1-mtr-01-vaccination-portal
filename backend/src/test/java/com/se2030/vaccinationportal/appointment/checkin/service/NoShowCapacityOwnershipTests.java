@@ -92,6 +92,7 @@ class NoShowCapacityOwnershipTests {
     }
 
     private static final Instant SLOT_START = Instant.parse("2026-10-01T10:00:00Z");
+    private static final Instant BEFORE_MODIFICATION_WINDOW = SLOT_START.minus(2, ChronoUnit.DAYS);
     private static final Instant AFTER_WINDOW_CLOSE = SLOT_START.plus(45, ChronoUnit.MINUTES);
 
     @Test
@@ -130,7 +131,7 @@ class NoShowCapacityOwnershipTests {
 
         InvalidAppointmentStateException ex = assertThrows(
                 InvalidAppointmentStateException.class,
-                () -> cancellationService.cancelAppointment(appt.getId(), 1001L, Instant.now())
+                () -> cancellationService.cancelAppointment(appt.getId(), 1001L, BEFORE_MODIFICATION_WINDOW)
         );
         assertNotNull(ex.getMessage());
         assertEquals(2, slotCapacityPortDouble.getAvailableCapacity(slotId), "Cancelled NO_SHOW must not release capacity a second time");
@@ -156,7 +157,7 @@ class NoShowCapacityOwnershipTests {
 
         InvalidAppointmentStateException ex = assertThrows(
                 InvalidAppointmentStateException.class,
-                () -> rescheduleService.rescheduleAppointment(appt.getId(), 1001L, targetSlotId, Instant.now())
+                () -> rescheduleService.rescheduleAppointment(appt.getId(), 1001L, targetSlotId, BEFORE_MODIFICATION_WINDOW)
         );
         assertNotNull(ex.getMessage());
         assertEquals(2, slotCapacityPortDouble.getAvailableCapacity(sourceSlotId),
@@ -187,11 +188,11 @@ class NoShowCapacityOwnershipTests {
 
         assertThrows(
                 InvalidAppointmentStateException.class,
-                () -> cancellationService.cancelAppointment(appt1.getId(), 1001L, Instant.now())
+                () -> cancellationService.cancelAppointment(appt1.getId(), 1001L, BEFORE_MODIFICATION_WINDOW)
         );
         assertThrows(
                 InvalidAppointmentStateException.class,
-                () -> rescheduleService.rescheduleAppointment(appt1.getId(), 1001L, otherSlotId, Instant.now())
+                () -> rescheduleService.rescheduleAppointment(appt1.getId(), 1001L, otherSlotId, BEFORE_MODIFICATION_WINDOW)
         );
 
         // Two real reservations remain (citizens 2 and 3); the counter must match exactly
@@ -201,7 +202,7 @@ class NoShowCapacityOwnershipTests {
                 "Rejected NO_SHOW reschedule must not consume the destination slot");
 
         // Control: ordinary cancellation of a reservation-owning appointment releases exactly once
-        cancellationService.cancelAppointment(appt2.getId(), 1002L, Instant.now());
+        cancellationService.cancelAppointment(appt2.getId(), 1002L, BEFORE_MODIFICATION_WINDOW);
         assertEquals(2, slotCapacityPortDouble.getAvailableCapacity(slotId));
         assertEquals(AppointmentStatus.CANCELLED,
                 appointmentRepository.findById(appt2.getId()).orElseThrow().getStatus());
@@ -221,7 +222,7 @@ class NoShowCapacityOwnershipTests {
         assertEquals(1, slotCapacityPortDouble.getAvailableCapacity(sourceSlotId));
         assertEquals(2, slotCapacityPortDouble.getAvailableCapacity(targetSlotId));
 
-        Appointment rescheduled = rescheduleService.rescheduleAppointment(appt.getId(), 1001L, targetSlotId, Instant.now());
+        Appointment rescheduled = rescheduleService.rescheduleAppointment(appt.getId(), 1001L, targetSlotId, BEFORE_MODIFICATION_WINDOW);
         assertEquals(targetSlotId, rescheduled.getSlotId());
         assertEquals(AppointmentStatus.CONFIRMED,
                 appointmentRepository.findById(appt.getId()).orElseThrow().getStatus());

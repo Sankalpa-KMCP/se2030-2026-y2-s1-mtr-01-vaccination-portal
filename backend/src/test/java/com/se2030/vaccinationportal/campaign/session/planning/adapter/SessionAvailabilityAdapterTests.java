@@ -1,13 +1,21 @@
 package com.se2030.vaccinationportal.campaign.session.planning.adapter;
 
+import com.se2030.vaccinationportal.campaign.center.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.session.planning.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+
+
 import com.se2030.vaccinationportal.campaign.api.availability.SlotAvailabilityPort;
 import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
 
 import com.se2030.vaccinationportal.appointment.booking.dto.AvailableSessionResponse;
 import com.se2030.vaccinationportal.appointment.query.service.AppointmentSearchService;
-import com.se2030.vaccinationportal.campaign.model.*;
-import com.se2030.vaccinationportal.campaign.service.TimeSlotService;
-import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
+import com.se2030.vaccinationportal.campaign.session.planning.service.TimeSlotService;
+import com.se2030.vaccinationportal.campaign.session.planning.service.VaccinationSessionService;
 import jakarta.persistence.EntityManager;
 import java.time.*;
 import java.util.List;

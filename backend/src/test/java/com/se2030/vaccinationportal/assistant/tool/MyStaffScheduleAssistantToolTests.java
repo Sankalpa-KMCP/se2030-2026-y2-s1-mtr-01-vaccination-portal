@@ -1,14 +1,14 @@
 package com.se2030.vaccinationportal.assistant.tool;
 
-import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
-import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
-import com.se2030.vaccinationportal.campaign.model.StaffRole;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
-import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
-import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
-import com.se2030.vaccinationportal.campaign.api.staff.JpaStaffContextQuery;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionLifecycleStatus;
+import com.se2030.vaccinationportal.campaign.session.planning.model.StaffAssignment;
+import com.se2030.vaccinationportal.campaign.center.model.StaffRole;
+import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.StaffAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.center.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.center.query.JpaStaffContextQuery;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

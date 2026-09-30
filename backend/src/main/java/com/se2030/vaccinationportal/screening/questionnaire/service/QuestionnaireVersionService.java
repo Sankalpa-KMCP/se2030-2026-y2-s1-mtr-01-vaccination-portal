@@ -9,7 +9,7 @@ import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuest
 import com.se2030.vaccinationportal.screening.submission.model.PreliminaryScreeningResult;
 
 
-import com.se2030.vaccinationportal.campaign.service.QuestionnaireVersionPublicationPort;
+import com.se2030.vaccinationportal.campaign.api.questionnaire.QuestionnaireVersionPublicationPort;
 import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireItemRepository;

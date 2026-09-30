@@ -14,10 +14,10 @@ import com.se2030.vaccinationportal.screening.submission.model.ScreeningSubmissi
 import com.se2030.vaccinationportal.screening.submission.model.ScreeningSubmissionStatus;
 
 
-import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
-import com.se2030.vaccinationportal.campaign.model.TargetGroup;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.questionnaire.model.CampaignQuestionnaireAssignment;
+import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
 import com.se2030.vaccinationportal.screening.query.service.ScreeningHistoryService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.persistence.EntityManager;

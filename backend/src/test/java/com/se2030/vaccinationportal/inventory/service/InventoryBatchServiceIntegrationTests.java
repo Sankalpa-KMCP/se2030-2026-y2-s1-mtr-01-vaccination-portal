@@ -3,11 +3,11 @@ package com.se2030.vaccinationportal.inventory.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.se2030.vaccinationportal.campaign.model.CenterStatus;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
-import com.se2030.vaccinationportal.campaign.model.VaccineType;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.center.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason;
 import com.se2030.vaccinationportal.inventory.dependency.InventoryBatchPort;
 import com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException;

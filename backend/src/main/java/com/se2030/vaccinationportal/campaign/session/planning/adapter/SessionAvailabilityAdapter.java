@@ -4,10 +4,10 @@ import com.se2030.vaccinationportal.campaign.api.availability.SlotAvailabilityPo
 import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 
-import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
-import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
-import com.se2030.vaccinationportal.campaign.service.TimeSlotService;
-import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionLifecycleStatus;
+import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.session.planning.service.TimeSlotService;
+import com.se2030.vaccinationportal.campaign.session.planning.service.VaccinationSessionService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;

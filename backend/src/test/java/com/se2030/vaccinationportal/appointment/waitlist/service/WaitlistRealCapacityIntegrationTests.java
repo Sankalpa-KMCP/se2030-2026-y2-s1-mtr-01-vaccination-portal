@@ -10,20 +10,20 @@ import com.se2030.vaccinationportal.appointment.persistence.repository.Appointme
 import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.campaign.CampaignTestFixtures;
-import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
-import com.se2030.vaccinationportal.campaign.model.CenterStatus;
-import com.se2030.vaccinationportal.campaign.model.TargetGroup;
-import com.se2030.vaccinationportal.campaign.model.TimeSlot;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
-import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
-import com.se2030.vaccinationportal.campaign.model.VaccineType;
-import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
-import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.core.model.CampaignStatus;
+import com.se2030.vaccinationportal.campaign.center.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.session.planning.model.TimeSlot;
+import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.reference.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaignRepository;
+import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.VaccinationSessionRepository;
+import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end integration tests validating {@link WaitlistJoinService} with the REAL
- * {@link com.se2030.vaccinationportal.campaign.service.TimeSlotCapacityService} production adapter.
+ * {@link com.se2030.vaccinationportal.campaign.session.planning.service.TimeSlotCapacityService} production adapter.
  * Proves that invalid, nonexistent, DRAFT, CANCELLED, zero-slot, or available-capacity sessions
  * are rejected without creating waitlist rows, and only fully booked SCHEDULED sessions are admitted.
  */

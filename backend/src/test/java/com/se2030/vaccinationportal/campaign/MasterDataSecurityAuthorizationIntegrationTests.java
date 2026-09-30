@@ -6,10 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.se2030.vaccinationportal.campaign.model.TargetGroup;
-import com.se2030.vaccinationportal.campaign.model.VaccineType;
-import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.reference.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

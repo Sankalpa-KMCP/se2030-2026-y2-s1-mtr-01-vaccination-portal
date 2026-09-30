@@ -4,8 +4,8 @@ import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentSta
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
-import com.se2030.vaccinationportal.campaign.service.SessionImpactReader;
-import com.se2030.vaccinationportal.campaign.service.SessionImpactSummary;
+import com.se2030.vaccinationportal.campaign.api.session.SessionImpactReader;
+import com.se2030.vaccinationportal.campaign.api.session.SessionImpactSummary;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
