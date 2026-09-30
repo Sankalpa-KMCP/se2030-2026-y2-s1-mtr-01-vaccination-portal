@@ -1,4 +1,4 @@
-package com.se2030.vaccinationportal.appointment.dependency;
+package com.se2030.vaccinationportal.campaign.api.capacity;
 
 import java.time.Instant;
 import java.util.Optional;

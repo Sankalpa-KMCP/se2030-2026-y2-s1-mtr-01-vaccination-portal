@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.se2030.vaccinationportal.appointment.dependency.SlotBookability;
-import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
-import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotBookability;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;

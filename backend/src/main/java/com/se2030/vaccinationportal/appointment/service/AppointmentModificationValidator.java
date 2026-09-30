@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.appointment.service;
 
-import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
 import com.se2030.vaccinationportal.appointment.exception.InvalidAppointmentStateException;
 import com.se2030.vaccinationportal.appointment.exception.RequiresStaffOverrideException;

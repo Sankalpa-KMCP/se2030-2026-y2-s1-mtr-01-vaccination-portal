@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.campaign;
 
-import com.se2030.vaccinationportal.appointment.dependency.SlotReservationResult;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotReservationResult;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionBookingStatus;

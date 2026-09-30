@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.appointment.service;
 
-import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;

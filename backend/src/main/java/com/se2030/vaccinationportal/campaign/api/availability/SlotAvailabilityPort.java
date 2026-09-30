@@ -1,4 +1,6 @@
-package com.se2030.vaccinationportal.appointment.dependency;
+package com.se2030.vaccinationportal.campaign.api.availability;
+
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -40,7 +42,7 @@ public interface SlotAvailabilityPort {
      *
      * <p>MF-03 does <em>not</em> apply eligibility filtering here. Eligibility is enforced at
      * booking time by {@link com.se2030.vaccinationportal.appointment.service.AppointmentBookingService}
-     * via {@link EligibilityLookupPort} (MF03-BR-01). Search intentionally shows all available
+     * via its eligibility boundary (MF03-BR-01). Search intentionally shows all available
      * sessions regardless of the citizen's current eligibility status.
      *
      * @param campaignId Identifier of the target campaign (required)

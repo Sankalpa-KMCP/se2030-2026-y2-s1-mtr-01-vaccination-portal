@@ -2,7 +2,7 @@ package com.se2030.vaccinationportal.campaign;
 
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityLookupPort;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
-import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;

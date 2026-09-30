@@ -1,4 +1,4 @@
-package com.se2030.vaccinationportal.appointment.dependency;
+package com.se2030.vaccinationportal.campaign.api.capacity;
 
 /**
  * Result enum returned when attempting to reserve capacity on an MF-02 TimeSlot (MF03-BR-03).

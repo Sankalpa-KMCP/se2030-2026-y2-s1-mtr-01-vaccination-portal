@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.appointment.service;
 
-import com.se2030.vaccinationportal.appointment.dependency.AvailableSessionSummary;
+import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;

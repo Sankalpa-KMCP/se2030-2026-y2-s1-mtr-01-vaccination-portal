@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.appointment.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.se2030.vaccinationportal.appointment.dependency.AvailableSessionSummary;
+import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.dto.AppointmentBookingRequest;
 import com.se2030.vaccinationportal.appointment.dto.AppointmentCancellationRequest;

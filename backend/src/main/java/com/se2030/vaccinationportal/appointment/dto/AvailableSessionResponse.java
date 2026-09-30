@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.appointment.dto;
 
-import com.se2030.vaccinationportal.appointment.dependency.AvailableSessionSummary;
+import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
 import java.time.Instant;
 
 /**

@@ -2,7 +2,7 @@ package com.se2030.vaccinationportal.appointment.service;
 
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityLookupPort;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
-import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
@@ -42,7 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>MF03-BR-06: Allowed only when all time slots of the session have zero remaining capacity;
  *       at most one active WAITING entry per citizen per campaign.</li>
  *   <li>R01 campaign/session integrity: the requested session's authoritative campaign (resolved via
- *       the {@link com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort}) must match the
+ *       the {@link com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort}) must match the
  *       requested campaign before any queue or capacity effects.</li>
  * </ul>
  */

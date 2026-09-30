@@ -1,4 +1,4 @@
-package com.se2030.vaccinationportal.appointment.dependency;
+package com.se2030.vaccinationportal.campaign.api.capacity;
 
 /**
  * Authoritative bookability verdict computed by MF-02 for a time slot at a given instant.

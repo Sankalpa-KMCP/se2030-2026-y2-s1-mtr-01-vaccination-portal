@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.appointment.service;
 
-import com.se2030.vaccinationportal.appointment.dependency.AvailableSessionSummary;
-import com.se2030.vaccinationportal.appointment.dependency.SlotAvailabilityPort;
+import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
+import com.se2030.vaccinationportal.campaign.api.availability.SlotAvailabilityPort;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;

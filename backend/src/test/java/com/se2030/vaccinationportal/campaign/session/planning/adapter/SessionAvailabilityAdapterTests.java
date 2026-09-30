@@ -1,4 +1,7 @@
-package com.se2030.vaccinationportal.appointment.dependency;
+package com.se2030.vaccinationportal.campaign.session.planning.adapter;
+
+import com.se2030.vaccinationportal.campaign.api.availability.SlotAvailabilityPort;
+import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
 
 import com.se2030.vaccinationportal.appointment.dto.AvailableSessionResponse;
 import com.se2030.vaccinationportal.appointment.service.AppointmentSearchService;
