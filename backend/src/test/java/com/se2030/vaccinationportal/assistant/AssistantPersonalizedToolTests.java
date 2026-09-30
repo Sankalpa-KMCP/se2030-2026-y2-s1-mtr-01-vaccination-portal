@@ -38,10 +38,10 @@ import com.se2030.vaccinationportal.screening.submission.model.PreliminaryScreen
 import com.se2030.vaccinationportal.screening.eligibility.repository.EligibilityAssessmentRepository;
 import com.se2030.vaccinationportal.screening.query.JpaCitizenEligibilityQuery;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
-import com.se2030.vaccinationportal.vaccination.dto.CitizenCertificateResponse;
-import com.se2030.vaccinationportal.vaccination.dto.CitizenVaccinationRecordResponse;
-import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
-import com.se2030.vaccinationportal.vaccination.service.DigitalCertificateService;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CitizenCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.query.dto.CitizenVaccinationRecordResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.model.CertificateStatus;
+import com.se2030.vaccinationportal.vaccination.certificate.service.DigitalCertificateService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

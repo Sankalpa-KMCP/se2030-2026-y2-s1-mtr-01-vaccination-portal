@@ -7,10 +7,10 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
-import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationDraftRequest;
-import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
-import com.se2030.vaccinationportal.vaccination.service.VaccinationDraftService;
+import com.se2030.vaccinationportal.vaccination.administration.dto.CreateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.administration.dto.UpdateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationDraft;
+import com.se2030.vaccinationportal.vaccination.administration.service.VaccinationDraftService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

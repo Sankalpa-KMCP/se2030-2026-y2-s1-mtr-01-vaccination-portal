@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.vaccination.certificate;
 
-import com.se2030.vaccinationportal.vaccination.model.EffectiveVaccinationRecordSnapshot;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionField;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
 

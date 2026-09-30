@@ -1,9 +1,9 @@
 package com.se2030.vaccinationportal.vaccination.validation;
 
-import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
-import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationDraftStatus;
+import com.se2030.vaccinationportal.vaccination.administration.dto.UpdateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationDraft;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationDraftStatus;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneOffset;

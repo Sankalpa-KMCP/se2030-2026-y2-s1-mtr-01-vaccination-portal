@@ -3,9 +3,9 @@ package com.se2030.vaccinationportal.vaccination.validation;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationDraftStatus;
+import com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationDraftException;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationDraft;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationDraftStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -64,7 +64,7 @@ class VaccinationDraftValidatorTests {
         VaccinationDraft draft = new VaccinationDraft(101L);
         draft.setStatus(VaccinationDraftStatus.FINALIZED);
         org.junit.jupiter.api.Assertions.assertThrows(
-                com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException.class,
+                com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationDraftException.class,
                 () -> validator.validateEditable(draft)
         );
     }

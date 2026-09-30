@@ -1,8 +1,8 @@
 package com.se2030.vaccinationportal.vaccination.validation;
 
-import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationCorrectionException;
-import com.se2030.vaccinationportal.vaccination.model.EffectiveVaccinationRecordSnapshot;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationCorrectionException;
+import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionField;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
