@@ -21,8 +21,7 @@ import com.se2030.vaccinationportal.screening.eligibility.repository.Eligibility
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.submission.repository.ScreeningSubmissionRepository;
 import com.se2030.vaccinationportal.screening.eligibility.repository.ScreeningTriggeredRuleEvidenceRepository;
-import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
-import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
+import com.se2030.vaccinationportal.shared.auth.api.AccountDisplayReader;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,7 +52,7 @@ public class EligibilityReviewService {
     private final ScreeningReviewDetailsMapper reviewDetailsMapper;
     private final CampaignScreeningReader campaignReader;
     private final Clock clock;
-    private final UserAccountRepository userAccountRepository;
+    private final AccountDisplayReader accountDisplayReader;
 
     public EligibilityReviewService(
             EligibilityAssessmentRepository assessmentRepository,
@@ -64,7 +63,7 @@ public class EligibilityReviewService {
             ScreeningReviewDetailsMapper reviewDetailsMapper,
             CampaignScreeningReader campaignReader,
             Clock clock,
-            UserAccountRepository userAccountRepository
+            AccountDisplayReader accountDisplayReader
     ) {
         this.assessmentRepository = assessmentRepository;
         this.submissionRepository = submissionRepository;
@@ -74,7 +73,7 @@ public class EligibilityReviewService {
         this.reviewDetailsMapper = reviewDetailsMapper;
         this.campaignReader = campaignReader;
         this.clock = clock;
-        this.userAccountRepository = userAccountRepository;
+        this.accountDisplayReader = accountDisplayReader;
     }
 
     // ==========================================
@@ -128,8 +127,7 @@ public class EligibilityReviewService {
         List<ScreeningTriggeredRuleEvidence> evidence = evidenceRepository
                 .findBySubmissionIdOrderByEvaluationOrderAsc(submissionId);
         EligibilityAssessment assessment = assessmentRepository.findBySubmissionId(submissionId).orElse(null);
-        String citizenFullName = userAccountRepository.findById(submission.getCitizenId())
-                .map(UserAccount::getFullName)
+        String citizenFullName = accountDisplayReader.findFullName(submission.getCitizenId())
                 .orElse(null);
 
         return reviewDetailsMapper.toResponse(

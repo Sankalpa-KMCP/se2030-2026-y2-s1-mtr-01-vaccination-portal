@@ -1,9 +1,7 @@
 package com.se2030.vaccinationportal.screening.eligibility.service;
 
 import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
-import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
-import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
-import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
+import com.se2030.vaccinationportal.shared.auth.api.AccountDisplayReader;
 import com.se2030.vaccinationportal.screening.eligibility.dto.response.ScreeningReviewDetailsResponse;
 import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.screening.eligibility.mapper.EligibilityAssessmentMapper;
@@ -73,7 +71,7 @@ class EligibilityReviewServiceReviewDetailsTests {
     private CampaignScreeningReader campaignService;
 
     @Mock
-    private UserAccountRepository userAccountRepository;
+    private AccountDisplayReader accountDisplayReader;
 
     private EligibilityReviewService service;
 
@@ -88,7 +86,7 @@ class EligibilityReviewServiceReviewDetailsTests {
                 new ScreeningReviewDetailsMapper(new EligibilityAssessmentMapper()),
                 campaignService,
                 Clock.fixed(NOW, ZoneOffset.UTC),
-                userAccountRepository
+                accountDisplayReader
         );
     }
 
@@ -139,9 +137,7 @@ class EligibilityReviewServiceReviewDetailsTests {
         );
 
         EligibilityAssessment assessment = assessment(submission);
-        UserAccount citizen = new UserAccount("private@example.com", "hash", AccountStatus.ACTIVE);
-        citizen.setFullName("Kawya Arusha");
-        when(userAccountRepository.findById(10L)).thenReturn(Optional.of(citizen));
+        when(accountDisplayReader.findFullName(10L)).thenReturn(Optional.of("Kawya Arusha"));
 
         when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(submission));
         when(questionnaireItemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))

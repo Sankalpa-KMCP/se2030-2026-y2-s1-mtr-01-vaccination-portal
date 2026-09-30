@@ -4,7 +4,7 @@ import com.se2030.vaccinationportal.screening.eligibility.service.EligibilityRev
 
 
 import com.se2030.vaccinationportal.campaign.api.screening.CampaignScreeningReader;
-import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
+import com.se2030.vaccinationportal.shared.auth.api.AccountDisplayReader;
 import com.se2030.vaccinationportal.screening.eligibility.mapper.ScreeningReviewDetailsMapper;
 import com.se2030.vaccinationportal.screening.questionnaire.model.ConsentNoticeVersion;
 import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionType;
@@ -64,7 +64,7 @@ class EligibilityReviewServiceCorrectionTests {
     private CampaignScreeningReader campaignService;
 
     @Mock
-    private UserAccountRepository userAccountRepository;
+    private AccountDisplayReader accountDisplayReader;
 
     private EligibilityReviewService service;
 
@@ -79,7 +79,7 @@ class EligibilityReviewServiceCorrectionTests {
                 reviewDetailsMapper,
                 campaignService,
                 Clock.fixed(CORRECTION_REQUESTED_AT, ZoneOffset.UTC),
-                userAccountRepository
+                accountDisplayReader
         );
     }
 
