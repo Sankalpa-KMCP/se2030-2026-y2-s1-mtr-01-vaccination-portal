@@ -1,547 +1,212 @@
-# Web-Based Vaccination Portal - Recommended Full File Tree
+# Web-Based Vaccination Portal — Current Architecture and File Tree
 
-**Canonical project:** `WBVP-SE2030`
-**Canonical version:** `3.3-AI`
-**Aligned canonical revision:** `2026-08-14-R9`
-**Document role:** Recommended target/reference structure; not an instruction to pre-create every file.
+This document describes the implemented ownership layout on the architecture refactor branch.
+The older canonical specification and MF handoffs remain business/reference history; their
+technical package examples are superseded by this document. Do not pre-create placeholder files.
+The application remains a modular monolith with one database and existing HTTP contracts.
 
-> The live repository is authoritative for what already exists. Before creating or moving files, inspect the repository and the relevant MF handoff. Create only the files required for the current logical slice.
->
-> Canonical ownership beats folder convenience. In particular, MF-02 owns `VaccineType`; MF-04 references it. MF-05 backend code belongs under `administration/`, not `vaccination/`.
+## Backend ownership
 
 ```text
-se2030-2026-y2-s1-mtr-01-vaccination-portal/
-|
-|-- README.md
-|-- CONTRIBUTING.md
-|-- LICENSE
-|-- .gitignore
-|-- .editorconfig
-|-- compose.yaml
-|
-|-- .github/
-|   |-- ISSUE_TEMPLATE/
-|   |   `-- user-story.md
-|   |-- pull_request_template.md
-|   `-- workflows/
-|       |-- backend-ci.yml
-|       `-- frontend-ci.yml
-|
-|-- docs/
-|   |-- Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md
-|   |-- Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md
-|   |-- MF02_Completion_and_Hardening_Plan.md
-|   |-- DOCUMENTATION_RELEASE_MANIFEST.md
-|   |-- handoffs/
-|   |   |-- MF01_Pre_Vaccination_Screening_and_Eligibility_Rule_Management_AI_Handoff.md
-|   |   |-- MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff.md
-|   |   |-- MF03_Appointment_Waitlist_and_Check_In_Management_AI_Handoff.md
-|   |   |-- MF04_Vaccine_Inventory_and_Batch_Management_AI_Handoff.md
-|   |   `-- MF05_Vaccination_Administration_Draft_Records_and_Digital_Certificate_Management_AI_Handoff.md
-|   |-- assessment/
-|   |   `-- README.md                         # assessment index/notes; supplied source material is tracked separately if required
-|   |-- architecture/
-|   |   |-- system-architecture.md
-|   |   |-- frontend-architecture.md
-|   |   |-- backend-architecture.md
-|   |   |-- database-architecture.md
-|   |   `-- api-conventions.md
-|   |-- api/
-|   |   |-- shared-access-api.md
-|   |   |-- mf01-screening-api.md
-|   |   |-- mf02-campaign-api.md
-|   |   |-- mf03-appointment-api.md
-|   |   |-- mf04-inventory-api.md
-|   |   `-- mf05-administration-api.md
-|   |-- decisions/
-|   |   |-- README.md
-|   |   `-- architecture-decisions.md
-|   `-- evidence/
-|       |-- README.md
-|       |-- sprint-1/
-|       |-- sprint-2/
-|       |-- sprint-3/
-|       `-- sprint-4/
-|
-|-- frontend/
-|   |-- README.md
-|   |-- package.json
-|   |-- package-lock.json
-|   |-- vite.config.js
-|   |-- eslint.config.js
-|   |-- index.html
-|   |-- .env.example
-|   |-- public/
-|   `-- src/
-|       |-- main.jsx
-|       |-- app/
-|       |   |-- App.jsx
-|       |   |-- router.jsx
-|       |   `-- providers.jsx
-|       |-- assets/
-|       |-- components/
-|       |   `-- common/
-|       |       |-- Header.jsx
-|       |       |-- Footer.jsx
-|       |       |-- LoadingSpinner.jsx
-|       |       |-- ErrorAlert.jsx
-|       |       |-- SuccessAlert.jsx
-|       |       |-- ConfirmDialog.jsx
-|       |       |-- EmptyState.jsx
-|       |       |-- Pagination.jsx
-|       |       |-- SearchInput.jsx
-|       |       `-- StatusBadge.jsx
-|       |-- layouts/
-|       |   |-- PublicLayout.jsx
-|       |   |-- CitizenLayout.jsx
-|       |   |-- StaffLayout.jsx
-|       |   `-- AdminLayout.jsx
-|       |-- services/
-|       |   `-- apiClient.js
-|       |-- hooks/
-|       |   |-- useApi.js
-|       |   `-- usePagination.js
-|       |-- constants/
-|       |   |-- apiRoutes.js
-|       |   `-- appConstants.js
-|       |-- utils/
-|       |   |-- dateUtils.js
-|       |   |-- formatUtils.js
-|       |   `-- validationUtils.js
-|       |-- styles/
-|       |   `-- global.css
-|       `-- features/
-|           |-- access/                                      # shared supporting function
-|           |   |-- api/
-|           |   |-- components/
-|           |   |-- pages/
-|           |   |-- hooks/
-|           |   `-- validation/
-|           |
-|           |-- screening/                                   # MF-01
-|           |   |-- api/
-|           |   |   `-- screeningApi.js
-|           |   |-- components/
-|           |   |   |-- ScreeningQuestionForm.jsx
-|           |   |   |-- QuestionnaireBuilder.jsx
-|           |   |   |-- ScreeningForm.jsx
-|           |   |   |-- PreliminaryResultCard.jsx
-|           |   |   |-- EligibilityDecisionForm.jsx
-|           |   |   `-- EligibilityStatusCard.jsx
-|           |   |-- pages/
-|           |   |   |-- ScreeningConfigurationPage.jsx
-|           |   |   |-- QuestionnaireManagementPage.jsx
-|           |   |   |-- CitizenScreeningPage.jsx
-|           |   |   |-- EligibilityReviewQueuePage.jsx
-|           |   |   `-- EligibilityHistoryPage.jsx
-|           |   |-- hooks/
-|           |   `-- validation/
-|           |
-|           |-- campaign-management/                         # MF-02
-|           |   |-- api/
-|           |   |   |-- campaignApi.js
-|           |   |   |-- centerApi.js
-|           |   |   `-- sessionApi.js
-|           |   |-- components/
-|           |   |   |-- CampaignForm.jsx
-|           |   |   |-- CampaignTable.jsx
-|           |   |   |-- DoseProgrammeForm.jsx
-|           |   |   |-- QuestionnaireSelector.jsx
-|           |   |   |-- CenterForm.jsx
-|           |   |   |-- OperatingHoursForm.jsx
-|           |   |   |-- CenterClosureForm.jsx
-|           |   |   |-- CampaignCenterAssignmentForm.jsx
-|           |   |   |-- RecurrenceRuleForm.jsx
-|           |   |   |-- SessionForm.jsx
-|           |   |   |-- ResourceAssignmentForm.jsx
-|           |   |   |-- CapacityPlanPanel.jsx
-|           |   |   `-- SessionChangeImpactDialog.jsx
-|           |   |-- pages/
-|           |   |   |-- CampaignManagementPage.jsx
-|           |   |   |-- CampaignDetailsPage.jsx
-|           |   |   |-- CenterManagementPage.jsx
-|           |   |   |-- SessionCalendarPage.jsx
-|           |   |   |-- SessionDetailsPage.jsx
-|           |   |   `-- OperationalDashboardPage.jsx
-|           |   |-- hooks/
-|           |   `-- validation/
-|           |
-|           |-- appointment-management/                      # MF-03
-|           |   |-- api/
-|           |   |   |-- availabilityApi.js
-|           |   |   |-- appointmentApi.js
-|           |   |   |-- waitlistApi.js
-|           |   |   `-- checkInApi.js
-|           |   |-- components/
-|           |   |   |-- AvailabilitySearch.jsx
-|           |   |   |-- SessionAvailabilityCard.jsx
-|           |   |   |-- AppointmentCard.jsx
-|           |   |   |-- AppointmentStatusBadge.jsx
-|           |   |   |-- RescheduleDialog.jsx
-|           |   |   |-- WaitlistCard.jsx
-|           |   |   |-- WaitlistPosition.jsx
-|           |   |   `-- CheckInPanel.jsx
-|           |   |-- pages/
-|           |   |   |-- AppointmentBookingPage.jsx
-|           |   |   |-- MyAppointmentsPage.jsx
-|           |   |   |-- WaitlistPage.jsx
-|           |   |   `-- CheckInManagementPage.jsx
-|           |   |-- hooks/
-|           |   `-- validation/
-|           |
-|           |-- vaccine-inventory/                           # MF-04
-|           |   |-- api/
-|           |   |   |-- batchApi.js
-|           |   |   |-- inventoryApi.js
-|           |   |   `-- transferApi.js
-|           |   |-- components/
-|           |   |   |-- BatchForm.jsx
-|           |   |   |-- BatchTable.jsx
-|           |   |   |-- CenterStockTable.jsx
-|           |   |   |-- ReceiptForm.jsx
-|           |   |   |-- TransferForm.jsx
-|           |   |   |-- AdjustmentForm.jsx
-|           |   |   |-- StockTransactionTable.jsx
-|           |   |   |-- LowStockAlert.jsx
-|           |   |   `-- NearExpiryAlert.jsx
-|           |   |-- pages/
-|           |   |   |-- BatchManagementPage.jsx
-|           |   |   |-- CenterInventoryPage.jsx
-|           |   |   |-- StockMovementPage.jsx
-|           |   |   `-- InventoryAlertsPage.jsx
-|           |   |-- hooks/
-|           |   `-- validation/
-|           |
-|           `-- vaccination-administration/                  # MF-05
-|               |-- api/
-|               |   |-- vaccinationDraftApi.js
-|               |   |-- vaccinationApi.js
-|               |   `-- certificateApi.js
-|               |-- components/
-|               |   |-- CheckedInWorkQueue.jsx
-|               |   |-- VaccinationDraftForm.jsx
-|               |   |-- AdministrationConfirmationDialog.jsx
-|               |   |-- VaccinationHistoryTable.jsx
-|               |   |-- CorrectionRequestForm.jsx
-|               |   |-- CertificateCard.jsx
-|               |   `-- CertificateVerificationForm.jsx
-|               |-- pages/
-|               |   |-- VaccinationWorkQueuePage.jsx
-|               |   |-- VaccinationDraftPage.jsx
-|               |   |-- VaccinationHistoryPage.jsx
-|               |   |-- VaccinationCorrectionPage.jsx
-|               |   |-- CertificatePage.jsx
-|               |   `-- CertificateVerificationPage.jsx
-|               |-- hooks/
-|               `-- validation/
-|
-|-- backend/
-|   |-- README.md
-|   |-- pom.xml
-|   |-- mvnw
-|   |-- mvnw.cmd
-|   |-- .env.example
-|   |-- .mvn/wrapper/
-|   `-- src/
-|       |-- main/
-|       |   |-- java/com/se2030/vaccinationportal/
-|       |   |   |-- VaccinationPortalApplication.java
-|       |   |   |
-|       |   |   |-- shared/
-|       |   |   |   |-- access/
-|       |   |   |   |   |-- controller/
-|       |   |   |   |   |-- dto/
-|       |   |   |   |   |-- model/
-|       |   |   |   |   |-- repository/
-|       |   |   |   |   `-- service/
-|       |   |   |   |-- security/
-|       |   |   |   |-- config/
-|       |   |   |   |-- exception/
-|       |   |   |   |-- dto/
-|       |   |   |   |-- audit/
-|       |   |   |   |-- notification/
-|       |   |   |   |-- outbox/
-|       |   |   |   |-- validation/
-|       |   |   |   `-- util/
-|       |   |   |
-|       |   |   |-- screening/                              # MF-01
-|       |   |   |   |-- controller/
-|       |   |   |   |   |-- ScreeningConfigurationController.java
-|       |   |   |   |   |-- QuestionnaireController.java
-|       |   |   |   |   |-- ScreeningSubmissionController.java
-|       |   |   |   |   `-- EligibilityReviewController.java
-|       |   |   |   |-- dto/
-|       |   |   |   |   |-- question/
-|       |   |   |   |   |-- questionnaire/
-|       |   |   |   |   |-- submission/
-|       |   |   |   |   `-- eligibility/
-|       |   |   |   |-- model/
-|       |   |   |   |   |-- ConsentNoticeVersion.java
-|       |   |   |   |   |-- ScreeningQuestion.java
-|       |   |   |   |   |-- AnswerOption.java
-|       |   |   |   |   |-- EligibilityRule.java
-|       |   |   |   |   |-- Questionnaire.java
-|       |   |   |   |   |-- QuestionnaireVersion.java
-|       |   |   |   |   |-- QuestionnaireVersionStatus.java
-|       |   |   |   |   |-- QuestionnaireItem.java
-|       |   |   |   |   |-- ScreeningSubmission.java
-|       |   |   |   |   |-- ScreeningSubmissionStatus.java
-|       |   |   |   |   |-- ScreeningAnswer.java
-|       |   |   |   |   |-- PreliminaryScreeningResult.java
-|       |   |   |   |   |-- EligibilityAssessment.java
-|       |   |   |   |   `-- EligibilityAssessmentStatus.java
-|       |   |   |   |-- repository/
-|       |   |   |   |-- service/
-|       |   |   |   |   |-- ScreeningConfigurationService.java
-|       |   |   |   |   |-- QuestionnaireVersionService.java
-|       |   |   |   |   |-- ScreeningSubmissionService.java
-|       |   |   |   |   |-- PreliminaryScreeningService.java
-|       |   |   |   |   `-- EligibilityReviewService.java
-|       |   |   |   |-- mapper/
-|       |   |   |   `-- validation/
-|       |   |   |
-|       |   |   |-- campaign/                               # MF-02
-|       |   |   |   |-- controller/
-|       |   |   |   |   |-- VaccineTypeController.java
-|       |   |   |   |   |-- CampaignController.java
-|       |   |   |   |   |-- VaccinationCenterController.java
-|       |   |   |   |   |-- CampaignCenterAssignmentController.java
-|       |   |   |   |   `-- VaccinationSessionController.java
-|       |   |   |   |-- dto/
-|       |   |   |   |   |-- campaign/
-|       |   |   |   |   |-- center/
-|       |   |   |   |   |-- assignment/
-|       |   |   |   |   |-- recurrence/
-|       |   |   |   |   |-- session/
-|       |   |   |   |   |-- resource/
-|       |   |   |   |   `-- capacity/
-|       |   |   |   |-- model/
-|       |   |   |   |   |-- VaccineType.java
-|       |   |   |   |   |-- TargetGroup.java
-|       |   |   |   |   |-- CampaignDoseProgramme.java
-|       |   |   |   |   |-- VaccinationCampaign.java
-|       |   |   |   |   |-- CampaignStatus.java
-|       |   |   |   |   |-- CampaignLocationTarget.java
-|       |   |   |   |   |-- CampaignQuestionnaireAssignment.java
-|       |   |   |   |   |-- VaccinationCenter.java
-|       |   |   |   |   |-- CenterStatus.java
-|       |   |   |   |   |-- CampaignCenterAssignment.java
-|       |   |   |   |   |-- OperatingHours.java
-|       |   |   |   |   |-- CenterClosure.java
-|       |   |   |   |   |-- SessionRecurrenceRule.java
-|       |   |   |   |   |-- VaccinationSession.java
-|       |   |   |   |   |-- SessionLifecycleStatus.java
-|       |   |   |   |   |-- SessionBookingStatus.java
-|       |   |   |   |   |-- TimeSlot.java
-|       |   |   |   |   |-- OperationalResource.java
-|       |   |   |   |   |-- OperationalResourceStatus.java
-|       |   |   |   |   |-- SessionResourceAssignment.java
-|       |   |   |   |   |-- StaffAssignment.java
-|       |   |   |   |   |-- SessionCapacityPlan.java
-|       |   |   |   |   `-- SessionChangeEvent.java
-|       |   |   |   |-- repository/
-|       |   |   |   |-- service/
-|       |   |   |   |   |-- CampaignService.java
-|       |   |   |   |   |-- VaccinationCenterService.java
-|       |   |   |   |   |-- RecurringSessionService.java
-|       |   |   |   |   |-- VaccinationSessionService.java
-|       |   |   |   |   |-- SessionResourceService.java
-|       |   |   |   |   |-- SessionCapacityService.java
-|       |   |   |   |   `-- SessionChangeService.java
-|       |   |   |   |-- mapper/
-|       |   |   |   `-- validation/
-|       |   |   |
-|       |   |   |-- appointment/                            # MF-03
-|       |   |   |   |-- controller/
-|       |   |   |   |   |-- AvailabilityController.java
-|       |   |   |   |   |-- AppointmentController.java
-|       |   |   |   |   |-- WaitlistController.java
-|       |   |   |   |   `-- CheckInController.java
-|       |   |   |   |-- dto/
-|       |   |   |   |   |-- availability/
-|       |   |   |   |   |-- appointment/
-|       |   |   |   |   |-- waitlist/
-|       |   |   |   |   `-- checkin/
-|       |   |   |   |-- model/
-|       |   |   |   |   |-- Appointment.java
-|       |   |   |   |   |-- AppointmentStatus.java
-|       |   |   |   |   |-- AppointmentChangeEvent.java
-|       |   |   |   |   |-- WaitlistEntry.java
-|       |   |   |   |   |-- WaitlistStatus.java
-|       |   |   |   |   |-- WaitlistChangeEvent.java
-|       |   |   |   |   |-- CheckInEvent.java
-|       |   |   |   |   |-- CheckInEventType.java
-|       |   |   |   |   `-- ModuleEventConsumption.java
-|       |   |   |   |-- repository/
-|       |   |   |   |-- service/
-|       |   |   |   |   |-- AvailabilityService.java
-|       |   |   |   |   |-- AppointmentBookingService.java
-|       |   |   |   |   |-- AppointmentRescheduleService.java
-|       |   |   |   |   |-- AppointmentCancellationService.java
-|       |   |   |   |   |-- WaitlistService.java
-|       |   |   |   |   |-- CheckInService.java
-|       |   |   |   |   `-- SessionChangeConsumerService.java
-|       |   |   |   |-- mapper/
-|       |   |   |   `-- validation/
-|       |   |   |
-|       |   |   |-- inventory/                              # MF-04
-|       |   |   |   |-- controller/
-|       |   |   |   |   |-- ManufacturerController.java
-|       |   |   |   |   |-- VaccineBatchController.java
-|       |   |   |   |   |-- InventoryController.java
-|       |   |   |   |   `-- StockTransferController.java
-|       |   |   |   |-- dto/
-|       |   |   |   |   |-- manufacturer/
-|       |   |   |   |   |-- batch/
-|       |   |   |   |   |-- inventory/
-|       |   |   |   |   |-- transaction/
-|       |   |   |   |   `-- transfer/
-|       |   |   |   |-- model/
-|       |   |   |   |   |-- Manufacturer.java
-|       |   |   |   |   |-- VaccineBatch.java
-|       |   |   |   |   |-- BatchStatus.java
-|       |   |   |   |   |-- CenterInventory.java
-|       |   |   |   |   |-- StockTransfer.java
-|       |   |   |   |   |-- StockTransaction.java
-|       |   |   |   |   `-- StockTransactionType.java
-|       |   |   |   |-- repository/
-|       |   |   |   |-- service/
-|       |   |   |   |   |-- ManufacturerService.java
-|       |   |   |   |   |-- VaccineBatchService.java
-|       |   |   |   |   |-- InventoryReceiptService.java
-|       |   |   |   |   |-- StockTransferService.java
-|       |   |   |   |   |-- StockAdjustmentService.java
-|       |   |   |   |   |-- InventoryQueryService.java
-|       |   |   |   |   `-- InventoryAlertService.java
-|       |   |   |   |-- mapper/
-|       |   |   |   `-- validation/
-|       |   |   |
-|       |   |   `-- administration/                         # MF-05
-|       |   |       |-- controller/
-|       |   |       |   |-- VaccinationWorkQueueController.java
-|       |   |       |   |-- VaccinationDraftController.java
-|       |   |       |   |-- VaccinationFinalizationController.java
-|       |   |       |   |-- VaccinationHistoryController.java
-|       |   |       |   |-- VaccinationCorrectionController.java
-|       |   |       |   |-- CertificateController.java
-|       |   |       |   `-- CertificateVerificationController.java
-|       |   |       |-- dto/
-|       |   |       |   |-- draft/
-|       |   |       |   |-- finalization/
-|       |   |       |   |-- history/
-|       |   |       |   |-- correction/
-|       |   |       |   `-- certificate/
-|       |   |       |-- model/
-|       |   |       |   |-- VaccinationDraft.java
-|       |   |       |   |-- VaccinationDraftStatus.java
-|       |   |       |   |-- VaccinationRecord.java
-|       |   |       |   |-- VaccinationCorrection.java
-|       |   |       |   |-- VaccinationCorrectionStatus.java
-|       |   |       |   |-- CertificateIssue.java
-|       |   |       |   |-- CertificateStatus.java
-|       |   |       |   |-- CertificateVerificationLog.java
-|       |   |       |   `-- ApiIdempotencyRecord.java
-|       |   |       |-- repository/
-|       |   |       |-- service/
-|       |   |       |   |-- VaccinationWorkQueueService.java
-|       |   |       |   |-- VaccinationDraftService.java
-|       |   |       |   |-- VaccinationFinalizationService.java
-|       |   |       |   |-- VaccinationHistoryService.java
-|       |   |       |   |-- VaccinationCorrectionService.java
-|       |   |       |   |-- CertificateService.java
-|       |   |       |   `-- CertificateVerificationService.java
-|       |   |       |-- mapper/
-|       |   |       `-- validation/
-|       |   |
-|       |   `-- resources/
-|       |       |-- application.properties
-|       |       |-- application-local.properties
-|       |       `-- application-demo.properties
-|       |
-|       `-- test/
-|           |-- java/com/se2030/vaccinationportal/
-|           |   |-- shared/
-|           |   |-- screening/
-|           |   |-- campaign/
-|           |   |-- appointment/
-|           |   |-- inventory/
-|           |   `-- administration/
-|           `-- resources/
-|               `-- application-test.properties
-|
-|-- database/
-|   |-- README.md
-|   |-- .env.example
-|   |-- migrations/
-|   |   |-- V001__shared_foundation.sql
-|   |   |-- V002__mf01_screening_foundation.sql
-|   |   |-- V003__mf02_campaign_foundation.sql
-|   |   |-- V004__mf03_appointment_foundation.sql
-|   |   |-- V005__mf04_inventory_foundation.sql
-|   |   `-- V006__mf05_administration_foundation.sql
-|   |-- seeds/
-|   |   |-- development/
-|   |   `-- testing/
-|   `-- diagrams/
-|       |-- er-diagram.md
-|       |-- er-diagram.png
-|       `-- database-schema.md
-|
-`-- tests/
-    |-- README.md
-    |-- integration/
-    |   |-- shared/
-    |   |-- screening/
-    |   |-- campaign/
-    |   |-- appointment/
-    |   |-- inventory/
-    |   `-- administration/
-    |-- end-to-end/
-    |   |-- citizen-screening-flow.spec.js
-    |   |-- appointment-booking-flow.spec.js
-    |   |-- inventory-flow.spec.js
-    |   `-- vaccination-certificate-flow.spec.js
-    `-- acceptance/
-        |-- mf01-acceptance.md
-        |-- mf02-acceptance.md
-        |-- mf03-acceptance.md
-        |-- mf04-acceptance.md
-        `-- mf05-acceptance.md
+backend/src/main/java/com/se2030/vaccinationportal/
+├── appointment/
+│   ├── api/{query,vaccination}
+│   ├── booking/{service,dto,web}
+│   ├── waitlist/{service,dto,web}
+│   ├── checkin/{service,dto,adapter}
+│   ├── query/{service,adapter}
+│   ├── persistence/{model,repository}
+│   ├── exception
+│   └── web
+├── campaign/
+│   ├── api/{appointment,availability,capacity,questionnaire,reference,screening,session,staff,vaccination}
+│   ├── core/{model,repository,service,dto,web,query}
+│   ├── reference/{model,repository,service,dto,web,adapter}
+│   ├── center/{model,repository,service,dto,web,query}
+│   ├── questionnaire/{model,repository,service,dto,web}
+│   ├── session/
+│   │   ├── planning/{model,repository,service,dto,web,adapter}
+│   │   └── recurrence/{model,repository,service,dto,web}
+│   ├── analytics/{dto,service,web}
+│   ├── commonrequest
+│   ├── exception
+│   └── web
+├── screening/
+│   ├── api/{eligibility,query}
+│   ├── questionnaire/{model,repository,service,dto,web}
+│   ├── submission/{model,repository,service,dto,mapper,web}
+│   ├── eligibility/{model,repository,service,dto,mapper,adapter,web}
+│   ├── correction/{service,dto,web}
+│   ├── query/{service,mapper,dto}
+│   ├── exception
+│   └── validation
+├── vaccination/
+│   ├── administration/{model,repository,service,dto,mapper,exception,integration,web}
+│   ├── certificate/{model,repository,service,dto,mapper,exception,web}
+│   ├── query/{model,service,dto}
+│   ├── validation
+│   └── web
+├── inventory/{controller,service,repository,model,dto,dependency,exception}
+├── assistant/{config,controller,dto,exception,policy,provider,service,tool}
+└── shared/auth/{api,query,bootstrap,controller,dto,exception,model,repository,security,service}
 ```
 
-## Ownership Summary
+The tree shows capability roots and relevant child areas, not every class. A capability may also
+have mapper, validation or integration children where its existing workflow requires them.
+Production providers live in capability `query` or `adapter` packages, outside public `api`.
+Inventory's existing `dependency` package is its public batch contract, not a generic shared bucket.
 
-| Area | Frontend | Backend | Backend tests |
-|---|---|---|---|
-| Shared access/support | `frontend/src/features/access/` or `frontend/src/auth/` | `backend/.../shared/` | `backend/src/test/.../shared/` |
-| MF-01 | `frontend/src/features/screening/` | `backend/.../screening/` | `backend/src/test/.../screening/` |
-| MF-02 | `frontend/src/features/campaign-management/`, `session-management/`, `center-operations/`, `analytics/` | `backend/.../campaign/` | `backend/src/test/.../campaign/` |
-| MF-03 | `frontend/src/features/appointment-management/` | `backend/.../appointment/` | `backend/src/test/.../appointment/` |
-| MF-04 | `frontend/src/features/vaccine-inventory/` | `backend/.../inventory/` | `backend/src/test/.../inventory/` |
-| MF-05 | `frontend/src/features/vaccination-administration/` | `backend/.../vaccination/` (or `administration/`) | `backend/src/test/.../vaccination/` |
+## Frontend ownership
 
-## Live Repository Structural Reconciliation Notes
+```text
+frontend/
+├── eslint/{featureBoundaries.js,featureBoundaries.test.js}
+└── src/
+    ├── app/{App.jsx,AuthenticatedLayout.jsx,ProtectedRoute.jsx,routes.jsx,pages}
+    ├── auth/{api,components,constants,context,pages,utils}
+    ├── components/common
+    ├── features/
+    │   ├── analytics
+    │   ├── appointment-management/{api,components,pages,citizen-appointment.css}
+    │   ├── assistant
+    │   ├── campaign-management
+    │   ├── center-operations
+    │   ├── citizen-dashboard
+    │   ├── citizen-profile
+    │   ├── inventory-management/{api,hooks,pages,utils}
+    │   ├── public-landing
+    │   ├── screening/{api,components,hooks,pages,utils,citizen-screening.css}
+    │   ├── session-management/{api,components,hooks,pages}
+    │   └── vaccination-administration
+    ├── shared/
+    │   ├── api/{apiClient.js,readApiErrorDetails.js}
+    │   ├── auth/authStorage.js
+    │   ├── time/timezoneUtils.js
+    │   ├── assets/citizen-health-banner.png
+    │   └── ui/citizen/{CitizenPageHeader, CitizenErrorState, CitizenStatePanel,
+    │                   CitizenStatusBadge, CitizenWorkflowGuide, citizen-ui.css}
+    └── styles
+```
 
-1. **Frontend Feature Modularization**: MF-02 frontend components are organized into dedicated feature folders (`campaign-management/`, `session-management/`, `center-operations/`, and `analytics/`) for clear separation of concerns, alongside shared authentication in `frontend/src/auth/`.
-2. **Flyway Migration Location**: Canonical runtime Flyway migrations reside in `backend/src/main/resources/db/migration/` (numbered `V0` through `V11`), executed automatically on Spring Boot application startup. The `database/migrations/` folder is reserved for reference scripts.
-3. **Frontend Automated Testing**: Frontend automated testing is configured via Vitest (`npm test` / `vitest run`) in `frontend/package.json` covering components, routes, and API client adapters.
-4. **Implementation Authority**: The live repository is authoritative for what exists. Do not move, rename, delete, or create production files merely because this reference tree layout differs from the live implementation.
+Tests follow their components/capabilities. The removed `features/citizen-ui` and `src/services`
+areas have no replacement compatibility shims. `CitizenSection` belongs to Screening.
+Auth owns login/session workflows; shared auth storage only owns browser token infrastructure.
 
-## File-Tree Rules
+## Feature dependency direction
 
-1. This document is a **target/reference tree**, not a checklist to pre-create every file.
-2. Inspect the live repository before creating or moving anything.
-3. Read the canonical Markdown and the relevant MF handoff before implementation. The canonical Markdown is the sole normative semantic source; no parallel binary canonical artifact is required.
-4. Keep business entities inside the owning module even when other modules reference them.
-5. `VaccineType` is owned by MF-02; MF-04 must not create `Vaccine`, `VaccineType`, `VaccineRepository` or another master lifecycle.
-6. MF-05 backend code belongs in its designated domain package; do not duplicate parallel packages across `vaccination/` and `administration/`.
-7. MF-03 uses `CheckInEvent` / `CheckInEventType`, not an alternative `CheckInRecord` model.
-8. MF-05 uses `CertificateIssue`, `CertificateVerificationLog` and `ApiIdempotencyRecord`; do not replace them with simplified `DigitalCertificate` or generic `IdempotencyRecord` models.
-9. Shared account/access, security, audit, notifications and transactional-outbox infrastructure belong under shared/supporting code, not inside one MF.
-10. Use DTOs for public API input/output; do not expose JPA entities directly.
-11. Keep controllers thin; business rules belong in services/domain validation and critical constraints also require database enforcement.
-12. Flyway migration versions are **global**. The active sequence spans `V0` through `V11`; every future migration must use the next globally coordinated version. Do not create independent per-branch version sequences.
-13. Do not use Hibernate `create`, `create-drop` or `update` as the committed production/demo schema-management strategy; use `validate`.
-14. Use only synthetic/anonymized seed and test data. Never commit `.env`, secrets, real citizen data, real screening/medical data or production dumps.
-15. Tests should mirror the module they verify, and cross-module integration tests should live in shared/integration test locations rather than duplicating another module's business implementation.
-16. Exact final filenames may evolve as code is implemented. Canonical semantics and ownership are authoritative.
+```text
+Assistant -> Appointment.api.query -> Campaign.api.appointment
+Assistant -> Screening.api.query
+Assistant -> Campaign.api.staff
+Assistant -> DigitalCertificateService / CitizenProfileService
+Appointment -> Campaign capacity, availability, display, vaccination-read APIs
+Appointment -> Screening.api.eligibility
+Inventory -> Campaign.api.reference
+Screening -> Campaign.api.screening + Shared Auth AccountDisplayReader
+Vaccination -> Appointment.api.vaccination + Inventory.dependency
+```
+
+Campaign owns `QuestionnaireVersionPublicationPort` and `SessionImpactReader`; Screening and
+Appointment implement them respectively. These are inverted runtime collaborations, not Campaign
+imports of consumer implementations. Campaign has no Java dependency on Appointment.
+The retained Assistant application services are intentionally appropriate public use cases.
+Shared backend infrastructure has no business-feature dependency.
+
+## Persistence and transaction boundaries
+
+Java access to another feature's repositories or JPA entities is prohibited. Immutable query
+snapshots contain facts, not entities or callbacks. There is one explicit persistence-query exception:
+`AppointmentRepository.countBySessionIdAndStatusIn` joins Campaign `TimeSlot` inside a single JPQL
+statement for the Campaign-owned session-impact count. It preserves the existing count consistency
+under session locks; replacing it with two separate reads would change that contract.
+
+Booking retains the citizen/campaign guard, eligibility and duplicate checks before capacity
+reservation. Waitlist FIFO, mutual exclusion and promotion behavior are unchanged. Campaign capacity
+keeps campaign -> session -> slot lock order. Session-change preview/confirmation tokens remain
+feature-owned. Vaccination finalization remains one transaction for record creation, Inventory
+stock/audit deduction, Appointment completion, certificate issuance and draft finalization.
+No new transaction, independent propagation, lock or schema is introduced by ownership moves.
+Existing finalization does not create a subsequent-dose draft; the refactor does not add that rule.
+
+`EffectiveVaccinationRecordService.resolve` is public across Vaccination capability packages.
+Its body is unchanged; the existing Spring transaction attribute source already recognized its
+previous package-visible annotation. It is not a new transaction boundary.
+
+## Assistant timing and principal scoping
+
+Appointment, Eligibility and Staff queries derive identity from `UserPrincipal`. User IDs typed
+in prompts cannot select another account. Appointment reads retrieve rows and bulk slot facts,
+then sample the existing Clock once and classify. Combined reads retrieve waitlist base rows
+before classification and perform queue counts afterward. Eligibility samples after retrieval
+and latest-per-campaign reduction. Five deterministic regressions protect those timing boundaries.
+Providers expose no clinical notes or repository-shaped state. Tool tests mock provider queries;
+provider tests exercise repositories; persisted Spring tests verify the production graph and isolation.
+
+## Frontend workflow and styling boundaries
+
+`useSessionRecurrenceWorkflow`, `useSessionChangeControl`, `useQuestionnaireBuilder` and
+`useInventoryManagement` own their respective feature orchestration. View files retain JSX,
+wording and accessibility. Request generations, stale-response guards and confirmation/mutation
+serialization remain together in the owning workflow. Business API functions stay feature-owned.
+
+Shared citizen components explicitly import their shared stylesheet. Appointment and Screening
+styles stay in their features. The shared campaign-card base plus Dashboard override remains an
+intentional cascade relationship; consider its order when changing styles. Shared assets are
+reused directly without deep imports into another feature.
+
+## Architecture enforcement
+
+`backend/src/test/java/com/se2030/vaccinationportal/architecture/FeatureBoundaryTests.java`
+uses Spring's existing ASM dependency to inspect compiled types, signatures, annotations, fields,
+calls, lambdas and record components. It checks repository/entity isolation, API purity, shared
+direction, Assistant seams, Campaign -> Appointment absence, internal services and the explicit
+JPQL exception. No new test dependency was added. Reflection, arbitrary string class names and
+native SQL are not proven by bytecode dependency scanning and still require review.
+
+`frontend/eslint/featureBoundaries.js` resolves relative imports, exports and literal dynamic
+imports. Production shared code cannot depend on business features/Auth workflows; features use
+another feature's APIs/constants or the small explicit list of provider-owned presentation entry
+points. Route composition belongs in `app`. Test fixtures are excluded from production boundary
+rules and the rule itself has valid/invalid RuleTester coverage. Computed dynamic module paths
+are outside static resolution; none are needed by the current production graph.
+
+## Migrations and validation
+
+Active Flyway location: `backend/src/main/resources/db/migration` (`classpath:db/migration`).
+There are 22 applied-history scripts, V0 through V21. Their contents and schema are unchanged.
+`database/migrations` contains historical reference scripts, not an additional Flyway location;
+see [database guide](../database/README.md). Do not apply them in addition to runtime migrations.
+
+From `backend`, run `./mvnw test` (Windows: `.\mvnw.cmd test`) and compile/test-compile.
+Run the existing `mysql-concurrency` profile when Docker is available for real MySQL migration
+and locking checks. From `frontend`, run `npm test`, `npm run lint` and `npm run build`.
+Run `git diff --check` and `git diff --cached --check` before committing an ownership milestone.
+See [contributing](../CONTRIBUTING.md) for the development workflow.
+
+## Refactor invariant audit
+
+Compared with starting commit `975c039e510a5f0630fc2223bfe17b004f40a9ed`:
+
+| Production evidence | Starting | Final | Result |
+| --- | ---: | ---: | --- |
+| Direct cross-feature repository imports | 4 | 0 | Removed through provider ownership |
+| Direct cross-feature JPA entity imports | 2 | 0 | Removed; enum/value imports are not counted as entities |
+| Cross-feature service-package imports | 8 | 2 | Three old entries were contracts/results, not implementations; two retained application services remain |
+| Transaction annotations | 225 | 225 | Same annotation values |
+| Lock annotations | 28 | 28 | Same annotation values |
+| HTTP mapping annotations | 246 | 246 | Same routes/method mappings |
+| Authorization annotations | 173 | 173 | Same policy values |
+| JPA mapping annotations checked | 802 | 802 | Same table/relationship/column/index values |
+
+Booking, waitlist join/promotion, capacity and finalization bodies are unchanged after package/import
+normalization. Session change/series preview services are preserved by the Campaign move comparisons.
+SecurityConfig, JwtAuthenticationFilter and UserPrincipal are unchanged; all runtime resources,
+active Flyway scripts, frontend app route files and dependency manifests are byte-identical to the
+starting revision. Provider wiring and entity/repository scanning are exercised by real Spring tests.
+These counts complement behavioral/integration tests; annotation equality alone is not a proof of
+all runtime behavior. Reflection/native SQL limitations and the named JPQL exception remain explicit.
+
+The earlier provider-next-to-interface package debt and repository-mocked Assistant tool test seam
+are resolved: providers now live under implementation capabilities, and unit/provider/integration
+responsibilities are separated. The existing public presentation allowlist and SessionImpact join
+are retained architectural exceptions rather than unfinished package moves.

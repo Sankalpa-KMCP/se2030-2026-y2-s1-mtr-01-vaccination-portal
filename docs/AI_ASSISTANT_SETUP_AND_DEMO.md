@@ -42,6 +42,21 @@ Authorized React Router Navigation
     └── Rendered as clickable action pills navigating within authorized client routes
 ```
 
+### Provider-owned personalized reads
+
+Assistant tools consume `CitizenAppointmentQuery`, `CitizenEligibilityQuery` and `StaffContextQuery`.
+Providers derive identity from the verified principal and return immutable minimized facts; Assistant
+has no Appointment/Screening/Campaign repository or entity imports. Appointment uses a bulk
+Campaign-owned slot-display reader. Vaccination summary retains `DigitalCertificateService`;
+profile completion retains `CitizenProfileService`. Staff profile and schedule use Campaign-owned
+roster/scheduling facts. Prompt-supplied identifiers cannot change query identity.
+
+Appointment and Eligibility sample the existing Clock after relevant persistence/reduction work.
+Combined appointment/waitlist reads classify appointments before queue counts. Deterministic
+provider regressions protect all five deadline-crossing scenarios. Tool unit tests mock query APIs;
+provider tests own persistence fixtures; `AssistantProviderQueryIntegrationTests` persists multiple
+users and exercises the real Spring graph. See the [current architecture](Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md).
+
 ### Endpoints and Data Contracts
 
 #### 1. Status Endpoint

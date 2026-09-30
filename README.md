@@ -1,5 +1,9 @@
 # Web-Based Vaccination Portal
 
+## Architecture ownership (current)
+
+See the [current architecture and file tree](docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md) for capability packages, provider-owned APIs, transaction invariants and enforced import boundaries. Historical handoffs do not define the current package tree.
+
 ## Project Overview
 
 The Web-Based Vaccination Portal (WBVP-SE2030) is a healthcare orchestration platform supporting vaccination program operations for citizens, operational staff, healthcare professionals, and system administrators. The portal is architected as a layered modular monolith with explicit hexagonal boundaries (ports and adapters) ensuring decoupled domain interactions.
@@ -18,7 +22,7 @@ The Web-Based Vaccination Portal (WBVP-SE2030) is a healthcare orchestration pla
 The backend follows an explicit hexagonal architecture (ports and adapters) under package `com.se2030.vaccinationportal`:
 
 - **Decoupled Inter-Module Communication**: Domain interactions across module boundaries use explicit ports (e.g. `EligibilityLookupPort`, `SlotCapacityPort`) to prevent direct database coupling between domains.
-- **Relational Integrity & Migrations**: Schema evolution is controlled entirely via Flyway database migrations in `backend/src/main/resources/db/migration/`. Current migrations span `V0` through `V12` (13 active migrations).
+- **Relational Integrity & Migrations**: Schema evolution is controlled entirely via Flyway database migrations in `backend/src/main/resources/db/migration/`. Current migrations span `V0` through `V21` (22 active migrations).
 - **Dual Verification Suite**: Backend verification combines fast in-memory H2 unit/integration tests with real MySQL Testcontainers for database schema and concurrency assurance.
 
 ## Functional Capabilities & Implementation Status
@@ -28,9 +32,9 @@ The backend follows an explicit hexagonal architecture (ports and adapters) unde
 | **Shared Authentication & Access Control** | `shared/auth` | `src/auth/` | **Implemented** | Stateless JWT authentication, citizen self-registration, staff registration requests, admin review, and role-based route protection. |
 | **MF-01: Pre-Vaccination Screening & Eligibility** | `screening` | `src/features/screening/` | **Implemented** | Screening question definitions, questionnaire versioning, dynamic rule evaluation, submission processing, and clinical eligibility reviews. |
 | **MF-02: Campaign, Center & Session Management** | `campaign` | `campaign-management`, `session-management`, `center-operations` | **Implemented** | Campaigns, target groups, dose programmes, geographic target allocations, vaccination centers, operating hours, closures, recurrence rule series generation, time slot capacity, and staff rostering. |
-| **MF-03: Appointment, Waitlist & Check-In** | `appointment` | `src/features/appointment-management/` | **Partial** | **Backend Implemented**: Citizen booking guard, concurrency-safe slot reservations, rescheduling, cancellations, check-in, check-in reversal, and waitlist queue management. **Frontend Partial**: Availability search, appointment booking (`/app/appointments/book`), appointment listing, rescheduling, and cancellation UI (`/app/appointments/mine`) implemented for citizens; waitlist join/management and staff check-in queue UI remain pending. |
-| **MF-04: Vaccine Inventory & Batch Management** | `inventory` | `src/features/inventory-management/` | **Planned** | Module boundaries and package structure prepared; stock, cold-chain, and batch allocation slices are planned in upcoming milestones. |
-| **MF-05: Vaccination Administration & Records** | `vaccination` | `src/features/vaccination-administration/` | **Partial** | **Backend Implemented**: Vaccination draft CRUD, finalization integration, and digital certificate issuance/verification. **Frontend Partial**: Digital certificate verification component is available; full clinical administration workflow UI is pending. |
+| **MF-03: Appointment, Waitlist & Check-In** | `appointment` | `src/features/appointment-management/` | **Implemented** | Citizen booking, cancellation/rescheduling, waitlist management and staff check-in; guard-row and capacity transaction invariants remain explicit. |
+| **MF-04: Vaccine Inventory & Batch Management** | `inventory` | `src/features/inventory-management/` | **Implemented** | Manufacturer and batch management, stock queries/adjustments, validation, auditing and the vaccination deduction boundary. |
+| **MF-05: Vaccination Administration & Records** | `vaccination` | `src/features/vaccination-administration/` | **Implemented** | Draft administration/finalization, citizen records and digital certificate issuance/verification; clinical finalization remains one transaction. |
 | **Operational Analytics** | `campaign` | `src/features/analytics/` | **Implemented** | Interactive operational analytics view with filterable vaccination program metrics. |
 | **Public Landing & Information** | N/A | `src/features/public-landing/` | **Implemented** | Responsive public landing experience, accessible navigation, workflow guide (`/how-it-works`), and mission overview (`/about`). |
 | **Project-Wide AI Assistant** | `assistant` | `src/features/assistant/` | **Implemented** | Secure, read-only conversational guidance, role-aware route suggestions, deterministic safety policy, and personalized citizen lookups. See [AI Assistant Setup & Demo Guide](docs/AI_ASSISTANT_SETUP_AND_DEMO.md). |
@@ -89,7 +93,7 @@ docker compose --env-file database/.env up -d mysql
 ```
 
 - **Connection URL**: `jdbc:mysql://localhost:3306/vaccination_portal`
-- **Flyway Migrations**: Applied automatically on backend application startup. Current migrations span `V0` through `V12`.
+- **Flyway Migrations**: Applied automatically on backend application startup. Current migrations span `V0` through `V21`.
 - See [database/README.md](database/README.md) for full database workflow instructions.
 
 ### 2. Backend Development

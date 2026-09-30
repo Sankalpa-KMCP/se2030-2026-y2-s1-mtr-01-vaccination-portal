@@ -2,6 +2,10 @@
 
 This directory contains database-related documentation, environment configuration, seed data guidelines, and design diagrams for the Web-Based Vaccination Portal.
 
+## Architecture ownership (current)
+
+See the [current architecture and file tree](../docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md) for capability packages, provider-owned APIs, transaction invariants and enforced import boundaries. Historical handoffs do not define the current package tree.
+
 ## Declared Technology Baseline
 
 - **Database Engine**: MySQL 8.4.10 LTS
@@ -12,7 +16,7 @@ This directory contains database-related documentation, environment configuratio
 
 ## Database Architecture & Flyway Migrations
 
-Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V12` (13 active migrations).
+Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V21` (22 active migrations).
 
 ### Active Migration Schedule
 
@@ -31,10 +35,19 @@ Database schema versioning is managed via Flyway migrations located in [`../back
 | `V10` | `V10__mf02_campaign_session_supporting_tables.sql` | MF-02: Recurrence rules, Rosters, Closures, Location targets |
 | `V11` | `V11__mf05_vaccination_foundation.sql` | MF-05: Vaccination administration, Drafts & Certificates |
 | `V12` | `V12__shared_auth_registration_foundation.sql` | Shared Auth: Citizen self-registration & staff registration request audit |
+| `V13` | `V13__mf02_time_slot_integrity_constraints.sql` | mf02 time slot integrity constraints |
+| `V14` | `V14__citizen_profile_foundation.sql` | citizen profile foundation |
+| `V15` | `V15__mf04_inventory_foundation.sql` | mf04 inventory foundation |
+| `V16` | `V16__add_super_admin_role.sql` | add super admin role |
+| `V17` | `V17__auth_verification_and_password_recovery.sql` | auth verification and password recovery |
+| `V18` | `V18__mf05_correction_certificate_lifecycle.sql` | mf05 correction certificate lifecycle |
+| `V19` | `V19__add_vaccinator_auth_role.sql` | add vaccinator auth role |
+| `V20` | `V20__vaccination_draft_deletion_audit.sql` | vaccination draft deletion audit |
+| `V21` | `V21__screening_submission_active_uniqueness.sql` | screening submission active uniqueness |
 
 ## Directory Structure
 
-- `migrations/` - Reference DDL exports and supplemental database scripts
+- `migrations/` - Historical reference scripts only: `V1__mf03_appointment_foundation.sql`, `V2__mf03_waitlist_foundation.sql`, `V002__mf01_screening_foundation.sql`. These versions overlap the active history and are not runtime inputs. Do not add this directory to Flyway locations or run it alongside the active scripts.
 - `seeds/` - Synthetic development, testing, and benchmark seed data
 - `diagrams/` - Entity-Relationship (ER) diagrams and database design materials
 
