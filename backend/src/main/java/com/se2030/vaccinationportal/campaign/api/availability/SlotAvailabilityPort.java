@@ -41,7 +41,7 @@ public interface SlotAvailabilityPort {
      * </ul>
      *
      * <p>MF-03 does <em>not</em> apply eligibility filtering here. Eligibility is enforced at
-     * booking time by {@link com.se2030.vaccinationportal.appointment.service.AppointmentBookingService}
+     * booking time by {@link com.se2030.vaccinationportal.appointment.booking.service.AppointmentBookingService}
      * via its eligibility boundary (MF03-BR-01). Search intentionally shows all available
      * sessions regardless of the citizen's current eligibility status.
      *

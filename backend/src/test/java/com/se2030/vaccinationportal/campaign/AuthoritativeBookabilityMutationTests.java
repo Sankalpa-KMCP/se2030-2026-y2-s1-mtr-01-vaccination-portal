@@ -10,13 +10,13 @@ import com.se2030.vaccinationportal.campaign.api.capacity.SlotBookability;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.dependency.EligibilityStatus;
-import com.se2030.vaccinationportal.appointment.model.Appointment;
-import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
-import com.se2030.vaccinationportal.appointment.repository.CitizenCampaignBookingGuardRepository;
-import com.se2030.vaccinationportal.appointment.service.AppointmentBookingService;
-import com.se2030.vaccinationportal.appointment.service.AppointmentRescheduleService;
-import com.se2030.vaccinationportal.appointment.service.TestEligibilityLookupPortDouble;
-import com.se2030.vaccinationportal.appointment.service.WaitlistPromotionService;
+import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;
+import com.se2030.vaccinationportal.appointment.booking.service.AppointmentBookingService;
+import com.se2030.vaccinationportal.appointment.booking.service.AppointmentRescheduleService;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
+import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistPromotionService;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
 import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
@@ -109,10 +109,10 @@ class AuthoritativeBookabilityMutationTests {
     private TargetGroupRepository targetGroupRepository;
 
     @Autowired
-    private com.se2030.vaccinationportal.appointment.repository.WaitlistRepository waitlistRepository;
+    private com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository waitlistRepository;
 
     @Autowired
-    private com.se2030.vaccinationportal.appointment.service.AppointmentCancellationService cancellationService;
+    private com.se2030.vaccinationportal.appointment.booking.service.AppointmentCancellationService cancellationService;
 
     private VaccinationCampaign openCampaign;
     private VaccinationCenter center;
@@ -219,7 +219,7 @@ class AuthoritativeBookabilityMutationTests {
                 "Rejected booking must not consume capacity");
         assertTrue(appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
                 citizenId, openCampaign.getId(),
-                java.util.List.of(com.se2030.vaccinationportal.appointment.model.AppointmentStatus.CONFIRMED)).isEmpty());
+                java.util.List.of(com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus.CONFIRMED)).isEmpty());
     }
 
     @Test
@@ -298,7 +298,7 @@ class AuthoritativeBookabilityMutationTests {
 
         Appointment appointment = bookingService.bookAppointment(citizenId, openCampaign.getId(), futureSlot.getId());
         assertNotNull(appointment);
-        assertEquals(com.se2030.vaccinationportal.appointment.model.AppointmentStatus.CONFIRMED, appointment.getStatus());
+        assertEquals(com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus.CONFIRMED, appointment.getStatus());
         assertEquals(2, timeSlotRepository.findById(futureSlot.getId()).orElseThrow().getAvailableCapacity());
     }
 
@@ -325,7 +325,7 @@ class AuthoritativeBookabilityMutationTests {
         // Source and destination counters untouched: no reservation moved
         Appointment reloaded = appointmentRepository.findById(appointment.getId()).orElseThrow();
         assertEquals(futureSlot.getId(), reloaded.getSlotId());
-        assertEquals(com.se2030.vaccinationportal.appointment.model.AppointmentStatus.CONFIRMED, reloaded.getStatus());
+        assertEquals(com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus.CONFIRMED, reloaded.getStatus());
         assertEquals(2, timeSlotRepository.findById(futureSlot.getId()).orElseThrow().getAvailableCapacity(),
                 "Source reservation must be untouched");
         assertEquals(3, timeSlotRepository.findById(suspendedSlot.getId()).orElseThrow().getAvailableCapacity(),
@@ -596,7 +596,7 @@ class AuthoritativeBookabilityMutationTests {
         assertEquals(SlotReservationResult.NOT_BOOKABLE, destResult.get());
         assertEquals(5, timeSlotRepository.findById(destSlot.getId()).orElseThrow().getAvailableCapacity(),
                 "Destination slot must not have capacity decremented");
-        assertEquals(com.se2030.vaccinationportal.appointment.model.AppointmentStatus.CONFIRMED,
+        assertEquals(com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus.CONFIRMED,
                 appointmentRepository.findById(appointment.getId()).orElseThrow().getStatus());
         assertEquals(2, timeSlotRepository.findById(futureSlot.getId()).orElseThrow().getAvailableCapacity(),
                 "Source slot capacity remains unchanged");
@@ -606,8 +606,8 @@ class AuthoritativeBookabilityMutationTests {
     @DisplayName("F1-A: Waitlist candidate queued; campaign closes concurrently; promotion rejects reservation under lock")
     void f1a_promotion_interleavedCampaignClosure_rejectedSafely() throws Exception {
         Long citizenId = 6203L;
-        com.se2030.vaccinationportal.appointment.model.WaitlistEntry entry =
-                new com.se2030.vaccinationportal.appointment.model.WaitlistEntry(
+        com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry entry =
+                new com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry(
                         citizenId, openCampaign.getId(), bookableSession.getId()
                 );
         waitlistRepository.saveAndFlush(entry);
@@ -676,8 +676,8 @@ class AuthoritativeBookabilityMutationTests {
         assertEquals(2, timeSlotRepository.findById(futureSlot.getId()).orElseThrow().getAvailableCapacity());
 
         // Queue waitlist candidate
-        com.se2030.vaccinationportal.appointment.model.WaitlistEntry waiterEntry =
-                waitlistRepository.saveAndFlush(new com.se2030.vaccinationportal.appointment.model.WaitlistEntry(
+        com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry waiterEntry =
+                waitlistRepository.saveAndFlush(new com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry(
                         waiterCitizenId, openCampaign.getId(), bookableSession.getId()
                 ));
 
@@ -722,11 +722,11 @@ class AuthoritativeBookabilityMutationTests {
 
         // Verify state is consistent:
         Appointment cancelled = appointmentRepository.findById(cancellingAppt.getId()).orElseThrow();
-        assertEquals(com.se2030.vaccinationportal.appointment.model.AppointmentStatus.CANCELLED, cancelled.getStatus());
+        assertEquals(com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus.CANCELLED, cancelled.getStatus());
 
         assertFalse(appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
                 bookerCitizenId, openCampaign.getId(),
-                java.util.List.of(com.se2030.vaccinationportal.appointment.model.AppointmentStatus.CONFIRMED)).isEmpty());
+                java.util.List.of(com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus.CONFIRMED)).isEmpty());
         assertNotNull(waitlistRepository.findById(waiterEntry.getId()).orElseThrow());
     }
 }

@@ -3,8 +3,8 @@ package com.se2030.vaccinationportal.assistant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.se2030.vaccinationportal.appointment.api.query.CitizenAppointmentQuery;
-import com.se2030.vaccinationportal.appointment.model.Appointment;
-import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
+import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
 import com.se2030.vaccinationportal.assistant.tool.AssistantToolContext;
 import com.se2030.vaccinationportal.assistant.tool.MyAppointmentsAssistantTool;
 import com.se2030.vaccinationportal.assistant.tool.MyEligibilityAssistantTool;

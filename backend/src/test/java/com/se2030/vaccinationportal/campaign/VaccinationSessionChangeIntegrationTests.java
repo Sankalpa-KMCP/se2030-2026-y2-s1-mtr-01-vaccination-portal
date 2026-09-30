@@ -1,11 +1,11 @@
 package com.se2030.vaccinationportal.campaign;
 
-import com.se2030.vaccinationportal.appointment.model.Appointment;
-import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
-import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
-import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
-import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
-import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
+import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus;
+import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterClosure;

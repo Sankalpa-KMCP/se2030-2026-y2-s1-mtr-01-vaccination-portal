@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.appointment.web;
 
-import com.se2030.vaccinationportal.appointment.dto.ErrorResponse;
+import com.se2030.vaccinationportal.appointment.booking.dto.ErrorResponse;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;

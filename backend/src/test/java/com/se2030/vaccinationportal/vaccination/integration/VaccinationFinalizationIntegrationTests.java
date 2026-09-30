@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.se2030.vaccinationportal.appointment.model.Appointment;
-import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
-import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.campaign.CampaignTestFixtures;
 import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.model.CenterStatus;
