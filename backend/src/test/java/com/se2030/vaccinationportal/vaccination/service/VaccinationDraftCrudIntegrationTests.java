@@ -56,7 +56,7 @@ class VaccinationDraftCrudIntegrationTests {
 
         VaccinationDraft created = draftService.createDraft(new CreateVaccinationDraftRequest(
                 99001L,
-                99003L,
+                null,
                 1,
                 Instant.now().minusSeconds(60),
                 null,

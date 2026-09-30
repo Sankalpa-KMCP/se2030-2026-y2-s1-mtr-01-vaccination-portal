@@ -178,6 +178,37 @@ class VaccinationDraftControllerTests {
     }
 
     @Test
+    void createDraft_unavailableBatchExpired_returns409() throws Exception {
+        when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L)))
+                .thenThrow(new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.EXPIRED_BATCH
+                ));
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"appointmentId\":101,\"vaccineBatchId\":101}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.message", containsString("EXPIRED_BATCH")));
+    }
+
+    @Test
+    void updateDraft_unavailableBatchInsufficientStock_returns409() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        when(draftService.updateDraft(eq(1L), any(UpdateVaccinationDraftRequest.class)))
+                .thenThrow(new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                        com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.INSUFFICIENT_STOCK
+                ));
+
+        mockMvc.perform(patch("/api/v1/vaccination/drafts/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"vaccineBatchId\":103}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.message", containsString("INSUFFICIENT_STOCK")));
+    }
+
+    @Test
     void getAllDrafts_returnsArray() throws Exception {
         when(draftService.getAllDraftsByVaccinatorId(201L)).thenReturn(List.of(sampleDraft));
 
