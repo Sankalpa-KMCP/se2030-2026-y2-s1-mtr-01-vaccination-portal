@@ -2,7 +2,7 @@ import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import ApiErrorAlert from './ApiErrorAlert';
-import { ApiError, PERMISSION_DENIED_MESSAGE } from '../../services/apiClient';
+import { ApiError, PERMISSION_DENIED_MESSAGE } from '../../shared/api/apiClient';
 
 describe('ApiErrorAlert', () => {
   afterEach(() => {

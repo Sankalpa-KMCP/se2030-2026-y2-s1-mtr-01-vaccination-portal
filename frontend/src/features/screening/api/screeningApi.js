@@ -1,4 +1,4 @@
-import { apiRequest, parseApiResponse } from '../../../services/apiClient';
+import { apiRequest, parseApiResponse } from '../../../shared/api/apiClient';
 
 const SCREENING_BASE_PATH = '/v1/screening';
 

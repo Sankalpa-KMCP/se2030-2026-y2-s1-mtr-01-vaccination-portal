@@ -8,7 +8,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { ApiError } from '../../../services/apiClient';
+import { ApiError } from '../../../shared/api/apiClient';
 
 const apiMocks = vi.hoisted(() => ({
   listQuestions: vi.fn(),

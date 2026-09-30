@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PERMISSION_DENIED_MESSAGE } from '../../services/apiClient';
+import { PERMISSION_DENIED_MESSAGE } from './apiClient';
 import { readApiErrorDetails } from './readApiErrorDetails';
 
 describe('readApiErrorDetails', () => {

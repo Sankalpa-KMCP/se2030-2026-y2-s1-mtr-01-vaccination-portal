@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import EmptyState from '../../../components/common/EmptyState';
-import { formatInTimezone } from '../../../services/timezoneUtils';
+import { formatInTimezone } from '../../../shared/time/timezoneUtils';
 
 function formatDateTime(instantStr, timeZone = 'UTC') {
   if (!instantStr) return '—';

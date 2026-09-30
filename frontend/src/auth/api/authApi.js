@@ -3,7 +3,7 @@
  * Interfaces with backend /api/v1/auth endpoints.
  */
 
-import { ApiError, apiRequestData } from '../../services/apiClient';
+import { ApiError, apiRequestData } from '../../shared/api/apiClient';
 
 const LOGIN_ERROR_MESSAGES = {
   ACCOUNT_PENDING_APPROVAL: 'Your staff account is waiting for administrator approval.',

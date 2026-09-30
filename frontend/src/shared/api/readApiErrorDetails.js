@@ -1,4 +1,4 @@
-import { PERMISSION_DENIED_MESSAGE } from '../../services/apiClient';
+import { PERMISSION_DENIED_MESSAGE } from './apiClient';
 
 // Extract response facts without choosing a component's title, fallback text, or markup.
 export function readApiErrorDetails(error) {

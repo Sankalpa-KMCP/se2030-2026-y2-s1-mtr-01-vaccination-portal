@@ -1,7 +1,7 @@
 import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { PERMISSION_DENIED_MESSAGE } from '../../../services/apiClient';
+import { PERMISSION_DENIED_MESSAGE } from '../../api/apiClient';
 import CitizenErrorState from './CitizenErrorState';
 
 afterEach(cleanup);

@@ -1,4 +1,4 @@
-import { apiRequest, parseApiResponse } from '../../../services/apiClient';
+import { apiRequest, parseApiResponse } from '../../../shared/api/apiClient';
 
 /**
  * Publicly verifies a digital vaccination certificate token without disclosing sensitive PII.

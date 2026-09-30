@@ -1,7 +1,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { ApiError } from '../../../services/apiClient';
+import { ApiError } from '../../../shared/api/apiClient';
 import { vaccinationDraftApi } from '../api/vaccinationDraftApi';
 import VaccinationDraftsPage from './VaccinationDraftsPage';
 import { getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';

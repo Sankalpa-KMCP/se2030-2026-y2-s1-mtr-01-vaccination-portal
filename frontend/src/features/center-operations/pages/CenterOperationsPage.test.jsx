@@ -280,7 +280,9 @@ describe('CenterOperationsPage - Center CRUD integration', () => {
     render(<CenterOperationsPage />);
     await screen.findByText('Colombo National Health Center');
 
-    fireEvent.click(screen.getByRole('button', { name: /Deactivate/i }));
+    const deactivateButton = await screen.findByRole('button', { name: /Deactivate/i });
+    await waitFor(() => expect(deactivateButton.disabled).toBe(false));
+    fireEvent.click(deactivateButton);
     expect(await screen.findByText('Confirm Center Deactivation')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Yes, Deactivate Center/i }));
@@ -303,7 +305,9 @@ describe('CenterOperationsPage - Center CRUD integration', () => {
     render(<CenterOperationsPage />);
     await screen.findByText('Colombo National Health Center');
 
-    fireEvent.click(screen.getByRole('button', { name: /Deactivate/i }));
+    const deactivateButton = await screen.findByRole('button', { name: /Deactivate/i });
+    await waitFor(() => expect(deactivateButton.disabled).toBe(false));
+    fireEvent.click(deactivateButton);
     await screen.findByText('Confirm Center Deactivation');
 
     fireEvent.click(screen.getByRole('button', { name: /Yes, Deactivate Center/i }));

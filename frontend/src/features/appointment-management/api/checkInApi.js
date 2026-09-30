@@ -1,4 +1,4 @@
-import { apiRequest } from '../../../services/apiClient';
+import { apiRequest } from '../../../shared/api/apiClient';
 
 /**
  * API client methods for staff check-in, queue inspection, reversal, and no-show processing.

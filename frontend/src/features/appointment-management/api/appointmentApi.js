@@ -1,4 +1,4 @@
-import { apiRequest } from '../../../services/apiClient';
+import { apiRequest } from '../../../shared/api/apiClient';
 
 /**
  * API client methods for appointment booking, listing, cancellation, and rescheduling.

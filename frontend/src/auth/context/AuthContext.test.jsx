@@ -8,8 +8,8 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { apiRequest } from '../../services/apiClient';
-import { getToken, setToken } from '../authStorage';
+import { apiRequest } from '../../shared/api/apiClient';
+import { getToken, setToken } from '../../shared/auth/authStorage';
 import { AuthProvider, useAuth } from './AuthContext';
 
 function response({ body = '', status = 200, statusText = 'OK' } = {}) {
