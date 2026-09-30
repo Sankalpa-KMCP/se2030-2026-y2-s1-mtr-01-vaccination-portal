@@ -34,12 +34,40 @@ export default {
     const root = path.resolve(context.cwd, 'src');
     const source = relativeToSource(root, context.filename);
     const parts = source.split('/');
+    const routeMembers = new Set(['Routes', 'Route', 'useRoutes']);
+
+    function routerNamespace(identifier, seen = new Set()) {
+      if (identifier?.type !== 'Identifier' && identifier?.type !== 'JSXIdentifier') return false;
+      let scope = context.sourceCode.getScope(identifier);
+      while (scope && !scope.set.has(identifier.name)) scope = scope.upper;
+      const variable = scope?.set.get(identifier.name);
+      if (!variable || seen.has(variable)) return false;
+      seen.add(variable);
+      return variable.defs.some((definition) => {
+        if (definition.type === 'ImportBinding') {
+          return definition.node.type === 'ImportNamespaceSpecifier'
+            && definition.parent.source.value === 'react-router-dom';
+        }
+        // Follow immutable namespace aliases, but not reassigned bindings.
+        return definition.type === 'Variable' && definition.parent.kind === 'const'
+          && variable.references.every((reference) => !reference.isWrite() || reference.init)
+          && routerNamespace(definition.node.init, seen);
+      });
+    }
+
+    function inspectRouterMember(node) {
+      if (parts[0] === 'app' || node.parent.type === 'JSXClosingElement') return;
+      const member = node.computed ? node.property.value : node.property.name;
+      if (routeMembers.has(member) && routerNamespace(node.object)) {
+        context.report({ node, messageId: 'route' });
+      }
+    }
 
     function inspect(node) {
       const specifier = node.source?.value;
       if (typeof specifier !== 'string') return;
       if (specifier === 'react-router-dom' && parts[0] !== 'app'
-          && node.specifiers?.some((item) => ['Routes', 'Route', 'useRoutes'].includes(item.imported?.name))) {
+          && node.specifiers?.some((item) => routeMembers.has(item.imported?.name))) {
         context.report({ node, messageId: 'route' });
       }
       if (!specifier.startsWith('.')) return;
@@ -58,6 +86,8 @@ export default {
       ExportNamedDeclaration: inspect,
       ExportAllDeclaration: inspect,
       ImportExpression(node) { inspect({ ...node, source: node.source }); },
+      MemberExpression: inspectRouterMember,
+      JSXMemberExpression: inspectRouterMember,
     };
   },
 };

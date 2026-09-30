@@ -28,9 +28,8 @@ backend/src/main/java/com/se2030/vaccinationportal/
 │   │   ├── planning/{model,repository,service,dto,web,adapter}
 │   │   └── recurrence/{model,repository,service,dto,web}
 │   ├── analytics/{dto,service,web}
-│   ├── commonrequest
 │   ├── exception
-│   └── web
+│   └── web/{dto/request,dto/response}
 ├── screening/
 │   ├── api/{eligibility,query}
 │   ├── questionnaire/{model,repository,service,dto,web}
