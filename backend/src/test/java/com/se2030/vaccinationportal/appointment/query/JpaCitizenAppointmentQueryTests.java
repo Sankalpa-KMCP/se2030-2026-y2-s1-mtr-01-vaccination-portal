@@ -134,6 +134,46 @@ class JpaCitizenAppointmentQueryTests {
         verifyNoInteractions(appointments, slots, clock);
     }
 
+    @Test
+    void principalScopedAppointmentsAreOrderedAndBoundedAtTheProvider() {
+        var rows = new java.util.ArrayList<Appointment>();
+        var schedule = new java.util.ArrayList<TimeSlotDisplaySnapshot>();
+        for (long i = 10; i >= 1; i--) {
+            rows.add(new Appointment(42L, i, i, AppointmentStatus.CONFIRMED, DEADLINE.minusSeconds(3600)));
+            schedule.add(new TimeSlotDisplaySnapshot(i, DEADLINE.plusSeconds(i), DEADLINE.plusSeconds(100),
+                    "Campaign " + i, "Clinic", "Address"));
+        }
+        when(appointments.findByCitizenIdOrderByBookedAtDesc(42L)).thenReturn(rows);
+        when(slots.findByIds(rows.stream().map(Appointment::getSlotId).toList())).thenReturn(schedule);
+
+        var result = query.appointmentsForCitizen(principal);
+
+        assertThat(result.activeOrUpcoming()).extracting(a -> a.slotId()).containsExactly(1L, 2L, 3L, 4L, 5L);
+        assertThat(result.pastOrInactive()).isEmpty();
+        verify(appointments).findByCitizenIdOrderByBookedAtDesc(42L);
+        verify(appointments, org.mockito.Mockito.never()).findByCitizenIdOrderByBookedAtDesc(999L);
+    }
+
+    @Test
+    void waitlistIsBoundedAndCountsOnlyQualifiedWaitingRowsWithoutLoadingTheWholeQueue() {
+        Instant joined = DEADLINE.minusSeconds(3600);
+        var waiting = waitingEntry(joined);
+        var inactive = mock(WaitlistEntry.class);
+        when(inactive.getStatus()).thenReturn(WaitlistStatus.CANCELLED);
+        when(waitlist.findByCitizenIdOrderByJoinedAtDesc(42L))
+                .thenReturn(List.of(waiting, inactive, inactive, inactive, inactive, waiting));
+        when(waitlist.countQueuePosition(500L, WaitlistStatus.WAITING, joined, 9L)).thenReturn(3L);
+
+        var result = query.waitlistForCitizen(principal);
+
+        assertThat(result).hasSize(5);
+        assertThat(result.getFirst().queuePosition()).isEqualTo(3);
+        assertThat(result.subList(1, 5)).allSatisfy(r -> assertThat(r.queuePosition()).isNull());
+        verify(waitlist, times(1)).countQueuePosition(500L, WaitlistStatus.WAITING, joined, 9L);
+        verify(waitlist, org.mockito.Mockito.never()).findBySessionIdAndStatusOrderByJoinedAtAsc(500L, WaitlistStatus.WAITING);
+        verifyNoInteractions(appointments, slots, clock);
+    }
+
     private static WaitlistEntry waitingEntry(Instant joinedAt) {
         WaitlistEntry entry = mock(WaitlistEntry.class);
         when(entry.getId()).thenReturn(9L);

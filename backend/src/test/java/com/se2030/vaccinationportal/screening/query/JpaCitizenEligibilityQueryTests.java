@@ -62,6 +62,41 @@ class JpaCitizenEligibilityQueryTests {
         assertExpired();
     }
 
+    @Test
+    void latestEncounterPerCampaignIsBoundedAndDoesNotExposeClinicalOrReviewFacts() {
+        var rows = new java.util.ArrayList<EligibilityAssessment>();
+        for (long id = 1; id <= 7; id++) {
+            var latest = assessment();
+            latest.setCampaignId(id);
+            latest.setCitizenId(42L);
+            latest.setReviewedAt(DEADLINE.minusSeconds(id));
+            latest.setClinicalNotes("Top Secret Clinical Evaluation Note XYZ");
+            latest.setReason("Internal clinical review reason ABC");
+            latest.setReviewerId(9999L);
+            latest.setRescreeningReason("Rescreening evidence DEF");
+            rows.add(latest);
+            var older = assessment();
+            older.setCampaignId(id);
+            older.setStatus(EligibilityAssessmentStatus.REVOKED);
+            rows.add(older);
+        }
+        when(assessments.findByCitizenIdOrderByReviewedAtDesc(42L)).thenReturn(rows);
+
+        var result = query.latestForCitizen(principal);
+
+        assertThat(result).extracting(r -> r.campaignId()).containsExactly(1L, 2L, 3L, 4L, 5L);
+        assertThat(result).allSatisfy(r -> {
+            assertThat(r.recordedStatus()).isEqualTo("ELIGIBLE");
+            assertThat(r.lifecycleState()).isEqualTo("ACTIVE");
+            assertThat(r.toString()).doesNotContain("Top Secret", "Internal clinical", "9999", "evidence DEF");
+        });
+        assertThat(com.se2030.vaccinationportal.screening.api.query.EligibilitySummary.class.getRecordComponents())
+                .extracting(java.lang.reflect.RecordComponent::getName)
+                .containsExactly("campaignId", "recordedStatus", "reviewedAt", "validUntil", "lifecycleState");
+        verify(assessments).findByCitizenIdOrderByReviewedAtDesc(42L);
+        verify(assessments, org.mockito.Mockito.never()).findByCitizenIdOrderByReviewedAtDesc(999L);
+    }
+
     private void assertExpired() {
         assertThat(query.latestForCitizen(principal)).singleElement().satisfies(summary -> {
             assertThat(summary.campaignId()).isEqualTo(10L);

@@ -9,13 +9,9 @@ import com.se2030.vaccinationportal.assistant.tool.AssistantToolId;
 import com.se2030.vaccinationportal.assistant.tool.AssistantToolRegistry;
 import com.se2030.vaccinationportal.assistant.tool.AssistantToolResult;
 import com.se2030.vaccinationportal.assistant.tool.MyStaffProfileAssistantTool;
-import com.se2030.vaccinationportal.campaign.center.model.OperationalStaffRoster;
-import com.se2030.vaccinationportal.campaign.center.model.OperationalStaffStatus;
-import com.se2030.vaccinationportal.campaign.center.model.StaffRole;
-import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
-import com.se2030.vaccinationportal.campaign.center.repository.OperationalStaffRosterRepository;
-import com.se2030.vaccinationportal.campaign.session.planning.repository.StaffAssignmentRepository;
-import com.se2030.vaccinationportal.campaign.center.query.JpaStaffContextQuery;
+import com.se2030.vaccinationportal.campaign.api.staff.StaffContextQuery;
+import com.se2030.vaccinationportal.campaign.api.staff.StaffProfileSummary;
+import com.se2030.vaccinationportal.campaign.api.staff.StaffRosterSummary;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +23,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,14 +32,13 @@ import static org.mockito.Mockito.when;
 @DisplayName("Staff personalized assistant profile tool")
 class AssistantStaffProfileToolTests {
 
-    private OperationalStaffRosterRepository rosterRepository;
+    private StaffContextQuery query;
     private MyStaffProfileAssistantTool tool;
 
     @BeforeEach
     void setUp() {
-        rosterRepository = mock(OperationalStaffRosterRepository.class);
-        tool = new MyStaffProfileAssistantTool(new JpaStaffContextQuery(rosterRepository,
-                mock(StaffAssignmentRepository.class)));
+        query = mock(StaffContextQuery.class);
+        tool = new MyStaffProfileAssistantTool(query);
     }
 
     @Test
@@ -52,19 +48,13 @@ class AssistantStaffProfileToolTests {
         AssistantToolContext context = new AssistantToolContext(
                 "staff-request-1", staff, Set.of("ROLE_CENTER_MANAGER"));
 
-        VaccinationCenter center = mock(VaccinationCenter.class);
-        when(center.getCode()).thenReturn("CTR-001");
-        when(center.getName()).thenReturn("Central Clinic");
-        OperationalStaffRoster roster = mock(OperationalStaffRoster.class);
-        when(roster.getCenter()).thenReturn(center);
-        when(roster.getRole()).thenReturn(StaffRole.SUPERVISOR);
-        when(roster.getStatus()).thenReturn(OperationalStaffStatus.ACTIVE);
-        when(rosterRepository.findByUserIdOrderByCenterIdAsc(77L)).thenReturn(List.of(roster));
+        when(query.profileForUser(staff)).thenReturn(new StaffProfileSummary(1,
+                List.of(new StaffRosterSummary("CTR-001", "Central Clinic", "SUPERVISOR", "ACTIVE"))));
 
         AssistantToolResult result = tool.execute(context, "Show staff ID 999");
 
-        verify(rosterRepository).findByUserIdOrderByCenterIdAsc(77L);
-        verify(rosterRepository, never()).findByUserIdOrderByCenterIdAsc(999L);
+        verify(query).profileForUser(argThat(p -> p.getUserId().equals(77L)));
+        verify(query, never()).profileForUser(argThat(p -> p.getUserId().equals(999L)));
         assertThat(result.toolId()).isEqualTo(AssistantToolId.MY_STAFF_PROFILE_AND_ASSIGNMENTS);
         assertThat(result.contextSnippet())
                 .contains("Verified staff account ID: 77")
@@ -81,7 +71,7 @@ class AssistantStaffProfileToolTests {
         UserPrincipal staff = staffPrincipal(88L, "ROLE_HEALTHCARE_OFFICER");
         AssistantToolContext context = new AssistantToolContext(
                 "staff-request-2", staff, Set.of("ROLE_HEALTHCARE_OFFICER"));
-        when(rosterRepository.findByUserIdOrderByCenterIdAsc(88L)).thenReturn(List.of());
+        when(query.profileForUser(argThat(p -> p.getUserId().equals(88L)))).thenReturn(new StaffProfileSummary(0, List.of()));
 
         AssistantToolResult result = tool.execute(context);
 
@@ -109,7 +99,7 @@ class AssistantStaffProfileToolTests {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> tool.execute(new AssistantToolContext("staff-request-4", null, Set.of())))
                 .isInstanceOf(IllegalArgumentException.class);
-        verify(rosterRepository, never()).findByUserIdOrderByCenterIdAsc(90L);
+        verify(query, never()).profileForUser(argThat(p -> p.getUserId().equals(90L)));
     }
 
     @Test
@@ -118,7 +108,7 @@ class AssistantStaffProfileToolTests {
         UserPrincipal healthcareOfficer = staffPrincipal(91L, "ROLE_HEALTHCARE_OFFICER");
         AssistantToolContext context = new AssistantToolContext(
                 "staff-request-5", healthcareOfficer, Set.of("ROLE_HEALTHCARE_OFFICER"));
-        when(rosterRepository.findByUserIdOrderByCenterIdAsc(91L)).thenReturn(List.of());
+        when(query.profileForUser(argThat(p -> p.getUserId().equals(91L)))).thenReturn(new StaffProfileSummary(0, List.of()));
         AssistantPersonalizedContextBuilder builder = new AssistantPersonalizedContextBuilder(
                 new AssistantToolRegistry(List.of(tool)));
 
@@ -139,7 +129,7 @@ class AssistantStaffProfileToolTests {
         UserPrincipal admin = staffPrincipal(95L, "ROLE_ADMIN");
         AssistantToolContext context = new AssistantToolContext(
                 "staff-request-admin", admin, Set.of("ROLE_ADMIN"));
-        when(rosterRepository.findByUserIdOrderByCenterIdAsc(95L)).thenReturn(List.of());
+        when(query.profileForUser(argThat(p -> p.getUserId().equals(95L)))).thenReturn(new StaffProfileSummary(0, List.of()));
 
         // 1. Direct tool execution result excludes /app/staff
         AssistantToolResult toolResult = tool.execute(context);
