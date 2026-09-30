@@ -7,8 +7,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationPort;
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationSnapshot;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationPort;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationSnapshot;
 import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
 import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;

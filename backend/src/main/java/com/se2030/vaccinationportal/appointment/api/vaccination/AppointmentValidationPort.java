@@ -1,9 +1,9 @@
-package com.se2030.vaccinationportal.vaccination.dependency;
+package com.se2030.vaccinationportal.appointment.api.vaccination;
 
 import java.util.Optional;
 
 /**
- * MF-05-owned read-only boundary for resolving appointment state required by
+ * Appointment-owned validation and completion boundary for resolving appointment state required by
  * vaccination administration workflows.
  *
  * <p>The provider must not expose its persistence entity through this contract.</p>

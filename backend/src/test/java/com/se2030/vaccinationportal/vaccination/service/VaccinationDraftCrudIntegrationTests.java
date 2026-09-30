@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationPort;
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationSnapshot;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationPort;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationSnapshot;
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;

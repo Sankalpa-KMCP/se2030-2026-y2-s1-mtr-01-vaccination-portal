@@ -1,4 +1,4 @@
-package com.se2030.vaccinationportal.vaccination.dependency;
+package com.se2030.vaccinationportal.appointment.api.vaccination;
 
 /**
  * Immutable appointment state exposed to MF-05 without leaking the MF-03 JPA entity.

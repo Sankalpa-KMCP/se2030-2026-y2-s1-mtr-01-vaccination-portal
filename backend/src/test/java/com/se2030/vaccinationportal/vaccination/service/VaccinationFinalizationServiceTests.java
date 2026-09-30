@@ -17,8 +17,8 @@ import com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason
 import com.se2030.vaccinationportal.inventory.dependency.InventoryBatchPort;
 import com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException;
 import com.se2030.vaccinationportal.inventory.model.BatchStatus;
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationPort;
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationSnapshot;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationPort;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationSnapshot;
 import com.se2030.vaccinationportal.vaccination.dto.FinalizeVaccinationResponse;
 import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException;

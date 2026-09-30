@@ -1,6 +1,9 @@
-package com.se2030.vaccinationportal.vaccination.integration;
+package com.se2030.vaccinationportal.appointment.integration;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -9,7 +12,9 @@ import static org.mockito.Mockito.when;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationSnapshot;
+import com.se2030.vaccinationportal.appointment.service.CheckInService;
+import com.se2030.vaccinationportal.campaign.api.vaccination.CampaignVaccinationReader;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationSnapshot;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,18 +23,24 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class Mf03AppointmentValidationAdapterTests {
+class JpaAppointmentValidationAdapterTests {
 
     private static final Long APPOINTMENT_ID = 101L;
 
     @Mock
     private AppointmentRepository appointmentRepository;
 
-    private Mf03AppointmentValidationAdapter adapter;
+    @Mock
+    private CheckInService checkInService;
+
+    @Mock
+    private CampaignVaccinationReader campaigns;
+
+    private JpaAppointmentValidationAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        adapter = new Mf03AppointmentValidationAdapter(appointmentRepository);
+        adapter = new JpaAppointmentValidationAdapter(appointmentRepository, checkInService, campaigns);
     }
 
     @Test
@@ -62,6 +73,33 @@ class Mf03AppointmentValidationAdapterTests {
         Optional<AppointmentValidationSnapshot> result = adapter.findByAppointmentId(APPOINTMENT_ID);
 
         assertTrue(result.isEmpty());
+        verifyNoInteractions(campaigns, checkInService);
+    }
+
+    @Test
+    void resolvesAuthoritativeCampaignFactsInOriginalReadOrder() {
+        Appointment appointment = appointmentWithStatus(AppointmentStatus.CHECKED_IN);
+        when(appointment.getCitizenId()).thenReturn(7L);
+        when(appointment.getCampaignId()).thenReturn(8L);
+        when(appointment.getSlotId()).thenReturn(9L);
+        when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appointment));
+        when(campaigns.findCenterIdBySlotId(9L)).thenReturn(Optional.of(10L));
+        when(campaigns.findVaccineTypeIdByCampaignId(8L)).thenReturn(Optional.of(11L));
+
+        assertEquals(new AppointmentValidationSnapshot(APPOINTMENT_ID, true, 7L, 8L, 9L, 10L, 11L),
+                adapter.findByAppointmentId(APPOINTMENT_ID).orElseThrow());
+        var reads = inOrder(appointmentRepository, campaigns);
+        reads.verify(appointmentRepository).findById(APPOINTMENT_ID);
+        reads.verify(campaigns).findCenterIdBySlotId(9L);
+        reads.verify(campaigns).findVaccineTypeIdByCampaignId(8L);
+        verifyNoInteractions(checkInService);
+    }
+
+    @Test
+    void completionDelegatesToExistingTransactionalCheckInService() {
+        adapter.completeAppointment(APPOINTMENT_ID);
+        verify(checkInService).completeAppointment(APPOINTMENT_ID);
+        verifyNoInteractions(appointmentRepository, campaigns);
     }
 
     private Appointment appointmentWithStatus(AppointmentStatus status) {
