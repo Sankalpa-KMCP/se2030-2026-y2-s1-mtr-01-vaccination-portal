@@ -1,8 +1,8 @@
 package com.se2030.vaccinationportal.assistant.tool;
 
 import com.se2030.vaccinationportal.assistant.policy.AssistantRouteCatalog;
-import com.se2030.vaccinationportal.campaign.model.OperationalStaffRoster;
-import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.api.staff.StaffContextQuery;
+import com.se2030.vaccinationportal.campaign.api.staff.StaffProfileSummary;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,10 +27,10 @@ public class MyStaffProfileAssistantTool implements AssistantReadOnlyTool {
             Pattern.compile("\\bstaff\\s*(id|number)\\s*[:=#-]?\\s*\\d+\\b", Pattern.CASE_INSENSITIVE)
     );
 
-    private final OperationalStaffRosterRepository rosterRepository;
+    private final StaffContextQuery staffQuery;
 
-    public MyStaffProfileAssistantTool(OperationalStaffRosterRepository rosterRepository) {
-        this.rosterRepository = rosterRepository;
+    public MyStaffProfileAssistantTool(StaffContextQuery staffQuery) {
+        this.staffQuery = staffQuery;
     }
 
     @Override
@@ -59,8 +59,8 @@ public class MyStaffProfileAssistantTool implements AssistantReadOnlyTool {
         }
 
         Long verifiedUserId = context.getUserId();
-        List<OperationalStaffRoster> rosterEntries =
-                rosterRepository.findByUserIdOrderByCenterIdAsc(verifiedUserId);
+        StaffProfileSummary profile = staffQuery.profileForUser(context.principal());
+        var rosterEntries = profile.roster();
 
         List<String> sortedAuthorities = context.authorities().stream().sorted().toList();
         StringBuilder summary = new StringBuilder()
@@ -72,13 +72,13 @@ public class MyStaffProfileAssistantTool implements AssistantReadOnlyTool {
                     .append("Ask an administrator or center manager to verify the staff roster association.");
         } else {
             summary.append("Center roster assignments: ");
-            rosterEntries.stream().limit(MAX_ROSTER_ENTRIES).forEach(entry -> summary
-                    .append("[Center code: ").append(entry.getCenter().getCode())
-                    .append(", name: ").append(entry.getCenter().getName())
-                    .append(", operational role: ").append(entry.getRole())
-                    .append(", roster status: ").append(entry.getStatus())
+            rosterEntries.forEach(entry -> summary
+                    .append("[Center code: ").append(entry.centerCode())
+                    .append(", name: ").append(entry.centerName())
+                    .append(", operational role: ").append(entry.role())
+                    .append(", roster status: ").append(entry.status())
                     .append("] "));
-            if (rosterEntries.size() > MAX_ROSTER_ENTRIES) {
+            if (profile.totalAssignments() > MAX_ROSTER_ENTRIES) {
                 summary.append("Only the first ").append(MAX_ROSTER_ENTRIES)
                         .append(" assignments are included in this bounded snapshot. ");
             }
@@ -100,7 +100,7 @@ public class MyStaffProfileAssistantTool implements AssistantReadOnlyTool {
         return new AssistantToolResult(
                 AssistantToolId.MY_STAFF_PROFILE_AND_ASSIGNMENTS,
                 true,
-                rosterEntries.size(),
+                profile.totalAssignments(),
                 summary.toString(),
                 suggestedRoutes
         );

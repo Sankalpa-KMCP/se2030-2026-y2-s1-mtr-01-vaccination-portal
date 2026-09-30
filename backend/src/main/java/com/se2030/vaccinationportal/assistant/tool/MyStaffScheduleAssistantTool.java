@@ -1,21 +1,17 @@
 package com.se2030.vaccinationportal.assistant.tool;
 
 import com.se2030.vaccinationportal.assistant.policy.AssistantRouteCatalog;
-import com.se2030.vaccinationportal.campaign.model.SessionLifecycleStatus;
-import com.se2030.vaccinationportal.campaign.model.StaffAssignment;
-import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
-import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.api.staff.StaffContextQuery;
+import com.se2030.vaccinationportal.campaign.api.staff.StaffScheduleSummary;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -26,8 +22,6 @@ import java.util.regex.Pattern;
 @Component
 public class MyStaffScheduleAssistantTool implements AssistantReadOnlyTool {
 
-    private static final int MAX_ASSIGNMENTS = 10;
-    private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Colombo");
     private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter
             .ofPattern("dd MMM uuuu, hh:mm a z", Locale.ENGLISH);
     private static final Pattern TODAY_INTENT = Pattern.compile("\\btoday(?:'s)?\\b", Pattern.CASE_INSENSITIVE);
@@ -38,16 +32,16 @@ public class MyStaffScheduleAssistantTool implements AssistantReadOnlyTool {
             Pattern.compile("\\bwhen\\s+(does|is)\\s+my\\s+next\\s+(shift|assignment|session)\\b", Pattern.CASE_INSENSITIVE)
     );
 
-    private final StaffAssignmentRepository assignmentRepository;
+    private final StaffContextQuery staffQuery;
     private final Clock clock;
 
     @Autowired
-    public MyStaffScheduleAssistantTool(StaffAssignmentRepository assignmentRepository) {
-        this(assignmentRepository, Clock.systemUTC());
+    public MyStaffScheduleAssistantTool(StaffContextQuery staffQuery) {
+        this(staffQuery, Clock.systemUTC());
     }
 
-    MyStaffScheduleAssistantTool(StaffAssignmentRepository assignmentRepository, Clock clock) {
-        this.assignmentRepository = assignmentRepository;
+    MyStaffScheduleAssistantTool(StaffContextQuery staffQuery, Clock clock) {
+        this.staffQuery = staffQuery;
         this.clock = clock;
     }
 
@@ -84,13 +78,7 @@ public class MyStaffScheduleAssistantTool implements AssistantReadOnlyTool {
 
         Instant now = clock.instant();
         boolean todayOnly = userMessage != null && TODAY_INTENT.matcher(userMessage).find();
-        List<StaffAssignment> assignments = assignmentRepository
-                .findByUserIdOrderByStartAtAscIdAsc(context.getUserId())
-                .stream()
-                .filter(assignment -> isActiveAssignment(assignment, now, todayOnly))
-                .sorted(Comparator.comparing(StaffAssignment::getStartAt))
-                .limit(MAX_ASSIGNMENTS)
-                .toList();
+        List<StaffScheduleSummary> assignments = staffQuery.scheduleForUser(context.principal(), now, todayOnly);
 
         List<String> suggestedRoutes = new ArrayList<>();
         if (AssistantRouteCatalog.isAuthorizedRoute("/app/staff", context.authorities())) {
@@ -112,18 +100,17 @@ public class MyStaffScheduleAssistantTool implements AssistantReadOnlyTool {
         StringBuilder summary = new StringBuilder(todayOnly
                 ? "Today's verified session assignments: "
                 : "Current and upcoming verified session assignments: ");
-        for (StaffAssignment assignment : assignments) {
-            VaccinationSession session = assignment.getSession();
-            ZoneId zone = resolveZone(session);
-            summary.append("[Session ID: ").append(session.getId())
-                    .append(", campaign: ").append(session.getCampaign().getCode())
-                    .append(" - ").append(session.getCampaign().getName())
-                    .append(", center: ").append(session.getCenter().getCode())
-                    .append(" - ").append(session.getCenter().getName())
-                    .append(", assigned role: ").append(assignment.getRole())
-                    .append(", status: ").append(session.getLifecycleStatus())
-                    .append(", starts: ").append(DISPLAY_TIME.format(assignment.getStartAt().atZone(zone)))
-                    .append(", ends: ").append(DISPLAY_TIME.format(assignment.getEndAt().atZone(zone)))
+        for (StaffScheduleSummary assignment : assignments) {
+            ZoneId zone = ZoneId.of(assignment.timezone());
+            summary.append("[Session ID: ").append(assignment.sessionId())
+                    .append(", campaign: ").append(assignment.campaignCode())
+                    .append(" - ").append(assignment.campaignName())
+                    .append(", center: ").append(assignment.centerCode())
+                    .append(" - ").append(assignment.centerName())
+                    .append(", assigned role: ").append(assignment.role())
+                    .append(", status: ").append(assignment.sessionStatus())
+                    .append(", starts: ").append(DISPLAY_TIME.format(assignment.startAt().atZone(zone)))
+                    .append(", ends: ").append(DISPLAY_TIME.format(assignment.endAt().atZone(zone)))
                     .append(", timezone: ").append(zone.getId())
                     .append("] ");
         }
@@ -138,35 +125,4 @@ public class MyStaffScheduleAssistantTool implements AssistantReadOnlyTool {
         );
     }
 
-    private boolean isActiveAssignment(StaffAssignment assignment, Instant now, boolean todayOnly) {
-        if (assignment == null || assignment.getSession() == null
-                || assignment.getStartAt() == null || assignment.getEndAt() == null) {
-            return false;
-        }
-        SessionLifecycleStatus lifecycleStatus = assignment.getSession().getLifecycleStatus();
-        if (lifecycleStatus == SessionLifecycleStatus.CANCELLED || lifecycleStatus == SessionLifecycleStatus.COMPLETED) {
-            return false;
-        }
-        if (!todayOnly) {
-            return assignment.getEndAt().isAfter(now);
-        }
-
-        ZoneId zone = resolveZone(assignment.getSession());
-        LocalDate today = LocalDate.ofInstant(now, zone);
-        Instant dayStart = today.atStartOfDay(zone).toInstant();
-        Instant nextDayStart = today.plusDays(1).atStartOfDay(zone).toInstant();
-        return assignment.getStartAt().isBefore(nextDayStart) && assignment.getEndAt().isAfter(dayStart);
-    }
-
-    private ZoneId resolveZone(VaccinationSession session) {
-        if (session == null || session.getScheduleTimezone() == null
-                || session.getScheduleTimezone().isBlank()) {
-            return DEFAULT_ZONE;
-        }
-        try {
-            return ZoneId.of(session.getScheduleTimezone());
-        } catch (RuntimeException ignored) {
-            return DEFAULT_ZONE;
-        }
-    }
 }

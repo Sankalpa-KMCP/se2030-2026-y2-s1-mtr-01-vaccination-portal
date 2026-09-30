@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.appointment.api.query.JpaCitizenAppointmentQuery;
 import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatRequest;
 import com.se2030.vaccinationportal.assistant.dto.AssistantChatResponse;
@@ -22,6 +23,7 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.api.appointment.JpaTimeSlotDisplayReader;
 import com.se2030.vaccinationportal.shared.auth.dto.CitizenProfileResponse;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
@@ -30,7 +32,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
@@ -48,7 +52,7 @@ class AssistantExperienceUpgradeTests {
         AppointmentRepository appointments = mock(AppointmentRepository.class);
         TimeSlotRepository slots = mock(TimeSlotRepository.class);
         WaitlistRepository waitlist = mock(WaitlistRepository.class);
-        MyAppointmentsAssistantTool tool = new MyAppointmentsAssistantTool(appointments, slots, waitlist);
+        MyAppointmentsAssistantTool tool = appointmentTool(appointments, slots, waitlist);
         AssistantToolContext context = citizenContext(42L);
         Instant now = Instant.now();
 
@@ -90,7 +94,7 @@ class AssistantExperienceUpgradeTests {
         AppointmentRepository appointments = mock(AppointmentRepository.class);
         TimeSlotRepository slots = mock(TimeSlotRepository.class);
         WaitlistRepository waitlist = mock(WaitlistRepository.class);
-        MyAppointmentsAssistantTool tool = new MyAppointmentsAssistantTool(appointments, slots, waitlist);
+        MyAppointmentsAssistantTool tool = appointmentTool(appointments, slots, waitlist);
         WaitlistEntry own = mock(WaitlistEntry.class);
         Instant joinedAt = Instant.now();
         when(own.getId()).thenReturn(9L);
@@ -130,7 +134,7 @@ class AssistantExperienceUpgradeTests {
         TimeSlotRepository slots = mock(TimeSlotRepository.class);
         WaitlistRepository waitlist = mock(WaitlistRepository.class);
         when(appointments.findByCitizenIdOrderByBookedAtDesc(42L)).thenReturn(List.of());
-        MyAppointmentsAssistantTool tool = new MyAppointmentsAssistantTool(appointments, slots, waitlist);
+        MyAppointmentsAssistantTool tool = appointmentTool(appointments, slots, waitlist);
         AssistantToolRegistry registry = new AssistantToolRegistry(List.of(tool));
         DeterministicFakeAiResponseProvider provider = new DeterministicFakeAiResponseProvider();
         provider.setCannedActions(List.of());
@@ -153,6 +157,12 @@ class AssistantExperienceUpgradeTests {
 
     private static AssistantToolContext citizenContext(Long id) {
         return new AssistantToolContext("request", citizenPrincipal(id), Set.of("ROLE_CITIZEN"));
+    }
+
+    private static MyAppointmentsAssistantTool appointmentTool(AppointmentRepository appointments,
+            TimeSlotRepository slots, WaitlistRepository waitlist) {
+        return new MyAppointmentsAssistantTool(new JpaCitizenAppointmentQuery(
+                appointments, waitlist, new JpaTimeSlotDisplayReader(slots), Clock.fixed(Instant.now(), ZoneOffset.UTC)));
     }
 
     private static UserPrincipal citizenPrincipal(Long id) {

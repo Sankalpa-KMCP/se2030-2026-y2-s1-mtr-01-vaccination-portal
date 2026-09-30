@@ -10,6 +10,7 @@ import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.appointment.api.query.JpaCitizenAppointmentQuery;
 import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
 import com.se2030.vaccinationportal.assistant.controller.AssistantController;
 import com.se2030.vaccinationportal.assistant.controller.AssistantExceptionHandler;
@@ -30,10 +31,12 @@ import com.se2030.vaccinationportal.assistant.tool.MyEligibilityAssistantTool;
 import com.se2030.vaccinationportal.assistant.tool.MyVaccinationSummaryAssistantTool;
 import com.se2030.vaccinationportal.campaign.model.TimeSlot;
 import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
+import com.se2030.vaccinationportal.campaign.api.appointment.JpaTimeSlotDisplayReader;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
 import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
 import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
 import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
+import com.se2030.vaccinationportal.screening.api.query.JpaCitizenEligibilityQuery;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.vaccination.dto.CitizenCertificateResponse;
 import com.se2030.vaccinationportal.vaccination.dto.CitizenVaccinationRecordResponse;
@@ -53,7 +56,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -116,9 +121,10 @@ class AssistantPersonalizedToolTests {
         eligibilityAssessmentRepository = mock(EligibilityAssessmentRepository.class);
         digitalCertificateService = mock(DigitalCertificateService.class);
 
-        appointmentsTool = new MyAppointmentsAssistantTool(
-                appointmentRepository, timeSlotRepository, waitlistRepository);
-        eligibilityTool = new MyEligibilityAssistantTool(eligibilityAssessmentRepository);
+        Clock clock = Clock.fixed(Instant.now(), ZoneOffset.UTC);
+        appointmentsTool = new MyAppointmentsAssistantTool(new JpaCitizenAppointmentQuery(
+                appointmentRepository, waitlistRepository, new JpaTimeSlotDisplayReader(timeSlotRepository), clock));
+        eligibilityTool = new MyEligibilityAssistantTool(new JpaCitizenEligibilityQuery(eligibilityAssessmentRepository, clock));
         vaccinationTool = new MyVaccinationSummaryAssistantTool(digitalCertificateService);
 
         toolRegistry = new AssistantToolRegistry(List.of(appointmentsTool, eligibilityTool, vaccinationTool));

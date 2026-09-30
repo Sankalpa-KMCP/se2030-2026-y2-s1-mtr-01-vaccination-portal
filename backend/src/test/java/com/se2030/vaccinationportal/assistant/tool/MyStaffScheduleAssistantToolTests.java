@@ -7,6 +7,8 @@ import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
 import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.api.staff.JpaStaffContextQuery;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +40,7 @@ class MyStaffScheduleAssistantToolTests {
     void setUp() {
         assignmentRepository = mock(StaffAssignmentRepository.class);
         tool = new MyStaffScheduleAssistantTool(
-                assignmentRepository,
+                new JpaStaffContextQuery(mock(OperationalStaffRosterRepository.class), assignmentRepository),
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }

@@ -14,6 +14,8 @@ import com.se2030.vaccinationportal.campaign.model.OperationalStaffStatus;
 import com.se2030.vaccinationportal.campaign.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.repository.StaffAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.api.staff.JpaStaffContextQuery;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,7 +41,8 @@ class AssistantStaffProfileToolTests {
     @BeforeEach
     void setUp() {
         rosterRepository = mock(OperationalStaffRosterRepository.class);
-        tool = new MyStaffProfileAssistantTool(rosterRepository);
+        tool = new MyStaffProfileAssistantTool(new JpaStaffContextQuery(rosterRepository,
+                mock(StaffAssignmentRepository.class)));
     }
 
     @Test
