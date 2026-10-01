@@ -1,6 +1,25 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { vaccinationDraftApi } from '../api/vaccinationDraftApi';
+import { getAvailableBatches } from '../api/certificateApi';
 import { formatLocalDateOnly, getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
+
+function TruncatedNotes({ text, maxLength = 60 }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!text) return '—';
+  if (text.length <= maxLength) return <span>{text}</span>;
+  return (
+    <span>
+      {expanded ? text : `${text.slice(0, maxLength)}…`}{' '}
+      <button
+        type="button"
+        className="btn btn-link btn-sm p-0 align-baseline text-decoration-none"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? 'Show less' : 'Show more'}
+      </button>
+    </span>
+  );
+}
 
 const emptyForm = {
   appointmentId: '',
@@ -41,6 +60,39 @@ export default function VaccinationDraftsPage() {
   const [viewingDraft, setViewingDraft] = useState(null);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
+  const [availableBatches, setAvailableBatches] = useState([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  const [manualBatchEntry, setManualBatchEntry] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const apptId = form?.appointmentId;
+    if (apptId && !isNaN(Number(apptId)) && Number(apptId) > 0) {
+      setLoadingBatches(true);
+      getAvailableBatches(apptId)
+        .then((data) => {
+          if (active) {
+            setAvailableBatches(Array.isArray(data) ? data : []);
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setAvailableBatches([]);
+          }
+        })
+        .finally(() => {
+          if (active) {
+            setLoadingBatches(false);
+          }
+        });
+    } else {
+      setAvailableBatches([]);
+      setLoadingBatches(false);
+    }
+    return () => {
+      active = false;
+    };
+  }, [form?.appointmentId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -208,17 +260,88 @@ export default function VaccinationDraftsPage() {
         <form onSubmit={submit} aria-label="Vaccination draft form">
           <fieldset disabled={busy}>
             <div className="row g-3">
-              {fields.map(([field, label, type]) => <div key={field} className="col-12 col-md-6">
-                <label className="form-label" htmlFor={`draft-${field}`}>{label}</label>
-                <input id={`draft-${field}`} className="form-control" type={type} value={form[field]}
-                  required={field === 'appointmentId'} min={type === 'number' ? 1 : undefined}
-                  step={type === 'number' ? 1 : undefined}
-                  disabled={
-                    (field === 'appointmentId' && editingId !== null) ||
-                    field === 'administrationTime'
-                  }
-                  onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))} />
-              </div>)}
+              {fields.map(([field, label, type]) => {
+                if (field === 'vaccineBatchId') {
+                  const showSelect = availableBatches.length > 0 && !manualBatchEntry;
+                  return (
+                    <div key={field} className="col-12 col-md-6">
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <label className="form-label mb-0" htmlFor={`draft-${field}`}>{label}</label>
+                        {availableBatches.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn btn-link btn-sm p-0 text-decoration-none"
+                            onClick={() => setManualBatchEntry(!manualBatchEntry)}
+                          >
+                            {manualBatchEntry ? 'Select from list' : 'Enter ID manually'}
+                          </button>
+                        )}
+                      </div>
+                      {showSelect ? (
+                        <select
+                          id={`draft-${field}`}
+                          className="form-select"
+                          value={form[field]}
+                          onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
+                        >
+                          <option value="">-- Select an available batch (optional) --</option>
+                          {availableBatches.map((b) => (
+                            <option key={b.id} value={String(b.id)}>
+                              {b.batchNumber} — {b.vaccineName} (Qty: {b.availableQuantity}, Exp: {b.expiryDate})
+                            </option>
+                          ))}
+                          {form[field] && !availableBatches.some((b) => String(b.id) === String(form[field])) && (
+                            <option value={form[field]}>
+                              Batch #{form[field]} (Selected)
+                            </option>
+                          )}
+                        </select>
+                      ) : (
+                        <input
+                          id={`draft-${field}`}
+                          className="form-control"
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder={availableBatches.length > 0 ? 'Enter batch ID' : 'Vaccine batch ID'}
+                          value={form[field]}
+                          onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
+                        />
+                      )}
+                      {loadingBatches && (
+                        <div className="form-text text-primary small">
+                          <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                          Loading compatible batches…
+                        </div>
+                      )}
+                      {!loadingBatches && form.appointmentId && availableBatches.length === 0 && (
+                        <div className="form-text text-muted small">
+                          No active inventory batches with available quantity found for this appointment.
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={field} className="col-12 col-md-6">
+                    <label className="form-label" htmlFor={`draft-${field}`}>{label}</label>
+                    <input
+                      id={`draft-${field}`}
+                      className="form-control"
+                      type={type}
+                      value={form[field]}
+                      required={field === 'appointmentId'}
+                      min={type === 'number' ? 1 : undefined}
+                      step={type === 'number' ? 1 : undefined}
+                      disabled={
+                        (field === 'appointmentId' && editingId !== null) ||
+                        field === 'administrationTime'
+                      }
+                      onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
+                    />
+                  </div>
+                );
+              })}
               <div className="col-12">
                 <label className="form-label" htmlFor="draft-notes">Authorized notes</label>
                 <textarea id="draft-notes" className="form-control" maxLength={2000} rows={3} value={form.authorizedNotes}
@@ -268,35 +391,112 @@ export default function VaccinationDraftsPage() {
               : 'No finalized draft history yet.'}
           </div>
         )
-      ) : <div className="table-responsive"><table className="table table-striped align-middle">
-        <caption>{activeTab === 'active' ? 'Active vaccination drafts' : 'Finalized vaccination draft history'}</caption>
-        <thead><tr>{['ID', 'Appointment ID', 'Vaccine batch ID', 'Dose number', 'Administration date', 'Next dose date', 'Authorized notes', 'Status', 'Physical confirmation (read-only)', 'Actions']
-          .map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
-        <tbody>{displayedDrafts.map((draft) => <tr key={draft.id}>
-          <td>{draft.id}</td><td>{draft.appointmentId}</td><td>{draft.vaccineBatchId ?? '—'}</td><td>{draft.doseNumber ?? '—'}</td>
-          <td>{formatLocalDateOnly(draft.administrationTime) || '—'}</td>
-          <td>{draft.nextDoseDate || '—'}</td><td className="text-break">{draft.authorizedNotes || '—'}</td><td>{draft.status}</td>
-          <td>{draft.physicalAdministrationConfirmed ? 'Confirmed' : 'Not confirmed'}</td>
-          <td className="text-nowrap">
-            <button type="button" className="btn btn-sm btn-outline-secondary me-2" aria-label={`View draft ${draft.id}`}
-              disabled={busy} onClick={() => view(draft.id)}>View</button>
-            {draft.status === 'IN_PROGRESS' && (
-              <>
-                <button type="button" className="btn btn-sm btn-outline-primary me-2" aria-label={`Edit draft ${draft.id}`}
-                  disabled={busy} onClick={() => edit(draft.id)}>Edit</button>
-                <button type="button" className="btn btn-sm btn-outline-danger me-2" aria-label={`Discard draft ${draft.id}`}
-                  disabled={busy} onClick={() => discard(draft.id)}>Discard Draft</button>
-                <button type="button" className="btn btn-sm btn-outline-success me-2" aria-label={`Confirm administration for draft ${draft.id}`}
-                  disabled={busy} onClick={() => confirm(draft.id)}>Confirm Administration</button>
-              </>
-            )}
-            {draft.status === 'READY_FOR_FINALIZATION' && (
-              <button type="button" className="btn btn-sm btn-success" aria-label={`Finalize draft ${draft.id}`}
-                disabled={busy} onClick={() => finalize(draft.id)}>Finalize</button>
-            )}
-          </td>
-        </tr>)}</tbody>
-      </table></div>}
+      ) : (
+        <>
+          {/* Desktop Table View */}
+          <div className="d-none d-md-block table-responsive">
+            <table className="table table-striped align-middle">
+              <caption>{activeTab === 'active' ? 'Active vaccination drafts' : 'Finalized vaccination draft history'}</caption>
+              <thead>
+                <tr>
+                  {['ID', 'Appointment ID', 'Vaccine batch ID', 'Dose number', 'Administration date', 'Next dose date', 'Authorized notes', 'Status', 'Physical confirmation (read-only)', 'Actions']
+                    .map((label) => <th scope="col" key={label}>{label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {displayedDrafts.map((draft) => (
+                  <tr key={draft.id}>
+                    <td>{draft.id}</td>
+                    <td>{draft.appointmentId}</td>
+                    <td>{draft.vaccineBatchId ?? '—'}</td>
+                    <td>{draft.doseNumber ?? '—'}</td>
+                    <td>{formatLocalDateOnly(draft.administrationTime) || '—'}</td>
+                    <td>{draft.nextDoseDate || '—'}</td>
+                    <td className="text-break"><TruncatedNotes text={draft.authorizedNotes} /></td>
+                    <td>{draft.status}</td>
+                    <td>{draft.physicalAdministrationConfirmed ? 'Confirmed' : 'Not confirmed'}</td>
+                    <td className="text-nowrap">
+                      <button type="button" className="btn btn-sm btn-outline-secondary me-2" aria-label={`View draft ${draft.id}`}
+                        disabled={busy} onClick={() => view(draft.id)}>View</button>
+                      {draft.status === 'IN_PROGRESS' && (
+                        <>
+                          <button type="button" className="btn btn-sm btn-outline-primary me-2" aria-label={`Edit draft ${draft.id}`}
+                            disabled={busy} onClick={() => edit(draft.id)}>Edit</button>
+                          <button type="button" className="btn btn-sm btn-outline-danger me-2" aria-label={`Discard draft ${draft.id}`}
+                            disabled={busy} onClick={() => discard(draft.id)}>Discard Draft</button>
+                          <button type="button" className="btn btn-sm btn-outline-success me-2" aria-label={`Confirm administration for draft ${draft.id}`}
+                            disabled={busy} onClick={() => confirm(draft.id)}>Confirm Administration</button>
+                        </>
+                      )}
+                      {draft.status === 'READY_FOR_FINALIZATION' && (
+                        <button type="button" className="btn btn-sm btn-success" aria-label={`Finalize draft ${draft.id}`}
+                          disabled={busy} onClick={() => finalize(draft.id)}>Finalize</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="d-md-none vstack gap-3 mb-4">
+            {displayedDrafts.map((draft) => (
+              <div key={draft.id} className="card shadow-sm border">
+                <div className="card-body p-3">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <span className="fw-bold">Draft #{draft.id}</span>
+                      <div className="small text-secondary">
+                        Appt #{draft.appointmentId} · Admin: {formatLocalDateOnly(draft.administrationTime) || '—'}
+                      </div>
+                    </div>
+                    <span className={`badge ${draft.status === 'IN_PROGRESS' ? 'text-bg-info' : draft.status === 'READY_FOR_FINALIZATION' ? 'text-bg-warning' : 'text-bg-success'}`}>
+                      Status: {draft.status}
+                    </span>
+                  </div>
+
+                  <div className="small text-secondary mb-2">
+                    <div><strong>Batch:</strong> {draft.vaccineBatchId ? `Batch #${draft.vaccineBatchId}` : '—'}</div>
+                    <div><strong>Dose:</strong> {draft.doseNumber ? `Dose ${draft.doseNumber}` : '—'}</div>
+                    {draft.nextDoseDate && <div><strong>Next Dose:</strong> {draft.nextDoseDate}</div>}
+                    <div>
+                      <strong>Physical:</strong>{' '}
+                      <span className={draft.physicalAdministrationConfirmed ? 'text-success fw-semibold' : 'text-secondary'}>
+                        {draft.physicalAdministrationConfirmed ? 'Administered' : 'Pending confirmation'}
+                      </span>
+                    </div>
+                    {draft.authorizedNotes && (
+                      <div className="mt-1">
+                        <strong>Clinical Notes:</strong> Note: {draft.authorizedNotes}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="d-flex flex-wrap gap-2 pt-2 border-top">
+                    <button type="button" className="btn btn-sm btn-outline-secondary flex-fill"
+                      disabled={busy} onClick={() => view(draft.id)}>View Details</button>
+                    {draft.status === 'IN_PROGRESS' && (
+                      <>
+                        <button type="button" className="btn btn-sm btn-outline-primary flex-fill"
+                          disabled={busy} onClick={() => edit(draft.id)}>Edit</button>
+                        <button type="button" className="btn btn-sm btn-outline-danger flex-fill"
+                          disabled={busy} onClick={() => discard(draft.id)}>Discard</button>
+                        <button type="button" className="btn btn-sm btn-outline-success w-100"
+                          disabled={busy} onClick={() => confirm(draft.id)}>Confirm Administration</button>
+                      </>
+                    )}
+                    {draft.status === 'READY_FOR_FINALIZATION' && (
+                      <button type="button" className="btn btn-sm btn-success w-100"
+                        disabled={busy} onClick={() => finalize(draft.id)}>Finalize</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }

@@ -10,6 +10,7 @@ export default function CitizenVaccinationsPage() {
   const [downloadingId, setDownloadingId] = useState(null);
   const [downloadError, setDownloadError] = useState('');
   const [selectedCert, setSelectedCert] = useState(null);
+  const [copiedToken, setCopiedToken] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -363,9 +364,28 @@ export default function CitizenVaccinationsPage() {
                   </div>
                   {selectedCert.verificationToken && (
                     <div className="col-12 border-top pt-2">
-                      <span className="text-secondary d-block">Verification Token:</span>
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <span className="text-secondary fw-semibold">Verification Token:</span>
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm py-0 px-2"
+                          onClick={() => {
+                            if (navigator?.clipboard?.writeText) {
+                              navigator.clipboard.writeText(selectedCert.verificationToken);
+                              setCopiedToken(true);
+                              setTimeout(() => setCopiedToken(false), 2000);
+                            }
+                          }}
+                        >
+                          <i className={`bi ${copiedToken ? 'bi-check2 text-success' : 'bi-clipboard'} me-1`}></i>
+                          {copiedToken ? 'Copied!' : 'Copy Token'}
+                        </button>
+                      </div>
                       <div className="p-2 bg-light rounded font-monospace small text-break border">
                         {selectedCert.verificationToken}
+                      </div>
+                      <div className="form-text text-secondary mt-1">
+                        This cryptographic token allows third-parties to verify your vaccination status without revealing your private citizen ID or medical history.
                       </div>
                     </div>
                   )}

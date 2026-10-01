@@ -107,3 +107,41 @@ export async function downloadCertificate(certificateId, certificateReference = 
 
   return true;
 }
+
+/**
+ * Lists the permanent vaccination records administered by the authenticated vaccinator.
+ *
+ * @returns {Promise<Array>} List of VaccinatorVaccinationRecordResponse objects
+ */
+export async function listVaccinatorRecords() {
+  const response = await apiRequest('/v1/vaccination/records/vaccinator/mine', {
+    method: 'GET',
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Gets detailed record info for a single vaccination record.
+ *
+ * @param {number|string} recordId
+ * @returns {Promise<Object>}
+ */
+export async function getRecordDetails(recordId) {
+  const response = await apiRequest(`/v1/vaccination/records/${recordId}`, {
+    method: 'GET',
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Retrieves available compatible vaccine batches for a specific appointment.
+ *
+ * @param {number|string} appointmentId
+ * @returns {Promise<Array>}
+ */
+export async function getAvailableBatches(appointmentId) {
+  const response = await apiRequest(`/v1/vaccination/batches/available?appointmentId=${encodeURIComponent(appointmentId)}`, {
+    method: 'GET',
+  });
+  return parseApiResponse(response);
+}

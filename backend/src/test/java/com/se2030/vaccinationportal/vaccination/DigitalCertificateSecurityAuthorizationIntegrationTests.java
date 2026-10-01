@@ -3,11 +3,13 @@ package com.se2030.vaccinationportal.vaccination;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
+import org.springframework.http.MediaType;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
@@ -36,6 +38,8 @@ class DigitalCertificateSecurityAuthorizationIntegrationTests {
 
     private static final Long CITIZEN_A_ID = 501L;
     private static final Long CITIZEN_B_ID = 502L;
+    private static final Long VACCINATOR_A_ID = 401L;
+    private static final Long VACCINATOR_B_ID = 402L;
 
     @Autowired
     private MockMvc mockMvc;
@@ -65,7 +69,7 @@ class DigitalCertificateSecurityAuthorizationIntegrationTests {
                 CITIZEN_A_ID,
                 201L,
                 301L,
-                401L,
+                VACCINATOR_A_ID,
                 501L,
                 1,
                 Instant.parse("2026-09-01T09:00:00Z"),
@@ -90,8 +94,8 @@ class DigitalCertificateSecurityAuthorizationIntegrationTests {
                 CITIZEN_B_ID,
                 201L,
                 301L,
-                401L,
-                501L,
+                VACCINATOR_B_ID,
+                502L,
                 1,
                 Instant.parse("2026-09-02T10:00:00Z"),
                 null,
@@ -299,6 +303,119 @@ class DigitalCertificateSecurityAuthorizationIntegrationTests {
     void citizenCannotDownloadOtherCitizenCertificatePdf() throws Exception {
         mockMvc.perform(get(BASE + "/certificates/{id}/download", certA.getId())
                         .header(HttpHeaders.AUTHORIZATION, bearer(CITIZEN_B_ID, "ROLE_CITIZEN")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Vaccinator can retrieve own administered certificate by ID")
+    void vaccinatorCanRetrieveOwnAdministeredCertificateById() throws Exception {
+        mockMvc.perform(get(BASE + "/certificates/{id}", certA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(certA.getId().intValue())))
+                .andExpect(jsonPath("$.certificateReference", is("CERT-CITIZEN-A")));
+    }
+
+    @Test
+    @DisplayName("Vaccinator cannot retrieve certificate for record administered by another vaccinator (IDOR forbidden)")
+    void vaccinatorCannotRetrieveOtherVaccinatorCertificateById() throws Exception {
+        mockMvc.perform(get(BASE + "/certificates/{id}", certB.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Vaccinator can retrieve own administered record details")
+    void vaccinatorCanRetrieveOwnAdministeredRecordDetails() throws Exception {
+        mockMvc.perform(get(BASE + "/records/{recordId}", recordA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(recordA.getId().intValue())))
+                .andExpect(jsonPath("$.citizenId", is(CITIZEN_A_ID.intValue())));
+    }
+
+    @Test
+    @DisplayName("Vaccinator cannot retrieve another vaccinator's record details (IDOR forbidden)")
+    void vaccinatorCannotRetrieveOtherVaccinatorRecordDetails() throws Exception {
+        mockMvc.perform(get(BASE + "/records/{recordId}", recordB.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Vaccinator can list their own administered records")
+    void vaccinatorCanListOwnAdministeredRecords() throws Exception {
+        mockMvc.perform(get(BASE + "/records/vaccinator/mine")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(recordA.getId().intValue())))
+                .andExpect(jsonPath("$[0].certificateReference", is("CERT-CITIZEN-A")));
+    }
+
+    @Test
+    @DisplayName("Vaccinator with no records returns empty list on /records/vaccinator/mine")
+    void otherVaccinatorReturnsEmptyList() throws Exception {
+        mockMvc.perform(get(BASE + "/records/vaccinator/mine")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(9999L, "ROLE_VACCINATOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("Vaccinator can download own administered certificate PDF")
+    void vaccinatorCanDownloadOwnAdministeredCertificatePdf() throws Exception {
+        mockMvc.perform(get(BASE + "/certificates/{id}/download", certA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string(
+                        HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificate-CERT-CITIZEN-A.pdf\""))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_PDF));
+    }
+
+    @Test
+    @DisplayName("Vaccinator cannot download other vaccinator certificate PDF")
+    void vaccinatorCannotDownloadOtherVaccinatorCertificatePdf() throws Exception {
+        mockMvc.perform(get(BASE + "/certificates/{id}/download", certB.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Vaccinator is forbidden from revoking certificates")
+    void vaccinatorCannotRevokeCertificate() throws Exception {
+        mockMvc.perform(post(BASE + "/certificates/{id}/revoke", certA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Vaccinator trying to revoke\",\"revokedBy\":401}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Vaccinator is forbidden from reissuing certificates")
+    void vaccinatorCannotReissueCertificate() throws Exception {
+        mockMvc.perform(post(BASE + "/records/{recordId}/certificates/reissue", recordA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Vaccinator trying to reissue\",\"reissuedBy\":401}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Vaccinator calling available batches for non-existent appointment returns 404")
+    void availableBatchesForNonExistentAppointmentReturns404() throws Exception {
+        mockMvc.perform(get(BASE + "/batches/available")
+                        .param("appointmentId", "99999")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Citizen is forbidden from calling available batches")
+    void citizenCannotCallAvailableBatches() throws Exception {
+        mockMvc.perform(get(BASE + "/batches/available")
+                        .param("appointmentId", "1001")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(CITIZEN_A_ID, "ROLE_CITIZEN")))
                 .andExpect(status().isForbidden());
     }
 }

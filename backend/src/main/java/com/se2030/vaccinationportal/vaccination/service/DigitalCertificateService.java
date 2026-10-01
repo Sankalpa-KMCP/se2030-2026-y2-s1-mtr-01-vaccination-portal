@@ -25,6 +25,27 @@ import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRep
 import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import java.time.Clock;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.inventory.model.BatchStatus;
+import com.se2030.vaccinationportal.inventory.model.CenterInventory;
+import com.se2030.vaccinationportal.inventory.model.VaccineBatch;
+import com.se2030.vaccinationportal.inventory.repository.CenterInventoryRepository;
+import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
+import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
+import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationPort;
+import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationSnapshot;
+import com.se2030.vaccinationportal.vaccination.dto.AvailableVaccineBatchResponse;
+import com.se2030.vaccinationportal.vaccination.dto.CertificateDisplayDetails;
+import com.se2030.vaccinationportal.vaccination.dto.VaccinatorVaccinationRecordResponse;
+import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.List;
 import java.util.UUID;
@@ -48,6 +69,21 @@ public class DigitalCertificateService {
     private final EffectiveVaccinationRecordService effectiveRecordService;
     private final Clock clock;
     private final CertificatePdfService certificatePdfService;
+
+    @Autowired(required = false)
+    private VaccineBatchRepository vaccineBatchRepository;
+    @Autowired(required = false)
+    private CenterInventoryRepository centerInventoryRepository;
+    @Autowired(required = false)
+    private VaccineTypeRepository vaccineTypeRepository;
+    @Autowired(required = false)
+    private VaccinationCenterRepository vaccinationCenterRepository;
+    @Autowired(required = false)
+    private VaccinationCampaignRepository vaccinationCampaignRepository;
+    @Autowired(required = false)
+    private UserAccountRepository userAccountRepository;
+    @Autowired(required = false)
+    private AppointmentValidationPort appointmentValidationPort;
 
     public DigitalCertificateService(
             VaccinationRecordRepository vaccinationRecordRepository,
@@ -261,6 +297,12 @@ public class DigitalCertificateService {
                 .orElseThrow(() -> new VaccinationRecordNotFoundException(
                         "Vaccination record not found with ID: " + certificate.getVaccinationRecordId()
                 ));
+        if (isVaccinator(principal)) {
+            if (!record.getVaccinatorId().equals(principal.getUserId())) {
+                throw new AccessDeniedException("Vaccinators may only access digital certificates for vaccinations they administered");
+            }
+            return;
+        }
         if (!record.getCitizenId().equals(principal.getUserId())) {
             throw new AccessDeniedException("Citizens may only access their own digital certificates");
         }
@@ -275,9 +317,129 @@ public class DigitalCertificateService {
                 .orElseThrow(() -> new VaccinationRecordNotFoundException(
                         "Vaccination record not found with ID: " + vaccinationRecordId
                 ));
+        if (isVaccinator(principal)) {
+            if (!record.getVaccinatorId().equals(principal.getUserId())) {
+                throw new AccessDeniedException("Vaccinators may only access records for vaccinations they administered");
+            }
+            return;
+        }
         if (!record.getCitizenId().equals(principal.getUserId())) {
             throw new AccessDeniedException("Citizens may only access certificate history for their own vaccination records");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<VaccinatorVaccinationRecordResponse> getVaccinatorVaccinationHistory(Long vaccinatorId) {
+        if (vaccinatorId == null || vaccinatorId <= 0) {
+            throw new IllegalArgumentException("Vaccinator ID must be positive");
+        }
+        List<VaccinationRecord> records = vaccinationRecordRepository.findByVaccinatorIdOrderByAdministrationTimeDesc(vaccinatorId);
+        return records.stream().map(this::toVaccinatorRecordResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public VaccinatorVaccinationRecordResponse getVaccinationRecordDetails(Long recordId) {
+        VaccinationRecord record = vaccinationRecordRepository.findById(recordId)
+                .orElseThrow(() -> new VaccinationRecordNotFoundException(
+                        "Vaccination record not found with ID: " + recordId
+                ));
+        return toVaccinatorRecordResponse(record);
+    }
+
+    private VaccinatorVaccinationRecordResponse toVaccinatorRecordResponse(VaccinationRecord record) {
+        var validCert = certificateRepository.findFirstByVaccinationRecordIdAndStatusOrderByIssuedAtDescIdDesc(
+                record.getId(), CertificateStatus.VALID
+        );
+        var fallbackCert = certificateRepository.findByVaccinationRecordIdOrderByIssuedAtAscIdAsc(record.getId())
+                .stream()
+                .reduce((first, second) -> second);
+        var certOpt = validCert.isPresent() ? validCert : fallbackCert;
+
+        Long certId = certOpt.map(DigitalCertificate::getId).orElse(null);
+        String certRef = certOpt.map(DigitalCertificate::getCertificateReference).orElse(null);
+        CertificateStatus status = certOpt.map(DigitalCertificate::getStatus).orElse(null);
+
+        String citizenName = resolveCitizenName(record.getCitizenId());
+        String campaignName = resolveCampaignName(record.getCampaignId());
+        String centerName = resolveCenterName(record.getCenterId());
+        String batchNumber = resolveBatchNumber(record.getVaccineBatchId());
+        String vaccineName = resolveVaccineName(record.getVaccineBatchId());
+
+        return new VaccinatorVaccinationRecordResponse(
+                record.getId(),
+                record.getAppointmentId(),
+                record.getCitizenId(),
+                citizenName,
+                record.getCampaignId(),
+                campaignName,
+                record.getCenterId(),
+                centerName,
+                record.getVaccineBatchId(),
+                batchNumber,
+                vaccineName,
+                record.getDoseNumber(),
+                record.getAdministrationTime(),
+                record.getNextDoseDate(),
+                record.getAuthorizedNotes(),
+                record.getFinalizedAt(),
+                certId,
+                certRef,
+                status
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvailableVaccineBatchResponse> getAvailableBatchesForAppointment(Long appointmentId) {
+        if (appointmentId == null || appointmentId <= 0) {
+            throw new IllegalArgumentException("Appointment ID must be positive");
+        }
+        if (appointmentValidationPort == null) {
+            return List.of();
+        }
+        AppointmentValidationSnapshot appointment = appointmentValidationPort.findByAppointmentId(appointmentId)
+                .orElseThrow(() -> new VaccinationAppointmentNotFoundException(
+                        "Vaccination appointment not found with ID: " + appointmentId
+                ));
+
+        Long centerId = appointment.centerId();
+        Long expectedVaccineTypeId = appointment.campaignVaccineTypeId();
+        if (centerId == null || centerInventoryRepository == null || vaccineBatchRepository == null) {
+            return List.of();
+        }
+
+        List<CenterInventory> inventories = centerInventoryRepository.findByCenterId(centerId);
+        LocalDate today = LocalDate.now(clock != null ? clock : Clock.systemUTC());
+
+        List<AvailableVaccineBatchResponse> results = new ArrayList<>();
+        for (CenterInventory inv : inventories) {
+            if (inv.getQuantity() <= 0) {
+                continue;
+            }
+            VaccineBatch batch = vaccineBatchRepository.findById(inv.getBatchId()).orElse(null);
+            if (batch == null || batch.getBatchStatus() != BatchStatus.ACTIVE) {
+                continue;
+            }
+            if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(today)) {
+                continue;
+            }
+            if (expectedVaccineTypeId != null && !expectedVaccineTypeId.equals(batch.getVaccineTypeId())) {
+                continue;
+            }
+            String vaccineName = "Standard Vaccine";
+            if (vaccineTypeRepository != null && batch.getVaccineTypeId() != null) {
+                vaccineName = vaccineTypeRepository.findById(batch.getVaccineTypeId())
+                        .map(VaccineType::getName)
+                        .orElse("Standard Vaccine");
+            }
+            results.add(new AvailableVaccineBatchResponse(
+                    batch.getId(),
+                    batch.getBatchNumber(),
+                    vaccineName,
+                    batch.getExpiryDate(),
+                    inv.getQuantity()
+            ));
+        }
+        return results;
     }
 
     @Transactional(readOnly = true)
@@ -347,7 +509,69 @@ public class DigitalCertificateService {
         assertCertificateAccess(certificate, principal);
         VaccinationRecord record = vaccinationRecordRepository.findById(certificate.getVaccinationRecordId())
                 .orElse(null);
-        return certificatePdfService.generateCertificatePdf(certificate, record);
+        CertificateDisplayDetails details = resolveDisplayDetails(certificate, record);
+        return certificatePdfService.generateCertificatePdf(certificate, record, details);
+    }
+
+    private CertificateDisplayDetails resolveDisplayDetails(DigitalCertificate certificate, VaccinationRecord record) {
+        if (record == null) {
+            return new CertificateDisplayDetails(null, null, null, null);
+        }
+        String citizenName = resolveCitizenName(record.getCitizenId());
+        String vaccineName = resolveVaccineName(record.getVaccineBatchId());
+        String batchNumber = resolveBatchNumber(record.getVaccineBatchId());
+        String centerName = resolveCenterName(record.getCenterId());
+        return new CertificateDisplayDetails(citizenName, vaccineName, batchNumber, centerName);
+    }
+
+    private String resolveCitizenName(Long citizenId) {
+        if (citizenId == null || userAccountRepository == null) {
+            return "Citizen #" + citizenId;
+        }
+        return userAccountRepository.findById(citizenId)
+                .map(user -> user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : "Citizen #" + citizenId)
+                .orElse("Citizen #" + citizenId);
+    }
+
+    private String resolveCenterName(Long centerId) {
+        if (centerId == null || vaccinationCenterRepository == null) {
+            return "Center #" + centerId;
+        }
+        return vaccinationCenterRepository.findById(centerId)
+                .map(VaccinationCenter::getName)
+                .orElse("Center #" + centerId);
+    }
+
+    private String resolveCampaignName(Long campaignId) {
+        if (campaignId == null || vaccinationCampaignRepository == null) {
+            return null;
+        }
+        return vaccinationCampaignRepository.findById(campaignId)
+                .map(VaccinationCampaign::getName)
+                .orElse(null);
+    }
+
+    private String resolveBatchNumber(Long batchId) {
+        if (batchId == null || vaccineBatchRepository == null) {
+            return "Batch #" + batchId;
+        }
+        return vaccineBatchRepository.findById(batchId)
+                .map(VaccineBatch::getBatchNumber)
+                .orElse("Batch #" + batchId);
+    }
+
+    private String resolveVaccineName(Long batchId) {
+        if (batchId == null || vaccineBatchRepository == null || vaccineTypeRepository == null) {
+            return "Authorized Vaccine";
+        }
+        return vaccineBatchRepository.findById(batchId)
+                .flatMap(b -> vaccineTypeRepository.findById(b.getVaccineTypeId()))
+                .map(VaccineType::getName)
+                .orElse("Authorized Vaccine");
+    }
+
+    private boolean isVaccinator(UserPrincipal principal) {
+        return principal != null && (principal.hasRole("ROLE_VACCINATOR") || principal.hasRole("VACCINATOR"));
     }
 
     private boolean isStaff(UserPrincipal principal) {
@@ -357,6 +581,41 @@ public class DigitalCertificateService {
                 || principal.hasRole("ADMIN")
                 || principal.hasRole("HEALTHCARE_OFFICER")
                 || principal.hasRole("SUPER_ADMIN");
+    }
+
+    @Autowired(required = false)
+    public void setVaccineBatchRepository(VaccineBatchRepository vaccineBatchRepository) {
+        this.vaccineBatchRepository = vaccineBatchRepository;
+    }
+
+    @Autowired(required = false)
+    public void setCenterInventoryRepository(CenterInventoryRepository centerInventoryRepository) {
+        this.centerInventoryRepository = centerInventoryRepository;
+    }
+
+    @Autowired(required = false)
+    public void setVaccineTypeRepository(VaccineTypeRepository vaccineTypeRepository) {
+        this.vaccineTypeRepository = vaccineTypeRepository;
+    }
+
+    @Autowired(required = false)
+    public void setVaccinationCenterRepository(VaccinationCenterRepository vaccinationCenterRepository) {
+        this.vaccinationCenterRepository = vaccinationCenterRepository;
+    }
+
+    @Autowired(required = false)
+    public void setVaccinationCampaignRepository(VaccinationCampaignRepository vaccinationCampaignRepository) {
+        this.vaccinationCampaignRepository = vaccinationCampaignRepository;
+    }
+
+    @Autowired(required = false)
+    public void setUserAccountRepository(UserAccountRepository userAccountRepository) {
+        this.userAccountRepository = userAccountRepository;
+    }
+
+    @Autowired(required = false)
+    public void setAppointmentValidationPort(AppointmentValidationPort appointmentValidationPort) {
+        this.appointmentValidationPort = appointmentValidationPort;
     }
 
     private String generateUniqueCertificateReference() {

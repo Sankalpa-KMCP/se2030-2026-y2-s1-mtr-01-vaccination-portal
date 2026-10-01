@@ -1,47 +1,74 @@
 package com.se2030.vaccinationportal.vaccination.service;
 
+import com.se2030.vaccinationportal.vaccination.dto.CertificateDisplayDetails;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 
 /**
  * Clean, lightweight server-side PDF generator for official digital vaccination certificates.
- * Generates standards-compliant PDF 1.4 documents without requiring external third-party dependencies.
+ * Generates standards-compliant PDF 1.4 documents with meaningful human-readable values.
  */
 @Service
 public class CertificatePdfService {
 
+    private static final DateTimeFormatter DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.ENGLISH).withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("dd MMMM yyyy, HH:mm 'UTC'", Locale.ENGLISH).withZone(ZoneOffset.UTC);
+
     public byte[] generateCertificatePdf(DigitalCertificate certificate, VaccinationRecord record) {
+        return generateCertificatePdf(certificate, record, null);
+    }
+
+    public byte[] generateCertificatePdf(
+            DigitalCertificate certificate,
+            VaccinationRecord record,
+            CertificateDisplayDetails details
+    ) {
         String ref = escapePdfText(certificate.getCertificateReference());
         String status = certificate.getStatus() != null ? certificate.getStatus().name() : "VALID";
         String dose = "Dose " + (certificate.getIssuedDoseNumber() != null ? certificate.getIssuedDoseNumber() : (record != null ? record.getDoseNumber() : 1));
-        
+
         String adminTime = "N/A";
         if (certificate.getIssuedAdministrationTime() != null) {
-            adminTime = DateTimeFormatter.ISO_INSTANT.format(certificate.getIssuedAdministrationTime());
+            adminTime = DATE_FORMATTER.format(certificate.getIssuedAdministrationTime());
         } else if (record != null && record.getAdministrationTime() != null) {
-            adminTime = DateTimeFormatter.ISO_INSTANT.format(record.getAdministrationTime());
+            adminTime = DATE_FORMATTER.format(record.getAdministrationTime());
         }
-        
+
         String issuedAt = certificate.getIssuedAt() != null
-                ? DateTimeFormatter.ISO_INSTANT.format(certificate.getIssuedAt())
+                ? DATE_TIME_FORMATTER.format(certificate.getIssuedAt())
                 : "N/A";
-        
-        String citizenId = record != null && record.getCitizenId() != null
-                ? String.valueOf(record.getCitizenId())
-                : "N/A";
-        String batchId = certificate.getIssuedVaccineBatchId() != null
-                ? String.valueOf(certificate.getIssuedVaccineBatchId())
-                : (record != null && record.getVaccineBatchId() != null ? String.valueOf(record.getVaccineBatchId()) : "N/A");
-        String centerId = record != null && record.getCenterId() != null
-                ? String.valueOf(record.getCenterId())
-                : "N/A";
+
+        String vaccineName = (details != null && details.vaccineName() != null && !details.vaccineName().isBlank())
+                ? details.vaccineName()
+                : "COVID-19 / Standard Formulation";
+
+        String batchNumber = (details != null && details.batchNumber() != null && !details.batchNumber().isBlank())
+                ? details.batchNumber()
+                : (certificate.getIssuedVaccineBatchId() != null
+                        ? "Batch #" + certificate.getIssuedVaccineBatchId()
+                        : (record != null && record.getVaccineBatchId() != null ? "Batch #" + record.getVaccineBatchId() : "Authorized Batch"));
+
+        String recipientName = (details != null && details.citizenName() != null && !details.citizenName().isBlank())
+                ? details.citizenName()
+                : null;
+
+        String centerName = (details != null && details.centerName() != null && !details.centerName().isBlank())
+                ? details.centerName()
+                : (record != null && record.getCenterId() != null
+                        ? "Vaccination Center #" + record.getCenterId()
+                        : "National Vaccination Center");
+
         String token = escapePdfText(certificate.getVerificationToken() != null ? certificate.getVerificationToken() : "N/A");
 
         StringBuilder content = new StringBuilder();
@@ -107,35 +134,42 @@ public class CertificatePdfService {
         content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
         content.append("150 0 Td (" + ref + ") Tj\n");
 
+        if (recipientName != null) {
+            content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
+            content.append("-150 -32 Td (Citizen Name:) Tj\n");
+            content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
+            content.append("150 0 Td (" + escapePdfText(recipientName) + ") Tj\n");
+        }
+
         content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Citizen Subject ID:) Tj\n");
+        content.append("-150 -32 Td (Vaccine / Formulation:) Tj\n");
         content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + citizenId + ") Tj\n");
+        content.append("150 0 Td (" + escapePdfText(vaccineName) + ") Tj\n");
 
         content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
         content.append("-150 -32 Td (Vaccine Dose:) Tj\n");
         content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + dose + ") Tj\n");
+        content.append("150 0 Td (" + escapePdfText(dose) + ") Tj\n");
 
         content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Administration Date:) Tj\n");
+        content.append("-150 -32 Td (Vaccination Date:) Tj\n");
         content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + adminTime + ") Tj\n");
+        content.append("150 0 Td (" + escapePdfText(adminTime) + ") Tj\n");
 
         content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Vaccine Batch ID:) Tj\n");
+        content.append("-150 -32 Td (Batch Code / Number:) Tj\n");
         content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + batchId + ") Tj\n");
+        content.append("150 0 Td (" + escapePdfText(batchNumber) + ") Tj\n");
 
         content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Vaccination Center ID:) Tj\n");
+        content.append("-150 -32 Td (Vaccination Center:) Tj\n");
         content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + centerId + ") Tj\n");
+        content.append("150 0 Td (" + escapePdfText(centerName) + ") Tj\n");
 
         content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Issue Timestamp:) Tj\n");
+        content.append("-150 -32 Td (Issued Date:) Tj\n");
         content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + issuedAt + ") Tj\n");
+        content.append("150 0 Td (" + escapePdfText(issuedAt) + ") Tj\n");
 
         content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
         content.append("-150 -32 Td (Verification Token:) Tj\n");
@@ -153,7 +187,7 @@ public class CertificatePdfService {
         content.append("/F1 10 Tf 0.06 0.43 0.36 rg\n");
         content.append("65 180 Td (PUBLIC VERIFICATION AND AUTHENTICITY) Tj\n");
         content.append("/F2 9 Tf 0.3 0.3 0.3 rg\n");
-        content.append("0 -18 Td (This official credential can be publicly verified via the National Portal at /verify-certificate.) Tj\n");
+        content.append("0 -18 Td (This certificate can be verified through the National Vaccination Portal at /verify-certificate.) Tj\n");
         content.append("0 -14 Td (Enter the certificate reference or verification token above to authenticate.) Tj\n");
         content.append("0 -14 Td (NFR-PRV-01 Privacy Compliant: Public verification displays minimal clinical details only.) Tj\n");
         content.append("/F2 8 Tf 0.5 0.5 0.5 rg\n");
