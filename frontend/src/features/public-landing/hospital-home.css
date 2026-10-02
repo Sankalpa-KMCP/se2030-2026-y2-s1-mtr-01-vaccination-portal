@@ -1267,3 +1267,54 @@ html.vax-text-xl .lp-page--home .hospital-shortcuts__grid {
 }
 
 
+
+
+/* Official service-standard indicators */
+.hero-inclusive-badges {
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.hero-inclusive-badge {
+  gap: 0.42rem;
+  min-height: 34px;
+  padding: 0.38rem 0.72rem;
+  border: 1px solid #cbd8dd;
+  border-left-width: 3px;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #29434d;
+  box-shadow: none;
+  font-size: 0.69rem;
+  font-weight: 750;
+  letter-spacing: 0.055em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.hero-inclusive-badge i {
+  flex: none;
+  margin: 0;
+  color: #0d776f;
+  font-size: 0.84rem;
+}
+
+.hero-inclusive-badge--support {
+  border-left-color: #0d776f;
+}
+
+.hero-inclusive-badge--security {
+  border-left-color: #234d63;
+}
+
+.hero-inclusive-badge--security i {
+  color: #234d63;
+}
+
+.hero-inclusive-badge--eligibility {
+  border-left-color: #667985;
+}
+
+.hero-inclusive-badge--eligibility i {
+  color: #526772;
+}
