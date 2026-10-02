@@ -140,7 +140,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/appointments/**", "/api/v1/waitlist/**").authenticated()
 
                         // Draft CRUD is vaccinator-only; enforce anonymous rejection at the HTTP boundary.
-                        .requestMatchers("/api/v1/vaccination/drafts", "/api/v1/vaccination/drafts/**").hasAnyRole("VACCINATOR", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/vaccination/drafts", "/api/v1/vaccination/drafts/**").hasRole("VACCINATOR")
 
                         // Functional REST endpoints delegate method-level security to @PreAuthorize
                         .requestMatchers("/api/v1/**").permitAll()

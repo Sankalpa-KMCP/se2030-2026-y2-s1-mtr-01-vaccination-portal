@@ -107,6 +107,19 @@ export function finalizeVaccinationDraft(draftId) {
   });
 }
 
+/**
+ * Confirms physical administration and transactionally finalizes the draft in one step.
+ * Creates immutable record, deducts stock, completes appointment, issues certificate, and finalizes draft.
+ *
+ * @param {number|string} draftId
+ * @returns {Promise<Object>} FinalizeVaccinationResponse
+ */
+export function confirmAndFinalizeVaccinationDraft(draftId) {
+  return draftRequest(`/${draftId}/confirm-and-finalize`, {
+    method: 'POST',
+  });
+}
+
 function filterFields(fields, payload) {
   if (!payload || typeof payload !== 'object') return payload;
   return Object.fromEntries(fields
@@ -125,5 +138,6 @@ export const vaccinationDraftApi = {
   remove: (id, reason = 'Discarded by vaccinator') => discardVaccinationDraft(id, reason),
   confirmAdministration: (id) => confirmPhysicalAdministration(id),
   finalize: (id) => finalizeVaccinationDraft(id),
+  confirmAndFinalize: (id) => confirmAndFinalizeVaccinationDraft(id),
 };
 

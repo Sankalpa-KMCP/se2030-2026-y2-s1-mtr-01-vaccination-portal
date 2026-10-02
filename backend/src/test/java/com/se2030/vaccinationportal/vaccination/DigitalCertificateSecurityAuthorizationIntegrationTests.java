@@ -181,11 +181,10 @@ class DigitalCertificateSecurityAuthorizationIntegrationTests {
                 .andExpect(status().isForbidden());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"ROLE_ADMIN", "ROLE_HEALTHCARE_OFFICER", "ROLE_SUPER_ADMIN"})
-    @DisplayName("Authorized staff roles can access any citizen's certificate and history")
-    void authorizedStaffCanAccessAnyCertificate(String role) throws Exception {
-        String staffToken = bearer(999L, role);
+    @Test
+    @DisplayName("Admin role can access any citizen's certificate and history")
+    void adminCanAccessAnyCertificate() throws Exception {
+        String staffToken = bearer(999L, "ROLE_ADMIN");
 
         // Certificate by ID
         mockMvc.perform(get(BASE + "/certificates/{id}", certA.getId())
@@ -208,7 +207,7 @@ class DigitalCertificateSecurityAuthorizationIntegrationTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"ROLE_VACCINATOR", "ROLE_CENTER_MANAGER", "ROLE_INVENTORY_OFFICER", "ROLE_CAMPAIGN_OFFICER"})
+    @ValueSource(strings = {"ROLE_CENTER_MANAGER", "ROLE_INVENTORY_OFFICER", "ROLE_CAMPAIGN_OFFICER", "ROLE_HEALTHCARE_OFFICER", "ROLE_SUPER_ADMIN"})
     @DisplayName("Unauthorized roles are forbidden from accessing certificate endpoints")
     void unauthorizedRolesCannotAccessCertificateEndpoints(String role) throws Exception {
         String unauthorizedToken = bearer(888L, role);
@@ -381,24 +380,37 @@ class DigitalCertificateSecurityAuthorizationIntegrationTests {
                 .andExpect(status().isForbidden());
     }
 
-    @Test
-    @DisplayName("Vaccinator is forbidden from revoking certificates")
-    void vaccinatorCannotRevokeCertificate() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"ROLE_VACCINATOR", "ROLE_CITIZEN", "ROLE_HEALTHCARE_OFFICER", "ROLE_SUPER_ADMIN"})
+    @DisplayName("Non-admin roles are forbidden from revoking certificates")
+    void nonAdminCannotRevokeCertificate(String role) throws Exception {
         mockMvc.perform(post(BASE + "/certificates/{id}/revoke", certA.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR"))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(401L, role))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"Vaccinator trying to revoke\",\"revokedBy\":401}"))
+                        .content("{\"reason\":\"Trying to revoke\",\"revokedBy\":401}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ROLE_VACCINATOR", "ROLE_CITIZEN", "ROLE_HEALTHCARE_OFFICER", "ROLE_SUPER_ADMIN"})
+    @DisplayName("Non-admin roles are forbidden from reissuing certificates")
+    void nonAdminCannotReissueCertificate(String role) throws Exception {
+        mockMvc.perform(post(BASE + "/records/{recordId}/certificates/reissue", recordA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(401L, role))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Trying to reissue\",\"reissuedBy\":401}"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("Vaccinator is forbidden from reissuing certificates")
-    void vaccinatorCannotReissueCertificate() throws Exception {
-        mockMvc.perform(post(BASE + "/records/{recordId}/certificates/reissue", recordA.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(VACCINATOR_A_ID, "ROLE_VACCINATOR"))
+    @DisplayName("Admin can revoke certificates")
+    void adminCanRevokeCertificate() throws Exception {
+        mockMvc.perform(post(BASE + "/certificates/{id}/revoke", certA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(1L, "ROLE_ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"Vaccinator trying to reissue\",\"reissuedBy\":401}"))
-                .andExpect(status().isForbidden());
+                        .content("{\"reason\":\"Clinical correction required\",\"revokedBy\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("REVOKED")));
     }
 
     @Test

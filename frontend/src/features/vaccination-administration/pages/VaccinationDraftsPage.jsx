@@ -205,6 +205,17 @@ export default function VaccinationDraftsPage() {
     finally { setBusy(false); }
   };
 
+  const confirmAndFinalize = async (id) => {
+    if (!window.confirm(`Confirm physical administration and finalize vaccination for draft ${id}? This action will permanently record the vaccination, deduct inventory, complete the appointment, and issue the digital certificate.`)) return;
+    setBusy(true); setError(null); setMessage('');
+    try {
+      const response = await vaccinationDraftApi.confirmAndFinalize(id);
+      setMessage(`Vaccination confirmed and finalized successfully. Certificate reference: ${response?.certificateReference || 'Issued'}.`);
+      await load();
+    } catch (exception) { setError(exception); }
+    finally { setBusy(false); }
+  };
+
   const activeDrafts = drafts.filter(
     (draft) => draft.status === 'IN_PROGRESS' || draft.status === 'READY_FOR_FINALIZATION',
   );
@@ -424,8 +435,8 @@ export default function VaccinationDraftsPage() {
                             disabled={busy} onClick={() => edit(draft.id)}>Edit</button>
                           <button type="button" className="btn btn-sm btn-outline-danger me-2" aria-label={`Discard draft ${draft.id}`}
                             disabled={busy} onClick={() => discard(draft.id)}>Discard Draft</button>
-                          <button type="button" className="btn btn-sm btn-outline-success me-2" aria-label={`Confirm administration for draft ${draft.id}`}
-                            disabled={busy} onClick={() => confirm(draft.id)}>Confirm Administration</button>
+                          <button type="button" className="btn btn-sm btn-success me-2" aria-label={`Confirm and finalize draft ${draft.id}`}
+                            disabled={busy} onClick={() => confirmAndFinalize(draft.id)}>Confirm &amp; Finalize</button>
                         </>
                       )}
                       {draft.status === 'READY_FOR_FINALIZATION' && (
@@ -482,8 +493,8 @@ export default function VaccinationDraftsPage() {
                           disabled={busy} onClick={() => edit(draft.id)}>Edit</button>
                         <button type="button" className="btn btn-sm btn-outline-danger flex-fill"
                           disabled={busy} onClick={() => discard(draft.id)}>Discard</button>
-                        <button type="button" className="btn btn-sm btn-outline-success w-100"
-                          disabled={busy} onClick={() => confirm(draft.id)}>Confirm Administration</button>
+                        <button type="button" className="btn btn-sm btn-success w-100"
+                          disabled={busy} onClick={() => confirmAndFinalize(draft.id)}>Confirm &amp; Finalize</button>
                       </>
                     )}
                     {draft.status === 'READY_FOR_FINALIZATION' && (

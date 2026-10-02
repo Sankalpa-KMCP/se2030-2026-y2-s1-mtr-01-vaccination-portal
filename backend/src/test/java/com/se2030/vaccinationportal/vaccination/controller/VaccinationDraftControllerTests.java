@@ -543,4 +543,21 @@ class VaccinationDraftControllerTests {
                 .andExpect(jsonPath("$.error", is("Conflict")))
                 .andExpect(jsonPath("$.message", containsString("INACTIVE_BATCH")));
     }
+
+    @Test
+    void confirmAndFinalizeDraft_delegatesToFinalizationService() throws Exception {
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+        FinalizeVaccinationResponse expected = new FinalizeVaccinationResponse(
+                1L, 100L, 101L, 501L, 301L, 1, sampleDraft.getAdministrationTime(),
+                "CERT-123", "token-xyz", null
+        );
+        when(finalizationService.confirmAndFinalizeDraft(1L, 201L)).thenReturn(expected);
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/confirm-and-finalize"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.draftId", is(1)))
+                .andExpect(jsonPath("$.certificateReference", is("CERT-123")));
+
+        verify(finalizationService).confirmAndFinalizeDraft(1L, 201L);
+    }
 }

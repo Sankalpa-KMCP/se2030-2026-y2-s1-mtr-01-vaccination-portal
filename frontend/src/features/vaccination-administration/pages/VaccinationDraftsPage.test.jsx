@@ -15,6 +15,7 @@ vi.mock('../api/vaccinationDraftApi', () => ({
     remove: vi.fn(),
     confirmAdministration: vi.fn(),
     finalize: vi.fn(),
+    confirmAndFinalize: vi.fn(),
   },
 }));
 
@@ -74,6 +75,10 @@ describe('Vaccination Drafts CRUD', () => {
       status: 'READY_FOR_FINALIZATION',
     });
     vaccinationDraftApi.finalize.mockResolvedValue({
+      draftId: 1,
+      certificateReference: 'CERT-2026-TEST-XYZ',
+    });
+    vaccinationDraftApi.confirmAndFinalize.mockResolvedValue({
       draftId: 1,
       certificateReference: 'CERT-2026-TEST-XYZ',
     });
@@ -221,12 +226,12 @@ describe('Vaccination Drafts CRUD', () => {
     expect(await screen.findByText('Only an unfinalized draft may be changed')).toBeTruthy();
   });
 
-  it('confirms physical administration after confirmation prompt and refreshes', async () => {
+  it('confirms and finalizes draft after confirmation prompt and refreshes', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     await openPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm administration for draft 1' }));
-    await screen.findByText('Physical administration confirmed successfully.');
-    expect(vaccinationDraftApi.confirmAdministration).toHaveBeenCalledWith(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm and finalize draft 1' }));
+    await screen.findByText(/Vaccination confirmed and finalized successfully\. Certificate reference: CERT-2026-TEST-XYZ\./);
+    expect(vaccinationDraftApi.confirmAndFinalize).toHaveBeenCalledWith(1);
     expect(vaccinationDraftApi.list).toHaveBeenCalledTimes(2);
   });
 
@@ -254,18 +259,18 @@ describe('Vaccination Drafts CRUD', () => {
     expect(activeTabBtn).toBeTruthy();
     expect(historyTabBtn).toBeTruthy();
 
-    // In Active tab: draft 1 (IN_PROGRESS) has View, Edit, Discard Draft, Confirm Administration
+    // In Active tab: draft 1 (IN_PROGRESS) has View, Edit, Discard Draft, Confirm & Finalize
     expect(screen.getByRole('button', { name: 'View draft 1' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Edit draft 1' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Discard draft 1' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Confirm administration for draft 1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Confirm and finalize draft 1' })).toBeTruthy();
 
     // In Active tab: draft 2 (READY_FOR_FINALIZATION) has View and Finalize only
     expect(screen.getByRole('button', { name: 'View draft 2' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Finalize draft 2' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Edit draft 2' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Discard draft 2' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Confirm administration for draft 2' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Confirm and finalize draft 2' })).toBeNull();
 
     // Draft 3 (FINALIZED) must NOT appear in the Active tab
     expect(screen.queryByText('Finalized notes')).toBeNull();

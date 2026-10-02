@@ -38,7 +38,7 @@ function formatDateTime(isoString) {
  *  3. "My Active Drafts" summary (strictly IN_PROGRESS and READY_FOR_FINALIZATION;
  *     FINALIZED excluded).
  *  4. Direct navigation link to the dedicated Vaccination Drafts page for all
- *     lifecycle mutations (Edit, Discard, Confirm Administration, Finalize).
+ *     lifecycle mutations (Edit, Discard, Confirm & Finalize, Finalize).
  */
 export default function VaccinatorDashboardSection() {
   const { user } = useAuth();

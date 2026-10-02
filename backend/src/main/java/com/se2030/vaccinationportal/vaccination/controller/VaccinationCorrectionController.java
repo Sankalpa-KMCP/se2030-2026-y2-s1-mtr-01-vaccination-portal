@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** REST endpoints for canonical correction lifecycle (PENDING -> APPROVED/REJECTED -> APPLIED). */
 @RestController
 @RequestMapping("/api/v1/vaccination/records/{recordId}/corrections")
-@PreAuthorize("hasAnyRole('ADMIN', 'HEALTHCARE_OFFICER')")
+@PreAuthorize("hasRole('ADMIN') and !hasRole('SUPER_ADMIN')")
 public class VaccinationCorrectionController {
 
     private final VaccinationCorrectionService correctionService;

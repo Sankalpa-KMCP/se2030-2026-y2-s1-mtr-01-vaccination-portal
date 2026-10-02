@@ -40,6 +40,7 @@ public class VaccinationFinalizationService {
     private final DigitalCertificateService certificateService;
     private final VaccinationDraftValidator draftValidator;
     private final Clock clock;
+    private final VaccinationDraftService draftService;
 
     public VaccinationFinalizationService(
             VaccinationDraftRepository draftRepository,
@@ -50,6 +51,20 @@ public class VaccinationFinalizationService {
             VaccinationDraftValidator draftValidator,
             Clock clock
     ) {
+        this(draftRepository, recordRepository, appointmentPort, inventoryPort, certificateService, draftValidator, clock, null);
+    }
+
+    @Autowired
+    public VaccinationFinalizationService(
+            VaccinationDraftRepository draftRepository,
+            VaccinationRecordRepository recordRepository,
+            AppointmentValidationPort appointmentPort,
+            InventoryBatchPort inventoryPort,
+            DigitalCertificateService certificateService,
+            VaccinationDraftValidator draftValidator,
+            Clock clock,
+            @Autowired(required = false) VaccinationDraftService draftService
+    ) {
         this.draftRepository = draftRepository;
         this.recordRepository = recordRepository;
         this.appointmentPort = appointmentPort;
@@ -57,6 +72,7 @@ public class VaccinationFinalizationService {
         this.certificateService = certificateService;
         this.draftValidator = draftValidator;
         this.clock = clock;
+        this.draftService = draftService;
     }
 
     @Transactional
@@ -197,5 +213,46 @@ public class VaccinationFinalizationService {
                 certificate.getVerificationToken(),
                 certResponse
         );
+    }
+
+    @Transactional
+    public FinalizeVaccinationResponse confirmAndFinalizeDraft(Long draftId, Long vaccinatorId) {
+        if (draftId == null || draftId <= 0) {
+            throw new InvalidVaccinationDraftException("Vaccination draft ID must be positive");
+        }
+
+        VaccinationDraft draft = draftRepository.findById(draftId)
+                .orElseThrow(() -> new VaccinationDraftNotFoundException(
+                        "Vaccination draft not found with ID: " + draftId
+                ));
+
+        if (draft.getStatus() == VaccinationDraftStatus.FINALIZED) {
+            throw new InvalidVaccinationDraftException("Vaccination draft is already finalized: " + draftId);
+        }
+
+        if (!draft.isPhysicalAdministrationConfirmed() || draft.getStatus() != VaccinationDraftStatus.READY_FOR_FINALIZATION) {
+            if (draftService != null) {
+                draftService.confirmPhysicalAdministration(draftId);
+            } else {
+                if (draft.getVaccineBatchId() == null || draft.getVaccineBatchId() <= 0) {
+                    throw new InvalidVaccinationDraftException(
+                            "Vaccine batch ID is required before confirming physical administration"
+                    );
+                }
+                if (draft.getDoseNumber() == null || draft.getDoseNumber() <= 0) {
+                    throw new InvalidVaccinationDraftException(
+                            "Dose number is required before confirming physical administration"
+                    );
+                }
+                draft.setPhysicalAdministrationConfirmed(true);
+                if (draft.getAdministrationTime() == null) {
+                    draft.setAdministrationTime(clock != null ? clock.instant() : java.time.Instant.now());
+                }
+                draft.setStatus(VaccinationDraftStatus.READY_FOR_FINALIZATION);
+                draftRepository.saveAndFlush(draft);
+            }
+        }
+
+        return finalizeDraft(draftId, vaccinatorId);
     }
 }

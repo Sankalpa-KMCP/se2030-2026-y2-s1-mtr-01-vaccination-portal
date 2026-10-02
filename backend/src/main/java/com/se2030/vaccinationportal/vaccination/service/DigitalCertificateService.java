@@ -576,11 +576,7 @@ public class DigitalCertificateService {
 
     private boolean isStaff(UserPrincipal principal) {
         return principal.hasRole("ROLE_ADMIN")
-                || principal.hasRole("ROLE_HEALTHCARE_OFFICER")
-                || principal.hasRole("ROLE_SUPER_ADMIN")
-                || principal.hasRole("ADMIN")
-                || principal.hasRole("HEALTHCARE_OFFICER")
-                || principal.hasRole("SUPER_ADMIN");
+                || principal.hasRole("ADMIN");
     }
 
     @Autowired(required = false)
