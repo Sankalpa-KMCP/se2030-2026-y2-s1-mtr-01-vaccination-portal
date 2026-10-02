@@ -39,13 +39,16 @@ export default function PublicHeader({ onLoginClick }) {
       <div className="lp-container lp-header__inner">
         <Link to="/" className="lp-header__brand-group" aria-label="Vaccination Portal — home">
           <BrandGlyph />
-          <span className="lp-header__brand">Vaccination Portal</span>
+          <span className="lp-header__brand-copy">
+            <span className="lp-header__brand">Vaccination Portal</span>
+            <span className="lp-header__brand-subtitle">Public Health Services</span>
+          </span>
         </Link>
 
         {/* Accessibility & Hotline Bar */}
         <div className="lp-header__utility" aria-label="Accessibility and Support">
-          <div className="lp-header__access-ctrl" title="Change text size for easier reading">
-            <span className="lp-header__access-label">Text:</span>
+          <div className="lp-header__access-ctrl" title="Adjust text size">
+            <span className="lp-header__access-label">Text size</span>
             <button
               type="button"
               className={`lp-header__font-btn ${textSize === 'normal' ? 'is-active' : ''}`}
@@ -78,11 +81,14 @@ export default function PublicHeader({ onLoginClick }) {
           <a
             href="tel:19008292273"
             className="lp-header__helpline"
-            aria-label="24/7 Telephone Booking Helpline 1900-VAX-CARE"
-            title="Free Senior & Citizen Phone Support"
+            aria-label="Public vaccination helpline 1900-VAX-CARE"
+            title="Public vaccination helpline"
           >
-            <i className="bi bi-telephone-fill me-1" />
-            <span>1900-VAX-CARE</span>
+            <i className="bi bi-telephone-fill" aria-hidden="true" />
+            <span className="lp-header__helpline-copy">
+              <small>Public helpline</small>
+              <strong>1900-VAX-CARE</strong>
+            </span>
           </a>
         </div>
 

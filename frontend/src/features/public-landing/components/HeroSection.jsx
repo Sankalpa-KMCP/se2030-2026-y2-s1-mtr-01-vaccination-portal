@@ -52,15 +52,15 @@ export default function HeroSection() {
     <section className="home-hero" aria-labelledby="home-hero-title">
       <div className="lp-container home-hero__frame">
         <div className="home-hero__copy">
-          <div className="hero-inclusive-badges mb-2">
-            <span className="hero-inclusive-badge hero-inclusive-badge--senior">
-              <i className="bi bi-heart-fill me-1" /> Gentle Senior Care
+          <div className="hero-inclusive-badges mb-2" aria-label="Portal service standards">
+            <span className="hero-inclusive-badge hero-inclusive-badge--support">
+              <i className="bi bi-person-check" aria-hidden="true" /> Assisted Citizen Support
             </span>
-            <span className="hero-inclusive-badge hero-inclusive-badge--youth">
-              <i className="bi bi-lightning-charge-fill me-1" /> 2-Min Fast Digital Pass
+            <span className="hero-inclusive-badge hero-inclusive-badge--security">
+              <i className="bi bi-shield-lock" aria-hidden="true" /> Secure Digital Services
             </span>
-            <span className="hero-inclusive-badge hero-inclusive-badge--family">
-              <i className="bi bi-shield-check me-1" /> 100% Free & Safe
+            <span className="hero-inclusive-badge hero-inclusive-badge--eligibility">
+              <i className="bi bi-clipboard2-check" aria-hidden="true" /> Eligibility-Based Booking
             </span>
           </div>
 
