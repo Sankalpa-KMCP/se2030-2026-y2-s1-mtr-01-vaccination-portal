@@ -560,4 +560,13 @@ class VaccinationDraftControllerTests {
 
         verify(finalizationService).confirmAndFinalizeDraft(1L, 201L);
     }
+
+    @Test
+    void confirmAndFinalizeDraft_otherVaccinator_returns403() throws Exception {
+        sampleDraft.setVaccinatorId(999L);
+        when(draftService.getDraftById(1L)).thenReturn(sampleDraft);
+
+        mockMvc.perform(post("/api/v1/vaccination/drafts/1/confirm-and-finalize"))
+                .andExpect(status().isForbidden());
+    }
 }
