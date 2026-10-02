@@ -145,3 +145,115 @@ export async function getAvailableBatches(appointmentId) {
   });
   return parseApiResponse(response);
 }
+
+/**
+ * Submits a correction request from a citizen for their own vaccination record.
+ *
+ * @param {number|string} recordId
+ * @param {string} message
+ * @returns {Promise<Object>}
+ */
+export async function requestVaccinationCorrection(recordId, message) {
+  const response = await apiRequest(`/v1/vaccination/records/${recordId}/corrections`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Lists the authenticated citizen's correction requests.
+ *
+ * @returns {Promise<Array>}
+ */
+export async function listMyCorrectionRequests() {
+  const response = await apiRequest('/v1/vaccination/corrections/mine', {
+    method: 'GET',
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Lists all correction requests for review by administrators.
+ *
+ * @returns {Promise<Array>}
+ */
+export async function listAdminCorrectionRequests() {
+  const response = await apiRequest('/v1/vaccination/corrections', {
+    method: 'GET',
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Approves a pending correction request (Admin only).
+ *
+ * @param {number|string} recordId
+ * @param {number|string} correctionId
+ * @param {string} [reason]
+ * @returns {Promise<Object>}
+ */
+export async function approveCorrectionRequest(recordId, correctionId, reason = '') {
+  const response = await apiRequest(`/v1/vaccination/records/${recordId}/corrections/${correctionId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Rejects a pending correction request (Admin only).
+ *
+ * @param {number|string} recordId
+ * @param {number|string} correctionId
+ * @param {string} reason
+ * @returns {Promise<Object>}
+ */
+export async function rejectCorrectionRequest(recordId, correctionId, reason) {
+  const response = await apiRequest(`/v1/vaccination/records/${recordId}/corrections/${correctionId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Lists correction requests for vaccinations administered by the authenticated vaccinator.
+ *
+ * @returns {Promise<Array>}
+ */
+export async function listVaccinatorCorrectionRequests() {
+  const response = await apiRequest('/v1/vaccination/corrections/administered', {
+    method: 'GET',
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Applies an approved correction and triggers certificate supersession/reissue (Vaccinator only).
+ *
+ * @param {number|string} recordId
+ * @param {number|string} correctionId
+ * @param {{ fieldName?: string, newValue?: string }} [payload]
+ * @returns {Promise<Object>}
+ */
+export async function applyCorrectionRequest(recordId, correctionId, payload = {}) {
+  const response = await apiRequest(`/v1/vaccination/records/${recordId}/corrections/${correctionId}/apply`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return parseApiResponse(response);
+}
+
+/**
+ * Retrieves the correction history for a specific vaccination record.
+ *
+ * @param {number|string} recordId
+ * @returns {Promise<Array>}
+ */
+export async function getRecordCorrections(recordId) {
+  const response = await apiRequest(`/v1/vaccination/records/${recordId}/corrections`, {
+    method: 'GET',
+  });
+  return parseApiResponse(response);
+}

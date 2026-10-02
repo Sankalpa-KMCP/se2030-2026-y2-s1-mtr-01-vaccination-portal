@@ -137,6 +137,11 @@ export default function Header({ onLogout }) {
                       Vaccination Records
                     </NavLink>
                   </li>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/staff/correction-requests" onClick={closeNav}>
+                      Correction Requests
+                    </NavLink>
+                  </li>
                 </>
               )}
 
@@ -189,11 +194,18 @@ export default function Header({ onLogout }) {
               )}
 
               {showAdminNavigation && (
-                <li className="nav-item">
-                  <NavLink className={navigationClassName} to="/app/admin/staff-requests" onClick={closeNav}>
-                    Staff Requests
-                  </NavLink>
-                </li>
+                <>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/admin/staff-requests" onClick={closeNav}>
+                      Staff Requests
+                    </NavLink>
+                  </li>
+                  <li className="nav-item">
+                    <NavLink className={navigationClassName} to="/app/admin/correction-requests" onClick={closeNav}>
+                      Correction Requests
+                    </NavLink>
+                  </li>
+                </>
               )}
 
               {showScreeningConfigurationNavigation && (

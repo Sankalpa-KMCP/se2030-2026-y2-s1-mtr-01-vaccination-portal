@@ -4,6 +4,14 @@ import {
   listMyVaccinations,
   listMyCertificates,
   downloadCertificate,
+  requestVaccinationCorrection,
+  listMyCorrectionRequests,
+  listAdminCorrectionRequests,
+  approveCorrectionRequest,
+  rejectCorrectionRequest,
+  listVaccinatorCorrectionRequests,
+  applyCorrectionRequest,
+  getRecordCorrections,
 } from './certificateApi';
 import * as apiClient from '../../../services/apiClient';
 
@@ -124,6 +132,111 @@ describe('certificateApi', () => {
       apiClient.apiRequest.mockResolvedValue(mockResponse);
 
       await expect(downloadCertificate(42)).rejects.toThrow('Failed to download vaccination certificate PDF.');
+    });
+  });
+
+  describe('Correction Requests API', () => {
+    it('requestVaccinationCorrection sends POST to /v1/vaccination/records/:recordId/corrections', async () => {
+      const mockCorrection = { id: 10, status: 'PENDING' };
+      apiClient.apiRequest.mockResolvedValue({ ok: true, status: 201 });
+      apiClient.parseApiResponse.mockResolvedValue(mockCorrection);
+
+      const res = await requestVaccinationCorrection(5, 'Incorrect batch');
+
+      expect(apiClient.apiRequest).toHaveBeenCalledWith(
+        '/v1/vaccination/records/5/corrections',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ message: 'Incorrect batch' }),
+        }),
+      );
+      expect(res).toEqual(mockCorrection);
+    });
+
+    it('listMyCorrectionRequests calls GET /v1/vaccination/corrections/mine', async () => {
+      const mockList = [{ id: 1 }];
+      apiClient.apiRequest.mockResolvedValue({ ok: true });
+      apiClient.parseApiResponse.mockResolvedValue(mockList);
+
+      const res = await listMyCorrectionRequests();
+      expect(apiClient.apiRequest).toHaveBeenCalledWith('/v1/vaccination/corrections/mine', { method: 'GET' });
+      expect(res).toEqual(mockList);
+    });
+
+    it('listAdminCorrectionRequests calls GET /v1/vaccination/corrections', async () => {
+      const mockList = [{ id: 1 }];
+      apiClient.apiRequest.mockResolvedValue({ ok: true });
+      apiClient.parseApiResponse.mockResolvedValue(mockList);
+
+      const res = await listAdminCorrectionRequests();
+      expect(apiClient.apiRequest).toHaveBeenCalledWith('/v1/vaccination/corrections', { method: 'GET' });
+      expect(res).toEqual(mockList);
+    });
+
+    it('approveCorrectionRequest sends POST to /approve', async () => {
+      apiClient.apiRequest.mockResolvedValue({ ok: true });
+      apiClient.parseApiResponse.mockResolvedValue({ id: 1, status: 'APPROVED' });
+
+      const res = await approveCorrectionRequest(100, 1, 'Looks valid');
+      expect(apiClient.apiRequest).toHaveBeenCalledWith(
+        '/v1/vaccination/records/100/corrections/1/approve',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ reason: 'Looks valid' }),
+        }),
+      );
+      expect(res.status).toBe('APPROVED');
+    });
+
+    it('rejectCorrectionRequest sends POST to /reject', async () => {
+      apiClient.apiRequest.mockResolvedValue({ ok: true });
+      apiClient.parseApiResponse.mockResolvedValue({ id: 1, status: 'REJECTED' });
+
+      const res = await rejectCorrectionRequest(100, 1, 'Insufficient justification');
+      expect(apiClient.apiRequest).toHaveBeenCalledWith(
+        '/v1/vaccination/records/100/corrections/1/reject',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ reason: 'Insufficient justification' }),
+        }),
+      );
+      expect(res.status).toBe('REJECTED');
+    });
+
+    it('listVaccinatorCorrectionRequests calls GET /v1/vaccination/corrections/administered', async () => {
+      const mockList = [{ id: 2 }];
+      apiClient.apiRequest.mockResolvedValue({ ok: true });
+      apiClient.parseApiResponse.mockResolvedValue(mockList);
+
+      const res = await listVaccinatorCorrectionRequests();
+      expect(apiClient.apiRequest).toHaveBeenCalledWith('/v1/vaccination/corrections/administered', { method: 'GET' });
+      expect(res).toEqual(mockList);
+    });
+
+    it('applyCorrectionRequest sends POST to /apply with updates', async () => {
+      apiClient.apiRequest.mockResolvedValue({ ok: true });
+      apiClient.parseApiResponse.mockResolvedValue({ id: 2, status: 'APPLIED' });
+
+      const updates = { fieldName: 'doseNumber', newValue: '2' };
+      const res = await applyCorrectionRequest(100, 2, updates);
+      expect(apiClient.apiRequest).toHaveBeenCalledWith(
+        '/v1/vaccination/records/100/corrections/2/apply',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify(updates),
+        }),
+      );
+      expect(res.status).toBe('APPLIED');
+    });
+
+    it('getRecordCorrections calls GET /v1/vaccination/records/:recordId/corrections', async () => {
+      const mockList = [{ id: 3 }];
+      apiClient.apiRequest.mockResolvedValue({ ok: true });
+      apiClient.parseApiResponse.mockResolvedValue(mockList);
+
+      const res = await getRecordCorrections(5);
+      expect(apiClient.apiRequest).toHaveBeenCalledWith('/v1/vaccination/records/5/corrections', { method: 'GET' });
+      expect(res).toEqual(mockList);
     });
   });
 });

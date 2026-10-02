@@ -50,6 +50,8 @@ import CheckInManagementPage from '../features/appointment-management/pages/Chec
 import InventoryManagementPage from '../features/inventory-management/pages/InventoryManagementPage';
 import VaccinationDraftsPage from '../features/vaccination-administration/pages/VaccinationDraftsPage';
 import VaccinatorVaccinationRecordsPage from '../features/vaccination-administration/pages/VaccinatorVaccinationRecordsPage';
+import VaccinatorCorrectionRequestsPage from '../features/vaccination-administration/pages/VaccinatorCorrectionRequestsPage';
+import AdminCorrectionRequestsPage from '../features/vaccination-administration/pages/AdminCorrectionRequestsPage';
 import CitizenVaccinationsPage from '../features/vaccination-administration/pages/CitizenVaccinationsPage';
 import PublicCertificateVerificationPage from '../features/vaccination-administration/pages/PublicCertificateVerificationPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
@@ -247,6 +249,7 @@ export default function PortalRoutes() {
           <Route element={<ProtectedRoute allowedRoles={['ROLE_VACCINATOR']} />}>
             <Route path="staff/vaccination-drafts" element={<VaccinationDraftsPage />} />
             <Route path="staff/vaccination-records" element={<VaccinatorVaccinationRecordsPage />} />
+            <Route path="staff/correction-requests" element={<VaccinatorCorrectionRequestsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={SCREENING_REVIEW_ROLES} />}>
@@ -258,6 +261,7 @@ export default function PortalRoutes() {
           <Route element={<ProtectedRoute allowedRoles={[ADMIN_ROLE]} />}>
             <Route path="admin" element={<AdminDashboardPage />} />
             <Route path="admin/staff-requests" element={<PendingStaffRequestsPage />} />
+            <Route path="admin/correction-requests" element={<AdminCorrectionRequestsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={CAMPAIGN_VIEW_ROLES} />}>

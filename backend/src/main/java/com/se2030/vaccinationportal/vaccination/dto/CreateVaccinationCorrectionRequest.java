@@ -1,11 +1,11 @@
 package com.se2030.vaccinationportal.vaccination.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** Request payload for appending a correction to finalized vaccination history. */
+/** Request payload for appending a correction or citizen correction request to finalized vaccination history. */
 public record CreateVaccinationCorrectionRequest(
-        @NotBlank(message = "Correction field is required")
         @Size(max = 64, message = "Correction field must not exceed 64 characters")
         String fieldName,
 
@@ -14,11 +14,16 @@ public record CreateVaccinationCorrectionRequest(
 
         @NotBlank(message = "Correction reason is required")
         @Size(max = 1000, message = "Correction reason must not exceed 1000 characters")
+        @JsonAlias({"message"})
         String reason,
 
         Long correctedBy
 ) {
     public CreateVaccinationCorrectionRequest(String fieldName, String newValue, String reason) {
         this(fieldName, newValue, reason, null);
+    }
+
+    public CreateVaccinationCorrectionRequest(String reason) {
+        this(null, null, reason, null);
     }
 }

@@ -164,6 +164,14 @@ public class VaccinationExceptionHandler {
         return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
     }
 
+    @ExceptionHandler(com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationCorrectionException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleDuplicateCorrection(
+            com.se2030.vaccinationportal.vaccination.exception.DuplicateVaccinationCorrectionException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
     @ExceptionHandler(CertificateVerificationNotFoundException.class)
     public ResponseEntity<VaccinationApiErrorResponse> handleVerificationNotFound(
             CertificateVerificationNotFoundException ex,
