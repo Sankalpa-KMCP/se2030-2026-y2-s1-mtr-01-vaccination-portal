@@ -7,14 +7,14 @@ export default function GenerationalCarePaths() {
       <div className="lp-container">
         <div className="gen-care__header" data-reveal="section">
           <span className="gen-care__eyebrow">
-            <i className="bi bi-people-fill me-1" /> HEALTHCARE FOR EVERY GENERATION
+            <i className="bi bi-people-fill me-1" /> CITIZEN SERVICE PATHWAYS
           </span>
           <h2 id="gen-care-title">
-            Tailored care whether you are <em>eighteen or eighty.</em>
+            Choose the support that <em>fits your needs.</em>
           </h2>
           <p className="gen-care__subtitle">
-            We designed every step to be crystal clear. Choose your pathway below for simple booking,
-            reassuring nurse support, or instant mobile passes.
+            Find accessible guidance, secure online vaccination services, and information about
+            participating vaccination centers.
           </p>
         </div>
 
@@ -24,42 +24,42 @@ export default function GenerationalCarePaths() {
             <div className="gen-card__media">
               <img
                 src="/images/senior-care-vaccination.jpg"
-                alt="Compassionate nurse gently assisting a smiling senior citizen"
+                alt="Healthcare worker assisting a senior citizen at a vaccination center"
                 className="gen-card__img"
                 loading="lazy"
               />
               <span className="gen-card__badge gen-card__badge--senior">
-                <i className="bi bi-heart-fill me-1" /> Gentle Senior Care
+                <i className="bi bi-universal-access-circle me-1" /> Accessible Support
               </span>
-              <span className="gen-card__pill-tag">Priority Support</span>
+              <span className="gen-card__pill-tag">Guided Services</span>
             </div>
             <div className="gen-card__body">
               <div className="gen-card__audience">
                 <span className="gen-card__icon-wrap gen-card__icon-wrap--senior">
-                  👵
+                  <i className="bi bi-person-check" aria-hidden="true" />
                 </span>
                 <div>
-                  <h3 className="gen-card__title">For Seniors & Elders</h3>
-                  <span className="gen-card__tagline">Comfortable, clear & unhurried</span>
+                  <h3 className="gen-card__title">Senior & Assisted Services</h3>
+                  <span className="gen-card__tagline">Clear guidance for citizens and caregivers</span>
                 </div>
               </div>
               <ul className="gen-card__perks">
                 <li>
                   <i className="bi bi-check-circle-fill text-success" />
-                  <span><strong>Big, clear text</strong> & step-by-step guidance</span>
+                  <span><strong>Adjustable text sizes</strong> and guided portal steps</span>
                 </li>
                 <li>
                   <i className="bi bi-check-circle-fill text-success" />
-                  <span><strong>Priority arrival seating</strong> with gentle nurse assistance</span>
+                  <span><strong>Citizen registration</strong> and appointment booking access</span>
                 </li>
                 <li>
                   <i className="bi bi-check-circle-fill text-success" />
-                  <span><strong>Phone booking hotline</strong> (1900-VAX) if you prefer to call</span>
+                  <span><strong>Public helpline</strong> for general portal support</span>
                 </li>
               </ul>
               <div className="gen-card__cta">
                 <Link to="/register/citizen" className="gen-card__btn gen-card__btn--senior">
-                  <span>Start Senior Booking</span>
+                  <span>Create Citizen Account</span>
                   <i className="bi bi-arrow-right" />
                 </Link>
               </div>
@@ -71,42 +71,42 @@ export default function GenerationalCarePaths() {
             <div className="gen-card__media">
               <img
                 src="/images/youth-digital-pass.jpg"
-                alt="Smiling young adult holding mobile phone with digital vaccination pass"
+                alt="Citizen using a mobile phone at a vaccination service center"
                 className="gen-card__img"
                 loading="lazy"
               />
               <span className="gen-card__badge gen-card__badge--youth">
-                <i className="bi bi-qr-code-scan me-1" /> 2-Min Instant Pass
+                <i className="bi bi-shield-lock me-1" /> Secure Online Access
               </span>
-              <span className="gen-card__pill-tag gen-card__pill-tag--youth">Fast Track</span>
+              <span className="gen-card__pill-tag gen-card__pill-tag--youth">Digital Services</span>
             </div>
             <div className="gen-card__body">
               <div className="gen-card__audience">
                 <span className="gen-card__icon-wrap gen-card__icon-wrap--youth">
-                  ⚡
+                  <i className="bi bi-phone" aria-hidden="true" />
                 </span>
                 <div>
-                  <h3 className="gen-card__title">For Youth & Families</h3>
-                  <span className="gen-card__tagline">Fast, paperless & mobile-ready</span>
+                  <h3 className="gen-card__title">Digital Citizen Services</h3>
+                  <span className="gen-card__tagline">Manage vaccination services online</span>
                 </div>
               </div>
               <ul className="gen-card__perks">
                 <li>
                   <i className="bi bi-check-circle-fill text-primary" />
-                  <span><strong>Quick online screening</strong> in under 2 minutes</span>
+                  <span><strong>Complete screening</strong> for available vaccination campaigns</span>
                 </li>
                 <li>
                   <i className="bi bi-check-circle-fill text-primary" />
-                  <span><strong>Flexible slot selection</strong> near your home or work</span>
+                  <span><strong>View eligibility</strong> and available appointment slots</span>
                 </li>
                 <li>
                   <i className="bi bi-check-circle-fill text-primary" />
-                  <span><strong>Instant digital QR code</strong> for express clinic check-in</span>
+                  <span><strong>Access appointments</strong> and certificate services</span>
                 </li>
               </ul>
               <div className="gen-card__cta">
                 <Link to="/register/citizen" className="gen-card__btn gen-card__btn--youth">
-                  <span>Get Fast Digital Pass</span>
+                  <span>Access Online Services</span>
                   <i className="bi bi-arrow-right" />
                 </Link>
               </div>
@@ -118,42 +118,42 @@ export default function GenerationalCarePaths() {
             <div className="gen-card__media">
               <img
                 src="/images/community-vax-clinic.jpg"
-                alt="Bright, welcoming community healthcare center with friendly greeting staff"
+                alt="Vaccination center reception area with citizens and healthcare staff"
                 className="gen-card__img"
                 loading="lazy"
               />
               <span className="gen-card__badge gen-card__badge--clinic">
-                <i className="bi bi-shield-check me-1" /> Certified Safety
+                <i className="bi bi-info-circle me-1" /> Center Information
               </span>
-              <span className="gen-card__pill-tag gen-card__pill-tag--clinic">All Centers</span>
+              <span className="gen-card__pill-tag gen-card__pill-tag--clinic">Service Guide</span>
             </div>
             <div className="gen-card__body">
               <div className="gen-card__audience">
                 <span className="gen-card__icon-wrap gen-card__icon-wrap--clinic">
-                  🏥
+                  <i className="bi bi-hospital" aria-hidden="true" />
                 </span>
                 <div>
-                  <h3 className="gen-card__title">Accredited Centers</h3>
-                  <span className="gen-card__tagline">Warm welcoming clinic spaces</span>
+                  <h3 className="gen-card__title">Vaccination Center Services</h3>
+                  <span className="gen-card__tagline">Plan your visit with clear information</span>
                 </div>
               </div>
               <ul className="gen-card__perks">
                 <li>
                   <i className="bi bi-check-circle-fill text-warning" />
-                  <span><strong>Continuous cold chain telemetry</strong> ensuring vaccine purity</span>
+                  <span><strong>Browse campaigns</strong> and participating center information</span>
                 </li>
                 <li>
                   <i className="bi bi-check-circle-fill text-warning" />
-                  <span><strong>Wheelchair accessible</strong> with dedicated resting bays</span>
+                  <span><strong>Understand appointment</strong> and arrival check-in steps</span>
                 </li>
                 <li>
                   <i className="bi bi-check-circle-fill text-warning" />
-                  <span><strong>Staffed by certified physicians</strong> and registered nurses</span>
+                  <span><strong>Learn what to bring</strong> before attending your appointment</span>
                 </li>
               </ul>
               <div className="gen-card__cta">
                 <Link to="/how-it-works" className="gen-card__btn gen-card__btn--clinic">
-                  <span>See How Centers Operate</span>
+                  <span>View Citizen Service Guide</span>
                   <i className="bi bi-arrow-right" />
                 </Link>
               </div>
