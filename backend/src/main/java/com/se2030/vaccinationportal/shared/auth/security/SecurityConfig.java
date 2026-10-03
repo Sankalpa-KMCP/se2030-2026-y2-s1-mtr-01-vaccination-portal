@@ -105,6 +105,9 @@ public class SecurityConfig {
                         // Protected Current User Profile Endpoint
                         .requestMatchers("/api/v1/auth/me").authenticated()
 
+                        // Principal-scoped citizen email OTP verification (method security enforces ROLE_CITIZEN)
+                        .requestMatchers("/api/v1/auth/email-verification/**").authenticated()
+
                         // Citizen-only self-service profile endpoints (method security enforces ROLE_CITIZEN)
                         .requestMatchers("/api/v1/profile/**").authenticated()
 

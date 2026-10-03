@@ -5,6 +5,11 @@ import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingApproval
 import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingVerificationException;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountRejectedException;
 import com.se2030.vaccinationportal.shared.auth.exception.DuplicateEmailException;
+import com.se2030.vaccinationportal.shared.auth.exception.EmailAlreadyVerifiedException;
+import com.se2030.vaccinationportal.shared.auth.exception.EmailOtpAttemptsExceededException;
+import com.se2030.vaccinationportal.shared.auth.exception.EmailOtpExpiredException;
+import com.se2030.vaccinationportal.shared.auth.exception.EmailOtpInvalidException;
+import com.se2030.vaccinationportal.shared.auth.exception.EmailOtpResendTooSoonException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidAuthActionTokenException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidApprovalRoleException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidRejectionReasonException;
@@ -169,12 +174,70 @@ public class AuthExceptionHandler {
         );
     }
 
+    @ExceptionHandler(EmailOtpInvalidException.class)
+    public ResponseEntity<AuthErrorResponse> handleEmailOtpInvalid(
+            EmailOtpInvalidException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "EMAIL_VERIFICATION_INVALID_CODE", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(EmailOtpExpiredException.class)
+    public ResponseEntity<AuthErrorResponse> handleEmailOtpExpired(
+            EmailOtpExpiredException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "EMAIL_VERIFICATION_CODE_EXPIRED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(EmailOtpAttemptsExceededException.class)
+    public ResponseEntity<AuthErrorResponse> handleEmailOtpAttemptsExceeded(
+            EmailOtpAttemptsExceededException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, "EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(EmailOtpResendTooSoonException.class)
+    public ResponseEntity<AuthErrorResponse> handleEmailOtpResendTooSoon(
+            EmailOtpResendTooSoonException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "EMAIL_VERIFICATION_RESEND_TOO_SOON",
+                exception.getMessage(),
+                request,
+                null,
+                (int) exception.getRetryAfterSeconds()
+        );
+    }
+
+    @ExceptionHandler(EmailAlreadyVerifiedException.class)
+    public ResponseEntity<AuthErrorResponse> handleEmailAlreadyVerified(
+            EmailAlreadyVerifiedException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, "EMAIL_ALREADY_VERIFIED", exception.getMessage(), request, null);
+    }
+
     private ResponseEntity<AuthErrorResponse> response(
             HttpStatus status,
             String code,
             String message,
             HttpServletRequest request,
             Map<String, List<String>> fieldErrors
+    ) {
+        return response(status, code, message, request, fieldErrors, null);
+    }
+
+    private ResponseEntity<AuthErrorResponse> response(
+            HttpStatus status,
+            String code,
+            String message,
+            HttpServletRequest request,
+            Map<String, List<String>> fieldErrors,
+            Integer retryAfterSeconds
     ) {
         return ResponseEntity.status(status).body(new AuthErrorResponse(
                 Instant.now(),
@@ -183,7 +246,8 @@ public class AuthExceptionHandler {
                 code,
                 message,
                 request.getRequestURI(),
-                fieldErrors
+                fieldErrors,
+                retryAfterSeconds
         ));
     }
 }
