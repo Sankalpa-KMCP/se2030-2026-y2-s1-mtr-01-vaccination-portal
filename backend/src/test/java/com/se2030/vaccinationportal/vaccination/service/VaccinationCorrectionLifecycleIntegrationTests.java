@@ -3,12 +3,15 @@ package com.se2030.vaccinationportal.vaccination.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.se2030.vaccinationportal.vaccination.dto.ApplyVaccinationCorrectionRequest;
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationCorrectionRequest;
 import com.se2030.vaccinationportal.vaccination.dto.ReissueDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.dto.RevokeDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.dto.VaccinationCorrectionLifecycleResponse;
+import com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrection;
@@ -109,9 +112,6 @@ class VaccinationCorrectionLifecycleIntegrationTests {
                 record.getId(),
                 request("administrationTime", "2026-09-01T09:30:00Z", "Correct administration time")
         );
-        VaccinationCorrectionLifecycleResponse batch = applyThroughCanonicalLifecycle(
-                record.getId(), request("vaccineBatchId", "6001", "Correct batch")
-        );
 
         entityManager.flush();
         entityManager.clear();
@@ -119,10 +119,8 @@ class VaccinationCorrectionLifecycleIntegrationTests {
                 .findByVaccinationRecordIdOrderByIssuedAtAscIdAsc(record.getId());
         assertTrue(dose.certificateReissued());
         assertTrue(administration.certificateReissued());
-        assertTrue(batch.certificateReissued());
-        assertEquals(4, history.size());
+        assertEquals(3, history.size());
         assertEquals(List.of(
-                CertificateStatus.SUPERSEDED,
                 CertificateStatus.SUPERSEDED,
                 CertificateStatus.SUPERSEDED,
                 CertificateStatus.VALID
@@ -135,12 +133,49 @@ class VaccinationCorrectionLifecycleIntegrationTests {
         assertEquals(ADMINISTERED_AT, history.get(1).getIssuedAdministrationTime());
         assertEquals(2, history.get(2).getIssuedDoseNumber());
         assertEquals(Instant.parse("2026-09-01T09:30:00Z"), history.get(2).getIssuedAdministrationTime());
-        assertEquals(6001L, history.get(3).getIssuedVaccineBatchId());
 
         VaccinationRecord unchanged = recordRepository.findById(record.getId()).orElseThrow();
         assertEquals(1, unchanged.getDoseNumber());
         assertEquals(ADMINISTERED_AT, unchanged.getAdministrationTime());
         assertEquals(5001L, unchanged.getVaccineBatchId());
+    }
+
+    @Test
+    void vaccineBatchCorrectionCannotBeAppliedAndDoesNotReissueCertificateOrAlterRecord() {
+        VaccinationRecord record = persistRecord(8102L);
+        DigitalCertificate cert = certificateService.issueCertificateForVaccinationRecord(record.getId());
+
+        // 1. Citizen creates a request mentioning batch
+        VaccinationCorrection pending = correctionService.createCorrection(
+                record.getId(), new CreateVaccinationCorrectionRequest(null, null, "Citizen requested batch change: batch was 6001", 91L)
+        );
+        // 2. Admin approves request
+        correctionService.approveCorrection(record.getId(), pending.getId(), 999L, "Approved for review");
+
+        // 3. Vaccinator attempts to apply a batch correction - must be rejected
+        UnsupportedVaccinationCorrectionFieldException ex = assertThrows(
+                UnsupportedVaccinationCorrectionFieldException.class,
+                () -> lifecycleService.applyApprovedCorrection(
+                        record.getId(),
+                        pending.getId(),
+                        999L,
+                        new ApplyVaccinationCorrectionRequest("vaccineBatchId", "6001")
+                )
+        );
+
+        assertEquals(
+                "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation.",
+                ex.getMessage()
+        );
+
+        // 4. Verify record remains untouched
+        VaccinationRecord currentRecord = recordRepository.findById(record.getId()).orElseThrow();
+        assertEquals(5001L, currentRecord.getVaccineBatchId());
+
+        // 5. Verify certificate remains VALID with no reissue
+        DigitalCertificate currentCert = certificateRepository.findById(cert.getId()).orElseThrow();
+        assertEquals(CertificateStatus.VALID, currentCert.getStatus());
+        assertEquals(1, certificateRepository.findByVaccinationRecordIdOrderByIssuedAtAscIdAsc(record.getId()).size());
     }
 
     @Test

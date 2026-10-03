@@ -22,13 +22,17 @@ public enum VaccinationCorrectionField {
         return apiName;
     }
 
+    public boolean isSupportedForCorrection() {
+        return this != VACCINE_BATCH_ID;
+    }
+
     public static VaccinationCorrectionField fromApiName(String apiName) {
         if (apiName == null) {
             return null;
         }
         String normalized = apiName.trim();
         return Arrays.stream(values())
-                .filter(field -> field.apiName.equals(normalized))
+                .filter(field -> field.apiName.equalsIgnoreCase(normalized))
                 .findFirst()
                 .orElse(null);
     }

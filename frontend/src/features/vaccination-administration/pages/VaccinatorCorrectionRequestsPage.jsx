@@ -73,9 +73,6 @@ export default function VaccinatorCorrectionRequestsPage() {
       case 'doseNumber':
         setNewValue(String(targetRecordDetails.doseNumber || '1'));
         break;
-      case 'vaccineBatchId':
-        setNewValue(String(targetRecordDetails.vaccineBatchId || ''));
-        break;
       case 'administrationTime':
         setNewValue(targetRecordDetails.administrationTime ? targetRecordDetails.administrationTime.slice(0, 16) : '');
         break;
@@ -495,6 +492,12 @@ export default function VaccinatorCorrectionRequestsPage() {
                     ) : null}
                   </div>
 
+                  {/* Inventory Protection Notice */}
+                  <div className="alert alert-info py-2 px-3 small mb-3">
+                    <i className="bi bi-info-circle me-1"></i>
+                    <strong>Inventory Protection:</strong> Vaccine batch corrections cannot be applied through this workflow because they affect inventory records. Contact the appropriate inventory/administrative process if batch reconciliation is required.
+                  </div>
+
                   {/* Field Selector */}
                   <div className="row g-3 mb-3">
                     <div className="col-12 col-md-6">
@@ -509,7 +512,6 @@ export default function VaccinatorCorrectionRequestsPage() {
                         disabled={submittingApply}
                       >
                         <option value="doseNumber">Dose Number</option>
-                        <option value="vaccineBatchId">Vaccine Batch ID</option>
                         <option value="administrationTime">Administration Date &amp; Time</option>
                         <option value="nextDoseDate">Next Dose Date</option>
                         <option value="authorizedNotes">Authorized Clinical Notes</option>
@@ -547,17 +549,6 @@ export default function VaccinatorCorrectionRequestsPage() {
                           id="correctionNewValue"
                           type="date"
                           className="form-control form-control-sm"
-                          value={newValue}
-                          onChange={(e) => setNewValue(e.target.value)}
-                          required
-                          disabled={submittingApply}
-                        />
-                      ) : selectedField === 'vaccineBatchId' ? (
-                        <input
-                          id="correctionNewValue"
-                          type="number"
-                          className="form-control form-control-sm font-monospace"
-                          placeholder="e.g. 104"
                           value={newValue}
                           onChange={(e) => setNewValue(e.target.value)}
                           required

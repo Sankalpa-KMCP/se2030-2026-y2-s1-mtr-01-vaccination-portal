@@ -76,8 +76,14 @@ public class VaccinationCorrectionLifecycleService {
                 effectiveRecordService.getEffectiveRecord(vaccinationRecordId);
 
         if (applyRequest != null && applyRequest.fieldName() != null && !applyRequest.fieldName().trim().isEmpty()) {
-            VaccinationCorrectionField field = VaccinationCorrectionField.fromApiName(applyRequest.fieldName().trim());
-            if (field == null) {
+            String requestedField = applyRequest.fieldName().trim();
+            if ("vaccineBatchId".equalsIgnoreCase(requestedField) || "VACCINE_BATCH_ID".equalsIgnoreCase(requestedField)) {
+                throw new com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException(
+                        "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation."
+                );
+            }
+            VaccinationCorrectionField field = VaccinationCorrectionField.fromApiName(requestedField);
+            if (field == null || !field.isSupportedForCorrection()) {
                 throw new com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException(
                         "Unsupported vaccination correction field: " + applyRequest.fieldName()
                 );
@@ -85,6 +91,12 @@ public class VaccinationCorrectionLifecycleService {
             String effectiveOldValue = valueCodec.valueFrom(beforeSnapshot, field);
             String newValue = valueCodec.normalizeRequestedValue(field, applyRequest.newValue());
             correction.updateCorrection(field, effectiveOldValue, newValue);
+        }
+
+        if (correction.getFieldName() == VaccinationCorrectionField.VACCINE_BATCH_ID) {
+            throw new com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException(
+                    "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation."
+            );
         }
 
         correction.apply();

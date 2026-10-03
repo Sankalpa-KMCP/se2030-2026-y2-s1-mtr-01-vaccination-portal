@@ -130,13 +130,19 @@ describe('VaccinatorCorrectionRequestsPage', () => {
 
     expect(screen.getByText(/Apply Approved Correction #11/i)).toBeTruthy();
     expect(screen.getByText(/Profile Isolation:/i)).toBeTruthy();
+    expect(screen.getByText(/Inventory Protection:/i)).toBeTruthy();
 
     await waitFor(() => {
       expect(screen.getByText('Bob Brown')).toBeTruthy();
     });
 
-    // Select field and value
+    // Verify vaccineBatchId is excluded from selectable fields
     const fieldSelect = screen.getByLabelText(/Select Field to Correct/i);
+    const options = Array.from(fieldSelect.querySelectorAll('option')).map((o) => o.value);
+    expect(options).not.toContain('vaccineBatchId');
+    expect(options).toEqual(['doseNumber', 'administrationTime', 'nextDoseDate', 'authorizedNotes']);
+
+    // Select field and value
     fireEvent.change(fieldSelect, { target: { value: 'doseNumber' } });
 
     const newValueInput = screen.getByLabelText(/Corrected Replacement Value/i);

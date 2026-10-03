@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationCorrectionRequest;
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationCorrectionException;
+import com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrection;
@@ -108,24 +109,24 @@ class VaccinationCorrectionIntegrationTests {
         );
         VaccinationCorrection first = createAndApplyCorrection(
                 record.getId(),
-                request("vaccineBatchId", "78", "First batch correction")
+                request("nextDoseDate", "2026-10-15", "First date correction")
         );
         VaccinationCorrection second = createAndApplyCorrection(
                 record.getId(),
-                request("vaccineBatchId", "90", "Second batch correction")
+                request("nextDoseDate", "2026-10-30", "Second date correction")
         );
 
         assertThrows(
                 InvalidVaccinationCorrectionException.class,
                 () -> correctionService.createCorrection(
                         record.getId(),
-                        request("vaccineBatchId", "90", "No effective change")
+                        request("nextDoseDate", "2026-10-30", "No effective change")
                 )
         );
 
         VaccinationCorrection restored = createAndApplyCorrection(
                 record.getId(),
-                request("vaccineBatchId", "56", "Restore original batch")
+                request("nextDoseDate", "2026-10-01", "Restore original date")
         );
         VaccinationCorrection noteOne = createAndApplyCorrection(
                 record.getId(),
@@ -142,14 +143,14 @@ class VaccinationCorrectionIntegrationTests {
         List<VaccinationCorrection> history = correctionService.getCorrectionHistory(record.getId());
         VaccinationRecord unchangedRecord = vaccinationRecordRepository.findById(record.getId()).orElseThrow();
 
-        assertEquals("56", first.getOldValue());
-        assertEquals("78", first.getNewValue());
+        assertEquals("2026-10-01", first.getOldValue());
+        assertEquals("2026-10-15", first.getNewValue());
         assertEquals("1", doseCorrection.getOldValue());
         assertEquals("2", doseCorrection.getNewValue());
-        assertEquals("78", second.getOldValue());
-        assertEquals("90", second.getNewValue());
-        assertEquals("90", restored.getOldValue());
-        assertEquals("56", restored.getNewValue());
+        assertEquals("2026-10-15", second.getOldValue());
+        assertEquals("2026-10-30", second.getNewValue());
+        assertEquals("2026-10-30", restored.getOldValue());
+        assertEquals("2026-10-01", restored.getNewValue());
         assertEquals("Original note", noteOne.getOldValue());
         assertEquals("First corrected note", noteOne.getNewValue());
         assertEquals("First corrected note", noteTwo.getOldValue());
@@ -157,6 +158,22 @@ class VaccinationCorrectionIntegrationTests {
         assertEquals(6, history.size());
         assertEquals(56L, unchangedRecord.getVaccineBatchId());
         assertEquals("Original note", unchangedRecord.getAuthorizedNotes());
+    }
+
+    @Test
+    void vaccineBatchCorrectionIsRejected() {
+        VaccinationRecord record = vaccinationRecordRepository.saveAndFlush(record());
+        UnsupportedVaccinationCorrectionFieldException ex = assertThrows(
+                UnsupportedVaccinationCorrectionFieldException.class,
+                () -> correctionService.createCorrection(
+                        record.getId(),
+                        request("vaccineBatchId", "78", "Batch change")
+                )
+        );
+        assertEquals(
+                "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation.",
+                ex.getMessage()
+        );
     }
 
     private CreateVaccinationCorrectionRequest request(String fieldName, String newValue, String reason) {

@@ -81,19 +81,38 @@ class VaccinationCorrectionServiceTests {
 
         VaccinationCorrection correction = service.createCorrection(
                 RECORD_ID,
-                request("vaccineBatchId", "78", " Wrong batch recorded ", 91L)
+                request("doseNumber", "2", " Wrong dose recorded ", 91L)
         );
 
         assertEquals(RECORD_ID, correction.getVaccinationRecordId());
-        assertEquals(VaccinationCorrectionField.VACCINE_BATCH_ID, correction.getFieldName());
-        assertEquals("56", correction.getOldValue());
-        assertEquals("78", correction.getNewValue());
-        assertEquals("Wrong batch recorded", correction.getReason());
+        assertEquals(VaccinationCorrectionField.DOSE_NUMBER, correction.getFieldName());
+        assertEquals("1", correction.getOldValue());
+        assertEquals("2", correction.getNewValue());
+        assertEquals("Wrong dose recorded", correction.getReason());
         assertEquals(91L, correction.getCorrectedBy());
         assertEquals(NOW, correction.getCorrectedAt());
         assertEquals(VaccinationCorrectionStatus.PENDING, correction.getStatus());
-        assertEquals(56L, record.getVaccineBatchId());
+        assertEquals(1, record.getDoseNumber());
         verify(vaccinationRecordRepository, never()).save(any(VaccinationRecord.class));
+    }
+
+    @Test
+    void vaccineBatchCorrectionIsRejectedWithDescriptiveDomainMessage() {
+        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+
+        UnsupportedVaccinationCorrectionFieldException ex = assertThrows(
+                UnsupportedVaccinationCorrectionFieldException.class,
+                () -> service.createCorrection(
+                        RECORD_ID,
+                        request("vaccineBatchId", "78", "Wrong batch recorded", 91L)
+                )
+        );
+
+        assertEquals(
+                "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation.",
+                ex.getMessage()
+        );
+        verify(correctionRepository, never()).save(any());
     }
 
     @Test
@@ -149,7 +168,7 @@ class VaccinationCorrectionServiceTests {
                 InvalidVaccinationCorrectionException.class,
                 () -> service.createCorrection(
                         RECORD_ID,
-                        request("vaccineBatchId", " 056 ", "No actual change", 91L)
+                        request("doseNumber", " 01 ", "No actual change", 91L)
                 )
         );
 
@@ -196,7 +215,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void chainedCorrectionUsesLatestSameFieldValueAsEffectiveOldValue() {
-        VaccinationCorrection prior = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
+        VaccinationCorrection prior = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
                 .thenReturn(List.of(prior));
@@ -205,17 +224,17 @@ class VaccinationCorrectionServiceTests {
 
         VaccinationCorrection correction = service.createCorrection(
                 RECORD_ID,
-                request("vaccineBatchId", "90", "Second batch correction", 91L)
+                request("doseNumber", "3", "Second dose correction", 91L)
         );
 
-        assertEquals("78", correction.getOldValue());
-        assertEquals("90", correction.getNewValue());
-        assertEquals(56L, record.getVaccineBatchId());
+        assertEquals("2", correction.getOldValue());
+        assertEquals("3", correction.getNewValue());
+        assertEquals(1, record.getDoseNumber());
     }
 
     @Test
     void duplicateEffectiveValueIsRejected() {
-        VaccinationCorrection prior = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
+        VaccinationCorrection prior = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
                 .thenReturn(List.of(prior));
@@ -224,7 +243,7 @@ class VaccinationCorrectionServiceTests {
                 InvalidVaccinationCorrectionException.class,
                 () -> service.createCorrection(
                         RECORD_ID,
-                        request("vaccineBatchId", "78", "Duplicate effective value", 91L)
+                        request("doseNumber", "2", "Duplicate effective value", 91L)
                 )
         );
 
@@ -233,7 +252,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void correctionBackToOriginalValueIsAllowedWhenEffectiveValueDiffers() {
-        VaccinationCorrection prior = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
+        VaccinationCorrection prior = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
         when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
                 .thenReturn(List.of(prior));
@@ -242,12 +261,12 @@ class VaccinationCorrectionServiceTests {
 
         VaccinationCorrection correction = service.createCorrection(
                 RECORD_ID,
-                request("vaccineBatchId", "56", "Restore original batch", 91L)
+                request("doseNumber", "1", "Restore original dose", 91L)
         );
 
-        assertEquals("78", correction.getOldValue());
-        assertEquals("56", correction.getNewValue());
-        assertEquals(56L, record.getVaccineBatchId());
+        assertEquals("2", correction.getOldValue());
+        assertEquals("1", correction.getNewValue());
+        assertEquals(1, record.getDoseNumber());
     }
 
     @Test
@@ -258,10 +277,10 @@ class VaccinationCorrectionServiceTests {
 
         VaccinationCorrection correction = service.createCorrection(
                 RECORD_ID,
-                request("vaccineBatchId", "78", "Batch correction", 91L)
+                request("doseNumber", "2", "Dose correction", 91L)
         );
 
-        assertEquals("56", correction.getOldValue());
+        assertEquals("1", correction.getOldValue());
         verify(correctionRepository).findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID);
     }
 
@@ -306,9 +325,6 @@ class VaccinationCorrectionServiceTests {
 
     private static Stream<Arguments> supportedCorrectionCases() {
         return Stream.of(
-                Arguments.of(
-                        "vaccineBatchId", "78", VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78"
-                ),
                 Arguments.of("doseNumber", "2", VaccinationCorrectionField.DOSE_NUMBER, "1", "2"),
                 Arguments.of(
                         "administrationTime",

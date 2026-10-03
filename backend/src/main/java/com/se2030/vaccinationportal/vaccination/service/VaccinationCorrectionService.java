@@ -75,8 +75,14 @@ public class VaccinationCorrectionService {
                 ? request.fieldName().trim()
                 : VaccinationCorrectionField.AUTHORIZED_NOTES.getApiName();
 
+        if ("vaccineBatchId".equalsIgnoreCase(fieldName) || "VACCINE_BATCH_ID".equalsIgnoreCase(fieldName)) {
+            throw new UnsupportedVaccinationCorrectionFieldException(
+                    "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation."
+            );
+        }
+
         VaccinationCorrectionField field = VaccinationCorrectionField.fromApiName(fieldName);
-        if (field == null) {
+        if (field == null || !field.isSupportedForCorrection()) {
             throw new UnsupportedVaccinationCorrectionFieldException(
                     "Unsupported vaccination correction field: " + request.fieldName()
             );

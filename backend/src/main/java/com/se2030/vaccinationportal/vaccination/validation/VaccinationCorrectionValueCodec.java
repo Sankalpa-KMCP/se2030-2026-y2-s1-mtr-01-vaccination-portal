@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.vaccination.validation;
 
 import com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationCorrectionException;
+import com.se2030.vaccinationportal.vaccination.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.model.EffectiveVaccinationRecordSnapshot;
 import com.se2030.vaccinationportal.vaccination.model.VaccinationCorrectionField;
 import java.time.Clock;
@@ -34,7 +35,9 @@ public class VaccinationCorrectionValueCodec {
 
     public String normalizeRequestedValue(VaccinationCorrectionField field, String value) {
         return switch (field) {
-            case VACCINE_BATCH_ID -> normalizePositiveLong(value, "Vaccine batch ID");
+            case VACCINE_BATCH_ID -> throw new UnsupportedVaccinationCorrectionFieldException(
+                    "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation."
+            );
             case DOSE_NUMBER -> normalizePositiveInteger(value, "Dose number");
             case ADMINISTRATION_TIME -> normalizeAdministrationTime(value);
             case NEXT_DOSE_DATE -> normalizeOptionalDate(value);
