@@ -12,6 +12,7 @@ import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCa
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistJoinService;
 import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistLeaveService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
@@ -49,8 +50,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(WaitlistControllerTests.TestConfig.class)
 class WaitlistControllerTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -101,6 +110,8 @@ class WaitlistControllerTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(1001L, 1002L, 1003L, 1004L, 1005L, 1006L, 9999L);
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();

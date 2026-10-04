@@ -12,6 +12,7 @@ import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.shared.auth.api.EmailVerificationStatusReader;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -42,6 +43,9 @@ import org.springframework.transaction.annotation.Transactional;
  *       are skipped and marked {@code SKIPPED_INELIGIBLE}.</li>
  *   <li>MF03-BR-02 &amp; MF03-BR-07: Entries holding an active appointment elsewhere in the campaign are skipped
  *       and marked {@code SKIPPED_DUPLICATE_APPOINTMENT}.</li>
+ *   <li>Verified-email rule: entries whose citizen has no verified email are temporarily passed over — the
+ *       entry stays {@code WAITING} with its original arrival order, and the FIFO loop continues with the
+ *       next candidate. No capacity is reserved for an unverified candidate.</li>
  *   <li>MF03-BR-06: Strict deterministic FIFO candidate ordering ({@code joined_at} ASC, then {@code id} ASC).</li>
  *   <li>MF03-BR-08: Successful promotion creates confirmed appointment and marks waitlist entry {@code PROMOTED}.</li>
  * </ul>
@@ -55,6 +59,7 @@ public class WaitlistPromotionService {
     private final CitizenCampaignBookingGuardRepository guardRepository;
     private final EligibilityLookupPort eligibilityLookupPort;
     private final SlotCapacityPort slotCapacityPort;
+    private final EmailVerificationStatusReader emailVerificationStatusReader;
 
     @Autowired
     public WaitlistPromotionService(
@@ -62,13 +67,15 @@ public class WaitlistPromotionService {
             AppointmentRepository appointmentRepository,
             CitizenCampaignBookingGuardRepository guardRepository,
             @Autowired(required = false) EligibilityLookupPort eligibilityLookupPort,
-            @Autowired(required = false) SlotCapacityPort slotCapacityPort
+            @Autowired(required = false) SlotCapacityPort slotCapacityPort,
+            EmailVerificationStatusReader emailVerificationStatusReader
     ) {
         this.waitlistRepository = waitlistRepository;
         this.appointmentRepository = appointmentRepository;
         this.guardRepository = guardRepository;
         this.eligibilityLookupPort = eligibilityLookupPort;
         this.slotCapacityPort = slotCapacityPort;
+        this.emailVerificationStatusReader = emailVerificationStatusReader;
     }
 
     /**
@@ -211,6 +218,18 @@ public class WaitlistPromotionService {
             // Viva note: Ensures mutual exclusion against concurrent citizen bookings during promotion evaluation.
             guardRepository.insertGuardIfAbsent(citizenId, campaignId);
             guardRepository.findByCitizenIdAndCampaignIdForUpdate(citizenId, campaignId);
+
+            // Step 1a-1: Re-check email verification at promotion time (verified-email rule).
+            // Viva note: Verification is account state that can change after joining (false -> true;
+            // account email is immutable so it cannot regress). An unverified candidate is a TEMPORARY
+            // promotion-ineligibility, not a disqualification: the entry stays WAITING with its original
+            // joinedAt and queue position, no capacity is reserved, and the FIFO loop continues so a
+            // later verified candidate can still receive the freed capacity. Unlike the clinical and
+            // duplicate checks below, this check runs FIRST so an unverified candidate is never
+            // terminally marked for what may resolve itself once they verify.
+            if (!emailVerificationStatusReader.isEmailVerified(citizenId)) {
+                continue;
+            }
 
             // Step 1b: Re-validate screening eligibility via EligibilityLookupPort (MF03-BR-01 & MF03-BR-07).
             // Viva note: If medical clearance expired or was revoked in MF-01, mark SKIPPED_INELIGIBLE and continue FIFO loop.

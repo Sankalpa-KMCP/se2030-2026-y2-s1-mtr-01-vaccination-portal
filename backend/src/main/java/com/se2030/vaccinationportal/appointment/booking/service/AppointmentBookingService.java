@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
+import com.se2030.vaccinationportal.appointment.exception.EmailVerificationRequiredException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
@@ -15,6 +16,7 @@ import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.shared.auth.api.EmailVerificationStatusReader;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,7 @@ public class AppointmentBookingService {
     private final CitizenCampaignBookingGuardRepository guardRepository;
     private final EligibilityLookupPort eligibilityLookupPort;
     private final SlotCapacityPort slotCapacityPort;
+    private final EmailVerificationStatusReader emailVerificationStatusReader;
 
     @Autowired
     public AppointmentBookingService(
@@ -55,13 +58,15 @@ public class AppointmentBookingService {
             WaitlistRepository waitlistRepository,
             CitizenCampaignBookingGuardRepository guardRepository,
             @Autowired(required = false) EligibilityLookupPort eligibilityLookupPort,
-            @Autowired(required = false) SlotCapacityPort slotCapacityPort
+            @Autowired(required = false) SlotCapacityPort slotCapacityPort,
+            EmailVerificationStatusReader emailVerificationStatusReader
     ) {
         this.appointmentRepository = appointmentRepository;
         this.waitlistRepository = waitlistRepository;
         this.guardRepository = guardRepository;
         this.eligibilityLookupPort = eligibilityLookupPort;
         this.slotCapacityPort = slotCapacityPort;
+        this.emailVerificationStatusReader = emailVerificationStatusReader;
     }
 
     /**
@@ -115,6 +120,14 @@ public class AppointmentBookingService {
         guardRepository.insertGuardIfAbsent(citizenId, campaignId);
         guardRepository.findByCitizenIdAndCampaignIdForUpdate(citizenId, campaignId)
                 .orElseThrow(() -> new IllegalStateException("Failed to acquire booking guard lock for citizen " + citizenId + " and campaign " + campaignId));
+
+        // Step 1a-1: Require a verified email before any eligibility, capacity, or persistence work.
+        // Viva note: Auth owns the verification state through its public status contract; Appointment owns
+        // the rule. Checked under the guard-row lock so an unverified citizen can never touch capacity,
+        // even while a concurrent verification for the same citizen is in flight.
+        if (!emailVerificationStatusReader.isEmailVerified(citizenId)) {
+            throw new EmailVerificationRequiredException();
+        }
 
         // Step 1b: Check MF-01 eligibility (MF03-BR-01).
         // Viva note: Checked before reserving capacity so slot counts are not decremented for ineligible citizens.

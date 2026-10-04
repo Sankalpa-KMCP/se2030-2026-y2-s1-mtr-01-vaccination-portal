@@ -2,11 +2,13 @@ package com.se2030.vaccinationportal.appointment.booking.service;
 
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 
 
 import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
+import com.se2030.vaccinationportal.appointment.exception.EmailVerificationRequiredException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
@@ -53,8 +55,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(AppointmentBookingServiceTests.TestConfig.class)
 class AppointmentBookingServiceTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -86,6 +96,8 @@ class AppointmentBookingServiceTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(1001L, 1002L, 1003L, 1004L, 1005L, 1006L, 1007L, 1009L, 1010L, 2001L, 2002L);
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
@@ -362,6 +374,27 @@ class AppointmentBookingServiceTests {
         List<Appointment> slotAppointments = appointmentRepository.findBySlotIdAndStatusIn(
                 slotId, List.of(AppointmentStatus.CONFIRMED));
         assertEquals(1, slotAppointments.size());
+    }
+
+    @Test
+    void bookAppointment_unverifiedCitizen_rejectedBeforeAnyCapacityOrPersistence() {
+        Long unverifiedCitizen = 1999L;
+        Long campaignId = 2001L;
+        Long slotId = 3001L;
+
+        // The request would otherwise succeed: eligible and capacity available.
+        eligibilityPortDouble.setEligibility(unverifiedCitizen, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        int capacityBefore = slotCapacityPortDouble.getAvailableCapacity(slotId);
+
+        assertThrows(EmailVerificationRequiredException.class,
+                () -> bookingService.bookAppointment(unverifiedCitizen, campaignId, slotId));
+
+        assertEquals(0, appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
+                        unverifiedCitizen, campaignId, List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN)).size(),
+                "No appointment may be created for an unverified citizen");
+        assertEquals(capacityBefore, slotCapacityPortDouble.getAvailableCapacity(slotId),
+                "Verification rejection must happen before any capacity reservation");
     }
 
     private List<Outcome> runConcurrently(Callable<?> first, Callable<?> second) throws Exception {

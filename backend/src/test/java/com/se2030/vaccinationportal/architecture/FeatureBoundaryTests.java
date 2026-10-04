@@ -158,6 +158,21 @@ class FeatureBoundaryTests {
     }
 
     @Test
+    void appointmentConsumesAuthVerificationOnlyThroughThePublicContract() {
+        String verificationReader = ROOT + "shared/auth/api/EmailVerificationStatusReader";
+        assertThat(edges((source, target) -> owner(source).equals("appointment")
+                && target.startsWith(ROOT + "shared/auth/")
+                && (target.contains("/model/") || target.contains("/repository/")
+                || target.contains("/service/") || target.contains("/query/"))))
+                .as("appointment must not depend on Auth persistence or implementation internals")
+                .isEmpty();
+        assertThat(edges((source, target) -> owner(source).equals("appointment")
+                && target.equals(verificationReader)))
+                .as("appointment consumes verification state through the public Auth contract")
+                .isNotEmpty();
+    }
+
+    @Test
     void collectorDetectsFullyQualifiedPersistenceFieldsWithoutImportStatements() throws IOException {
         String resource = "/" + getClass().getName().replace('.', '/') + "$PersistenceFixture.class";
         try (var input = getClass().getResourceAsStream(resource)) {
