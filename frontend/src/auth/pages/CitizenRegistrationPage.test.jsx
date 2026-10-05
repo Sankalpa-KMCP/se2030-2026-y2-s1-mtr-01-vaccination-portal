@@ -103,13 +103,13 @@ describe('CitizenRegistrationPage', () => {
     },
   );
 
-  it('registers a citizen and displays email verification guidance before login', async () => {
+  it('registers a citizen and displays OTP verification guidance for the login step', async () => {
     registerCitizen.mockResolvedValue({ id: 1 });
     renderPage();
     fillCitizenForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
 
-    await screen.findByRole('heading', { name: 'Verify your email before signing in.' });
+    await screen.findByRole('heading', { name: 'A verification code has been sent to your email.' });
     expect(registerCitizen).toHaveBeenCalledTimes(1);
     expect(registerCitizen).toHaveBeenCalledWith({
       fullName: 'Citizen User',
@@ -118,7 +118,8 @@ describe('CitizenRegistrationPage', () => {
       password: 'Secret123!',
     });
     expect(registerCitizen.mock.calls[0][0]).not.toHaveProperty('confirmPassword');
-    expect(screen.getByText(/Please check your email and click the verification link/i)).toBeTruthy();
+    expect(screen.getByText(/Sign in, then verify your email with the code before booking an appointment./i)).toBeTruthy();
+    expect(screen.queryByText(/click the verification link/i)).toBeNull();
     expect(screen.getByRole('link', { name: 'Go to Citizen Login' }).getAttribute('href')).toBe('/login');
   });
 
