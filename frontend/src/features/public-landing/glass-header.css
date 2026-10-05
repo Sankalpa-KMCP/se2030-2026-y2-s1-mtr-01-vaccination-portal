@@ -587,3 +587,134 @@ html.vax-text-xl .lp-page .lp-btn--header {
     transform: none;
   }
 }
+
+
+/* Official public-service identity refinements */
+.lp-header__brand-copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  line-height: 1;
+}
+
+.lp-page .lp-header__brand,
+.lp-page--home .lp-header__brand {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-size: clamp(1.08rem, 1.55vw, 1.32rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+.lp-header__brand-subtitle {
+  color: #60737d;
+  font-size: 0.61rem;
+  font-weight: 700;
+  letter-spacing: 0.115em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lp-header__access-ctrl {
+  gap: 0.2rem;
+  min-height: 38px;
+  padding: 0.22rem 0.32rem 0.22rem 0.62rem;
+  border: 1px solid #cfdadf;
+  border-radius: 6px;
+  background: #f8fafb;
+}
+
+.lp-header__access-label {
+  margin-right: 0.28rem;
+  color: #526772;
+  font-size: 0.68rem;
+  letter-spacing: 0.075em;
+}
+
+.lp-header__font-btn {
+  min-width: 30px;
+  min-height: 28px;
+  padding: 0.15rem 0.38rem;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.lp-header__font-btn:hover {
+  color: #075f58;
+  background: #e4f0ee;
+}
+
+.lp-header__font-btn.is-active {
+  background: #0d776f;
+  box-shadow: none;
+}
+
+.lp-header__helpline {
+  gap: 0.5rem;
+  min-height: 38px;
+  padding: 0.28rem 0.72rem;
+  border: 1px solid #9fc9c2;
+  border-radius: 6px;
+  background: #f3faf8;
+  color: #075f58;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.lp-header__helpline > i {
+  font-size: 0.92rem;
+}
+
+.lp-header__helpline-copy {
+  display: grid;
+  gap: 0.05rem;
+}
+
+.lp-header__helpline-copy small {
+  color: #526f69;
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.lp-header__helpline-copy strong {
+  color: #075f58;
+  font-size: 0.79rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.lp-header__helpline:hover {
+  border-color: #0d776f;
+  background: #e7f4f1;
+  color: #075f58;
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .lp-header__brand-subtitle {
+    font-size: 0.52rem !important;
+  }
+
+  .lp-header__helpline-copy small {
+    display: none !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .lp-header__utility {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .lp-header__access-ctrl,
+  .lp-header__helpline {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
+  }
+}
