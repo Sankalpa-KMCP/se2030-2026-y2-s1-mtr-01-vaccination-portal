@@ -64,14 +64,16 @@ export default function StaffDashboardPage() {
   ].filter(Boolean);
 
   return (
-    <section aria-labelledby="staff-dashboard-title">
-      <div className="mb-4">
-        <span className="badge text-bg-primary mb-2">Staff Dashboard</span>
-        <h1 className="display-6 fw-semibold mb-2" id="staff-dashboard-title">
-          Welcome, {user?.fullName || user?.email}
-        </h1>
-        <p className="text-muted mb-0">Your available tools reflect your authoritative staff role.</p>
-      </div>
+    <section aria-labelledby={isVaccinator ? 'vaccinator-workspace-title' : 'staff-dashboard-title'}>
+      {!isVaccinator && (
+        <div className="mb-4">
+          <span className="badge text-bg-primary mb-2">Staff Dashboard</span>
+          <h1 className="display-6 fw-semibold mb-2" id="staff-dashboard-title">
+            Welcome, {user?.fullName || user?.email}
+          </h1>
+          <p className="text-muted mb-0">Your available tools reflect your authoritative staff role.</p>
+        </div>
+      )}
 
       {!isVaccinator && (
         <div className="mb-5"><DashboardProfileCard user={user} showRoles /></div>

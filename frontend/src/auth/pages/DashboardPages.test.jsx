@@ -120,6 +120,10 @@ describe('role dashboards', () => {
     // Large Account Summary card should NOT be rendered for Vaccinator
     expect(screen.queryByRole('heading', { name: 'Account Summary' })).toBeNull();
 
+    // Generic Staff Dashboard intro should NOT be rendered for Vaccinator
+    expect(screen.queryByText('Staff Dashboard', { selector: '.badge' })).toBeNull();
+    expect(screen.queryByText('Your available tools reflect your authoritative staff role.')).toBeNull();
+
     // Compact identity line rendered in Vaccinator workspace
     expect(screen.getByText('Welcome, Vera Vaccinator • Vaccinator')).toBeTruthy();
 
@@ -174,7 +178,9 @@ describe('role dashboards', () => {
     } };
     renderPage(<StaffDashboardPage />);
 
-    expect(screen.getByRole('heading', { name: 'Welcome, Dual Role Staff' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Vaccinator Dashboard' })).toBeTruthy();
+    expect(screen.getByText('Welcome, Dual Role Staff • Vaccinator')).toBeTruthy();
+    expect(screen.queryByText('Staff Dashboard', { selector: '.badge' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Check-In & Queue Management' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Check-In Queue' })).toBeNull();
     const checkInLinks = screen.getAllByRole('link', { name: 'Open' })
