@@ -413,7 +413,7 @@ class RegistrationControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequest("pending@example.com", "WrongPassword!"))))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").doesNotExist())
+                .andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")))
                 .andExpect(jsonPath("$.token").doesNotExist());
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -433,7 +433,7 @@ class RegistrationControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequest("rejected@example.com", "WrongPassword!"))))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").doesNotExist())
+                .andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")))
                 .andExpect(jsonPath("$.token").doesNotExist());
 
         mockMvc.perform(post("/api/v1/auth/login")

@@ -42,6 +42,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -81,8 +82,11 @@ public class AuthService {
     private final AuthLinkDeliveryService authLinkDeliveryService;
     private final AuthLinkIssuanceThrottle authLinkIssuanceThrottle;
     private final EmailVerificationService emailVerificationService;
+    private final Clock clock;
     private final int verificationTokenExpirationHours;
     private final int resetTokenExpirationMinutes;
+    private final int maxFailedLoginAttempts;
+    private final int loginLockDurationSeconds;
 
     public AuthService(
             UserAccountRepository userAccountRepository,
@@ -97,9 +101,25 @@ public class AuthService {
             AuthLinkDeliveryService authLinkDeliveryService,
             AuthLinkIssuanceThrottle authLinkIssuanceThrottle,
             EmailVerificationService emailVerificationService,
+            Clock clock,
             @Value("${app.security.auth.verification-token-expiration-hours:24}") int verificationTokenExpirationHours,
-            @Value("${app.security.auth.reset-token-expiration-minutes:30}") int resetTokenExpirationMinutes
+            @Value("${app.security.auth.reset-token-expiration-minutes:30}") int resetTokenExpirationMinutes,
+            @Value("${app.security.auth.login-max-failed-attempts:${AUTH_LOGIN_MAX_FAILED_ATTEMPTS:5}}") int maxFailedLoginAttempts,
+            @Value("${app.security.auth.login-lock-duration-seconds:${AUTH_LOGIN_LOCK_DURATION_SECONDS:900}}") int loginLockDurationSeconds
     ) {
+        // Fail fast on invalid lockout policy: a permissive value here would silently
+        // disable the brute-force control (e.g. a non-positive duration yields a lock
+        // that is already expired). Application startup must refuse such configuration.
+        if (maxFailedLoginAttempts < 1) {
+            throw new IllegalArgumentException(
+                    "app.security.auth.login-max-failed-attempts must be at least 1 (configured value: "
+                            + maxFailedLoginAttempts + ")");
+        }
+        if (loginLockDurationSeconds <= 0) {
+            throw new IllegalArgumentException(
+                    "app.security.auth.login-lock-duration-seconds must be greater than 0 (configured value: "
+                            + loginLockDurationSeconds + ")");
+        }
         this.userAccountRepository = userAccountRepository;
         this.roleRepository = roleRepository;
         this.citizenProfileRepository = citizenProfileRepository;
@@ -112,10 +132,19 @@ public class AuthService {
         this.authLinkDeliveryService = authLinkDeliveryService;
         this.authLinkIssuanceThrottle = authLinkIssuanceThrottle;
         this.emailVerificationService = emailVerificationService;
+        this.clock = clock;
         this.verificationTokenExpirationHours = verificationTokenExpirationHours;
         this.resetTokenExpirationMinutes = resetTokenExpirationMinutes;
+        this.maxFailedLoginAttempts = maxFailedLoginAttempts;
+        this.loginLockDurationSeconds = loginLockDurationSeconds;
     }
 
+    /**
+     * {@code noRollbackFor} is load-bearing: the failed-login counter update must
+     * commit even though the transaction ends with BadCredentialsException, or every
+     * rejected attempt would be rolled back together with the rejection itself.
+     */
+    @Transactional(noRollbackFor = BadCredentialsException.class)
     public LoginResponse login(LoginRequest request) {
         Objects.requireNonNull(request, "LoginRequest must not be null");
 
@@ -125,8 +154,13 @@ public class AuthService {
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.password(), account.getPasswordHash())) {
+            recordFailedLoginAttempt(account);
             throw new BadCredentialsException("Invalid email or password");
         }
+
+        // Correct password: an elapsed timed lock unlocks by System-after-expiry
+        // (canonical Appendix E) before the lock gate runs.
+        clearExpiredTimedLock(account);
 
         // Citizens pending email verification must be able to log in: the OTP
         // verification API is principal-scoped, so login is the gate that lets
@@ -141,7 +175,7 @@ public class AuthService {
         }
 
         if (account.getAccountStatus() == AccountStatus.LOCKED
-                || (account.getLockedUntil() != null && Instant.now().isBefore(account.getLockedUntil()))) {
+                || (account.getLockedUntil() != null && clock.instant().isBefore(account.getLockedUntil()))) {
             throw new LockedException("Account is temporarily locked");
         }
 
@@ -152,6 +186,8 @@ public class AuthService {
             throw new DisabledException("Account is not active for login");
         }
 
+        userAccountRepository.resetFailedLoginAttempts(account.getId());
+
         List<String> roleCodes = account.getRoles().stream()
                 .map(Role::getCode)
                 .sorted()
@@ -161,6 +197,36 @@ public class AuthService {
         UserProfileResponse userProfile = toUserProfile(account, roleCodes);
 
         return new LoginResponse(token, userProfile);
+    }
+
+    /**
+     * Records one failed password attempt through the atomic threshold-transition
+     * update (no lost increments under concurrent failures). While a timed lock is
+     * active the statement matches no rows, so attempts during a lock neither count
+     * toward the next lock nor extend the current one.
+     */
+    private void recordFailedLoginAttempt(UserAccount account) {
+        Instant now = clock.instant();
+        userAccountRepository.recordFailedLoginAttempt(
+                account.getId(),
+                maxFailedLoginAttempts,
+                now.plus(Duration.ofSeconds(loginLockDurationSeconds)),
+                now
+        );
+    }
+
+    /**
+     * Clears an elapsed timed lock together with the failure counter. Unknown-email
+     * attempts never reach this path, so no state is created for nonexistent
+     * accounts, and permanent LOCKED account status is untouched.
+     */
+    private void clearExpiredTimedLock(UserAccount account) {
+        Instant now = clock.instant();
+        if (account.getLockedUntil() != null && !account.getLockedUntil().isAfter(now)) {
+            userAccountRepository.clearExpiredTimedLock(account.getId(), now);
+            account.setLockedUntil(null);
+            account.setFailedLoginAttempts(0);
+        }
     }
 
     public UserProfileResponse getCurrentUserProfile(UserPrincipal principal) {
@@ -216,7 +282,7 @@ public class AuthService {
             throw new TokenAlreadyUsedException();
         }
 
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         if (token.isExpired(now)) {
             throw new TokenExpiredException();
         }
@@ -250,11 +316,11 @@ public class AuthService {
                 // Collation-equivalent aliases (e.g. accents, case, Unicode under utf8mb4_unicode_ci)
                 // resolve to the same account and share one cooldown, while nonexistent identities
                 // never consume throttle capacity.
-                if (!authLinkIssuanceThrottle.tryRecordIssuance(user.getId(), Instant.now())) {
+                if (!authLinkIssuanceThrottle.tryRecordIssuance(user.getId(), clock.instant())) {
                     return new MessageResponse(GENERIC_RESEND_VERIFICATION_MESSAGE);
                 }
 
-                Instant now = Instant.now();
+                Instant now = clock.instant();
                 List<EmailVerificationToken> existingTokens = emailVerificationTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
                 for (EmailVerificationToken existingToken : existingTokens) {
                     existingToken.markUsed(now);
@@ -286,11 +352,11 @@ public class AuthService {
                 // Bounded abuse protection (R06 / F2-DOS / F2-ALIAS): same per-account cooldown gate as
                 // resend-verification — keyed to the immutable user.getId() so collation aliases, alternate
                 // spellings, and formatting variants cannot bypass the cooldown or rotate reset tokens.
-                if (!authLinkIssuanceThrottle.tryRecordIssuance(user.getId(), Instant.now())) {
+                if (!authLinkIssuanceThrottle.tryRecordIssuance(user.getId(), clock.instant())) {
                     return new MessageResponse(GENERIC_FORGOT_PASSWORD_MESSAGE);
                 }
 
-                Instant now = Instant.now();
+                Instant now = clock.instant();
                 List<PasswordResetToken> existingTokens = passwordResetTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
                 for (PasswordResetToken existingToken : existingTokens) {
                     existingToken.markUsed(now);
@@ -323,7 +389,7 @@ public class AuthService {
             throw new TokenAlreadyUsedException();
         }
 
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         if (token.isExpired(now)) {
             throw new TokenExpiredException();
         }
@@ -333,6 +399,9 @@ public class AuthService {
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(now)) {
             user.setLockedUntil(null);
         }
+        // A password reset proves credential ownership: clear any residual
+        // failed-login accounting so post-reset logins start from a clean slate.
+        user.setFailedLoginAttempts(0);
         userAccountRepository.saveAndFlush(user);
 
         token.markUsed(now);

@@ -23,6 +23,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -134,6 +137,32 @@ public class AuthExceptionHandler {
             HttpServletRequest request
     ) {
         return response(HttpStatus.FORBIDDEN, "ACCOUNT_REJECTED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<AuthErrorResponse> handleBadCredentials(
+            BadCredentialsException exception,
+            HttpServletRequest request
+    ) {
+        // The service intentionally returns one message for unknown emails and wrong
+        // passwords; keep the outward contract enumeration-resistant.
+        return response(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<AuthErrorResponse> handleLocked(
+            LockedException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.LOCKED, "ACCOUNT_LOCKED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<AuthErrorResponse> handleDisabled(
+            DisabledException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.FORBIDDEN, "ACCOUNT_NOT_ACTIVE", exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(InvalidAuthActionTokenException.class)
