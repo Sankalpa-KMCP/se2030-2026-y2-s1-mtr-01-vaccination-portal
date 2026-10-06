@@ -105,7 +105,8 @@ describe('shared routing and role guards', () => {
   it('routes a Vaccinator to staff and shows draft navigation', () => {
     setAuth({ roles: ['ROLE_VACCINATOR'] });
     render(<MemoryRouter initialEntries={['/app']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByText('Staff Dashboard')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Vaccinator Dashboard' })).toBeTruthy();
+    expect(screen.queryByText('Staff Dashboard')).toBeNull();
     expect(screen.getAllByRole('link', { name: /Vaccination Drafts/ }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: 'Staff Requests' })).toBeNull();
   });

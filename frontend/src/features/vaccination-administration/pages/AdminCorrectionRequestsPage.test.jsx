@@ -61,7 +61,7 @@ describe('AdminCorrectionRequestsPage', () => {
     },
   ];
 
-  it('renders loading state then requests table and summary cards', async () => {
+  it('renders loading state then requests table and summary cards defaulting to Pending Review', async () => {
     certificateApi.listAdminCorrectionRequests.mockResolvedValue(mockRequests);
 
     render(
@@ -74,8 +74,21 @@ describe('AdminCorrectionRequestsPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Jane Doe')).toBeTruthy();
-      expect(screen.getByText('John Smith')).toBeTruthy();
       expect(screen.getByText('CERT-100-AAA')).toBeTruthy();
+    });
+
+    // Summary cards exist
+    expect(screen.getByText('Pending Review')).toBeTruthy();
+    expect(screen.getByText('Needs Your Review')).toBeTruthy();
+
+    // Default filter is 'PENDING', so APPROVED request (John Smith) is not in table until filter is changed
+    expect(screen.queryByText('John Smith')).toBeNull();
+
+    // Click 'All' filter button
+    fireEvent.click(screen.getByRole('button', { name: /All \(2\)/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('John Smith')).toBeTruthy();
     });
 
     expect(screen.getByText('Citizen Correction Requests')).toBeTruthy();
