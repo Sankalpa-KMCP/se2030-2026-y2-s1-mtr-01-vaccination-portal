@@ -7,4 +7,10 @@ public interface CampaignVaccinationReader {
     Optional<Long> findCenterIdBySlotId(Long slotId);
 
     Optional<Long> findVaccineTypeIdByCampaignId(Long campaignId);
+
+    Optional<String> findCampaignNameById(Long campaignId);
+
+    Optional<String> findCenterNameById(Long centerId);
+
+    Optional<String> findVaccineTypeNameById(Long vaccineTypeId);
 }
