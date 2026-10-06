@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.inventory.service;
 
 import com.se2030.vaccinationportal.inventory.dependency.BatchAvailability;
+import com.se2030.vaccinationportal.inventory.dependency.AvailableBatchSnapshot;
+import com.se2030.vaccinationportal.inventory.dependency.BatchDisplaySnapshot;
 import com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason;
 import com.se2030.vaccinationportal.inventory.dependency.InventoryBatchPort;
 import com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException;
@@ -14,6 +16,8 @@ import com.se2030.vaccinationportal.inventory.repository.StockTransactionReposit
 import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +49,30 @@ public class InventoryBatchService implements InventoryBatchPort {
         int quantity = inventories.findByCenterIdAndBatchId(centerId, batchId)
                 .map(CenterInventory::getQuantity).orElse(0);
         return availability(batch, quantity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AvailableBatchSnapshot> findAvailableBatches(Long centerId, Long expectedVaccineTypeId,
+                                                              LocalDate asOfDate) {
+        return inventories.findByCenterId(centerId).stream()
+                .filter(inventory -> inventory.getQuantity() > 0)
+                .map(inventory -> batches.findById(inventory.getBatchId())
+                        .filter(batch -> batch.getBatchStatus() == BatchStatus.ACTIVE)
+                        .filter(batch -> batch.getExpiryDate() == null || !batch.getExpiryDate().isBefore(asOfDate))
+                        .filter(batch -> expectedVaccineTypeId == null
+                                || expectedVaccineTypeId.equals(batch.getVaccineTypeId()))
+                        .map(batch -> new AvailableBatchSnapshot(batch.getId(), batch.getBatchNumber(),
+                                batch.getVaccineTypeId(), batch.getExpiryDate(), inventory.getQuantity())))
+                .flatMap(Optional::stream)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BatchDisplaySnapshot> findBatchDisplay(Long batchId) {
+        return batches.findById(batchId)
+                .map(batch -> new BatchDisplaySnapshot(batch.getBatchNumber(), batch.getVaccineTypeId()));
     }
 
     @Override

@@ -30,25 +30,15 @@ import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import java.time.Clock;
 import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationPort;
 import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationSnapshot;
-import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
-import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
-import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaignRepository;
-import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
-import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
-import com.se2030.vaccinationportal.inventory.model.BatchStatus;
-import com.se2030.vaccinationportal.inventory.model.CenterInventory;
-import com.se2030.vaccinationportal.inventory.model.VaccineBatch;
-import com.se2030.vaccinationportal.inventory.repository.CenterInventoryRepository;
-import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
-import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
-import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
+import com.se2030.vaccinationportal.campaign.api.vaccination.CampaignVaccinationReader;
+import com.se2030.vaccinationportal.inventory.dependency.InventoryBatchPort;
+import com.se2030.vaccinationportal.inventory.dependency.BatchDisplaySnapshot;
+import com.se2030.vaccinationportal.shared.auth.api.AccountDisplayReader;
 import com.se2030.vaccinationportal.vaccination.administration.dto.AvailableVaccineBatchResponse;
 import com.se2030.vaccinationportal.vaccination.administration.dto.CertificateDisplayDetails;
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinatorVaccinationRecordResponse;
 import com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationAppointmentNotFoundException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Locale;
 import java.util.List;
 import java.util.UUID;
@@ -74,17 +64,11 @@ public class DigitalCertificateService {
     private final CertificatePdfService certificatePdfService;
 
     @Autowired(required = false)
-    private VaccineBatchRepository vaccineBatchRepository;
+    private InventoryBatchPort inventoryBatchPort;
     @Autowired(required = false)
-    private CenterInventoryRepository centerInventoryRepository;
+    private CampaignVaccinationReader campaignVaccinationReader;
     @Autowired(required = false)
-    private VaccineTypeRepository vaccineTypeRepository;
-    @Autowired(required = false)
-    private VaccinationCenterRepository vaccinationCenterRepository;
-    @Autowired(required = false)
-    private VaccinationCampaignRepository vaccinationCampaignRepository;
-    @Autowired(required = false)
-    private UserAccountRepository userAccountRepository;
+    private AccountDisplayReader accountDisplayReader;
     @Autowired(required = false)
     private AppointmentValidationPort appointmentValidationPort;
 
@@ -406,43 +390,20 @@ public class DigitalCertificateService {
 
         Long centerId = appointment.centerId();
         Long expectedVaccineTypeId = appointment.campaignVaccineTypeId();
-        if (centerId == null || centerInventoryRepository == null || vaccineBatchRepository == null) {
+        if (centerId == null || inventoryBatchPort == null) {
             return List.of();
         }
 
-        List<CenterInventory> inventories = centerInventoryRepository.findByCenterId(centerId);
         LocalDate today = LocalDate.now(clock != null ? clock : Clock.systemUTC());
-
-        List<AvailableVaccineBatchResponse> results = new ArrayList<>();
-        for (CenterInventory inv : inventories) {
-            if (inv.getQuantity() <= 0) {
-                continue;
-            }
-            VaccineBatch batch = vaccineBatchRepository.findById(inv.getBatchId()).orElse(null);
-            if (batch == null || batch.getBatchStatus() != BatchStatus.ACTIVE) {
-                continue;
-            }
-            if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(today)) {
-                continue;
-            }
-            if (expectedVaccineTypeId != null && !expectedVaccineTypeId.equals(batch.getVaccineTypeId())) {
-                continue;
-            }
-            String vaccineName = "Standard Vaccine";
-            if (vaccineTypeRepository != null && batch.getVaccineTypeId() != null) {
-                vaccineName = vaccineTypeRepository.findById(batch.getVaccineTypeId())
-                        .map(VaccineType::getName)
-                        .orElse("Standard Vaccine");
-            }
-            results.add(new AvailableVaccineBatchResponse(
-                    batch.getId(),
-                    batch.getBatchNumber(),
-                    vaccineName,
-                    batch.getExpiryDate(),
-                    inv.getQuantity()
-            ));
-        }
-        return results;
+        return inventoryBatchPort.findAvailableBatches(centerId, expectedVaccineTypeId, today).stream()
+                .map(batch -> new AvailableVaccineBatchResponse(
+                        batch.batchId(), batch.batchNumber(),
+                        campaignVaccinationReader == null || batch.vaccineTypeId() == null
+                                ? "Standard Vaccine"
+                                : campaignVaccinationReader.findVaccineTypeNameById(batch.vaccineTypeId())
+                                        .orElse("Standard Vaccine"),
+                        batch.expiryDate(), batch.availableQuantity()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -528,48 +489,46 @@ public class DigitalCertificateService {
     }
 
     private String resolveCitizenName(Long citizenId) {
-        if (citizenId == null || userAccountRepository == null) {
+        if (citizenId == null || accountDisplayReader == null) {
             return "Citizen #" + citizenId;
         }
-        return userAccountRepository.findById(citizenId)
-                .map(user -> user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : "Citizen #" + citizenId)
+        return accountDisplayReader.findFullName(citizenId)
+                .filter(name -> !name.isBlank())
                 .orElse("Citizen #" + citizenId);
     }
 
     private String resolveCenterName(Long centerId) {
-        if (centerId == null || vaccinationCenterRepository == null) {
+        if (centerId == null || campaignVaccinationReader == null) {
             return "Center #" + centerId;
         }
-        return vaccinationCenterRepository.findById(centerId)
-                .map(VaccinationCenter::getName)
+        return campaignVaccinationReader.findCenterNameById(centerId)
                 .orElse("Center #" + centerId);
     }
 
     private String resolveCampaignName(Long campaignId) {
-        if (campaignId == null || vaccinationCampaignRepository == null) {
+        if (campaignId == null || campaignVaccinationReader == null) {
             return null;
         }
-        return vaccinationCampaignRepository.findById(campaignId)
-                .map(VaccinationCampaign::getName)
+        return campaignVaccinationReader.findCampaignNameById(campaignId)
                 .orElse(null);
     }
 
     private String resolveBatchNumber(Long batchId) {
-        if (batchId == null || vaccineBatchRepository == null) {
+        if (batchId == null || inventoryBatchPort == null) {
             return "Batch #" + batchId;
         }
-        return vaccineBatchRepository.findById(batchId)
-                .map(VaccineBatch::getBatchNumber)
+        return inventoryBatchPort.findBatchDisplay(batchId)
+                .map(BatchDisplaySnapshot::batchNumber)
                 .orElse("Batch #" + batchId);
     }
 
     private String resolveVaccineName(Long batchId) {
-        if (batchId == null || vaccineBatchRepository == null || vaccineTypeRepository == null) {
+        if (batchId == null || inventoryBatchPort == null || campaignVaccinationReader == null) {
             return "Authorized Vaccine";
         }
-        return vaccineBatchRepository.findById(batchId)
-                .flatMap(b -> vaccineTypeRepository.findById(b.getVaccineTypeId()))
-                .map(VaccineType::getName)
+        return inventoryBatchPort.findBatchDisplay(batchId)
+                .flatMap(batch -> batch.vaccineTypeId() == null ? java.util.Optional.empty()
+                        : campaignVaccinationReader.findVaccineTypeNameById(batch.vaccineTypeId()))
                 .orElse("Authorized Vaccine");
     }
 
@@ -583,33 +542,16 @@ public class DigitalCertificateService {
     }
 
     @Autowired(required = false)
-    public void setVaccineBatchRepository(VaccineBatchRepository vaccineBatchRepository) {
-        this.vaccineBatchRepository = vaccineBatchRepository;
+    public void setInventoryBatchPort(InventoryBatchPort inventoryBatchPort) {
+        this.inventoryBatchPort = inventoryBatchPort;
     }
 
-    @Autowired(required = false)
-    public void setCenterInventoryRepository(CenterInventoryRepository centerInventoryRepository) {
-        this.centerInventoryRepository = centerInventoryRepository;
+    public void setCampaignVaccinationReader(CampaignVaccinationReader campaignVaccinationReader) {
+        this.campaignVaccinationReader = campaignVaccinationReader;
     }
 
-    @Autowired(required = false)
-    public void setVaccineTypeRepository(VaccineTypeRepository vaccineTypeRepository) {
-        this.vaccineTypeRepository = vaccineTypeRepository;
-    }
-
-    @Autowired(required = false)
-    public void setVaccinationCenterRepository(VaccinationCenterRepository vaccinationCenterRepository) {
-        this.vaccinationCenterRepository = vaccinationCenterRepository;
-    }
-
-    @Autowired(required = false)
-    public void setVaccinationCampaignRepository(VaccinationCampaignRepository vaccinationCampaignRepository) {
-        this.vaccinationCampaignRepository = vaccinationCampaignRepository;
-    }
-
-    @Autowired(required = false)
-    public void setUserAccountRepository(UserAccountRepository userAccountRepository) {
-        this.userAccountRepository = userAccountRepository;
+    public void setAccountDisplayReader(AccountDisplayReader accountDisplayReader) {
+        this.accountDisplayReader = accountDisplayReader;
     }
 
     @Autowired(required = false)
