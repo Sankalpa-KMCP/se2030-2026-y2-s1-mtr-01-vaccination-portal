@@ -8,6 +8,7 @@ import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -25,6 +26,13 @@ import org.springframework.stereotype.Repository;
 public interface SessionResourceAssignmentRepository extends JpaRepository<SessionResourceAssignment, Long> {
 
     List<SessionResourceAssignment> findBySessionIdOrderByStartAtAscIdAsc(Long sessionId);
+
+    @Query("SELECT a FROM SessionResourceAssignment a LEFT JOIN FETCH a.resource " +
+            "WHERE a.session.id = :sessionId ORDER BY a.startAt ASC, a.id ASC")
+    List<SessionResourceAssignment> findBySessionIdWithResource(@Param("sessionId") Long sessionId);
+
+    @Query("SELECT a FROM SessionResourceAssignment a LEFT JOIN FETCH a.resource WHERE a.id = :assignmentId")
+    Optional<SessionResourceAssignment> findByIdWithResource(@Param("assignmentId") Long assignmentId);
 
     List<SessionResourceAssignment> findByResourceIdOrderByStartAtAscIdAsc(Long resourceId);
 
