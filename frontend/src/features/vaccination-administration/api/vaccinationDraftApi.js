@@ -1,4 +1,4 @@
-import { apiRequest, parseApiResponse } from '../../../services/apiClient';
+import { apiRequest, parseApiResponse } from '../../../shared/api/apiClient';
 
 const DRAFTS_BASE_PATH = '/v1/vaccination/drafts';
 const EDITABLE_FIELDS = ['vaccineBatchId', 'doseNumber', 'administrationTime', 'nextDoseDate', 'authorizedNotes'];

@@ -1,22 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
-import EmptyState from '../../../components/common/EmptyState';
-import LoadingSpinner from '../../../components/common/LoadingSpinner';
-import PageHeader from '../../../components/common/PageHeader';
-import SuccessAlert from '../../../components/common/SuccessAlert';
-import { inventoryApi } from '../api/inventoryApi';
-import InventoryOperationModal from '../components/InventoryOperationModal';
-import '../inventory-management.css';
+import ApiErrorAlert from "../../../components/common/ApiErrorAlert";
+import LoadingSpinner from "../../../components/common/LoadingSpinner";
+import EmptyState from "../../../components/common/EmptyState";
+import PageHeader from "../../../components/common/PageHeader";
+import SuccessAlert from "../../../components/common/SuccessAlert";
+import { inventoryApi } from "../api/inventoryApi";
+import InventoryOperationModal from "../components/InventoryOperationModal";
+import "../inventory-management.css";
+import { daysUntil } from "../utils/inventoryDates";
+import useInventoryManagement from "../hooks/useInventoryManagement";
 
-const LOW_STOCK = 10;
-const NEAR_EXPIRY = 30;
 const STATUSES = ['ACTIVE', 'QUARANTINED', 'RECALLED', 'EXPIRED', 'INACTIVE'];
-const EMPTY = { manufacturers: [], batches: [], stocks: [], transactions: [], references: { vaccineTypes: [], centers: [] } };
-const blankManufacturer = { code: '', name: '' };
-const blankBatch = { manufacturerId: '', vaccineTypeId: '', batchNumber: '', manufactureDate: '', expiryDate: '', batchStatus: 'ACTIVE' };
-const blankStock = { centerId: '', batchId: '', quantity: 0 };
-const daysUntil = (date) => Math.ceil((new Date(`${date}T00:00:00`) - new Date()) / 86400000);
+
 const title = (value) => value?.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
 const badge = (status) => ({ ACTIVE: 'text-bg-success', QUARANTINED: 'text-bg-warning', RECALLED: 'text-bg-danger', EXPIRED: 'text-bg-dark', INACTIVE: 'text-bg-secondary' }[status] || 'text-bg-secondary');
 
 function SummaryCard({ icon, label, value, note, tone = 'primary' }) {
@@ -25,100 +21,6 @@ function SummaryCard({ icon, label, value, note, tone = 'primary' }) {
 
 function SelectField({ id, label, value, onChange, options, all = false, disabled = false }) {
   return <div><label className="form-label small fw-semibold" htmlFor={id}>{label}</label><select id={id} className="form-select" value={value} onChange={onChange} disabled={disabled} required={!all}><option value="">{all ? `All ${label.toLowerCase()}` : `Select ${label.toLowerCase()}`}</option>{options.map((x) => <option key={x.id ?? x} value={x.id ?? x}>{x.code ? `${x.code} — ${x.name}` : title(x)}</option>)}</select></div>;
-}
-
-export default function InventoryManagementPage() {
-  const [data, setData] = useState(EMPTY);
-  const [view, setView] = useState('overview');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState('');
-  const [refreshedAt, setRefreshedAt] = useState(null);
-  const [filters, setFilters] = useState({ search: '', center: '', type: '', manufacturer: '', status: '', low: false, expiry: false });
-  const [sort, setSort] = useState({ field: 'expiryDate', direction: 'asc' });
-  const [manufacturerForm, setManufacturerForm] = useState(blankManufacturer);
-  const [batchForm, setBatchForm] = useState(blankBatch);
-  const [stockForm, setStockForm] = useState(blankStock);
-  const [editingManufacturer, setEditingManufacturer] = useState(null);
-  const [editingBatch, setEditingBatch] = useState(null);
-  const [operation, setOperation] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [manufacturers, batches, stocks, references, transactions] = await inventoryApi.loadAll();
-      setData({ manufacturers, batches, stocks, references, transactions });
-      setRefreshedAt(new Date()); setError(null);
-    } catch (caught) { setError(caught); }
-    finally { setLoading(false); }
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
-  const lookups = useMemo(() => ({
-    manufacturers: Object.fromEntries(data.manufacturers.map((x) => [x.id, x])),
-    batches: Object.fromEntries(data.batches.map((x) => [x.id, x])),
-    types: Object.fromEntries(data.references.vaccineTypes.map((x) => [x.id, x])),
-    centers: Object.fromEntries(data.references.centers.map((x) => [x.id, x])),
-    stocks: Object.fromEntries(data.stocks.map((x) => [x.id, x])),
-  }), [data]);
-
-  const inventory = useMemo(() => data.stocks.map((stock) => {
-    const batchItem = lookups.batches[stock.batchId] || {};
-    const remaining = batchItem.expiryDate ? daysUntil(batchItem.expiryDate) : null;
-    const effectiveStatus = remaining < 0 ? 'EXPIRED' : batchItem.batchStatus;
-    return { ...stock, batch: batchItem, manufacturer: lookups.manufacturers[batchItem.manufacturerId] || {}, type: lookups.types[batchItem.vaccineTypeId] || {}, center: lookups.centers[stock.centerId] || {}, remaining, effectiveStatus,
-      nearExpiry: batchItem.batchStatus === 'ACTIVE' && stock.quantity > 0 && remaining >= 0 && remaining <= NEAR_EXPIRY,
-      available: effectiveStatus === 'ACTIVE' && stock.quantity > 0 };
-  }), [data.stocks, lookups]);
-
-  const lowGroups = useMemo(() => {
-    const totals = new Map();
-    inventory.filter((x) => x.effectiveStatus === 'ACTIVE').forEach((x) => { const key = `${x.centerId}:${x.batch.vaccineTypeId}`; totals.set(key, (totals.get(key) || 0) + x.quantity); });
-    return new Set([...totals].filter(([, amount]) => amount <= LOW_STOCK).map(([key]) => key));
-  }, [inventory]);
-  const rows = useMemo(() => inventory.map((x) => ({ ...x, lowStock: lowGroups.has(`${x.centerId}:${x.batch.vaccineTypeId}`) })), [inventory, lowGroups]);
-  const alerts = useMemo(() => rows.filter((x) => x.lowStock || x.nearExpiry || ['QUARANTINED', 'RECALLED', 'EXPIRED'].includes(x.effectiveStatus)), [rows]);
-  const summary = useMemo(() => ({
-    doses: rows.filter((x) => x.available).reduce((sum, x) => sum + x.quantity, 0),
-    active: data.batches.filter((x) => x.batchStatus === 'ACTIVE' && daysUntil(x.expiryDate) >= 0).length,
-    centers: new Set(data.stocks.filter((x) => x.quantity > 0).map((x) => x.centerId)).size,
-    low: new Set(rows.filter((x) => x.lowStock).map((x) => `${x.centerId}:${x.batch.vaccineTypeId}`)).size,
-    expiry: rows.filter((x) => x.nearExpiry).length,
-    restricted: data.batches.filter((x) => ['QUARANTINED', 'RECALLED', 'EXPIRED'].includes(daysUntil(x.expiryDate) < 0 ? 'EXPIRED' : x.batchStatus)).length,
-  }), [data, rows]);
-
-  const filtered = useMemo(() => rows.filter((x) => {
-    const text = `${x.center.name} ${x.type.name} ${x.manufacturer.name} ${x.batch.batchNumber}`.toLowerCase();
-    return (!filters.search || text.includes(filters.search.toLowerCase())) && (!filters.center || String(x.centerId) === filters.center)
-      && (!filters.type || String(x.batch.vaccineTypeId) === filters.type) && (!filters.manufacturer || String(x.batch.manufacturerId) === filters.manufacturer)
-      && (!filters.status || x.effectiveStatus === filters.status) && (!filters.low || x.lowStock) && (!filters.expiry || x.nearExpiry);
-  }).sort((a, b) => {
-    const left = sort.field === 'quantity' ? a.quantity : a.batch.expiryDate;
-    const right = sort.field === 'quantity' ? b.quantity : b.batch.expiryDate;
-    return (left < right ? -1 : left > right ? 1 : 0) * (sort.direction === 'asc' ? 1 : -1);
-  }), [rows, filters, sort]);
-
-  const perform = async (action, message) => { setBusy(true); try { await action(); setSuccess(message); setError(null); await load(); return true; } catch (caught) { setError(caught); return false; } finally { setBusy(false); } };
-  const submitManufacturer = async (event) => { event.preventDefault(); const ok = await perform(() => editingManufacturer ? inventoryApi.update('manufacturers', editingManufacturer, manufacturerForm) : inventoryApi.create('manufacturers', manufacturerForm), `Manufacturer ${editingManufacturer ? 'updated' : 'registered'}.`); if (ok) { setManufacturerForm(blankManufacturer); setEditingManufacturer(null); } };
-  const submitBatch = async (event) => { event.preventDefault(); if (batchForm.manufactureDate >= batchForm.expiryDate) { setError('Manufacture date must be before expiry date.'); return; } const body = { ...batchForm, manufacturerId: Number(batchForm.manufacturerId), vaccineTypeId: Number(batchForm.vaccineTypeId) }; const ok = await perform(() => editingBatch ? inventoryApi.update('batches', editingBatch, body) : inventoryApi.create('batches', body), `Batch ${editingBatch ? 'updated' : 'registered'}.`); if (ok) { setBatchForm(blankBatch); setEditingBatch(null); } };
-  const submitStock = async (event) => { event.preventDefault(); const body = { centerId: Number(stockForm.centerId), batchId: Number(stockForm.batchId), quantity: Number(stockForm.quantity) }; const ok = await perform(() => inventoryApi.create('stocks', body), 'Center stock created and initial receipt audited.'); if (ok) setStockForm(blankStock); };
-  const remove = (resource, item) => { if (window.confirm(`Delete ${item.name || item.batchNumber}? This cannot be undone.`)) perform(() => inventoryApi.remove(resource, item.id), 'Record deleted.'); };
-  const changeSort = (field) => setSort((current) => ({ field, direction: current.field === field && current.direction === 'asc' ? 'desc' : 'asc' }));
-
-  if (loading && !refreshedAt) return <LoadingSpinner message="Loading inventory operations…" />;
-  return <section className="inventory-dashboard" aria-labelledby="inventory-title">
-    <PageHeader id="inventory-title" eyebrow="MF-04 Operations" title="Inventory & Batch Management" subtitle="Monitor vaccine stock, batch safety, and auditable movements across vaccination centers." actions={<><span className="small text-secondary align-self-center" aria-live="polite">{refreshedAt ? `Last refreshed ${refreshedAt.toLocaleTimeString()}` : 'Not refreshed'}</span><button className="btn btn-outline-primary" onClick={load} disabled={loading}><i className="bi bi-arrow-clockwise me-2" />Refresh</button></>} />
-    <ApiErrorAlert error={error} onDismiss={() => setError(null)} />{success && <SuccessAlert message={success} onDismiss={() => setSuccess('')} />}
-    <div className="row g-3 mb-4"><SummaryCard icon="bi-box-seam" label="Available doses" value={summary.doses} note="Active, unexpired stock"/><SummaryCard icon="bi-shield-check" label="Active batches" value={summary.active} note="Operationally usable" tone="success"/><SummaryCard icon="bi-building" label="Manufacturers" value={data.manufacturers.length} note="Registered suppliers"/><SummaryCard icon="bi-geo-alt" label="Centers with stock" value={summary.centers} note="Positive quantity"/><SummaryCard icon="bi-exclamation-triangle" label="Low-stock groups" value={summary.low} note="At or below 10 doses" tone="warning"/><SummaryCard icon="bi-calendar2-week" label="Near expiry" value={summary.expiry} note="Within 30 days" tone="warning"/><SummaryCard icon="bi-slash-circle" label="Restricted batches" value={summary.restricted} note="Quarantined, recalled or expired" tone="danger"/></div>
-    <nav className="nav nav-pills gap-2 mb-4" aria-label="Inventory dashboard sections">{[['overview','Inventory overview'],['batches','Batch management'],['manufacturers','Manufacturers'],['history','Stock history']].map(([key,label]) => <button type="button" key={key} className={`nav-link ${view === key ? 'active' : ''}`} onClick={() => setView(key)}>{label}</button>)}</nav>
-
-    {view === 'overview' && <Overview alerts={alerts} filtered={filtered} data={data} lookups={lookups} filters={filters} setFilters={setFilters} changeSort={changeSort} setOperation={setOperation} setView={setView} stockForm={stockForm} setStockForm={setStockForm} submitStock={submitStock} busy={busy} />}
-    {view === 'manufacturers' && <Manufacturers data={data} form={manufacturerForm} setForm={setManufacturerForm} editing={editingManufacturer} setEditing={setEditingManufacturer} submit={submitManufacturer} remove={remove} busy={busy} />}
-    {view === 'batches' && <Batches data={data} lookups={lookups} form={batchForm} setForm={setBatchForm} editing={editingBatch} setEditing={setEditingBatch} submit={submitBatch} remove={remove} busy={busy} />}
-    {view === 'history' && <History transactions={data.transactions} lookups={lookups} />}
-    {operation && <InventoryOperationModal mode={operation.mode} inventory={operation.row} label={`${operation.row.center.name} · ${operation.row.batch.batchNumber}`} busy={busy} onClose={() => setOperation(null)} onSubmit={async (body) => { const ok = await perform(() => operation.mode === 'receipt' ? inventoryApi.receiveStock(body) : inventoryApi.adjustStock(body), operation.mode === 'receipt' ? 'Stock receipt recorded.' : 'Stock adjustment recorded.'); if (ok) setOperation(null); }} />}
-  </section>;
 }
 
 function Overview({ alerts, filtered, data, lookups, filters, setFilters, changeSort, setOperation, setView, stockForm, setStockForm, submitStock, busy }) {
@@ -137,4 +39,60 @@ function Batches({ data, lookups, form, setForm, editing, setEditing, submit, re
 
 function History({ transactions, lookups }) {
   return <div className="card border-0 shadow-sm"><div className="card-header bg-white border-0 pt-4 px-4"><h2 className="h5">Recent stock transactions</h2><p className="small text-secondary">Read-only append-only audit history; latest 100 entries.</p></div><div className="table-responsive"><table className="table table-hover mb-0"><thead><tr><th>Time</th><th>Type</th><th>Center</th><th>Batch</th><th>Change</th><th>Before → After</th><th>Actor</th><th>Reason</th></tr></thead><tbody>{transactions.length===0?<tr><td colSpan="8"><EmptyState compact icon="bi-clock-history" title="No stock history">Receipts and adjustments appear here.</EmptyState></td></tr>:transactions.map((item)=>{const stock=lookups.stocks[item.inventoryId]||{};return <tr key={item.id}><td>{new Date(item.createdAt).toLocaleString()}</td><td><span className="badge text-bg-light border"><i className="bi bi-journal-text me-1"/>{title(item.type)}</span></td><td>{lookups.centers[stock.centerId]?.name||`Inventory #${item.inventoryId}`}</td><td>{lookups.batches[stock.batchId]?.batchNumber||'—'}</td><td className={item.quantityChange>0?'text-success fw-bold':'text-danger fw-bold'}>{item.quantityChange>0?'+':''}{item.quantityChange}</td><td>{item.beforeQuantity} → {item.afterQuantity}</td><td>{item.actorId?`User #${item.actorId}`:'System'}</td><td>{item.reason||'—'}</td></tr>;})}</tbody></table></div></div>;
+}
+
+export default function InventoryManagementPage() {
+  const {
+    data,
+    view,
+    setView,
+    loading,
+    error,
+    setError,
+    success,
+    setSuccess,
+    refreshedAt,
+    filters,
+    setFilters,
+    manufacturerForm,
+    setManufacturerForm,
+    batchForm,
+    setBatchForm,
+    stockForm,
+    setStockForm,
+    editingManufacturer,
+    setEditingManufacturer,
+    editingBatch,
+    setEditingBatch,
+    operation,
+    setOperation,
+    busy,
+    load,
+    lookups,
+    alerts,
+    summary,
+    filtered,
+    perform,
+    submitManufacturer,
+    submitBatch,
+    submitStock,
+    remove,
+    changeSort
+  } = useInventoryManagement();
+
+
+  if (loading && !refreshedAt) return <LoadingSpinner message="Loading inventory operations…" />;
+
+  return <section className="inventory-dashboard" aria-labelledby="inventory-title">
+    <PageHeader id="inventory-title" eyebrow="MF-04 Operations" title="Inventory & Batch Management" subtitle="Monitor vaccine stock, batch safety, and auditable movements across vaccination centers." actions={<><span className="small text-secondary align-self-center" aria-live="polite">{refreshedAt ? `Last refreshed ${refreshedAt.toLocaleTimeString()}` : 'Not refreshed'}</span><button className="btn btn-outline-primary" onClick={load} disabled={loading}><i className="bi bi-arrow-clockwise me-2" />Refresh</button></>} />
+    <ApiErrorAlert error={error} onDismiss={() => setError(null)} />{success && <SuccessAlert message={success} onDismiss={() => setSuccess('')} />}
+    <div className="row g-3 mb-4"><SummaryCard icon="bi-box-seam" label="Available doses" value={summary.doses} note="Active, unexpired stock"/><SummaryCard icon="bi-shield-check" label="Active batches" value={summary.active} note="Operationally usable" tone="success"/><SummaryCard icon="bi-building" label="Manufacturers" value={data.manufacturers.length} note="Registered suppliers"/><SummaryCard icon="bi-geo-alt" label="Centers with stock" value={summary.centers} note="Positive quantity"/><SummaryCard icon="bi-exclamation-triangle" label="Low-stock groups" value={summary.low} note="At or below 10 doses" tone="warning"/><SummaryCard icon="bi-calendar2-week" label="Near expiry" value={summary.expiry} note="Within 30 days" tone="warning"/><SummaryCard icon="bi-slash-circle" label="Restricted batches" value={summary.restricted} note="Quarantined, recalled or expired" tone="danger"/></div>
+    <nav className="nav nav-pills gap-2 mb-4" aria-label="Inventory dashboard sections">{[['overview','Inventory overview'],['batches','Batch management'],['manufacturers','Manufacturers'],['history','Stock history']].map(([key,label]) => <button type="button" key={key} className={`nav-link ${view === key ? 'active' : ''}`} onClick={() => setView(key)}>{label}</button>)}</nav>
+
+    {view === 'overview' && <Overview alerts={alerts} filtered={filtered} data={data} lookups={lookups} filters={filters} setFilters={setFilters} changeSort={changeSort} setOperation={setOperation} setView={setView} stockForm={stockForm} setStockForm={setStockForm} submitStock={submitStock} busy={busy} />}
+    {view === 'manufacturers' && <Manufacturers data={data} form={manufacturerForm} setForm={setManufacturerForm} editing={editingManufacturer} setEditing={setEditingManufacturer} submit={submitManufacturer} remove={remove} busy={busy} />}
+    {view === 'batches' && <Batches data={data} lookups={lookups} form={batchForm} setForm={setBatchForm} editing={editingBatch} setEditing={setEditingBatch} submit={submitBatch} remove={remove} busy={busy} />}
+    {view === 'history' && <History transactions={data.transactions} lookups={lookups} />}
+    {operation && <InventoryOperationModal mode={operation.mode} inventory={operation.row} label={`${operation.row.center.name} · ${operation.row.batch.batchNumber}`} busy={busy} onClose={() => setOperation(null)} onSubmit={async (body) => { const ok = await perform(() => operation.mode === 'receipt' ? inventoryApi.receiveStock(body) : inventoryApi.adjustStock(body), operation.mode === 'receipt' ? 'Stock receipt recorded.' : 'Stock adjustment recorded.'); if (ok) setOperation(null); }} />}
+  </section>;
 }

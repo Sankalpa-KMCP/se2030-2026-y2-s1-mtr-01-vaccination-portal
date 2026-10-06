@@ -8,12 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
-import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
+import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.vaccination.certificate.model.CertificateStatus;
+import com.se2030.vaccinationportal.vaccination.certificate.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.certificate.repository.DigitalCertificateRepository;
 import org.springframework.http.MediaType;
-import com.se2030.vaccinationportal.vaccination.model.DigitalCertificate;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationRecord;
-import com.se2030.vaccinationportal.vaccination.repository.DigitalCertificateRepository;
-import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;

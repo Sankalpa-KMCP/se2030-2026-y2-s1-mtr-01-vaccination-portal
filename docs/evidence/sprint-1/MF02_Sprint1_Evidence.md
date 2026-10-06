@@ -1,5 +1,7 @@
 # MF-02 Sprint 1 Evidence Record
 
+> Historical specification/evidence: package trees, implementation status and migration counts below describe their original revision. Current ownership and setup are recorded in the [current architecture](../../Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md). Applied runtime Flyway history is V0–V21 under `backend/src/main/resources/db/migration`; reference scripts are not runtime migrations. Business requirements remain reference material.
+
 **Project:** Web-Based Vaccination Portal (`WBVP-SE2030`)
 **Function:** MF-02 — Vaccination Campaign, Center and Session Management
 **Canonical authority:** `3.3-AI / 2026-08-14-R9`

@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.screening.validation;
 
-import com.se2030.vaccinationportal.screening.dto.AddQuestionItemRequest;
+import com.se2030.vaccinationportal.screening.questionnaire.dto.AddQuestionItemRequest;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.DatabindException;
 import tools.jackson.databind.json.JsonMapper;

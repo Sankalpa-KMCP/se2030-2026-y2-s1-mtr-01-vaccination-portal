@@ -1,4 +1,4 @@
-import { apiRequest } from '../../../services/apiClient';
+import { apiRequest } from '../../../shared/api/apiClient';
 
 /**
  * Helper to process Fetch API responses and unpack backend JSON or structured error payloads.
@@ -106,7 +106,7 @@ export {
   formatDateInTimezone,
   formatTimeInTimezone,
   utcToLocalDateAndTime,
-} from '../../../services/timezoneUtils';
+} from '../../../shared/time/timezoneUtils';
 
 
 

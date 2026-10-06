@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CitizenEligibilityPage from './CitizenEligibilityPage';
 
@@ -83,7 +83,7 @@ describe('citizen eligibility', () => {
     expect(mocks.listCitizenScreeningSubmissions).toHaveBeenCalledExactlyOnceWith(71);
     expect(mocks.listCitizenEligibilityAssessments).toHaveBeenCalledExactlyOnceWith(71);
     expect(mocks.listCampaigns).toHaveBeenCalled();
-    expect(mocks.getCitizenCampaignEligibility).toHaveBeenCalledExactlyOnceWith(71, 22);
+    await waitFor(() => expect(mocks.getCitizenCampaignEligibility).toHaveBeenCalledExactlyOnceWith(71, 22));
     expect(screen.getByRole('heading', { name: 'Archived campaign' })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: 'View Screening' })[0].getAttribute('href')).toBe('/app/screening/history/42');
     expect(screen.getAllByRole('link', { name: 'View Screening History' })[0].getAttribute('href')).toBe('/app/screening/history');

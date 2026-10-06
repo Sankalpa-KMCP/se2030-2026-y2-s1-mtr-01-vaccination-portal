@@ -7,11 +7,12 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
-import com.se2030.vaccinationportal.vaccination.dto.CreateVaccinationDraftRequest;
-import com.se2030.vaccinationportal.vaccination.dto.UpdateVaccinationDraftRequest;
-import com.se2030.vaccinationportal.vaccination.model.VaccinationDraft;
-import com.se2030.vaccinationportal.vaccination.service.VaccinationDraftService;
-import com.se2030.vaccinationportal.vaccination.service.VaccinationFinalizationService;
+import com.se2030.vaccinationportal.vaccination.administration.dto.CreateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.administration.dto.FinalizeVaccinationResponse;
+import com.se2030.vaccinationportal.vaccination.administration.dto.UpdateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationDraft;
+import com.se2030.vaccinationportal.vaccination.administration.service.VaccinationDraftService;
+import com.se2030.vaccinationportal.vaccination.administration.service.VaccinationFinalizationService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -82,7 +83,7 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
         when(draftService.getDraftById(1L)).thenReturn(draft);
         when(draftService.updateDraft(eq(1L), any(UpdateVaccinationDraftRequest.class))).thenReturn(draft);
         when(finalizationService.confirmAndFinalizeDraft(eq(1L), any())).thenReturn(
-                new com.se2030.vaccinationportal.vaccination.dto.FinalizeVaccinationResponse(
+                new FinalizeVaccinationResponse(
                         1L, 100L, 101L, 501L, 301L, 1, java.time.Instant.now(), "CERT-REF", "tok", null
                 )
         );

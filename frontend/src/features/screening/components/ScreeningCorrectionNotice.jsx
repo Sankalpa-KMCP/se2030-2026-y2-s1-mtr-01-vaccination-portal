@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { SCREENING_SUBMISSION_STATUS } from '../constants/screeningConstants';
 import { formatScreeningTimestamp } from '../utils/screeningHistory';
-import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
+import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
 import './ScreeningCorrectionNotice.css';
 
 export default function ScreeningCorrectionNotice({ submission, action }) {

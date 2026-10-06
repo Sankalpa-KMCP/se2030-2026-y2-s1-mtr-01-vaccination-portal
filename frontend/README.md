@@ -176,14 +176,34 @@ frontend/
     |   |   \-- styles/
     |   |-- campaign-management/
     |   |-- center-operations/
+    |   |-- citizen-dashboard/
     |   |-- citizen-profile/
     |   |-- inventory-management/
     |   |-- public-landing/
     |   |-- screening/
     |   |-- session-management/
     |   \-- vaccination-administration/
-    |-- services/
-    |   \-- apiClient.js
+    |-- shared/
+    |   |-- api/          # HTTP infrastructure and error facts
+    |   |-- auth/         # token storage, not Auth workflows
+    |   |-- time/
+    |   |-- assets/
+    |   \-- ui/citizen/
     \-- styles/
         \-- global.css
 ```
+
+## Workflow ownership and enforcement
+
+The large session recurrence, session change-control, questionnaire builder and Inventory workflows
+use feature-owned hooks. Presentation remains in their existing pages/components; APIs, loading/error
+semantics and routes are unchanged. `app` composes routes; `auth` owns authentication workflows.
+`shared/api/apiClient.js`, `shared/auth/authStorage.js` and `shared/time/timezoneUtils.js` are reusable
+infrastructure. Shared citizen components load shared-owned CSS explicitly. Screening owns
+`CitizenSection`, and Appointment/Screening own their feature-specific citizen styles.
+
+`npm run lint` enforces the resolved-path architecture rule in `eslint/featureBoundaries.js`.
+Features may consume another feature's API/constants and the explicitly listed provider-owned
+presentation entries. Shared code cannot depend on feature internals or Auth workflows.
+See the [current architecture](../docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md)
+for the boundary exceptions and test strategy. Tests stay beside their components/hooks.

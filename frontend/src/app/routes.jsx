@@ -13,7 +13,7 @@ import StaffRegistrationRequestPage from '../auth/pages/StaffRegistrationRequest
 import ForgotPasswordPage from '../auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '../auth/pages/ResetPasswordPage';
 import VerifyEmailPage from '../auth/pages/VerifyEmailPage';
-import CitizenDashboardPage from '../auth/pages/CitizenDashboardPage';
+import CitizenDashboardPage from '../features/citizen-dashboard/pages/CitizenDashboardPage';
 import StaffDashboardPage from '../auth/pages/StaffDashboardPage';
 import AdminDashboardPage from '../auth/pages/AdminDashboardPage';
 import PendingStaffRequestsPage from '../auth/pages/PendingStaffRequestsPage';

@@ -4,12 +4,6 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.se2030.vaccinationportal.appointment.model.Appointment;
-import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
-import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
-import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
-import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
-import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.assistant.config.AssistantProperties;
 import com.se2030.vaccinationportal.assistant.controller.AssistantController;
 import com.se2030.vaccinationportal.assistant.controller.AssistantExceptionHandler;
@@ -28,17 +22,18 @@ import com.se2030.vaccinationportal.assistant.tool.AssistantToolResult;
 import com.se2030.vaccinationportal.assistant.tool.MyAppointmentsAssistantTool;
 import com.se2030.vaccinationportal.assistant.tool.MyEligibilityAssistantTool;
 import com.se2030.vaccinationportal.assistant.tool.MyVaccinationSummaryAssistantTool;
-import com.se2030.vaccinationportal.campaign.model.TimeSlot;
-import com.se2030.vaccinationportal.campaign.repository.TimeSlotRepository;
-import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
-import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
-import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
-import com.se2030.vaccinationportal.screening.repository.EligibilityAssessmentRepository;
+import com.se2030.vaccinationportal.appointment.api.query.AppointmentSummary;
+import com.se2030.vaccinationportal.appointment.api.query.CitizenAppointmentQuery;
+import com.se2030.vaccinationportal.appointment.api.query.CitizenAppointmentOverview;
+import com.se2030.vaccinationportal.appointment.api.query.CitizenAppointmentAndWaitlistOverview;
+import com.se2030.vaccinationportal.appointment.api.query.WaitlistSummary;
+import com.se2030.vaccinationportal.screening.api.query.CitizenEligibilityQuery;
+import com.se2030.vaccinationportal.screening.api.query.EligibilitySummary;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
-import com.se2030.vaccinationportal.vaccination.dto.CitizenCertificateResponse;
-import com.se2030.vaccinationportal.vaccination.dto.CitizenVaccinationRecordResponse;
-import com.se2030.vaccinationportal.vaccination.model.CertificateStatus;
-import com.se2030.vaccinationportal.vaccination.service.DigitalCertificateService;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CitizenCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.query.dto.CitizenVaccinationRecordResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.model.CertificateStatus;
+import com.se2030.vaccinationportal.vaccination.certificate.service.DigitalCertificateService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -62,14 +57,11 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -83,10 +75,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("Phase 4: Authorized Read-Only Personalized Assistant Tools Tests")
 class AssistantPersonalizedToolTests {
 
-    private AppointmentRepository appointmentRepository;
-    private TimeSlotRepository timeSlotRepository;
-    private WaitlistRepository waitlistRepository;
-    private EligibilityAssessmentRepository eligibilityAssessmentRepository;
+    private CitizenAppointmentQuery appointmentQuery;
+    private CitizenEligibilityQuery eligibilityQuery;
     private DigitalCertificateService digitalCertificateService;
 
     private MyAppointmentsAssistantTool appointmentsTool;
@@ -110,15 +100,16 @@ class AssistantPersonalizedToolTests {
     void setUp() {
         SecurityContextHolder.clearContext();
 
-        appointmentRepository = mock(AppointmentRepository.class);
-        timeSlotRepository = mock(TimeSlotRepository.class);
-        waitlistRepository = mock(WaitlistRepository.class);
-        eligibilityAssessmentRepository = mock(EligibilityAssessmentRepository.class);
+        appointmentQuery = mock(CitizenAppointmentQuery.class);
+        eligibilityQuery = mock(CitizenEligibilityQuery.class);
         digitalCertificateService = mock(DigitalCertificateService.class);
-
-        appointmentsTool = new MyAppointmentsAssistantTool(
-                appointmentRepository, timeSlotRepository, waitlistRepository);
-        eligibilityTool = new MyEligibilityAssistantTool(eligibilityAssessmentRepository);
+        when(appointmentQuery.appointmentsForCitizen(any())).thenReturn(emptyAppointments());
+        when(appointmentQuery.appointmentsAndWaitlistForCitizen(any())).thenReturn(
+                new CitizenAppointmentAndWaitlistOverview(emptyAppointments(), List.of()));
+        when(appointmentQuery.waitlistForCitizen(any())).thenReturn(List.of());
+        when(eligibilityQuery.latestForCitizen(any())).thenReturn(List.of());
+        appointmentsTool = new MyAppointmentsAssistantTool(appointmentQuery);
+        eligibilityTool = new MyEligibilityAssistantTool(eligibilityQuery);
         vaccinationTool = new MyVaccinationSummaryAssistantTool(digitalCertificateService);
 
         toolRegistry = new AssistantToolRegistry(List.of(appointmentsTool, eligibilityTool, vaccinationTool));
@@ -182,8 +173,7 @@ class AssistantPersonalizedToolTests {
 
         assistantService.processMessage(request, null, httpReq);
 
-        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
-                eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
         String recordedInstruction = fakeProvider.getRecordedSystemInstructions().get(0);
         assertThat(recordedInstruction).doesNotContain(AssistantPersonalizedContextBuilder.DELIMITER_START);
         assertThat(recordedInstruction).contains("Anonymous visitor");
@@ -210,8 +200,7 @@ class AssistantPersonalizedToolTests {
 
         assistantService.processMessage(request, staffPrincipal, httpReq);
 
-        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
-                eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
         String recordedInstruction = fakeProvider.getRecordedSystemInstructions().get(0);
         assertThat(recordedInstruction).doesNotContain(AssistantPersonalizedContextBuilder.DELIMITER_START);
     }
@@ -220,9 +209,7 @@ class AssistantPersonalizedToolTests {
     @DisplayName("3. Citizen appointment lookup always uses principal.getUserId()")
     void testAppointmentLookupUsesPrincipalUserId() {
         UserPrincipal citizen = createCitizenPrincipal(77L);
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(77L)).thenReturn(List.of(
-                new Appointment(77L, 10L, 101L)
-        ));
+        stubAppointments(77L, List.of(appointment(10L, 101L)), List.of());
 
         AssistantChatRequest request = new AssistantChatRequest("What is the status of my appointment?", Collections.emptyList(), null);
         MockHttpServletRequest httpReq = new MockHttpServletRequest();
@@ -230,8 +217,8 @@ class AssistantPersonalizedToolTests {
 
         assistantService.processMessage(request, citizen, httpReq);
 
-        verify(appointmentRepository).findByCitizenIdOrderByBookedAtDesc(77L);
-        verify(appointmentRepository, never()).findByCitizenIdOrderByBookedAtDesc(42L);
+        verify(appointmentQuery).appointmentsAndWaitlistForCitizen(argThat(p -> p.getUserId().equals(77L)));
+        verify(appointmentQuery, never()).appointmentsAndWaitlistForCitizen(argThat(p -> p.getUserId().equals(42L)));
 
         String instruction = fakeProvider.getRecordedSystemInstructions().get(0);
         assertThat(instruction).contains(AssistantPersonalizedContextBuilder.DELIMITER_START);
@@ -243,9 +230,7 @@ class AssistantPersonalizedToolTests {
     @DisplayName("4. Citizen IDs written in the prompt are ignored")
     void testCitizenIdsInPromptAreIgnored() {
         UserPrincipal citizen = createCitizenPrincipal(88L);
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(88L)).thenReturn(List.of(
-                new Appointment(88L, 20L, 202L)
-        ));
+        stubAppointments(88L, List.of(appointment(20L, 202L)), List.of());
 
         MockHttpServletRequest httpReq = new MockHttpServletRequest();
         httpReq.setRemoteAddr("10.0.0.4");
@@ -262,8 +247,8 @@ class AssistantPersonalizedToolTests {
         }
 
         // Must strictly have queried 88L and NEVER 42L or 999L
-        verify(appointmentRepository, never()).findByCitizenIdOrderByBookedAtDesc(42L);
-        verify(appointmentRepository, never()).findByCitizenIdOrderByBookedAtDesc(999L);
+        verify(appointmentQuery, never()).appointmentsAndWaitlistForCitizen(argThat(p -> p.getUserId().equals(42L)));
+        verify(appointmentQuery, never()).appointmentsAndWaitlistForCitizen(argThat(p -> p.getUserId().equals(999L)));
     }
 
     @Test
@@ -272,8 +257,7 @@ class AssistantPersonalizedToolTests {
         UserPrincipal citizen = createCitizenPrincipal(88L);
         AssistantToolContext context = new AssistantToolContext("req-5", citizen, Set.of("ROLE_CITIZEN"));
 
-        Appointment appt = new Appointment(88L, 12L, 345L, AppointmentStatus.CONFIRMED, Instant.now());
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(88L)).thenReturn(List.of(appt));
+        stubAppointments(88L, List.of(appointment(12L, 345L)), List.of());
 
         AssistantToolResult result = appointmentsTool.execute(context);
 
@@ -291,8 +275,7 @@ class AssistantPersonalizedToolTests {
         UserPrincipal citizen = createCitizenPrincipal(88L);
         AssistantToolContext context = new AssistantToolContext("req-6", citizen, Set.of("ROLE_CITIZEN"));
 
-        Appointment appt = new Appointment(88L, 10L, 100L);
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(88L)).thenReturn(List.of(appt));
+        stubAppointments(88L, List.of(appointment(10L, 100L)), List.of());
 
         AssistantToolResult result = appointmentsTool.execute(context);
 
@@ -308,19 +291,11 @@ class AssistantPersonalizedToolTests {
         Instant now = Instant.now();
 
         Instant bookingCreationTime = now.minusSeconds(12345);
-        Appointment upcoming = new Appointment(88L, 10L, 100L, AppointmentStatus.CONFIRMED, bookingCreationTime);
-        Appointment past = new Appointment(88L, 20L, 200L, AppointmentStatus.COMPLETED, now.minusSeconds(22345));
-        TimeSlot upcomingSlot = mock(TimeSlot.class);
-        when(upcomingSlot.getId()).thenReturn(100L);
-        when(upcomingSlot.getStartTime()).thenReturn(now.plusSeconds(3600));
-        when(upcomingSlot.getEndTime()).thenReturn(now.plusSeconds(5400));
-        TimeSlot pastSlot = mock(TimeSlot.class);
-        when(pastSlot.getId()).thenReturn(200L);
-        when(pastSlot.getStartTime()).thenReturn(now.minusSeconds(5400));
-        when(pastSlot.getEndTime()).thenReturn(now.minusSeconds(3600));
-
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(88L)).thenReturn(List.of(upcoming, past));
-        when(timeSlotRepository.findByIdIn(any())).thenReturn(List.of(upcomingSlot, pastSlot));
+        AppointmentSummary upcoming = new AppointmentSummary("CONFIRMED", 10L, 100L, true,
+                now.plusSeconds(3600), now.plusSeconds(5400), null, null, null, false);
+        AppointmentSummary past = new AppointmentSummary("COMPLETED", 20L, 200L, true,
+                now.minusSeconds(5400), now.minusSeconds(3600), null, null, null, false);
+        stubAppointments(88L, List.of(upcoming), List.of(past));
 
         AssistantToolResult result = appointmentsTool.execute(context);
 
@@ -335,23 +310,14 @@ class AssistantPersonalizedToolTests {
     void testWaitlistOutputUsesPrincipalCitizenId() {
         UserPrincipal citizen = createCitizenPrincipal(88L);
         AssistantToolContext context = new AssistantToolContext("req-6b", citizen, Set.of("ROLE_CITIZEN"));
-        WaitlistEntry own = mock(WaitlistEntry.class);
-        Instant joinedAt = Instant.now();
-        when(own.getId()).thenReturn(900L);
-        when(own.getCitizenId()).thenReturn(88L);
-        when(own.getCampaignId()).thenReturn(10L);
-        when(own.getSessionId()).thenReturn(500L);
-        when(own.getStatus()).thenReturn(WaitlistStatus.WAITING);
-        when(own.getJoinedAt()).thenReturn(joinedAt);
-
-        when(waitlistRepository.findByCitizenIdOrderByJoinedAtDesc(88L)).thenReturn(List.of(own));
-        when(waitlistRepository.countQueuePosition(500L, WaitlistStatus.WAITING, joinedAt, 900L))
-                .thenReturn(2L);
+        when(appointmentQuery.appointmentsAndWaitlistForCitizen(citizen)).thenReturn(
+                new CitizenAppointmentAndWaitlistOverview(emptyAppointments(),
+                        List.of(new WaitlistSummary("WAITING", 10L, 500L, 2))));
 
         AssistantToolResult result = appointmentsTool.execute(context);
 
-        verify(waitlistRepository).findByCitizenIdOrderByJoinedAtDesc(88L);
-        verify(waitlistRepository, never()).findByCitizenIdOrderByJoinedAtDesc(77L);
+        verify(appointmentQuery).appointmentsAndWaitlistForCitizen(argThat(p -> p.getUserId().equals(88L)));
+        verify(appointmentQuery, never()).appointmentsAndWaitlistForCitizen(argThat(p -> p.getUserId().equals(77L)));
         assertThat(result.contextSnippet()).contains("Status: WAITING");
         assertThat(result.contextSnippet()).contains("Current Queue Position: 2");
         assertThat(result.contextSnippet()).doesNotContain("77");
@@ -362,7 +328,7 @@ class AssistantPersonalizedToolTests {
     @DisplayName("7. Eligibility lookup always uses principal.getUserId()")
     void testEligibilityLookupUsesPrincipalUserId() {
         UserPrincipal citizen = createCitizenPrincipal(123L);
-        when(eligibilityAssessmentRepository.findByCitizenIdOrderByReviewedAtDesc(123L)).thenReturn(Collections.emptyList());
+        when(eligibilityQuery.latestForCitizen(argThat(p -> p.getUserId().equals(123L)))).thenReturn(List.of());
 
         AssistantChatRequest request = new AssistantChatRequest("What is my eligibility status?", Collections.emptyList(), null);
         MockHttpServletRequest httpReq = new MockHttpServletRequest();
@@ -370,7 +336,7 @@ class AssistantPersonalizedToolTests {
 
         assistantService.processMessage(request, citizen, httpReq);
 
-        verify(eligibilityAssessmentRepository).findByCitizenIdOrderByReviewedAtDesc(123L);
+        verify(eligibilityQuery).latestForCitizen(argThat(p -> p.getUserId().equals(123L)));
     }
 
     @Test
@@ -379,19 +345,9 @@ class AssistantPersonalizedToolTests {
         UserPrincipal citizen = createCitizenPrincipal(123L);
         AssistantToolContext context = new AssistantToolContext("req-8", citizen, Set.of("ROLE_CITIZEN"));
 
-        EligibilityAssessment assessment = new EligibilityAssessment();
-        assessment.setCitizenId(123L);
-        assessment.setCampaignId(44L);
-        assessment.setStatus(EligibilityAssessmentStatus.ELIGIBLE);
-        assessment.setPreliminaryResult(PreliminaryScreeningResult.PRELIMINARY_PASS);
-        assessment.setReviewedAt(Instant.parse("2026-09-01T10:00:00Z"));
-        assessment.setValidUntil(Instant.parse("2026-12-01T10:00:00Z"));
-        assessment.setClinicalNotes("Top Secret Clinical Evaluation Note XYZ");
-        assessment.setReason("Internal clinical review reason ABC");
-        assessment.setReviewerId(9999L);
-        assessment.setRescreeningReason("Rescreening evidence DEF");
-
-        when(eligibilityAssessmentRepository.findByCitizenIdOrderByReviewedAtDesc(123L)).thenReturn(List.of(assessment));
+        when(eligibilityQuery.latestForCitizen(citizen)).thenReturn(List.of(new EligibilitySummary(
+                44L, "ELIGIBLE", Instant.parse("2026-09-01T10:00:00Z"),
+                Instant.parse("2026-12-01T10:00:00Z"), "ACTIVE")));
 
         AssistantToolResult result = eligibilityTool.execute(context);
 
@@ -414,7 +370,7 @@ class AssistantPersonalizedToolTests {
         UserPrincipal citizen = createCitizenPrincipal(123L);
         AssistantToolContext context = new AssistantToolContext("req-9", citizen, Set.of("ROLE_CITIZEN"));
 
-        when(eligibilityAssessmentRepository.findByCitizenIdOrderByReviewedAtDesc(123L)).thenReturn(Collections.emptyList());
+        when(eligibilityQuery.latestForCitizen(argThat(p -> p.getUserId().equals(123L)))).thenReturn(List.of());
 
         AssistantToolResult result = eligibilityTool.execute(context);
 
@@ -464,30 +420,17 @@ class AssistantPersonalizedToolTests {
         UserPrincipal citizen = createCitizenPrincipal(100L);
         AssistantToolContext context = new AssistantToolContext("req-11", citizen, Set.of("ROLE_CITIZEN"));
 
-        // 10 appointments
-        List<Appointment> manyAppointments = new ArrayList<>();
-        for (long i = 1; i <= 10; i++) {
-            manyAppointments.add(new Appointment(100L, i, i * 10));
+        // Queries guarantee bounded snapshots; this layer verifies their rendered count.
+        List<AppointmentSummary> appointmentFacts = new ArrayList<>();
+        List<EligibilitySummary> eligibilityFacts = new ArrayList<>();
+        for (long i = 1; i <= 5; i++) {
+            appointmentFacts.add(appointment(i, i * 10));
+            eligibilityFacts.add(new EligibilitySummary(i, "ELIGIBLE", Instant.EPOCH, null, "ACTIVE"));
         }
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(100L)).thenReturn(manyAppointments);
-
-        AssistantToolResult apptResult = appointmentsTool.execute(context);
-        assertEquals(5, apptResult.resultCount());
-
-        // 10 assessments across 7 campaigns
-        List<EligibilityAssessment> manyAssessments = new ArrayList<>();
-        for (long c = 1; c <= 7; c++) {
-            EligibilityAssessment a = new EligibilityAssessment();
-            a.setCitizenId(100L);
-            a.setCampaignId(c);
-            a.setStatus(EligibilityAssessmentStatus.ELIGIBLE);
-            a.setReviewedAt(Instant.now());
-            manyAssessments.add(a);
-        }
-        when(eligibilityAssessmentRepository.findByCitizenIdOrderByReviewedAtDesc(100L)).thenReturn(manyAssessments);
-
-        AssistantToolResult eligResult = eligibilityTool.execute(context);
-        assertEquals(5, eligResult.resultCount());
+        stubAppointments(100L, appointmentFacts, List.of());
+        when(eligibilityQuery.latestForCitizen(citizen)).thenReturn(eligibilityFacts);
+        assertEquals(5, appointmentsTool.execute(context).resultCount());
+        assertEquals(5, eligibilityTool.execute(context).resultCount());
     }
 
     @Test
@@ -501,8 +444,7 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.MUTATION_REFUSAL_MESSAGE);
-        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
-                eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
     }
 
     @Test
@@ -516,8 +458,7 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.MEDICAL_BOUNDARY_MESSAGE);
-        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
-                eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
     }
 
     @Test
@@ -531,8 +472,7 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.SECURITY_REFUSAL_MESSAGE);
-        verifyNoInteractions(appointmentRepository, timeSlotRepository, waitlistRepository,
-                eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
     }
 
     @Test
@@ -552,14 +492,14 @@ class AssistantPersonalizedToolTests {
             assistantService.processMessage(new AssistantChatRequest(q, Collections.emptyList(), null), citizen, httpReq);
         }
 
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
     }
 
     @Test
     @DisplayName("16. Tool exceptions produce neutral context without database details")
     void testToolExceptionProducesNeutralContext() {
         UserPrincipal citizen = createCitizenPrincipal(100L);
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(100L))
+        when(appointmentQuery.appointmentsAndWaitlistForCitizen(argThat(p -> p.getUserId().equals(100L))))
                 .thenThrow(new RuntimeException("SQLSyntaxErrorException near TABLE appointment; Connection failed"));
 
         AssistantToolContext context = new AssistantToolContext("req-16", citizen, Set.of("ROLE_CITIZEN"));
@@ -578,11 +518,11 @@ class AssistantPersonalizedToolTests {
         UserPrincipal citizen = createCitizenPrincipal(100L);
         AssistantToolContext context = new AssistantToolContext("req-17", citizen, Set.of("ROLE_CITIZEN"));
 
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(100L)).thenReturn(Collections.emptyList());
+        stubAppointments(100L, List.of(), List.of());
         AssistantToolResult apptResult = appointmentsTool.execute(context);
         assertThat(apptResult.contextSnippet()).contains("No appointment or waitlist record was found.");
 
-        when(eligibilityAssessmentRepository.findByCitizenIdOrderByReviewedAtDesc(100L)).thenReturn(Collections.emptyList());
+        when(eligibilityQuery.latestForCitizen(argThat(p -> p.getUserId().equals(100L)))).thenReturn(List.of());
         AssistantToolResult eligResult = eligibilityTool.execute(context);
         assertThat(eligResult.contextSnippet()).contains("No recorded eligibility assessment was found.");
 
@@ -598,7 +538,7 @@ class AssistantPersonalizedToolTests {
         UserPrincipal citizen = createCitizenPrincipal(100L);
         AssistantToolContext context = new AssistantToolContext("req-18", citizen, Set.of("ROLE_CITIZEN"));
 
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(100L)).thenReturn(List.of(new Appointment(100L, 1L, 1L)));
+        stubAppointments(100L, List.of(appointment(1L, 1L)), List.of());
 
         Optional<String> contextBlock = personalizedContextBuilder.buildPersonalizedContext("Show my appointments", context);
 
@@ -610,9 +550,7 @@ class AssistantPersonalizedToolTests {
     @DisplayName("19. Logs contain tool ID and result count but no personalized values")
     void testLogsContainToolIdAndResultCountWithoutPersonalizedValues() {
         UserPrincipal citizen = createCitizenPrincipal(100L);
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(100L)).thenReturn(List.of(
-                new Appointment(100L, 999L, 888L)
-        ));
+        stubAppointments(100L, List.of(appointment(999L, 888L)), List.of());
 
         AssistantToolContext context = new AssistantToolContext("test-req-19", citizen, Set.of("ROLE_CITIZEN"));
         personalizedContextBuilder.buildPersonalizedContext("What is the status of my appointment?", context);
@@ -669,9 +607,7 @@ class AssistantPersonalizedToolTests {
                 new UsernamePasswordAuthenticationToken(citizen, null, citizen.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(400L)).thenReturn(List.of(
-                new Appointment(400L, 1L, 1L)
-        ));
+        stubAppointments(400L, List.of(appointment(1L, 1L)), List.of());
 
         AssistantChatRequest request = new AssistantChatRequest("What is the status of my appointment?", Collections.emptyList(), "/app/appointments/mine");
 
@@ -709,7 +645,7 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.EMERGENCY_GUIDANCE_MESSAGE);
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
         assertThat(fakeProvider.getRecordedRequests()).isEmpty();
     }
 
@@ -725,7 +661,7 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.MEDICAL_BOUNDARY_MESSAGE);
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
         assertThat(fakeProvider.getRecordedRequests()).isEmpty();
     }
 
@@ -743,7 +679,7 @@ class AssistantPersonalizedToolTests {
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.MUTATION_REFUSAL_MESSAGE);
         assertThat(response.suggestedActions()).isNotEmpty();
         assertThat(response.suggestedActions().get(0).path()).isEqualTo("/app/appointments/mine");
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
         assertThat(fakeProvider.getRecordedRequests()).isEmpty();
     }
 
@@ -759,7 +695,7 @@ class AssistantPersonalizedToolTests {
         AssistantChatResponse response = assistantService.processMessage(request, citizen, httpReq);
 
         assertThat(response.answer()).isEqualTo(AssistantRefusalPolicy.SECURITY_REFUSAL_MESSAGE);
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
         assertThat(fakeProvider.getRecordedRequests()).isEmpty();
     }
 
@@ -776,7 +712,7 @@ class AssistantPersonalizedToolTests {
                 .isInstanceOf(com.se2030.vaccinationportal.assistant.exception.AssistantDisabledException.class)
                 .hasMessageContaining("currently disabled or unavailable");
 
-        verifyNoInteractions(appointmentRepository, eligibilityAssessmentRepository, digitalCertificateService);
+        verifyNoInteractions(appointmentQuery, eligibilityQuery, digitalCertificateService);
         assertThat(fakeProvider.getRecordedRequests()).isEmpty();
     }
 
@@ -837,9 +773,7 @@ class AssistantPersonalizedToolTests {
         UserPrincipal citizen = createCitizenPrincipal(700L);
         AssistantToolContext context = new AssistantToolContext("req-28", citizen, Set.of("ROLE_CITIZEN"));
 
-        when(appointmentRepository.findByCitizenIdOrderByBookedAtDesc(700L)).thenReturn(List.of(
-                new Appointment(700L, 1L, 1L)
-        ));
+        stubAppointments(700L, List.of(appointment(1L, 1L)), List.of());
 
         // 1. Tool result contextSnippet must NOT contain literal /app/ paths
         AssistantToolResult toolResult = appointmentsTool.execute(context);
@@ -885,5 +819,20 @@ class AssistantPersonalizedToolTests {
         assertTrue(personalizedContext.isPresent());
         assertThat(personalizedContext.get()).doesNotContain("/app/admin/staff-requests");
         assertThat(personalizedContext.get()).doesNotContain("Authorized Navigation:");
+    }
+
+    private static CitizenAppointmentOverview emptyAppointments() {
+        return new CitizenAppointmentOverview(List.of(), List.of(), List.of());
+    }
+
+    private static AppointmentSummary appointment(Long campaign, Long slot) {
+        return new AppointmentSummary("CONFIRMED", campaign, slot, false, null, null, null, null, null, false);
+    }
+
+    private void stubAppointments(Long userId, List<AppointmentSummary> upcoming, List<AppointmentSummary> past) {
+        CitizenAppointmentOverview overview = new CitizenAppointmentOverview(upcoming, past, List.of());
+        when(appointmentQuery.appointmentsForCitizen(argThat(p -> p.getUserId().equals(userId)))).thenReturn(overview);
+        when(appointmentQuery.appointmentsAndWaitlistForCitizen(argThat(p -> p.getUserId().equals(userId))))
+                .thenReturn(new CitizenAppointmentAndWaitlistOverview(overview, List.of()));
     }
 }

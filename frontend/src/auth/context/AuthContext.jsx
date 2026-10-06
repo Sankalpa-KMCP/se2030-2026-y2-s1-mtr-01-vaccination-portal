@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { getToken, setToken, clearToken, onUnauthorized } from '../authStorage';
+import { getToken, setToken, clearToken, onUnauthorized } from '../../shared/auth/authStorage';
 import { loginApi, getCurrentUserApi } from '../api/authApi';
 
 const AuthContext = createContext(null);

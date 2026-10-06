@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import featureBoundaries from './eslint/featureBoundaries.js';
 
 export default [
   { ignores: ['dist'] },
@@ -29,5 +30,11 @@ export default [
         { allowConstantExport: true },
       ],
     },
+  },
+  {
+    files: ['src/**/*.{js,jsx}'],
+    ignores: ['src/**/*.test.{js,jsx}'],
+    plugins: { architecture: { rules: { 'feature-boundaries': featureBoundaries } } },
+    rules: { 'architecture/feature-boundaries': 'error' },
   },
 ];

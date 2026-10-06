@@ -9,7 +9,7 @@ import {
   within,
 } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ApiError } from '../../../services/apiClient';
+import { ApiError } from '../../../shared/api/apiClient';
 
 const apiMocks = vi.hoisted(() => ({
   listQuestionnaires: vi.fn(),

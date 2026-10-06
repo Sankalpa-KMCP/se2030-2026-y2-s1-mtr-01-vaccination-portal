@@ -1,5 +1,5 @@
 import React from 'react';
-import bannerImage from '../assets/citizen-health-banner.png';
+import bannerImage from '../../../shared/assets/citizen-health-banner.png';
 
 export default function BottomHealthBanner() {
   return (

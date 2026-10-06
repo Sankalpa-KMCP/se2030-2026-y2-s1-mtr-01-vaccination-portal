@@ -2,6 +2,10 @@
 
 The backend application for the Web-Based Vaccination Portal (WBVP-SE2030) is a modular monolith built with Java 21 and Spring Boot. It uses Maven for build automation, MySQL for persistent relational storage with Flyway database migrations, and an in-memory H2 database alongside MySQL Testcontainers for multi-tier verification.
 
+## Architecture ownership (current)
+
+See the [current architecture and file tree](../docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md) for capability packages, provider-owned APIs, transaction invariants and enforced import boundaries. Historical handoffs do not define the current package tree.
+
 ## Declared Technology Stack
 
 - **Language**: Java 21
@@ -37,7 +41,7 @@ The backend follows an explicit hexagonal / ports-and-adapters architecture unde
   - Rescheduling, cancellations, check-in processing, check-in reversal, and waitlist queue management (`AppointmentController`, `WaitlistController`).
   - Inter-module decoupling via explicit ports (`EligibilityLookupPort`, `SlotCapacityPort`).
 - **MF-04: Vaccine Inventory & Batch Management (`inventory`)**:
-  - Planned module boundary; package structure and dependency interfaces prepared for upcoming stock, cold-chain, and batch allocation slices.
+  - Implemented manufacturer, batch, stock adjustment and auditing services; Campaign reference reads use immutable Campaign-owned APIs. Inventory owns its batch availability/deduction port.
 - **MF-05: Vaccination Administration & Records (`vaccination`)**:
   - Vaccination draft records with full CRUD (`VaccinationDraftController`).
   - Finalized vaccination records and verifiable digital certificates (`DigitalCertificateController`, `DigitalCertificateService`).
@@ -46,7 +50,7 @@ The backend follows an explicit hexagonal / ports-and-adapters architecture unde
 
 Database schema versioning is managed strictly through Flyway migrations located in `src/main/resources/db/migration/`.
 
-- **Active Migration Range**: Current migrations span `V0` through `V12` (13 active migrations).
+- **Active Migration Range**: Current migrations span `V0` through `V21` (22 active migrations).
 - **Migration Execution**: Flyway migrations run automatically upon application startup when connected to a configured MySQL database.
 - **DDL Validation**: Production safety is enforced via `spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:validate}`, verifying that Hibernate entities match the Flyway-applied schema without runtime auto-modification.
 - **Testing Profile (`application-test.properties`)**: Standard unit and integration tests run against an in-memory H2 database (`MODE=MySQL`) with `create-drop` lifecycle for fast, isolated execution.
@@ -269,6 +273,7 @@ backend/
     |   |           \-- vaccinationportal/
     |   |               |-- VaccinationPortalApplication.java
     |   |               |-- appointment/
+    |   |               |-- assistant/
     |   |               |-- campaign/
     |   |               |-- inventory/
     |   |               |-- screening/
@@ -280,7 +285,7 @@ backend/
     |       \-- db/
     |           \-- migration/
     |               |-- V0__core_campaign_center_session_foundation.sql
-    |               \-- ... (V1 through V12)
+    |               \-- ... (V1 through V21)
     \-- test/
         |-- java/
         |   \-- com/

@@ -2,7 +2,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import CitizenDashboardPage from './CitizenDashboardPage';
+import CitizenDashboardPage from '../../features/citizen-dashboard/pages/CitizenDashboardPage';
 import StaffDashboardPage from './StaffDashboardPage';
 import AdminDashboardPage from './AdminDashboardPage';
 

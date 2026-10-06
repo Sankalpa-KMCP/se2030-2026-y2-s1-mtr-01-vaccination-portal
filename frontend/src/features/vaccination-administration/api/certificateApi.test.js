@@ -13,9 +13,9 @@ import {
   applyCorrectionRequest,
   getRecordCorrections,
 } from './certificateApi';
-import * as apiClient from '../../../services/apiClient';
+import * as apiClient from '../../../shared/api/apiClient';
 
-vi.mock('../../../services/apiClient', () => ({
+vi.mock('../../../shared/api/apiClient', () => ({
   apiRequest: vi.fn(),
   parseApiResponse: vi.fn(),
 }));

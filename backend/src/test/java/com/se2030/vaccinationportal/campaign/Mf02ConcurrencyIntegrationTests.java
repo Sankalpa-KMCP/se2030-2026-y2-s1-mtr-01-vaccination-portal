@@ -1,37 +1,37 @@
 package com.se2030.vaccinationportal.campaign;
 
-import com.se2030.vaccinationportal.campaign.model.CampaignCenterAssignment;
-import com.se2030.vaccinationportal.campaign.model.CampaignDoseProgramme;
-import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
-import com.se2030.vaccinationportal.campaign.model.CenterStatus;
-import com.se2030.vaccinationportal.campaign.model.DoseCategory;
-import com.se2030.vaccinationportal.campaign.model.OperatingHours;
-import com.se2030.vaccinationportal.campaign.model.SessionChangeEvent;
-import com.se2030.vaccinationportal.campaign.model.SessionRecurrenceRule;
-import com.se2030.vaccinationportal.campaign.model.TargetGroup;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
-import com.se2030.vaccinationportal.campaign.model.VaccinationSession;
-import com.se2030.vaccinationportal.campaign.model.VaccineType;
-import com.se2030.vaccinationportal.campaign.repository.CampaignCenterAssignmentRepository;
-import com.se2030.vaccinationportal.campaign.repository.CampaignDoseProgrammeRepository;
-import com.se2030.vaccinationportal.campaign.repository.CampaignQuestionnaireAssignmentRepository;
-import com.se2030.vaccinationportal.campaign.repository.OperatingHoursRepository;
-import com.se2030.vaccinationportal.campaign.repository.SessionChangeEventRepository;
-import com.se2030.vaccinationportal.campaign.repository.SessionRecurrenceRuleRepository;
-import com.se2030.vaccinationportal.campaign.repository.TargetGroupRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCampaignRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationSessionRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
-import com.se2030.vaccinationportal.campaign.service.CampaignDoseProgrammeService;
-import com.se2030.vaccinationportal.campaign.service.CampaignQuestionnaireAssignmentService;
-import com.se2030.vaccinationportal.campaign.service.OperatingHoursService;
-import com.se2030.vaccinationportal.campaign.service.QuestionnaireVersionPublicationPort;
-import com.se2030.vaccinationportal.campaign.service.SessionChangePreview;
-import com.se2030.vaccinationportal.campaign.service.SessionOccurrenceGenerationService;
-import com.se2030.vaccinationportal.campaign.service.SessionSeriesChangeService;
-import com.se2030.vaccinationportal.campaign.service.VaccinationSessionService;
+import com.se2030.vaccinationportal.campaign.center.model.CampaignCenterAssignment;
+import com.se2030.vaccinationportal.campaign.core.model.CampaignDoseProgramme;
+import com.se2030.vaccinationportal.campaign.core.model.CampaignStatus;
+import com.se2030.vaccinationportal.campaign.center.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.core.model.DoseCategory;
+import com.se2030.vaccinationportal.campaign.center.model.OperatingHours;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionChangeEvent;
+import com.se2030.vaccinationportal.campaign.session.recurrence.model.SessionRecurrenceRule;
+import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.center.repository.CampaignCenterAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.core.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.questionnaire.repository.CampaignQuestionnaireAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.center.repository.OperatingHoursRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.SessionChangeEventRepository;
+import com.se2030.vaccinationportal.campaign.session.recurrence.repository.SessionRecurrenceRuleRepository;
+import com.se2030.vaccinationportal.campaign.reference.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaignRepository;
+import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.VaccinationSessionRepository;
+import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.core.service.CampaignDoseProgrammeService;
+import com.se2030.vaccinationportal.campaign.questionnaire.service.CampaignQuestionnaireAssignmentService;
+import com.se2030.vaccinationportal.campaign.center.service.OperatingHoursService;
+import com.se2030.vaccinationportal.campaign.api.questionnaire.QuestionnaireVersionPublicationPort;
+import com.se2030.vaccinationportal.campaign.session.planning.service.SessionChangePreview;
+import com.se2030.vaccinationportal.campaign.session.recurrence.service.SessionOccurrenceGenerationService;
+import com.se2030.vaccinationportal.campaign.session.recurrence.service.SessionSeriesChangeService;
+import com.se2030.vaccinationportal.campaign.session.planning.service.VaccinationSessionService;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -325,7 +325,7 @@ class Mf02ConcurrencyIntegrationTests {
 
         generationService.generateOccurrences(rule.getId());
 
-        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview preview =
+        com.se2030.vaccinationportal.campaign.session.recurrence.service.SeriesChangePreview preview =
                 seriesChangeService.previewSeriesChange(
                         rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
                         LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
@@ -366,7 +366,7 @@ class Mf02ConcurrencyIntegrationTests {
 
         generationService.generateOccurrences(rule.getId());
 
-        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview preview =
+        com.se2030.vaccinationportal.campaign.session.recurrence.service.SeriesChangePreview preview =
                 seriesChangeService.previewSeriesChange(
                         rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
                         LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),
@@ -413,7 +413,7 @@ class Mf02ConcurrencyIntegrationTests {
 
         generationService.generateOccurrences(rule.getId());
 
-        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview preview =
+        com.se2030.vaccinationportal.campaign.session.recurrence.service.SeriesChangePreview preview =
                 seriesChangeService.previewSeriesCancellation(rule.getId());
 
         // Run two series cancellations with the same preview token concurrently
@@ -454,10 +454,10 @@ class Mf02ConcurrencyIntegrationTests {
 
         generationService.generateOccurrences(rule.getId());
 
-        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview cancelPreview =
+        com.se2030.vaccinationportal.campaign.session.recurrence.service.SeriesChangePreview cancelPreview =
                 seriesChangeService.previewSeriesCancellation(rule.getId());
 
-        com.se2030.vaccinationportal.campaign.service.SeriesChangePreview changePreview =
+        com.se2030.vaccinationportal.campaign.session.recurrence.service.SeriesChangePreview changePreview =
                 seriesChangeService.previewSeriesChange(
                         rule.getId(), EnumSet.of(DayOfWeek.MONDAY),
                         LocalDate.of(2029, 2, 5), LocalDate.of(2029, 2, 26),

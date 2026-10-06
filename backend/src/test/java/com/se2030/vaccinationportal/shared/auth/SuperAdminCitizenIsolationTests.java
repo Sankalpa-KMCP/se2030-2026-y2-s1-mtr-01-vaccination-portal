@@ -1,7 +1,7 @@
 package com.se2030.vaccinationportal.shared.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.se2030.vaccinationportal.appointment.dto.WaitlistJoinRequest;
+import com.se2030.vaccinationportal.appointment.waitlist.dto.WaitlistJoinRequest;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;

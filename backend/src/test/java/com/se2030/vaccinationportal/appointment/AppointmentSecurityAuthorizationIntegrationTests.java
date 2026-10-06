@@ -4,12 +4,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.se2030.vaccinationportal.appointment.model.Appointment;
-import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
-import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
-import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
-import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
-import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
+import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus;
+import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import java.time.Instant;
 import java.time.LocalDate;

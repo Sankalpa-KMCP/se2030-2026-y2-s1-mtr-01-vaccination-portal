@@ -7,12 +7,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationPort;
-import com.se2030.vaccinationportal.vaccination.dependency.AppointmentValidationSnapshot;
-import com.se2030.vaccinationportal.vaccination.exception.AppointmentNotCheckedInException;
-import com.se2030.vaccinationportal.vaccination.exception.VaccinationAppointmentNotFoundException;
-import com.se2030.vaccinationportal.vaccination.exception.VaccinationRecordAlreadyExistsException;
-import com.se2030.vaccinationportal.vaccination.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationPort;
+import com.se2030.vaccinationportal.appointment.api.vaccination.AppointmentValidationSnapshot;
+import com.se2030.vaccinationportal.vaccination.administration.exception.AppointmentNotCheckedInException;
+import com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationAppointmentNotFoundException;
+import com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationRecordAlreadyExistsException;
+import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -146,7 +146,7 @@ class VaccinationDraftIntegrationValidatorTests {
         );
 
         assertThrows(
-                com.se2030.vaccinationportal.vaccination.exception.VaccinationBatchVaccineTypeMismatchException.class,
+                com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationBatchVaccineTypeMismatchException.class,
                 () -> validatorWithInventory.validateBatchCompatibility(APPOINTMENT_ID, batchId)
         );
     }
@@ -204,7 +204,7 @@ class VaccinationDraftIntegrationValidatorTests {
         );
 
         assertThrows(
-                com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException.class,
+                com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationDraftException.class,
                 () -> validatorWithInventory.validateBatchCompatibility(APPOINTMENT_ID, batchId)
         );
     }
@@ -227,7 +227,7 @@ class VaccinationDraftIntegrationValidatorTests {
         when(appointmentValidationPort.findByAppointmentId(APPOINTMENT_ID)).thenReturn(Optional.of(snapshot));
 
         assertThrows(
-                com.se2030.vaccinationportal.vaccination.exception.InvalidVaccinationDraftException.class,
+                com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationDraftException.class,
                 () -> validatorWithInventory.validateBatchCompatibility(APPOINTMENT_ID, batchId)
         );
     }

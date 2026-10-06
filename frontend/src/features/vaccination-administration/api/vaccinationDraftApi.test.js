@@ -5,7 +5,7 @@ const clientMocks = vi.hoisted(() => ({
   parseApiResponse: vi.fn(),
 }));
 
-vi.mock('../../../services/apiClient', () => clientMocks);
+vi.mock('../../../shared/api/apiClient', () => clientMocks);
 
 import {
   confirmAndFinalizeVaccinationDraft,

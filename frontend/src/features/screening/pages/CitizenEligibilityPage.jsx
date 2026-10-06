@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
+import CitizenErrorState from '../../../shared/ui/citizen/CitizenErrorState';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
 import { getCitizenCampaignEligibility } from '../api/screeningApi';
 import {
   CITIZEN_PRELIMINARY_RESULT_LABELS,
@@ -20,7 +20,7 @@ import {
   latestCampaignRecords,
   screeningWorkflowLabel,
 } from '../utils/screeningHistory';
-import citizenHealthBanner from '../../citizen-dashboard/assets/citizen-health-banner.png';
+import citizenHealthBanner from '../../../shared/assets/citizen-health-banner.png';
 import './CitizenEligibilityPage.css';
 
 function getCampaignActivityEvents(submission, assessment) {

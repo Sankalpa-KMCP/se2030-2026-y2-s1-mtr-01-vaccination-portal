@@ -4,10 +4,11 @@ import AvailabilitySearch from '../components/AvailabilitySearch';
 import { bookAppointment } from '../api/appointmentApi';
 import { joinWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
-import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
-import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
-import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
+import CitizenErrorState from '../../../shared/ui/citizen/CitizenErrorState';
+import CitizenPageHeader from '../../../shared/ui/citizen/CitizenPageHeader';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenWorkflowGuide from '../../../shared/ui/citizen/CitizenWorkflowGuide';
+import '../citizen-appointment.css';
 
 /**
  * Appointment Booking Page (US-03).

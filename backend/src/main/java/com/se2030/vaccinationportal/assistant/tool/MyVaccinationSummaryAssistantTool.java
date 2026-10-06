@@ -1,8 +1,8 @@
 package com.se2030.vaccinationportal.assistant.tool;
 
-import com.se2030.vaccinationportal.vaccination.dto.CitizenCertificateResponse;
-import com.se2030.vaccinationportal.vaccination.dto.CitizenVaccinationRecordResponse;
-import com.se2030.vaccinationportal.vaccination.service.DigitalCertificateService;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CitizenCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.query.dto.CitizenVaccinationRecordResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.service.DigitalCertificateService;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
