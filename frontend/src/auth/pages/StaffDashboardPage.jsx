@@ -73,7 +73,9 @@ export default function StaffDashboardPage() {
         <p className="text-muted mb-0">Your available tools reflect your authoritative staff role.</p>
       </div>
 
-      <div className="mb-5"><DashboardProfileCard user={user} showRoles /></div>
+      {!isVaccinator && (
+        <div className="mb-5"><DashboardProfileCard user={user} showRoles /></div>
+      )}
 
       {isVaccinator && <VaccinatorDashboardSection />}
 

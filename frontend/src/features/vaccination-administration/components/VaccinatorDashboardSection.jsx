@@ -250,6 +250,9 @@ export default function VaccinatorDashboardSection({
         <h2 className="h3 fw-bold mb-1" id="vaccinator-workspace-title">
           Vaccinator Dashboard
         </h2>
+        <div className="small text-secondary fw-medium mb-1">
+          Welcome, {user?.fullName || user?.email || 'Vaccinator'} • Vaccinator
+        </div>
         <p className="text-muted mb-0">Manage today&apos;s vaccination work</p>
       </div>
 
