@@ -508,4 +508,84 @@ class VaccinationFinalizationServiceTests {
         verify(recordRepository, never()).saveAndFlush(any());
         verify(inventoryPort, never()).deductVaccinationDose(any(), any(), any());
     }
+
+    @Test
+    void confirmAndFinalizeDraft_whenAlreadyReady_finalizesDirectly() {
+        VaccinationDraft draft = readyDraft(101L, 42L);
+        when(draftRepository.findById(101L)).thenReturn(Optional.of(draft));
+        when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
+
+        AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
+                42L, true, 501L, 601L, 701L, 10L, 1L
+        );
+        when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
+
+        BatchAvailability available = new BatchAvailability(
+                12L, 1L, BatchStatus.ACTIVE, LocalDate.of(2027, 1, 1), 50, BatchAvailabilityReason.AVAILABLE
+        );
+        when(inventoryPort.getBatchAvailability(10L, 12L)).thenReturn(available);
+
+        VaccinationRecord savedRecord = new VaccinationRecord(
+                42L, 501L, 601L, 10L, 201L, 12L, 1, NOW, null, "Authorized notes", NOW
+        );
+        ReflectionTestUtils.setField(savedRecord, "id", 777L);
+        when(recordRepository.saveAndFlush(any(VaccinationRecord.class))).thenReturn(savedRecord);
+
+        DigitalCertificate certificate = new DigitalCertificate(
+                savedRecord.getId(), "CERT-2026-XYZ", "tok_verify_123", NOW
+        );
+        when(certificateService.issueCertificateForVaccinationRecord(savedRecord.getId())).thenReturn(certificate);
+
+        FinalizeVaccinationResponse response = finalizationService.confirmAndFinalizeDraft(101L, 201L);
+
+        assertNotNull(response);
+        assertEquals(101L, response.draftId());
+        assertEquals(VaccinationDraftStatus.FINALIZED, draft.getStatus());
+        verify(recordRepository).saveAndFlush(any(VaccinationRecord.class));
+    }
+
+    @Test
+    void confirmAndFinalizeDraft_whenInProgress_confirmsPhysicalThenFinalizes() {
+        VaccinationDraft draft = new VaccinationDraft(42L);
+        ReflectionTestUtils.setField(draft, "id", 101L);
+        draft.setVaccinatorId(201L);
+        draft.setVaccineBatchId(12L);
+        draft.setDoseNumber(1);
+        draft.setAdministrationTime(NOW);
+        draft.setAuthorizedNotes("Authorized notes");
+        draft.setPhysicalAdministrationConfirmed(false);
+        draft.setStatus(VaccinationDraftStatus.IN_PROGRESS);
+
+        when(draftRepository.findById(101L)).thenReturn(Optional.of(draft));
+        when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
+
+        AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
+                42L, true, 501L, 601L, 701L, 10L, 1L
+        );
+        when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
+
+        BatchAvailability available = new BatchAvailability(
+                12L, 1L, BatchStatus.ACTIVE, LocalDate.of(2027, 1, 1), 50, BatchAvailabilityReason.AVAILABLE
+        );
+        when(inventoryPort.getBatchAvailability(10L, 12L)).thenReturn(available);
+
+        VaccinationRecord savedRecord = new VaccinationRecord(
+                42L, 501L, 601L, 10L, 201L, 12L, 1, NOW, null, "Authorized notes", NOW
+        );
+        ReflectionTestUtils.setField(savedRecord, "id", 777L);
+        when(recordRepository.saveAndFlush(any(VaccinationRecord.class))).thenReturn(savedRecord);
+
+        DigitalCertificate certificate = new DigitalCertificate(
+                savedRecord.getId(), "CERT-2026-XYZ", "tok_verify_123", NOW
+        );
+        when(certificateService.issueCertificateForVaccinationRecord(savedRecord.getId())).thenReturn(certificate);
+
+        FinalizeVaccinationResponse response = finalizationService.confirmAndFinalizeDraft(101L, 201L);
+
+        assertNotNull(response);
+        assertEquals(101L, response.draftId());
+        assertTrue(draft.isPhysicalAdministrationConfirmed());
+        assertEquals(VaccinationDraftStatus.FINALIZED, draft.getStatus());
+        verify(recordRepository).saveAndFlush(any(VaccinationRecord.class));
+    }
 }

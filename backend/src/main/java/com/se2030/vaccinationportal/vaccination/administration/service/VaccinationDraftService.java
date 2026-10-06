@@ -75,6 +75,9 @@ public class VaccinationDraftService {
         draft.setVaccinatorId(vaccinatorId);
         validator.validateDraft(draft);
         integrationValidator.validateAppointment(draft.getAppointmentId());
+        if (draft.getVaccineBatchId() != null) {
+            integrationValidator.validateBatchCompatibility(draft.getAppointmentId(), draft.getVaccineBatchId());
+        }
 
         try {
             return draftRepository.saveAndFlush(draft);
@@ -118,6 +121,9 @@ public class VaccinationDraftService {
         VaccinationDraftMapper.applyUpdate(request, draft);
         validator.validateDraft(draft);
         integrationValidator.validateAppointment(draft.getAppointmentId());
+        if (draft.getVaccineBatchId() != null) {
+            integrationValidator.validateBatchCompatibility(draft.getAppointmentId(), draft.getVaccineBatchId());
+        }
         return draftRepository.save(draft);
     }
 

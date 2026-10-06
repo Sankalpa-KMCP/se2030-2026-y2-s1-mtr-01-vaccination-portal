@@ -38,7 +38,7 @@ function formatDateTime(isoString) {
  *  3. "My Active Drafts" summary (strictly IN_PROGRESS and READY_FOR_FINALIZATION;
  *     FINALIZED excluded).
  *  4. Direct navigation link to the dedicated Vaccination Drafts page for all
- *     lifecycle mutations (Edit, Discard, Confirm Administration, Finalize).
+ *     lifecycle mutations (Edit, Discard, Confirm & Finalize).
  */
 export default function VaccinatorDashboardSection() {
   const { user } = useAuth();
@@ -311,22 +311,32 @@ export default function VaccinatorDashboardSection() {
                         <AppointmentStatusBadge status={appointment.status} />
                       </div>
                       <div className="d-flex justify-content-end gap-2">
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          aria-label={`Begin vaccination draft for appointment ${appointment.id}`}
-                          disabled={pendingAppointmentIds.has(appointment.id)}
-                          onClick={() => beginDraftFromAppointment(appointment)}
-                        >
-                          {pendingAppointmentIds.has(appointment.id) ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                              Starting…
-                            </>
-                          ) : (
-                            'Begin Vaccination Draft'
-                          )}
-                        </button>
+                        {activeDrafts?.some((d) => d.appointmentId === appointment.id) ? (
+                          <Link
+                            to="/app/staff/vaccination-drafts"
+                            className="btn btn-outline-primary btn-sm"
+                            aria-label={`Open existing vaccination draft for appointment ${appointment.id}`}
+                          >
+                            Open Draft
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            aria-label={`Begin vaccination draft for appointment ${appointment.id}`}
+                            disabled={pendingAppointmentIds.has(appointment.id)}
+                            onClick={() => beginDraftFromAppointment(appointment)}
+                          >
+                            {pendingAppointmentIds.has(appointment.id) ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Starting…
+                              </>
+                            ) : (
+                              'Begin Vaccination Draft'
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

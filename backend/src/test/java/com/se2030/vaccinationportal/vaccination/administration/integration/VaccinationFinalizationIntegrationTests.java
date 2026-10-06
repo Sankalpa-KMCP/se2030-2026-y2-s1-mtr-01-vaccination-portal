@@ -349,4 +349,145 @@ class VaccinationFinalizationIntegrationTests {
         CenterInventory inventoryAfterSecond = centerInventoryRepository.findByCenterIdAndBatchId(center.getId(), batch.getId()).orElseThrow();
         assertEquals(4, inventoryAfterSecond.getQuantity());
     }
+
+    @Test
+    void confirmAndFinalize_whenInProgress_recordsPhysicalConfirmationAndCompletesFinalization() {
+        VaccinationDraft draft = new VaccinationDraft(appointment.getId());
+        draft.setVaccinatorId(501L);
+        draft.setVaccineBatchId(batch.getId());
+        draft.setDoseNumber(1);
+        draft.setAdministrationTime(Instant.now().minusSeconds(120));
+        draft.setAuthorizedNotes("Unified confirm and finalize workflow test.");
+        draft.setPhysicalAdministrationConfirmed(false);
+        draft.setStatus(VaccinationDraftStatus.IN_PROGRESS);
+        draft = draftRepository.saveAndFlush(draft);
+
+        FinalizeVaccinationResponse response = finalizationService.confirmAndFinalizeDraft(draft.getId(), 501L);
+
+        assertNotNull(response);
+        assertEquals(draft.getId(), response.draftId());
+        assertNotNull(response.vaccinationRecordId());
+        assertNotNull(response.certificateReference());
+
+        // 1. Verify Draft transitioned through physical confirmation to FINALIZED
+        VaccinationDraft updatedDraft = draftRepository.findById(draft.getId()).orElseThrow();
+        assertEquals(VaccinationDraftStatus.FINALIZED, updatedDraft.getStatus());
+        assertThat(updatedDraft.isPhysicalAdministrationConfirmed()).isTrue();
+
+        // 2. Verify Vaccination Record persisted
+        VaccinationRecord record = recordRepository.findById(response.vaccinationRecordId()).orElseThrow();
+        assertEquals(appointment.getId(), record.getAppointmentId());
+        assertEquals(1001L, record.getCitizenId());
+        assertEquals(501L, record.getVaccinatorId());
+        assertEquals(batch.getId(), record.getVaccineBatchId());
+
+        // 3. Verify Inventory deducted once
+        CenterInventory updatedInventory = centerInventoryRepository.findByCenterIdAndBatchId(center.getId(), batch.getId()).orElseThrow();
+        assertEquals(4, updatedInventory.getQuantity());
+
+        // 4. Verify StockTransaction once
+        StockTransaction transaction = stockTransactionRepository.findByVaccinationRecordId(record.getId()).orElseThrow();
+        assertEquals(StockTransactionType.VACCINATION_DEDUCTION, transaction.getType());
+        assertEquals(-1, transaction.getDelta());
+
+        // 5. Verify Appointment completed
+        Appointment updatedAppointment = appointmentRepository.findById(appointment.getId()).orElseThrow();
+        assertEquals(AppointmentStatus.COMPLETED, updatedAppointment.getStatus());
+
+        // 6. Verify Digital Certificate issued once
+        List<DigitalCertificate> certs = certificateRepository.findByVaccinationRecordIdOrderByIssuedAtAscIdAsc(record.getId());
+        assertThat(certs).hasSize(1);
+        assertEquals(CertificateStatus.VALID, certs.get(0).getStatus());
+    }
+
+    @Test
+    void confirmAndFinalize_whenReadyForFinalization_finalizesWithoutDuplicateSideEffects() {
+        VaccinationDraft draft = new VaccinationDraft(appointment.getId());
+        draft.setVaccinatorId(501L);
+        draft.setVaccineBatchId(batch.getId());
+        draft.setDoseNumber(1);
+        draft.setAdministrationTime(Instant.now().minusSeconds(120));
+        draft.setAuthorizedNotes("Legacy ready draft finalization.");
+        draft.setPhysicalAdministrationConfirmed(true);
+        draft.setStatus(VaccinationDraftStatus.READY_FOR_FINALIZATION);
+        draft = draftRepository.saveAndFlush(draft);
+
+        FinalizeVaccinationResponse response = finalizationService.confirmAndFinalizeDraft(draft.getId(), 501L);
+
+        assertNotNull(response);
+        assertEquals(draft.getId(), response.draftId());
+
+        VaccinationDraft updatedDraft = draftRepository.findById(draft.getId()).orElseThrow();
+        assertEquals(VaccinationDraftStatus.FINALIZED, updatedDraft.getStatus());
+        assertThat(updatedDraft.isPhysicalAdministrationConfirmed()).isTrue();
+
+        CenterInventory updatedInventory = centerInventoryRepository.findByCenterIdAndBatchId(center.getId(), batch.getId()).orElseThrow();
+        assertEquals(4, updatedInventory.getQuantity());
+
+        Appointment updatedAppointment = appointmentRepository.findById(appointment.getId()).orElseThrow();
+        assertEquals(AppointmentStatus.COMPLETED, updatedAppointment.getStatus());
+
+        List<DigitalCertificate> certs = certificateRepository.findByVaccinationRecordIdOrderByIssuedAtAscIdAsc(response.vaccinationRecordId());
+        assertThat(certs).hasSize(1);
+    }
+
+    @Test
+    void confirmAndFinalize_whenAlreadyFinalized_throwsExceptionAndPreventsDuplicateSideEffects() {
+        VaccinationDraft draft = new VaccinationDraft(appointment.getId());
+        draft.setVaccinatorId(501L);
+        draft.setVaccineBatchId(batch.getId());
+        draft.setDoseNumber(1);
+        draft.setAdministrationTime(Instant.now().minusSeconds(120));
+        draft.setPhysicalAdministrationConfirmed(false);
+        draft.setStatus(VaccinationDraftStatus.IN_PROGRESS);
+        draft = draftRepository.saveAndFlush(draft);
+
+        // First completion succeeds
+        FinalizeVaccinationResponse firstResponse = finalizationService.confirmAndFinalizeDraft(draft.getId(), 501L);
+        assertNotNull(firstResponse);
+
+        CenterInventory inventoryAfterFirst = centerInventoryRepository.findByCenterIdAndBatchId(center.getId(), batch.getId()).orElseThrow();
+        assertEquals(4, inventoryAfterFirst.getQuantity());
+
+        // Second completion attempt is rejected
+        Long draftId = draft.getId();
+        assertThatThrownBy(() -> finalizationService.confirmAndFinalizeDraft(draftId, 501L))
+                .isInstanceOf(InvalidVaccinationDraftException.class)
+                .hasMessageContaining("already finalized");
+
+        // Inventory is not deducted a second time
+        CenterInventory inventoryAfterSecond = centerInventoryRepository.findByCenterIdAndBatchId(center.getId(), batch.getId()).orElseThrow();
+        assertEquals(4, inventoryAfterSecond.getQuantity());
+
+        // Records and certificates remain exactly 1
+        assertThat(recordRepository.findAll()).hasSize(1);
+        assertThat(certificateRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    void confirmAndFinalize_downstreamFailure_rollsBackTransactionAtomically() {
+        // Set stock quantity to 0 so deduction fails due to INSUFFICIENT_STOCK
+        inventory.setQuantity(0);
+        centerInventoryRepository.saveAndFlush(inventory);
+
+        VaccinationDraft draft = new VaccinationDraft(appointment.getId());
+        draft.setVaccinatorId(501L);
+        draft.setVaccineBatchId(batch.getId());
+        draft.setDoseNumber(1);
+        draft.setAdministrationTime(Instant.now().minusSeconds(60));
+        draft.setPhysicalAdministrationConfirmed(false);
+        draft.setStatus(VaccinationDraftStatus.IN_PROGRESS);
+        draft = draftRepository.saveAndFlush(draft);
+
+        Long draftId = draft.getId();
+
+        assertThatThrownBy(() -> finalizationService.confirmAndFinalizeDraft(draftId, 501L))
+                .isInstanceOf(BatchUnavailableException.class);
+
+        // Transaction rollback verification:
+        assertThat(recordRepository.existsByAppointmentId(appointment.getId())).isFalse();
+        Appointment currentAppointment = appointmentRepository.findById(appointment.getId()).orElseThrow();
+        assertEquals(AppointmentStatus.CHECKED_IN, currentAppointment.getStatus());
+        assertThat(certificateRepository.findAll()).isEmpty();
+    }
 }

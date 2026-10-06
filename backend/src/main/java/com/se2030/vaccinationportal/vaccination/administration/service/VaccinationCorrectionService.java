@@ -1,23 +1,25 @@
 package com.se2030.vaccinationportal.vaccination.administration.service;
 
-import com.se2030.vaccinationportal.vaccination.query.service.EffectiveVaccinationRecordService;
-
-
+import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.vaccination.administration.dto.CreateVaccinationCorrectionRequest;
+import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionDetailResponse;
 import com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationCorrectionException;
 import com.se2030.vaccinationportal.vaccination.administration.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.administration.mapper.VaccinationCorrectionMapper;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionField;
-import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.vaccination.certificate.repository.DigitalCertificateRepository;
+import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
+import com.se2030.vaccinationportal.vaccination.query.service.EffectiveVaccinationRecordService;
+import com.se2030.vaccinationportal.vaccination.validation.VaccinationCorrectionValueCodec;
 import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
-import com.se2030.vaccinationportal.vaccination.validation.VaccinationCorrectionValueCodec;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,8 @@ public class VaccinationCorrectionService {
     private final EffectiveVaccinationRecordService effectiveRecordService;
     private final VaccinationCorrectionValueCodec valueCodec;
     private final Clock clock;
+    private final DigitalCertificateRepository digitalCertificateRepository;
+    private final UserAccountRepository userAccountRepository;
 
     public VaccinationCorrectionService(
             VaccinationRecordRepository vaccinationRecordRepository,
@@ -39,11 +43,26 @@ public class VaccinationCorrectionService {
             VaccinationCorrectionValueCodec valueCodec,
             Clock clock
     ) {
+        this(vaccinationRecordRepository, correctionRepository, effectiveRecordService, valueCodec, clock, null, null);
+    }
+
+    @Autowired
+    public VaccinationCorrectionService(
+            VaccinationRecordRepository vaccinationRecordRepository,
+            VaccinationCorrectionRepository correctionRepository,
+            EffectiveVaccinationRecordService effectiveRecordService,
+            VaccinationCorrectionValueCodec valueCodec,
+            Clock clock,
+            DigitalCertificateRepository digitalCertificateRepository,
+            UserAccountRepository userAccountRepository
+    ) {
         this.vaccinationRecordRepository = vaccinationRecordRepository;
         this.correctionRepository = correctionRepository;
         this.effectiveRecordService = effectiveRecordService;
         this.valueCodec = valueCodec;
-        this.clock = clock;
+        this.clock = clock != null ? clock : Clock.systemUTC();
+        this.digitalCertificateRepository = digitalCertificateRepository;
+        this.userAccountRepository = userAccountRepository;
     }
 
     public VaccinationCorrection createCorrection(
@@ -54,8 +73,18 @@ public class VaccinationCorrectionService {
         VaccinationRecord record = findRecord(vaccinationRecordId);
         validateRequest(request, actorId);
 
-        VaccinationCorrectionField field = VaccinationCorrectionField.fromApiName(request.fieldName());
-        if (field == null) {
+        String fieldName = request.fieldName() != null && !request.fieldName().trim().isEmpty()
+                ? request.fieldName().trim()
+                : VaccinationCorrectionField.AUTHORIZED_NOTES.getApiName();
+
+        if ("vaccineBatchId".equalsIgnoreCase(fieldName) || "VACCINE_BATCH_ID".equalsIgnoreCase(fieldName)) {
+            throw new UnsupportedVaccinationCorrectionFieldException(
+                    "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation."
+            );
+        }
+
+        VaccinationCorrectionField field = VaccinationCorrectionField.fromApiName(fieldName);
+        if (field == null || !field.isSupportedForCorrection()) {
             throw new UnsupportedVaccinationCorrectionFieldException(
                     "Unsupported vaccination correction field: " + request.fieldName()
             );
@@ -63,11 +92,14 @@ public class VaccinationCorrectionService {
 
         EffectiveVaccinationRecordSnapshot effectiveRecord = effectiveRecordService.resolve(record);
         String effectiveOldValue = valueCodec.valueFrom(effectiveRecord, field);
-        String newValue = valueCodec.normalizeRequestedValue(field, request.newValue());
-        if (Objects.equals(effectiveOldValue, newValue)) {
-            throw new InvalidVaccinationCorrectionException(
-                    "Corrected value must differ from the current effective value"
-            );
+        String newValue = null;
+        if (request.newValue() != null && !request.newValue().trim().isEmpty()) {
+            newValue = valueCodec.normalizeRequestedValue(field, request.newValue());
+            if (Objects.equals(effectiveOldValue, newValue)) {
+                throw new InvalidVaccinationCorrectionException(
+                        "Corrected value must differ from the current effective value"
+                );
+            }
         }
 
         VaccinationCorrection correction = new VaccinationCorrection(
@@ -89,6 +121,11 @@ public class VaccinationCorrectionService {
     ) {
         Long actorId = request != null && request.correctedBy() != null ? request.correctedBy() : null;
         return createCorrection(vaccinationRecordId, request, actorId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasActiveCorrection(Long vaccinationRecordId) {
+        return correctionRepository.existsActiveByVaccinationRecordId(vaccinationRecordId);
     }
 
     @Transactional(readOnly = true)
@@ -152,6 +189,99 @@ public class VaccinationCorrectionService {
     public List<VaccinationCorrection> getCorrectionHistory(Long vaccinationRecordId) {
         VaccinationRecord record = findRecord(vaccinationRecordId);
         return correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(record.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<VaccinationCorrectionDetailResponse> getAdminCorrectionRequests() {
+        return correctionRepository.findAllByOrderByCorrectedAtDescIdDesc()
+                .stream()
+                .map(this::toDetailResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VaccinationCorrectionDetailResponse> getVaccinatorCorrectionRequests(Long vaccinatorId) {
+        if (vaccinatorId == null) {
+            return List.of();
+        }
+        return correctionRepository.findByVaccinatorIdOrderByCorrectedAtDescIdDesc(vaccinatorId)
+                .stream()
+                .map(this::toDetailResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VaccinationCorrectionDetailResponse> getCitizenCorrectionRequests(Long citizenId) {
+        if (citizenId == null) {
+            return List.of();
+        }
+        return correctionRepository.findByCitizenIdOrderByCorrectedAtDescIdDesc(citizenId)
+                .stream()
+                .map(this::toDetailResponse)
+                .toList();
+    }
+
+    public VaccinationCorrectionDetailResponse toDetailResponse(VaccinationCorrection correction) {
+        VaccinationRecord record = vaccinationRecordRepository.findById(correction.getVaccinationRecordId()).orElse(null);
+        Long citizenId = record != null ? record.getCitizenId() : null;
+        Long vaccinatorId = record != null ? record.getVaccinatorId() : null;
+
+        String citizenName = resolveCitizenName(citizenId);
+        String vaccinatorName = resolveUserName(vaccinatorId);
+
+        String certRef = null;
+        String certStatus = null;
+        Long certId = null;
+
+        if (digitalCertificateRepository != null && record != null) {
+            var certs = digitalCertificateRepository.findByVaccinationRecordIdOrderByIssuedAtAscIdAsc(record.getId());
+            if (!certs.isEmpty()) {
+                var latestCert = certs.get(certs.size() - 1);
+                certRef = latestCert.getCertificateReference();
+                certStatus = latestCert.getStatus() != null ? latestCert.getStatus().name() : null;
+                certId = latestCert.getId();
+            }
+        }
+
+        return new VaccinationCorrectionDetailResponse(
+                correction.getId(),
+                correction.getVaccinationRecordId(),
+                citizenId,
+                citizenName,
+                vaccinatorId,
+                vaccinatorName,
+                certRef,
+                certStatus,
+                certId,
+                correction.getFieldName() != null ? correction.getFieldName().getApiName() : null,
+                correction.getOldValue(),
+                correction.getNewValue(),
+                correction.getReason(),
+                correction.getCorrectedBy(),
+                correction.getCorrectedAt(),
+                correction.getStatus(),
+                correction.getReviewedBy(),
+                correction.getReviewedAt(),
+                correction.getReviewReason()
+        );
+    }
+
+    private String resolveCitizenName(Long citizenId) {
+        if (citizenId == null || userAccountRepository == null) {
+            return citizenId != null ? "Citizen #" + citizenId : null;
+        }
+        return userAccountRepository.findById(citizenId)
+                .map(user -> user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : "Citizen #" + citizenId)
+                .orElse("Citizen #" + citizenId);
+    }
+
+    private String resolveUserName(Long userId) {
+        if (userId == null || userAccountRepository == null) {
+            return userId != null ? "User #" + userId : null;
+        }
+        return userAccountRepository.findById(userId)
+                .map(user -> user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : user.getEmail())
+                .orElse("User #" + userId);
     }
 
     private VaccinationRecord findRecord(Long vaccinationRecordId) {

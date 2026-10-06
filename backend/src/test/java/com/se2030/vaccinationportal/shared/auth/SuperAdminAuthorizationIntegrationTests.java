@@ -364,11 +364,11 @@ class SuperAdminAuthorizationIntegrationTests {
     // =========================================================================
 
     @Test
-    @DisplayName("ROLE_SUPER_ADMIN can access vaccination draft operational endpoints")
-    void superAdmin_canAccessVaccinationDrafts() throws Exception {
+    @DisplayName("ROLE_SUPER_ADMIN cannot access vaccination draft operational endpoints")
+    void superAdmin_cannotAccessVaccinationDrafts() throws Exception {
         mockMvc.perform(get("/api/v1/vaccination/drafts")
                         .header(HttpHeaders.AUTHORIZATION, superAdminToken())
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 }

@@ -33,3 +33,37 @@ export function toApiIsoDate(dateStr) {
   if (!dateStr) return '';
   return `${dateStr}T00:00:00Z`;
 }
+
+/**
+ * Formats an ISO date/time string safely without modern timeStyle options that may fail in jsdom/node.
+ *
+ * @param {string|null|undefined} value
+ * @returns {string} Formatted date/time or 'N/A'
+ */
+export function formatDisplayDateTime(value) {
+  if (!value) return 'N/A';
+  try {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return `${d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  } catch {
+    return String(value);
+  }
+}
+
+/**
+ * Formats a date string into a user-friendly display date.
+ *
+ * @param {string|null|undefined} value
+ * @returns {string} Formatted date or 'N/A'
+ */
+export function formatDisplayDate(value) {
+  if (!value) return 'N/A';
+  try {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return String(value);
+  }
+}

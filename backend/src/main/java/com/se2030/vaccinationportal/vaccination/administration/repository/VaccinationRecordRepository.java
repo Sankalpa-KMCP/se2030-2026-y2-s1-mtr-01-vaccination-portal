@@ -17,4 +17,6 @@ public interface VaccinationRecordRepository extends JpaRepository<VaccinationRe
     boolean existsByAppointmentId(Long appointmentId);
 
     List<VaccinationRecord> findByCitizenIdOrderByAdministrationTimeDesc(Long citizenId);
+
+    List<VaccinationRecord> findByVaccinatorIdOrderByAdministrationTimeDesc(Long vaccinatorId);
 }

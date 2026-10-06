@@ -9,11 +9,14 @@ vi.mock('../api/certificateApi', () => ({
   listMyVaccinations: vi.fn(),
   listMyCertificates: vi.fn(),
   downloadCertificate: vi.fn(),
+  listMyCorrectionRequests: vi.fn(),
+  requestVaccinationCorrection: vi.fn(),
 }));
 
 describe('CitizenVaccinationsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    certificateApi.listMyCorrectionRequests.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -23,6 +26,7 @@ describe('CitizenVaccinationsPage', () => {
   it('renders loading state initially and then empty state when no records exist', async () => {
     certificateApi.listMyVaccinations.mockResolvedValue([]);
     certificateApi.listMyCertificates.mockResolvedValue([]);
+    certificateApi.listMyCorrectionRequests.mockResolvedValue([]);
 
     render(
       <MemoryRouter>
@@ -149,5 +153,61 @@ describe('CitizenVaccinationsPage', () => {
     fireEvent.click(pdfButton);
 
     expect(certificateApi.downloadCertificate).toHaveBeenCalledWith(101, 'CERT-DL');
+  });
+
+  it('allows citizen to open correction modal and submit a correction request', async () => {
+    const mockRecords = [
+      {
+        id: 1,
+        doseNumber: 1,
+        vaccineBatchId: 10,
+        centerId: 5,
+        administrationTime: '2026-09-01T09:00:00Z',
+        certificateId: 101,
+        certificateReference: 'CERT-001',
+        certificateStatus: 'VALID',
+      },
+    ];
+    const mockCerts = [
+      {
+        id: 101,
+        vaccinationRecordId: 1,
+        certificateReference: 'CERT-001',
+        status: 'VALID',
+        doseNumber: 1,
+      },
+    ];
+
+    certificateApi.listMyVaccinations.mockResolvedValue(mockRecords);
+    certificateApi.listMyCertificates.mockResolvedValue(mockCerts);
+    certificateApi.listMyCorrectionRequests.mockResolvedValue([]);
+    certificateApi.requestVaccinationCorrection.mockResolvedValue({ id: 1, status: 'PENDING' });
+
+    render(
+      <MemoryRouter>
+        <CitizenVaccinationsPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('CERT-001')).toBeTruthy();
+    });
+
+    const requestCorrectionButtons = screen.getAllByRole('button', { name: /Request Correction/i });
+    expect(requestCorrectionButtons.length).toBeGreaterThan(0);
+    fireEvent.click(requestCorrectionButtons[0]);
+
+    expect(screen.getAllByText(/Request Correction/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Citizen name\/profile correction requires a separate identity\/profile correction workflow/i)).toBeTruthy();
+
+    const textarea = screen.getByLabelText(/Describe what you believe should be corrected/i);
+    fireEvent.change(textarea, { target: { value: 'My dose number is actually dose 2' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Submit Request/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(certificateApi.requestVaccinationCorrection).toHaveBeenCalledWith(1, 'My dose number is actually dose 2');
+    });
   });
 });

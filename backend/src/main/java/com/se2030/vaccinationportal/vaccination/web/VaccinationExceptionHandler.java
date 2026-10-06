@@ -11,6 +11,7 @@ import com.se2030.vaccinationportal.vaccination.certificate.exception.Certificat
 import com.se2030.vaccinationportal.vaccination.certificate.exception.CertificateLifecycleConflictException;
 import com.se2030.vaccinationportal.vaccination.certificate.exception.DigitalCertificateNotFoundException;
 import com.se2030.vaccinationportal.vaccination.certificate.exception.DuplicateDigitalCertificateException;
+import com.se2030.vaccinationportal.vaccination.administration.exception.DuplicateVaccinationCorrectionException;
 import com.se2030.vaccinationportal.vaccination.administration.exception.DuplicateVaccinationDraftException;
 import com.se2030.vaccinationportal.vaccination.certificate.exception.InvalidCertificateVerificationTokenException;
 import com.se2030.vaccinationportal.vaccination.certificate.exception.InvalidCertificateLifecycleException;
@@ -165,6 +166,14 @@ public class VaccinationExceptionHandler {
     @ExceptionHandler(DuplicateDigitalCertificateException.class)
     public ResponseEntity<VaccinationApiErrorResponse> handleDuplicateCertificate(
             DuplicateDigitalCertificateException ex,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(DuplicateVaccinationCorrectionException.class)
+    public ResponseEntity<VaccinationApiErrorResponse> handleDuplicateCorrection(
+            DuplicateVaccinationCorrectionException ex,
             HttpServletRequest request
     ) {
         return response(HttpStatus.CONFLICT, ex.getMessage(), request, null);

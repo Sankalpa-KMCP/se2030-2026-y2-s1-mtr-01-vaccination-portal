@@ -1,6 +1,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ApiError } from '../../../shared/api/apiClient';
 import { vaccinationDraftApi } from '../api/vaccinationDraftApi';
 import VaccinationDraftsPage from './VaccinationDraftsPage';
@@ -15,6 +16,7 @@ vi.mock('../api/vaccinationDraftApi', () => ({
     remove: vi.fn(),
     confirmAdministration: vi.fn(),
     finalize: vi.fn(),
+    confirmAndFinalize: vi.fn(),
   },
 }));
 
@@ -49,8 +51,12 @@ const finalizedDraft = {
   authorizedNotes: 'Finalized notes',
 };
 
+function renderWithRouter(ui) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 async function openPage() {
-  render(<VaccinationDraftsPage />);
+  renderWithRouter(<VaccinationDraftsPage />);
   await screen.findByText('Original notes');
 }
 
@@ -77,6 +83,10 @@ describe('Vaccination Drafts CRUD', () => {
       draftId: 1,
       certificateReference: 'CERT-2026-TEST-XYZ',
     });
+    vaccinationDraftApi.confirmAndFinalize.mockResolvedValue({
+      draftId: 1,
+      certificateReference: 'CERT-2026-TEST-XYZ',
+    });
   });
 
   afterEach(() => {
@@ -85,7 +95,7 @@ describe('Vaccination Drafts CRUD', () => {
   });
 
   it('renders loading followed by draft list and read-only confirmation', async () => {
-    render(<VaccinationDraftsPage />);
+    renderWithRouter(<VaccinationDraftsPage />);
     expect(screen.getByRole('heading', { name: 'Vaccination Drafts' })).toBeTruthy();
     expect(screen.getByText('Loading drafts…')).toBeTruthy();
     await screen.findByText('Original notes');
@@ -101,7 +111,7 @@ describe('Vaccination Drafts CRUD', () => {
 
   it('shows an empty state for active drafts', async () => {
     vaccinationDraftApi.list.mockResolvedValue([]);
-    render(<VaccinationDraftsPage />);
+    renderWithRouter(<VaccinationDraftsPage />);
     expect(await screen.findByText(/No active vaccination drafts yet/)).toBeTruthy();
   });
 
@@ -209,7 +219,7 @@ describe('Vaccination Drafts CRUD', () => {
 
   it.each([401, 403, 404, 409, 500, 0])('shows API/network errors for status %s', async (status) => {
     vaccinationDraftApi.list.mockRejectedValue(new ApiError(`Backend error ${status}`, status));
-    render(<VaccinationDraftsPage />);
+    renderWithRouter(<VaccinationDraftsPage />);
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain(`Backend error ${status}`));
   });
 
@@ -221,77 +231,115 @@ describe('Vaccination Drafts CRUD', () => {
     expect(await screen.findByText('Only an unfinalized draft may be changed')).toBeTruthy();
   });
 
-  it('confirms physical administration after confirmation prompt and refreshes', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    await openPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm administration for draft 1' }));
-    await screen.findByText('Physical administration confirmed successfully.');
-    expect(vaccinationDraftApi.confirmAdministration).toHaveBeenCalledWith(1);
-    expect(vaccinationDraftApi.list).toHaveBeenCalledTimes(2);
-  });
+  it('shows Confirm & Finalize for IN_PROGRESS and does not show standalone Finalize', async () => {
+    vaccinationDraftApi.list.mockResolvedValue([draft]);
 
-  it('finalizes draft after confirmation prompt and displays certificate reference', async () => {
-    vaccinationDraftApi.list.mockResolvedValue([readyDraft]);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderWithRouter(<VaccinationDraftsPage />);
+    await screen.findByText('Original notes');
 
-    render(<VaccinationDraftsPage />);
-    const finalizeBtn = await screen.findByRole('button', { name: 'Finalize draft 2' });
-    fireEvent.click(finalizeBtn);
-
-    await screen.findByText(/Vaccination finalized successfully\. Certificate reference: CERT-2026-TEST-XYZ\./);
-    expect(vaccinationDraftApi.finalize).toHaveBeenCalledWith(2);
-    expect(vaccinationDraftApi.list).toHaveBeenCalledTimes(2);
-  });
-
-  it('separates Active Drafts and Draft History into tabs with status-gated action buttons', async () => {
-    vaccinationDraftApi.list.mockResolvedValue([draft, readyDraft, finalizedDraft]);
-
-    render(<VaccinationDraftsPage />);
-
-    // Tab buttons
-    const activeTabBtn = await screen.findByRole('tab', { name: 'Active Drafts (2)' });
-    const historyTabBtn = screen.getByRole('tab', { name: 'Draft History (1)' });
-    expect(activeTabBtn).toBeTruthy();
-    expect(historyTabBtn).toBeTruthy();
-
-    // In Active tab: draft 1 (IN_PROGRESS) has View, Edit, Discard Draft, Confirm Administration
     expect(screen.getByRole('button', { name: 'View draft 1' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Edit draft 1' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Discard draft 1' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Confirm administration for draft 1' })).toBeTruthy();
-
-    // In Active tab: draft 2 (READY_FOR_FINALIZATION) has View and Finalize only
-    expect(screen.getByRole('button', { name: 'View draft 2' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Finalize draft 2' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Edit draft 2' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Discard draft 2' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Confirm administration for draft 2' })).toBeNull();
-
-    // Draft 3 (FINALIZED) must NOT appear in the Active tab
-    expect(screen.queryByText('Finalized notes')).toBeNull();
-
-    // Switch to Draft History tab
-    fireEvent.click(historyTabBtn);
-
-    // In History tab: draft 3 (FINALIZED) appears with View only
-    expect(await screen.findByText('Finalized notes')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'View draft 3' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Edit draft 3' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Discard draft 3' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Finalize draft 3' })).toBeNull();
-
-    // Active drafts must not be listed in History tab
-    expect(screen.queryByText('Original notes')).toBeNull();
-    expect(screen.queryByText('Ready notes')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Confirm and finalize draft 1' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Finalize draft 1' })).toBeNull();
   });
 
-  it('shows an empty state in Draft History tab when there are no finalized drafts', async () => {
+  it('shows Confirm & Finalize for READY_FOR_FINALIZATION and does not show standalone Finalize', async () => {
+    vaccinationDraftApi.list.mockResolvedValue([readyDraft]);
+
+    renderWithRouter(<VaccinationDraftsPage />);
+    await screen.findByText('Ready notes');
+
+    expect(screen.getByRole('button', { name: 'View draft 2' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Confirm and finalize draft 2' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Finalize draft 2' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit draft 2' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Discard draft 2' })).toBeNull();
+  });
+
+  it('ensures Draft History tab is absent and FINALIZED drafts are absent from the page', async () => {
+    vaccinationDraftApi.list.mockResolvedValue([draft, readyDraft, finalizedDraft]);
+
+    renderWithRouter(<VaccinationDraftsPage />);
+    await screen.findByText('Original notes');
+
+    // Tabs must be completely absent
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByText(/Draft History/)).toBeNull();
+
+    // Active drafts must be visible
+    expect(screen.getByText('Original notes')).toBeTruthy();
+    expect(screen.getByText('Ready notes')).toBeTruthy();
+
+    // FINALIZED draft must NOT appear on Vaccination Drafts page
+    expect(screen.queryByText('Finalized notes')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'View draft 3' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Finalize draft 3' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Confirm and finalize draft 3' })).toBeNull();
+  });
+
+  it('displays correct confirmation dialog text for IN_PROGRESS draft', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await openPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm and finalize draft 1' }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Confirm that the vaccine has physically been administered to this citizen and finalize the vaccination?')
+    );
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining('This action will permanently record the vaccination, deduct inventory, complete the appointment, and issue the official digital certificate.')
+    );
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining('This action cannot be edited or discarded afterward.')
+    );
+    expect(vaccinationDraftApi.confirmAndFinalize).toHaveBeenCalledWith(1);
+  });
+
+  it('displays correct confirmation dialog text for legacy READY_FOR_FINALIZATION draft', async () => {
+    vaccinationDraftApi.list.mockResolvedValue([readyDraft]);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    renderWithRouter(<VaccinationDraftsPage />);
+    await screen.findByText('Ready notes');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm and finalize draft 2' }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Physical administration has already been confirmed for this draft. Complete finalization now?')
+    );
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining('This will permanently record the vaccination, deduct inventory, complete the appointment, and issue the official digital certificate.')
+    );
+    expect(vaccinationDraftApi.confirmAndFinalize).toHaveBeenCalledWith(2);
+  });
+
+  it('successful completion removes draft from active list, displays success message, and refreshes', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vaccinationDraftApi.list.mockResolvedValueOnce([draft]).mockResolvedValueOnce([]);
+
+    await openPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm and finalize draft 1' }));
+
+    await screen.findByText(
+      'Vaccination confirmed and finalized successfully. The permanent vaccination record and digital certificate are now available.'
+    );
+    expect(vaccinationDraftApi.confirmAndFinalize).toHaveBeenCalledWith(1);
+    expect(vaccinationDraftApi.list).toHaveBeenCalledTimes(2);
+
+    // After refresh with empty list, active drafts empty alert should appear
+    expect(await screen.findByText(/No active vaccination drafts yet/)).toBeTruthy();
+  });
+
+  it('provides navigation link to Vaccination Records', async () => {
     vaccinationDraftApi.list.mockResolvedValue([draft]);
 
-    render(<VaccinationDraftsPage />);
-    const historyTabBtn = await screen.findByRole('tab', { name: 'Draft History (0)' });
-    fireEvent.click(historyTabBtn);
+    renderWithRouter(<VaccinationDraftsPage />);
+    await screen.findByText('Original notes');
 
-    expect(await screen.findByText('No finalized draft history yet.')).toBeTruthy();
+    const recordsLink = screen.getByRole('link', { name: 'Vaccination Records' });
+    expect(recordsLink).toBeTruthy();
+    expect(recordsLink.getAttribute('href')).toBe('/app/staff/vaccination-records');
   });
 });

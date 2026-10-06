@@ -41,15 +41,15 @@ public class VaccinationCorrection {
 
     @NotNull(message = "Correction field is required")
     @Enumerated(EnumType.STRING)
-    @Column(name = "field_name", nullable = false, updatable = false, length = 40)
+    @Column(name = "field_name", nullable = false, length = 40)
     private VaccinationCorrectionField fieldName;
 
     @Size(max = 2000, message = "Old value must not exceed 2000 characters")
-    @Column(name = "old_value", updatable = false, length = 2000)
+    @Column(name = "old_value", length = 2000)
     private String oldValue;
 
     @Size(max = 2000, message = "New value must not exceed 2000 characters")
-    @Column(name = "new_value", updatable = false, length = 2000)
+    @Column(name = "new_value", length = 2000)
     private String newValue;
 
     @NotBlank(message = "Correction reason is required")
@@ -177,6 +177,18 @@ public class VaccinationCorrection {
             throw new IllegalStateException("Only APPROVED corrections can be applied; current status is: " + this.status);
         }
         this.status = VaccinationCorrectionStatus.APPLIED;
+    }
+
+    public void updateCorrection(VaccinationCorrectionField fieldName, String oldValue, String newValue) {
+        if (this.status != VaccinationCorrectionStatus.APPROVED) {
+            throw new IllegalStateException("Only APPROVED corrections can be updated prior to application; current status is: " + this.status);
+        }
+        if (fieldName == null) {
+            throw new IllegalArgumentException("Correction field is required");
+        }
+        this.fieldName = fieldName;
+        this.oldValue = enforceLength(oldValue, "Old value", 2000);
+        this.newValue = enforceLength(newValue, "New value", 2000);
     }
 
     private static String requireText(String value, String name, int maxLength) {

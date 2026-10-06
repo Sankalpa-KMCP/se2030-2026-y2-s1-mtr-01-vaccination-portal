@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.vaccination.certificate.service.DigitalCerti
 import com.se2030.vaccinationportal.vaccination.query.service.EffectiveVaccinationRecordService;
 
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -16,13 +17,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.se2030.vaccinationportal.vaccination.certificate.CertificateImpactPolicy;
-import com.se2030.vaccinationportal.vaccination.certificate.dto.CertificateReissueResponse;
+import com.se2030.vaccinationportal.vaccination.administration.dto.ApplyVaccinationCorrectionRequest;
 import com.se2030.vaccinationportal.vaccination.administration.dto.CreateVaccinationCorrectionRequest;
-import com.se2030.vaccinationportal.vaccination.certificate.dto.ReissueDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionLifecycleResponse;
-import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
+import com.se2030.vaccinationportal.vaccination.administration.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CertificateReissueResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.ReissueDigitalCertificateRequest;
+import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -100,11 +103,11 @@ class VaccinationCorrectionLifecycleServiceTests {
 
     @Test
     void impactingCorrectionWithoutValidCertificateDoesNotIssueInitialCertificate() {
-        VaccinationCorrection correction = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
+        VaccinationCorrection correction = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
         correction.approve(92L, Instant.now(), "Approved");
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
-                .thenReturn(snapshot(1, ADMINISTERED_AT, 78L, "Original"));
+                .thenReturn(snapshot(2, ADMINISTERED_AT, 56L, "Original"));
         when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
         when(certificateService.hasCurrentValidCertificate(101L)).thenReturn(false);
 
@@ -114,6 +117,47 @@ class VaccinationCorrectionLifecycleServiceTests {
         assertFalse(result.certificateReissued());
         assertNull(result.certificateReissue());
         verify(certificateService, never()).issueCertificateForVaccinationRecord(any());
+        verify(certificateService, never()).reissueCertificate(any(), any());
+    }
+
+    @Test
+    void applyApprovedCorrection_rejectsVaccineBatchIdInApplyRequest() {
+        VaccinationCorrection correction = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
+        correction.approve(92L, Instant.now(), "Approved");
+        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+        when(effectiveRecordService.getEffectiveRecord(101L))
+                .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"));
+
+        UnsupportedVaccinationCorrectionFieldException ex = assertThrows(
+                UnsupportedVaccinationCorrectionFieldException.class,
+                () -> lifecycleService.applyApprovedCorrection(
+                        101L, 1L, 92L,
+                        new ApplyVaccinationCorrectionRequest("vaccineBatchId", "78")
+                )
+        );
+
+        assertEquals(
+                "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation.",
+                ex.getMessage()
+        );
+        verify(certificateService, never()).reissueCertificate(any(), any());
+    }
+
+    @Test
+    void applyApprovedCorrection_rejectsApprovedCorrectionWhenUnderlyingFieldIsVaccineBatchId() {
+        VaccinationCorrection correction = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
+        correction.approve(92L, Instant.now(), "Approved");
+        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+
+        UnsupportedVaccinationCorrectionFieldException ex = assertThrows(
+                UnsupportedVaccinationCorrectionFieldException.class,
+                () -> lifecycleService.applyApprovedCorrection(101L, 1L, 92L)
+        );
+
+        assertEquals(
+                "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation.",
+                ex.getMessage()
+        );
         verify(certificateService, never()).reissueCertificate(any(), any());
     }
 

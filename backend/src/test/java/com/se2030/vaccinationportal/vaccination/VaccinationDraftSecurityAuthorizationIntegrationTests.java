@@ -8,9 +8,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import com.se2030.vaccinationportal.vaccination.administration.dto.CreateVaccinationDraftRequest;
+import com.se2030.vaccinationportal.vaccination.administration.dto.FinalizeVaccinationResponse;
 import com.se2030.vaccinationportal.vaccination.administration.dto.UpdateVaccinationDraftRequest;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationDraft;
 import com.se2030.vaccinationportal.vaccination.administration.service.VaccinationDraftService;
+import com.se2030.vaccinationportal.vaccination.administration.service.VaccinationFinalizationService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,6 +37,7 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
     @Autowired private MockMvc mockMvc;
     @Autowired private JwtTokenService jwtTokenService;
     @MockitoBean private VaccinationDraftService draftService;
+    @MockitoBean private VaccinationFinalizationService finalizationService;
 
     private String token(Long userId, String role) {
         return "Bearer " + jwtTokenService.generateToken(userId, "staff" + userId + "@test.gov", List.of(role));
@@ -50,11 +53,12 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
                 MockMvcRequestBuilders.get(BASE),
                 MockMvcRequestBuilders.get(BASE + "/1"),
                 MockMvcRequestBuilders.patch(BASE + "/1").contentType(MediaType.APPLICATION_JSON).content("{\"doseNumber\":2}"),
-                MockMvcRequestBuilders.delete(BASE + "/1?reason=Removal"));
+                MockMvcRequestBuilders.delete(BASE + "/1?reason=Removal"),
+                MockMvcRequestBuilders.post(BASE + "/1/confirm-and-finalize"));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"ROLE_CITIZEN", "ROLE_HEALTHCARE_OFFICER", "ROLE_ADMIN", "ROLE_CENTER_MANAGER",
+    @ValueSource(strings = {"ROLE_CITIZEN", "ROLE_HEALTHCARE_OFFICER", "ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_CENTER_MANAGER",
             "ROLE_CAMPAIGN_OFFICER", "ROLE_INVENTORY_OFFICER", "ROLE_MANAGEMENT_USER"})
     void otherRolesCannotAccessAnyCrudEndpoint(String role) throws Exception {
         for (var endpoint : endpoints()) {
@@ -78,7 +82,12 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
         when(draftService.getAllDraftsByVaccinatorId(201L)).thenReturn(List.of(draft));
         when(draftService.getDraftById(1L)).thenReturn(draft);
         when(draftService.updateDraft(eq(1L), any(UpdateVaccinationDraftRequest.class))).thenReturn(draft);
-        int[] statuses = {201, 200, 200, 200, 204};
+        when(finalizationService.confirmAndFinalizeDraft(eq(1L), any())).thenReturn(
+                new FinalizeVaccinationResponse(
+                        1L, 100L, 101L, 501L, 301L, 1, java.time.Instant.now(), "CERT-REF", "tok", null
+                )
+        );
+        int[] statuses = {201, 200, 200, 200, 204, 200};
         int index = 0;
         for (var endpoint : endpoints()) {
             mockMvc.perform(endpoint.header(HttpHeaders.AUTHORIZATION, token("ROLE_VACCINATOR")))
@@ -111,32 +120,14 @@ class VaccinationDraftSecurityAuthorizationIntegrationTests {
     }
 
     @Test
-    void superAdminCanAccessOtherVaccinatorsDraft() throws Exception {
-        VaccinationDraft draft = new VaccinationDraft(101L);
-        draft.setVaccinatorId(201L);
-        when(draftService.getDraftById(1L)).thenReturn(draft);
-        when(draftService.getAllDrafts()).thenReturn(List.of(draft));
-        when(draftService.updateDraft(eq(1L), any(UpdateVaccinationDraftRequest.class))).thenReturn(draft);
-
+    void superAdminCannotAccessDraftEndpoints() throws Exception {
         String superAdmin = token(999L, "ROLE_SUPER_ADMIN");
-
         mockMvc.perform(MockMvcRequestBuilders.get(BASE).header(HttpHeaders.AUTHORIZATION, superAdmin))
-                .andExpect(status().isOk());
-
+                .andExpect(status().isForbidden());
         mockMvc.perform(MockMvcRequestBuilders.get(BASE + "/1").header(HttpHeaders.AUTHORIZATION, superAdmin))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(MockMvcRequestBuilders.patch(BASE + "/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"doseNumber\":2}")
-                        .header(HttpHeaders.AUTHORIZATION, superAdmin))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(MockMvcRequestBuilders.delete(BASE + "/1?reason=SuperAdmin+cleanup")
-                        .header(HttpHeaders.AUTHORIZATION, superAdmin))
-                .andExpect(status().isNoContent());
-
-        verify(draftService).deleteDraft(1L, "SuperAdmin cleanup", 999L);
+                .andExpect(status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.post(BASE + "/1/confirm-and-finalize").header(HttpHeaders.AUTHORIZATION, superAdmin))
+                .andExpect(status().isForbidden());
     }
 
     @Test

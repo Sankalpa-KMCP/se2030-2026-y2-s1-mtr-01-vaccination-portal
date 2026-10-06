@@ -8,6 +8,7 @@ const clientMocks = vi.hoisted(() => ({
 vi.mock('../../../shared/api/apiClient', () => clientMocks);
 
 import {
+  confirmAndFinalizeVaccinationDraft,
   confirmPhysicalAdministration,
   createVaccinationDraft,
   discardVaccinationDraft,
@@ -95,6 +96,14 @@ describe('vaccinationDraftApi', () => {
     });
   });
 
+  it('confirms and finalizes draft via POST to /confirm-and-finalize', async () => {
+    await confirmAndFinalizeVaccinationDraft(15);
+
+    expect(clientMocks.apiRequest).toHaveBeenCalledExactlyOnceWith('/v1/vaccination/drafts/15/confirm-and-finalize', {
+      method: 'POST',
+    });
+  });
+
   describe('object-style vaccinationDraftApi helper', () => {
     it('supports list, get, and default reason deletion', async () => {
       await vaccinationDraftApi.list();
@@ -138,7 +147,7 @@ describe('vaccinationDraftApi', () => {
       });
     });
 
-    it('delegates confirmAdministration and finalize to correct endpoints', async () => {
+    it('delegates confirmAdministration, finalize, and confirmAndFinalize to correct endpoints', async () => {
       await vaccinationDraftApi.confirmAdministration(10);
       expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/vaccination/drafts/10/confirm-administration', {
         method: 'POST',
@@ -146,6 +155,11 @@ describe('vaccinationDraftApi', () => {
 
       await vaccinationDraftApi.finalize(10);
       expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/vaccination/drafts/10/finalize', {
+        method: 'POST',
+      });
+
+      await vaccinationDraftApi.confirmAndFinalize(10);
+      expect(clientMocks.apiRequest).toHaveBeenCalledWith('/v1/vaccination/drafts/10/confirm-and-finalize', {
         method: 'POST',
       });
     });

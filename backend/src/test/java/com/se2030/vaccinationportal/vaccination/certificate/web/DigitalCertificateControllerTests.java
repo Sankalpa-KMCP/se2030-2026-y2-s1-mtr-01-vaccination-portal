@@ -11,8 +11,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.se2030.vaccinationportal.vaccination.certificate.dto.CertificateVerificationResponse;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
+import com.se2030.vaccinationportal.vaccination.administration.dto.AvailableVaccineBatchResponse;
+import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinatorVaccinationRecordResponse;
 import com.se2030.vaccinationportal.vaccination.certificate.dto.CertificateReissueResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CertificateVerificationResponse;
 import com.se2030.vaccinationportal.vaccination.certificate.dto.DigitalCertificateResponse;
 import com.se2030.vaccinationportal.vaccination.certificate.dto.ReissueDigitalCertificateRequest;
 import com.se2030.vaccinationportal.vaccination.certificate.dto.RevokeDigitalCertificateRequest;
@@ -20,9 +23,9 @@ import com.se2030.vaccinationportal.vaccination.certificate.exception.Certificat
 import com.se2030.vaccinationportal.vaccination.certificate.exception.CertificateVerificationNotFoundException;
 import com.se2030.vaccinationportal.vaccination.certificate.exception.DigitalCertificateNotFoundException;
 import com.se2030.vaccinationportal.vaccination.certificate.exception.InvalidCertificateVerificationTokenException;
+import com.se2030.vaccinationportal.vaccination.certificate.mapper.DigitalCertificateMapper;
 import com.se2030.vaccinationportal.vaccination.certificate.model.CertificateStatus;
 import com.se2030.vaccinationportal.vaccination.certificate.model.DigitalCertificate;
-import com.se2030.vaccinationportal.vaccination.certificate.mapper.DigitalCertificateMapper;
 import com.se2030.vaccinationportal.vaccination.certificate.service.DigitalCertificateService;
 import java.time.Instant;
 import java.util.List;
@@ -31,6 +34,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -275,5 +281,56 @@ class DigitalCertificateControllerTests {
                 ISSUED_AT,
                 valid
         );
+    }
+
+    @Test
+    void getMyVaccinatorRecordsReturnsRecords() throws Exception {
+        UserPrincipal principal = new UserPrincipal(401L, "vaccinator@portal.test", "hash", true, List.of(new SimpleGrantedAuthority("ROLE_VACCINATOR")));
+        Authentication auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        VaccinatorVaccinationRecordResponse resp = new VaccinatorVaccinationRecordResponse(
+                10L, 1001L, 501L, "Citizen A", 201L, "Campaign 1", 301L, "Center 1",
+                401L, "BATCH-1", "Pfizer", 1, ISSUED_AT, null, "Notes", ISSUED_AT,
+                201L, "CERT-REF-1", CertificateStatus.VALID
+        );
+        when(certificateService.getVaccinatorVaccinationHistory(401L)).thenReturn(List.of(resp));
+
+        mockMvc.perform(get("/api/v1/vaccination/records/vaccinator/mine").principal(auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(10)))
+                .andExpect(jsonPath("$[0].certificateReference", is("CERT-REF-1")));
+    }
+
+    @Test
+    void getRecordByIdReturnsDetails() throws Exception {
+        UserPrincipal principal = new UserPrincipal(401L, "vaccinator@portal.test", "hash", true, List.of(new SimpleGrantedAuthority("ROLE_VACCINATOR")));
+        Authentication auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        VaccinatorVaccinationRecordResponse resp = new VaccinatorVaccinationRecordResponse(
+                10L, 1001L, 501L, "Citizen A", 201L, "Campaign 1", 301L, "Center 1",
+                401L, "BATCH-1", "Pfizer", 1, ISSUED_AT, null, "Notes", ISSUED_AT,
+                201L, "CERT-REF-1", CertificateStatus.VALID
+        );
+        when(certificateService.getVaccinationRecordDetails(10L)).thenReturn(resp);
+
+        mockMvc.perform(get("/api/v1/vaccination/records/10").principal(auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(10)))
+                .andExpect(jsonPath("$.citizenName", is("Citizen A")));
+    }
+
+    @Test
+    void getAvailableBatchesReturnsCompatibleBatches() throws Exception {
+        AvailableVaccineBatchResponse batch = new AvailableVaccineBatchResponse(
+                501L, "BATCH-A", "Pfizer", java.time.LocalDate.parse("2026-12-31"), 50
+        );
+        when(certificateService.getAvailableBatchesForAppointment(1001L)).thenReturn(List.of(batch));
+
+        mockMvc.perform(get("/api/v1/vaccination/batches/available").param("appointmentId", "1001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(501)))
+                .andExpect(jsonPath("$[0].batchNumber", is("BATCH-A")));
     }
 }

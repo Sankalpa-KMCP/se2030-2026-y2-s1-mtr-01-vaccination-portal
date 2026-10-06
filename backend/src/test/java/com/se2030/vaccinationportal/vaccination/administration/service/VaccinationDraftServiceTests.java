@@ -157,6 +157,43 @@ class VaccinationDraftServiceTests {
     }
 
     @Test
+    void createDraft_whenBatchUnavailable_throwsExceptionAndDoesNotPersist() {
+        when(draftRepository.existsByAppointmentId(101L)).thenReturn(false);
+        doThrow(new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.EXPIRED_BATCH))
+                .when(integrationValidator).validateBatchCompatibility(101L, 301L);
+
+        assertThrows(
+                com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException.class,
+                () -> service.createDraft(createRequest(101L), 201L)
+        );
+
+        verify(draftRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateDraft_whenBatchUnavailable_throwsExceptionAndDoesNotSave() {
+        VaccinationDraft draft = new VaccinationDraft(101L);
+        draft.setStatus(VaccinationDraftStatus.IN_PROGRESS);
+        draft.setPhysicalAdministrationConfirmed(false);
+        when(draftRepository.findById(1L)).thenReturn(Optional.of(draft));
+
+        UpdateVaccinationDraftRequest request = new UpdateVaccinationDraftRequest(
+                301L, null, null, null, null
+        );
+        doThrow(new com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException(
+                com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason.INSUFFICIENT_STOCK))
+                .when(integrationValidator).validateBatchCompatibility(101L, 301L);
+
+        assertThrows(
+                com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException.class,
+                () -> service.updateDraft(1L, request)
+        );
+
+        verify(draftRepository, never()).save(any());
+    }
+
+    @Test
     void updateDraft_emptyPatch_isRejected() {
         UpdateVaccinationDraftRequest empty = new UpdateVaccinationDraftRequest(
                 null, null, null, null, null

@@ -36,7 +36,7 @@ import com.se2030.vaccinationportal.vaccination.administration.service.Vaccinati
  */
 @RestController
 @RequestMapping("/api/v1/vaccination/drafts")
-@PreAuthorize("hasAnyRole('VACCINATOR', 'SUPER_ADMIN')")
+@PreAuthorize("hasRole('VACCINATOR') and !hasRole('SUPER_ADMIN')")
 public class VaccinationDraftController {
 
     private final VaccinationDraftService draftService;
@@ -74,9 +74,7 @@ public class VaccinationDraftController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         List<VaccinationDraft> drafts;
-        if (principal != null && principal.hasRole("ROLE_SUPER_ADMIN")) {
-            drafts = draftService.getAllDrafts();
-        } else if (principal != null) {
+        if (principal != null) {
             drafts = draftService.getAllDraftsByVaccinatorId(principal.getUserId());
         } else {
             drafts = draftService.getAllDrafts();
@@ -171,8 +169,26 @@ public class VaccinationDraftController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{id}/confirm-and-finalize")
+    public ResponseEntity<FinalizeVaccinationResponse> confirmAndFinalizeDraft(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        VaccinationDraft existing = draftService.getDraftById(id);
+        assertDraftOwnership(existing, principal);
+        Long vaccinatorId = principal != null ? principal.getUserId() : existing.getVaccinatorId();
+        if (vaccinatorId == null) {
+            throw new AccessDeniedException("Authenticated vaccinator ID is required");
+        }
+        if (finalizationService == null) {
+            throw new IllegalStateException("Vaccination finalization service is not configured");
+        }
+        FinalizeVaccinationResponse response = finalizationService.confirmAndFinalizeDraft(id, vaccinatorId);
+        return ResponseEntity.ok(response);
+    }
+
     private void assertDraftOwnership(VaccinationDraft draft, UserPrincipal principal) {
-        if (principal == null || principal.hasRole("ROLE_SUPER_ADMIN")) {
+        if (principal == null) {
             return;
         }
         if (draft.getVaccinatorId() != null && !Objects.equals(draft.getVaccinatorId(), principal.getUserId())) {
