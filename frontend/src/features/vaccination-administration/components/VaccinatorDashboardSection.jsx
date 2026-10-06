@@ -20,37 +20,6 @@ const DRAFT_STATUS_LABELS = {
   FINALIZED: 'Finalized',
 };
 
-// Default operational clinic sessions for vaccinator shift selection
-export const DEFAULT_CLINIC_SESSIONS = [
-  {
-    id: 1,
-    slotId: 1,
-    centerName: 'Colombo Central Vaccination Center',
-    date: '06 Oct 2026',
-    startTime: '09:00',
-    endTime: '12:00',
-    status: 'ACTIVE',
-  },
-  {
-    id: 2,
-    slotId: 2,
-    centerName: 'Colombo Central Vaccination Center',
-    date: '06 Oct 2026',
-    startTime: '12:00',
-    endTime: '15:00',
-    status: 'ACTIVE',
-  },
-  {
-    id: 3,
-    slotId: 3,
-    centerName: 'Colombo Central Vaccination Center',
-    date: '06 Oct 2026',
-    startTime: '15:00',
-    endTime: '18:00',
-    status: 'ACTIVE',
-  },
-];
-
 function formatDateTime(isoString) {
   if (!isoString) return 'N/A';
   return new Date(isoString).toLocaleString(undefined, {
@@ -71,7 +40,7 @@ function formatDateTime(isoString) {
  *     - Right: Active Work with drafts ("Open Draft") and approved corrections ("ACTION REQUIRED", "Open Correction").
  *
  * @param {Object} props
- * @param {Array} [props.sessions] - Optional custom sessions list for the vaccinator. If omitted, uses DEFAULT_CLINIC_SESSIONS. Pass [] for no assigned sessions.
+ * @param {Array} [props.sessions] - Assigned operational sessions list for the vaccinator. Defaults to empty array if none assigned.
  * @param {number|string} [props.initialSlotId] - Optional initial slot identifier to load.
  */
 export default function VaccinatorDashboardSection({
@@ -82,8 +51,8 @@ export default function VaccinatorDashboardSection({
   const isVaccinator = Boolean(user?.roles?.includes(VACCINATOR_ROLE));
   const sessionSelectorId = useId();
 
-  // Sessions state
-  const availableSessions = propSessions !== undefined ? propSessions : DEFAULT_CLINIC_SESSIONS;
+  // Sessions state: strictly requires real sessions passed via props; defaults to empty array
+  const availableSessions = Array.isArray(propSessions) ? propSessions : [];
   const [selectedSessionId, setSelectedSessionId] = useState(() => {
     if (initialSlotId !== undefined && initialSlotId !== null) {
       const match = availableSessions.find((s) => String(s.slotId) === String(initialSlotId) || String(s.id) === String(initialSlotId));
@@ -445,7 +414,7 @@ export default function VaccinatorDashboardSection({
               {/* No active session state */}
               {!queueLoading && !queueError && !activeSession && (
                 <div className="alert alert-light border text-center py-4 mb-0">
-                  <p className="text-muted small mb-0">No active vaccination session is currently assigned.</p>
+                  <p className="text-muted small mb-0">Select or receive an assigned vaccination session to view the queue.</p>
                 </div>
               )}
 

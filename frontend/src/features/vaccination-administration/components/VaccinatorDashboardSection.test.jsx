@@ -2,7 +2,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import VaccinatorDashboardSection, { DEFAULT_CLINIC_SESSIONS } from './VaccinatorDashboardSection';
+import VaccinatorDashboardSection from './VaccinatorDashboardSection';
 import { getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
 
 const authMock = vi.hoisted(() => ({
@@ -39,6 +39,27 @@ function deferred() {
   });
   return { promise, resolve, reject };
 }
+
+const mockSessions = [
+  {
+    id: 1,
+    slotId: 1,
+    centerName: 'Colombo Central Vaccination Center',
+    date: '06 Oct 2026',
+    startTime: '09:00',
+    endTime: '12:00',
+    status: 'ACTIVE',
+  },
+  {
+    id: 2,
+    slotId: 2,
+    centerName: 'Colombo Central Vaccination Center',
+    date: '06 Oct 2026',
+    startTime: '12:00',
+    endTime: '15:00',
+    status: 'ACTIVE',
+  },
+];
 
 const sampleDraft = {
   id: 10,
@@ -115,12 +136,12 @@ describe('VaccinatorDashboardSection (Option B)', () => {
       fullName: 'Citizen Charlie',
       roles: ['ROLE_CITIZEN'],
     };
-    const { container } = renderSection();
+    const { container } = renderSection({ sessions: mockSessions });
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders Option B header, active session card, summary metrics, and task-oriented workspace', async () => {
-    renderSection();
+  it('renders Option B header, active session card, summary metrics, and task-oriented workspace when sessions are provided', async () => {
+    renderSection({ sessions: mockSessions });
 
     await waitFor(() => {
       expect(draftApiMocks.listMyVaccinationDrafts).toHaveBeenCalledTimes(1);
@@ -155,11 +176,24 @@ describe('VaccinatorDashboardSection (Option B)', () => {
     expect(openLink.getAttribute('href')).toBe('/app/staff/vaccination-drafts');
   });
 
-  it('displays empty state when no session is assigned', async () => {
+  it('displays empty state when no session is assigned or sessions prop is omitted', async () => {
+    renderSection();
+
+    await waitFor(() => {
+      expect(screen.getByText('No active vaccination session is currently assigned.')).toBeTruthy();
+      expect(screen.getByText('Select or receive an assigned vaccination session to view the queue.')).toBeTruthy();
+    });
+
+    expect(screen.queryByText('Active Session')).toBeNull();
+    expect(checkInApiMocks.getVaccinatorQueue).not.toHaveBeenCalled();
+  });
+
+  it('displays empty state when sessions prop is empty array', async () => {
     renderSection({ sessions: [] });
 
     await waitFor(() => {
-      expect(screen.getAllByText('No active vaccination session is currently assigned.').length).toBeGreaterThan(0);
+      expect(screen.getByText('No active vaccination session is currently assigned.')).toBeTruthy();
+      expect(screen.getByText('Select or receive an assigned vaccination session to view the queue.')).toBeTruthy();
     });
 
     expect(screen.queryByText('Active Session')).toBeNull();
@@ -167,7 +201,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
   });
 
   it('auto-selects single session without rendering session dropdown', async () => {
-    const singleSession = [DEFAULT_CLINIC_SESSIONS[0]];
+    const singleSession = [mockSessions[0]];
     renderSection({ sessions: singleSession });
 
     await waitFor(() => {
@@ -181,7 +215,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
   });
 
   it('allows switching sessions via dropdown and auto-loads queue for selected session', async () => {
-    renderSection();
+    renderSection({ sessions: mockSessions });
 
     await waitFor(() => {
       expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith(1);
@@ -201,7 +235,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
   it('displays draft error state with retry button when listMyVaccinationDrafts fails', async () => {
     draftApiMocks.listMyVaccinationDrafts.mockRejectedValueOnce(new Error('Network failure loading drafts'));
 
-    renderSection();
+    renderSection({ sessions: mockSessions });
 
     await waitFor(() => {
       expect(screen.getByText('Could Not Load Drafts')).toBeTruthy();
@@ -273,7 +307,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ ...sampleDraft, id: 25 }]);
 
-    renderSection();
+    renderSection({ sessions: mockSessions });
 
     await waitFor(() => {
       expect(screen.getByText('Appointment #101')).toBeTruthy();
@@ -300,7 +334,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
       .mockReturnValueOnce(firstCreate.promise)
       .mockReturnValueOnce(secondCreate.promise);
 
-    renderSection();
+    renderSection({ sessions: mockSessions });
 
     const firstButton = await screen.findByRole('button', { name: 'Begin vaccination draft for appointment 101' });
     const secondButton = screen.getByRole('button', { name: 'Begin vaccination draft for appointment 102' });
@@ -326,7 +360,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
   it('displays separate error and empty states for the queue', async () => {
     checkInApiMocks.getVaccinatorQueue.mockRejectedValueOnce(new Error('Network error loading queue'));
 
-    renderSection();
+    renderSection({ sessions: mockSessions });
 
     await waitFor(() => {
       expect(screen.getByText('Error Loading Queue')).toBeTruthy();
@@ -348,7 +382,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
       .mockResolvedValueOnce([])
       .mockRejectedValueOnce(new Error('Draft refresh unavailable'));
 
-    renderSection();
+    renderSection({ sessions: mockSessions });
 
     fireEvent.click(await screen.findByRole('button', { name: 'Begin vaccination draft for appointment 101' }));
 
