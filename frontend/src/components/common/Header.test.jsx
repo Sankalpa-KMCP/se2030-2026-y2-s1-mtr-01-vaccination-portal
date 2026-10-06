@@ -161,7 +161,7 @@ describe('Header', () => {
     expect(screen.getByText('Inventory').getAttribute('href')).toBe('/app/inventory');
   });
 
-  it('shows check-in queue but hides inventory navigation for a center manager', () => {
+  it('hides check-in queue and inventory navigation in navbar for a center manager', () => {
     mockUser({
       id: 6,
       fullName: 'Center Manager',
@@ -170,7 +170,7 @@ describe('Header', () => {
     });
     renderHeader('/app/staff');
 
-    expect(screen.getByText('Check-In Queue').getAttribute('href')).toBe('/app/checkin/queue');
+    expect(screen.queryByText('Check-In Queue')).toBeNull();
     expect(screen.queryByText('Inventory')).toBeNull();
   });
 

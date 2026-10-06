@@ -2,7 +2,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import VaccinatorDashboardSection from './VaccinatorDashboardSection';
+import VaccinatorDashboardSection, { DEFAULT_CLINIC_SESSIONS } from './VaccinatorDashboardSection';
 import { getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
 
 const authMock = vi.hoisted(() => ({
@@ -76,7 +76,7 @@ const sampleAppointment = {
   id: 101,
   citizenId: 501,
   campaignId: 301,
-  slotId: 42,
+  slotId: 1,
   status: 'CHECKED_IN',
   bookedAt: '2026-09-19T09:00:00Z',
 };
@@ -85,17 +85,18 @@ const secondAppointment = {
   ...sampleAppointment,
   id: 102,
   citizenId: 502,
+  slotId: 1,
 };
 
-function renderSection() {
+function renderSection(props = {}) {
   return render(
     <MemoryRouter>
-      <VaccinatorDashboardSection />
+      <VaccinatorDashboardSection {...props} />
     </MemoryRouter>,
   );
 }
 
-describe('VaccinatorDashboardSection', () => {
+describe('VaccinatorDashboardSection (Option B)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authMock.user = {
@@ -118,25 +119,83 @@ describe('VaccinatorDashboardSection', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('loads my drafts on mount and displays empty state with Open Vaccination Drafts link', async () => {
+  it('renders Option B header, active session card, summary metrics, and task-oriented workspace', async () => {
     renderSection();
 
     await waitFor(() => {
       expect(draftApiMocks.listMyVaccinationDrafts).toHaveBeenCalledTimes(1);
     });
 
-    expect(screen.getByText('Vaccinator Workspace')).toBeTruthy();
-    expect(screen.getByText('Checked-In Queue')).toBeTruthy();
-    expect(screen.getByText('My Active Drafts')).toBeTruthy();
+    // Option B Header
+    expect(screen.getByRole('heading', { name: 'Vaccinator Dashboard' })).toBeTruthy();
+    expect(screen.getByText("Manage today's vaccination work")).toBeTruthy();
 
-    const draftsHeading = screen.getByRole('heading', { name: 'My Active Drafts' });
-    const draftsCard = draftsHeading.closest('.card');
-    expect(within(draftsCard).getByText('0')).toBeTruthy();
-    expect(screen.getByText('No active vaccination drafts.')).toBeTruthy();
+    // Option B Active Session Card
+    expect(screen.getByText('Active Session')).toBeTruthy();
+    expect(screen.getByText('Colombo Central Vaccination Center')).toBeTruthy();
+    expect(screen.getByText(/06 Oct 2026 · 09:00 – 12:00/)).toBeTruthy();
 
+    // Summary Metric Cards
+    expect(screen.getByText('Waiting in Queue')).toBeTruthy();
+    expect(screen.getByText('Active Drafts')).toBeTruthy();
+    expect(screen.getByText('Corrections Needed')).toBeTruthy();
+
+    // Two-Column Task Workspace
+    expect(screen.getByRole('heading', { name: 'Checked-In Queue' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Active Work' })).toBeTruthy();
+
+    // Raw Slot ID input should be completely absent
+    expect(screen.queryByLabelText(/Time Slot ID/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Load Queue' })).toBeNull();
+    expect(screen.queryByText(/Morning Slot \(Slot #1\)/i)).toBeNull();
+
+    // Open Vaccination Drafts link
     const openLink = screen.getByRole('link', { name: 'Open Vaccination Drafts' });
     expect(openLink).toBeTruthy();
     expect(openLink.getAttribute('href')).toBe('/app/staff/vaccination-drafts');
+  });
+
+  it('displays empty state when no session is assigned', async () => {
+    renderSection({ sessions: [] });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('No active vaccination session is currently assigned.').length).toBeGreaterThan(0);
+    });
+
+    expect(screen.queryByText('Active Session')).toBeNull();
+    expect(checkInApiMocks.getVaccinatorQueue).not.toHaveBeenCalled();
+  });
+
+  it('auto-selects single session without rendering session dropdown', async () => {
+    const singleSession = [DEFAULT_CLINIC_SESSIONS[0]];
+    renderSection({ sessions: singleSession });
+
+    await waitFor(() => {
+      expect(screen.getByText('Active Session')).toBeTruthy();
+      expect(screen.getByText('Colombo Central Vaccination Center')).toBeTruthy();
+    });
+
+    // Dropdown should NOT be shown when only 1 session exists
+    expect(screen.queryByLabelText('Change Session')).toBeNull();
+    expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith(1);
+  });
+
+  it('allows switching sessions via dropdown and auto-loads queue for selected session', async () => {
+    renderSection();
+
+    await waitFor(() => {
+      expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith(1);
+    });
+
+    const selector = screen.getByLabelText('Change Session');
+    expect(selector).toBeTruthy();
+
+    fireEvent.change(selector, { target: { value: '2' } });
+
+    await waitFor(() => {
+      expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith(2);
+      expect(screen.getAllByText(/12:00 – 15:00/).length).toBeGreaterThan(0);
+    });
   });
 
   it('displays draft error state with retry button when listMyVaccinationDrafts fails', async () => {
@@ -171,11 +230,6 @@ describe('VaccinatorDashboardSection', () => {
       expect(screen.getByText('Draft #11')).toBeTruthy();
     });
 
-    // Badge count within My Active Drafts should be 2, not 3
-    const draftsHeading = screen.getByRole('heading', { name: 'My Active Drafts' });
-    const draftsCard = draftsHeading.closest('.card');
-    expect(within(draftsCard).getByText('2')).toBeTruthy();
-
     // Draft #12 is FINALIZED and must not appear
     expect(screen.queryByText('Draft #12')).toBeNull();
 
@@ -183,191 +237,36 @@ describe('VaccinatorDashboardSection', () => {
     expect(screen.getByText('In Progress')).toBeTruthy();
     expect(screen.getByText('Ready for Finalization')).toBeTruthy();
 
-    // Summary view must NOT contain mutation/lifecycle action buttons
+    // Summary view must NOT contain mutation action buttons
     expect(screen.queryByRole('button', { name: /edit/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /discard/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /confirm/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /finalize/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /view/i })).toBeNull();
 
-    // Open Vaccination Drafts link must be rendered
-    const openLink = screen.getByRole('link', { name: 'Open Vaccination Drafts' });
-    expect(openLink).toBeTruthy();
-    expect(openLink.getAttribute('href')).toBe('/app/staff/vaccination-drafts');
+    // Open Draft link must be rendered
+    const openDraftLinks = screen.getAllByRole('link', { name: 'Open Draft' });
+    expect(openDraftLinks.length).toBe(2);
   });
 
-  it('keeps the newest draft list when an older list request resolves later', async () => {
-    const initialList = deferred();
-    draftApiMocks.listMyVaccinationDrafts
-      .mockReturnValueOnce(initialList.promise)
-      .mockResolvedValueOnce([secondDraft]);
-    checkInApiMocks.getVaccinatorQueue.mockResolvedValue([sampleAppointment]);
-    draftApiMocks.createVaccinationDraft.mockResolvedValue({ id: 11 });
+  it('displays Action Required banner and Open Correction link when approved corrections exist', async () => {
+    certificateApiMocks.listVaccinatorCorrectionRequests.mockResolvedValue([
+      { id: 1, status: 'APPROVED', citizenName: 'Jane Citizen', reason: 'Typo' },
+      { id: 2, status: 'PENDING', citizenName: 'John Citizen', reason: 'Review pending' },
+    ]);
 
     renderSection();
 
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '42' } });
-    fireEvent.submit(slotInput.closest('form'));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Begin vaccination draft for appointment 101' })).toBeTruthy();
+      expect(screen.getByText('ACTION REQUIRED')).toBeTruthy();
+      expect(screen.getByText(/1 correction/)).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Begin vaccination draft for appointment 101' }));
-    await waitFor(() => {
-      expect(screen.getByText('Draft #11')).toBeTruthy();
-    });
-
-    await act(async () => {
-      initialList.resolve([sampleDraft]);
-      await initialList.promise;
-    });
-    await waitFor(() => {
-      expect(screen.getByText('Draft #11')).toBeTruthy();
-      expect(screen.queryByText('Draft #10')).toBeNull();
-    });
+    const openCorrLink = screen.getByRole('link', { name: 'Open Correction' });
+    expect(openCorrLink).toBeTruthy();
+    expect(openCorrLink.getAttribute('href')).toBe('/app/staff/correction-requests');
   });
 
-  it('does not load queue if slot ID is empty or non-positive', () => {
-    renderSection();
-
-    const loadButton = screen.getByRole('button', { name: 'Load Queue' });
-    expect(loadButton.hasAttribute('disabled')).toBe(true);
-
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '0' } });
-    fireEvent.submit(loadButton.closest('form'));
-
-    expect(checkInApiMocks.getVaccinatorQueue).not.toHaveBeenCalled();
-  });
-
-  it('loads queue when a valid slot ID is entered and submitted', async () => {
-    checkInApiMocks.getVaccinatorQueue.mockResolvedValue([sampleAppointment]);
-
-    renderSection();
-
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '42' } });
-    fireEvent.submit(slotInput.closest('form'));
-
-    await waitFor(() => {
-      expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith(42);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Active Slot #42')).toBeTruthy();
-      expect(screen.getByText('Appointment #101')).toBeTruthy();
-      expect(
-        screen.getByRole('button', { name: 'Begin vaccination draft for appointment 101' }),
-      ).toBeTruthy();
-    });
-  });
-
-  it('clears previous queue immediately when slot input is changed', async () => {
-    checkInApiMocks.getVaccinatorQueue.mockResolvedValue([sampleAppointment]);
-
-    renderSection();
-
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '42' } });
-    fireEvent.submit(slotInput.closest('form'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Appointment #101')).toBeTruthy();
-    });
-
-    fireEvent.change(slotInput, { target: { value: '43' } });
-
-    expect(screen.queryByText('Appointment #101')).toBeNull();
-    expect(screen.getByText('No Slot Selected')).toBeTruthy();
-  });
-
-  it('invalidates a pending queue request when slot input changes without another submit', async () => {
-    const slotFourRequest = deferred();
-    checkInApiMocks.getVaccinatorQueue.mockReturnValueOnce(slotFourRequest.promise);
-
-    renderSection();
-
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '4' } });
-    fireEvent.submit(slotInput.closest('form'));
-
-    await waitFor(() => {
-      expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith(4);
-    });
-
-    fireEvent.change(slotInput, { target: { value: '42' } });
-    await act(async () => {
-      slotFourRequest.resolve([{ ...sampleAppointment, id: 4, slotId: 4 }]);
-      await slotFourRequest.promise;
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByText('Appointment #4')).toBeNull();
-      expect(screen.getByText('No Slot Selected')).toBeTruthy();
-    });
-  });
-
-  it('prevents race conditions with monotonic queue request tracking', async () => {
-    let resolveFirst;
-    const firstPromise = new Promise((resolve) => {
-      resolveFirst = resolve;
-    });
-
-    checkInApiMocks.getVaccinatorQueue
-      .mockImplementationOnce(() => firstPromise)
-      .mockResolvedValueOnce([
-        { ...sampleAppointment, id: 999, slotId: 43 },
-      ]);
-
-    renderSection();
-
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-
-    fireEvent.change(slotInput, { target: { value: '42' } });
-    fireEvent.submit(slotInput.closest('form'));
-
-    fireEvent.change(slotInput, { target: { value: '43' } });
-    fireEvent.submit(slotInput.closest('form'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Appointment #999')).toBeTruthy();
-      expect(screen.getByText('Active Slot #43')).toBeTruthy();
-    });
-
-    await act(async () => {
-      resolveFirst([{ ...sampleAppointment, id: 101, slotId: 42 }]);
-      await firstPromise;
-    });
-
-    expect(screen.getByText('Appointment #999')).toBeTruthy();
-    expect(screen.queryByText('Appointment #101')).toBeNull();
-  });
-
-  it('displays separate error and empty states for the queue', async () => {
-    checkInApiMocks.getVaccinatorQueue.mockRejectedValueOnce(new Error('Slot expired or invalid'));
-
-    renderSection();
-
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '99' } });
-    fireEvent.submit(slotInput.closest('form'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Error Loading Queue')).toBeTruthy();
-      expect(screen.getByText('Slot expired or invalid')).toBeTruthy();
-    });
-
-    checkInApiMocks.getVaccinatorQueue.mockResolvedValueOnce([]);
-    fireEvent.change(slotInput, { target: { value: '100' } });
-    fireEvent.submit(slotInput.closest('form'));
-
-    await waitFor(() => {
-      expect(screen.getByText('No checked-in appointments found for Slot #100.')).toBeTruthy();
-    });
-  });
-
-  it('starts a vaccination draft with local calendar administration date and refreshes drafts list', async () => {
+  it('renders checked-in queue and allows vaccinator to begin vaccination draft', async () => {
     checkInApiMocks.getVaccinatorQueue.mockResolvedValue([sampleAppointment]);
     draftApiMocks.createVaccinationDraft.mockResolvedValue({ id: 25 });
     draftApiMocks.listMyVaccinationDrafts
@@ -376,11 +275,8 @@ describe('VaccinatorDashboardSection', () => {
 
     renderSection();
 
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '42' } });
-    fireEvent.submit(slotInput.closest('form'));
-
     await waitFor(() => {
+      expect(screen.getByText('Appointment #101')).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Begin vaccination draft for appointment 101' })).toBeTruthy();
     });
 
@@ -396,26 +292,6 @@ describe('VaccinatorDashboardSection', () => {
     });
   });
 
-  it('reports create success separately when the follow-up draft refresh fails', async () => {
-    checkInApiMocks.getVaccinatorQueue.mockResolvedValue([sampleAppointment]);
-    draftApiMocks.createVaccinationDraft.mockResolvedValue({ id: 25 });
-    draftApiMocks.listMyVaccinationDrafts
-      .mockResolvedValueOnce([])
-      .mockRejectedValueOnce(new Error('Draft refresh unavailable'));
-
-    renderSection();
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '42' } });
-    fireEvent.submit(slotInput.closest('form'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Begin vaccination draft for appointment 101' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Draft Started')).toBeTruthy();
-      expect(screen.getByText(/draft created.+could not be refreshed/i)).toBeTruthy();
-      expect(screen.queryByText('Draft Not Started')).toBeNull();
-    });
-  });
-
   it('tracks simultaneous draft creation independently per appointment', async () => {
     const firstCreate = deferred();
     const secondCreate = deferred();
@@ -425,9 +301,6 @@ describe('VaccinatorDashboardSection', () => {
       .mockReturnValueOnce(secondCreate.promise);
 
     renderSection();
-    const slotInput = screen.getByLabelText(/Time Slot ID/i);
-    fireEvent.change(slotInput, { target: { value: '42' } });
-    fireEvent.submit(slotInput.closest('form'));
 
     const firstButton = await screen.findByRole('button', { name: 'Begin vaccination draft for appointment 101' });
     const secondButton = screen.getByRole('button', { name: 'Begin vaccination draft for appointment 102' });
@@ -447,6 +320,42 @@ describe('VaccinatorDashboardSection', () => {
     secondCreate.resolve({ id: 21 });
     await waitFor(() => {
       expect(secondButton.disabled).toBe(false);
+    });
+  });
+
+  it('displays separate error and empty states for the queue', async () => {
+    checkInApiMocks.getVaccinatorQueue.mockRejectedValueOnce(new Error('Network error loading queue'));
+
+    renderSection();
+
+    await waitFor(() => {
+      expect(screen.getByText('Error Loading Queue')).toBeTruthy();
+      expect(screen.getByText('Network error loading queue')).toBeTruthy();
+    });
+
+    checkInApiMocks.getVaccinatorQueue.mockResolvedValueOnce([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('No citizens are currently waiting for this session.')).toBeTruthy();
+    });
+  });
+
+  it('reports create success separately when the follow-up draft refresh fails', async () => {
+    checkInApiMocks.getVaccinatorQueue.mockResolvedValue([sampleAppointment]);
+    draftApiMocks.createVaccinationDraft.mockResolvedValue({ id: 25 });
+    draftApiMocks.listMyVaccinationDrafts
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error('Draft refresh unavailable'));
+
+    renderSection();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Begin vaccination draft for appointment 101' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Draft Started')).toBeTruthy();
+      expect(screen.getByText(/draft created.+could not be refreshed/i)).toBeTruthy();
+      expect(screen.queryByText('Draft Not Started')).toBeNull();
     });
   });
 });

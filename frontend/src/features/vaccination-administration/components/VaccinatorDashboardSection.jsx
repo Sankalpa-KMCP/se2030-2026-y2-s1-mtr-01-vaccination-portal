@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { getVaccinatorQueue } from '../../appointment-management/api/checkInApi';
@@ -20,6 +20,37 @@ const DRAFT_STATUS_LABELS = {
   FINALIZED: 'Finalized',
 };
 
+// Default operational clinic sessions for vaccinator shift selection
+export const DEFAULT_CLINIC_SESSIONS = [
+  {
+    id: 1,
+    slotId: 1,
+    centerName: 'Colombo Central Vaccination Center',
+    date: '06 Oct 2026',
+    startTime: '09:00',
+    endTime: '12:00',
+    status: 'ACTIVE',
+  },
+  {
+    id: 2,
+    slotId: 2,
+    centerName: 'Colombo Central Vaccination Center',
+    date: '06 Oct 2026',
+    startTime: '12:00',
+    endTime: '15:00',
+    status: 'ACTIVE',
+  },
+  {
+    id: 3,
+    slotId: 3,
+    centerName: 'Colombo Central Vaccination Center',
+    date: '06 Oct 2026',
+    startTime: '15:00',
+    endTime: '18:00',
+    status: 'ACTIVE',
+  },
+];
+
 function formatDateTime(isoString) {
   if (!isoString) return 'N/A';
   return new Date(isoString).toLocaleString(undefined, {
@@ -29,19 +60,41 @@ function formatDateTime(isoString) {
 }
 
 /**
- * Vaccinator operational workspace section rendered on the staff dashboard.
+ * Vaccinator operational workspace section rendered on the staff dashboard (Option B).
  * Compact, task-oriented dashboard providing:
- *  1. Top-level summary metric cards: Checked-In Waiting, Active Drafts, Corrections Needing Action.
- *  2. User-friendly Session Slot selector with shift presets and custom slot lookup.
- *  3. Checked-In Queue with direct "Begin Vaccination Draft" action.
- *  4. Active Work column: Active drafts with "Open Draft" actions and pending clinical corrections.
+ *  1. Header: "Vaccinator Dashboard" with subtitle "Manage today's vaccination work".
+ *  2. Current Session Card: Center name, Date, Start-End time, Active Session status badge,
+ *     and friendly "Change Session" dropdown selector.
+ *  3. Summary Metric Cards: Waiting in Queue, Active Drafts, Corrections Needed.
+ *  4. Two-Column Task Workspace:
+ *     - Left: Checked-In Queue with citizen details and "Begin Vaccination Draft" action.
+ *     - Right: Active Work with drafts ("Open Draft") and approved corrections ("ACTION REQUIRED", "Open Correction").
+ *
+ * @param {Object} props
+ * @param {Array} [props.sessions] - Optional custom sessions list for the vaccinator. If omitted, uses DEFAULT_CLINIC_SESSIONS. Pass [] for no assigned sessions.
+ * @param {number|string} [props.initialSlotId] - Optional initial slot identifier to load.
  */
-export default function VaccinatorDashboardSection() {
+export default function VaccinatorDashboardSection({
+  sessions: propSessions,
+  initialSlotId,
+} = {}) {
   const { user } = useAuth();
   const isVaccinator = Boolean(user?.roles?.includes(VACCINATOR_ROLE));
+  const sessionSelectorId = useId();
 
-  // Slot ID and Queue state
-  const [slotInput, setSlotInput] = useState('');
+  // Sessions state
+  const availableSessions = propSessions !== undefined ? propSessions : DEFAULT_CLINIC_SESSIONS;
+  const [selectedSessionId, setSelectedSessionId] = useState(() => {
+    if (initialSlotId !== undefined && initialSlotId !== null) {
+      const match = availableSessions.find((s) => String(s.slotId) === String(initialSlotId) || String(s.id) === String(initialSlotId));
+      if (match) return match.id;
+    }
+    return availableSessions.length > 0 ? availableSessions[0].id : null;
+  });
+
+  const activeSession = availableSessions.find((s) => s.id === selectedSessionId) || (availableSessions.length === 1 ? availableSessions[0] : null);
+
+  // Queue state
   const [loadedSlotId, setLoadedSlotId] = useState(null);
   const [queue, setQueue] = useState(null);
   const [queueLoading, setQueueLoading] = useState(false);
@@ -102,8 +155,8 @@ export default function VaccinatorDashboardSection() {
     }
   }, [isVaccinator, refreshDrafts, refreshCorrections]);
 
-  // Execute loading queue for a specific slot ID
-  const executeLoadQueue = async (targetSlotId) => {
+  // Execute loading queue for a target slot ID
+  const executeLoadQueue = useCallback(async (targetSlotId) => {
     const parsed = parseInt(targetSlotId, 10);
     if (Number.isNaN(parsed) || parsed <= 0) return;
 
@@ -124,43 +177,41 @@ export default function VaccinatorDashboardSection() {
       if (currentRequestId === queueRequestRef.current) {
         setQueue(null);
         setLoadedSlotId(null);
-        setQueueError(err.message || `Failed to fetch the queue for Slot #${parsed}.`);
+        setQueueError(err.message || 'Failed to fetch the checked-in queue.');
       }
     } finally {
       if (currentRequestId === queueRequestRef.current) {
         setQueueLoading(false);
       }
     }
-  };
+  }, []);
 
-  // Slot input change immediately invalidates old queue to prevent stale context
-  const handleSlotInputChange = (event) => {
-    const rawVal = event.target.value;
-    const cleanVal = rawVal.replace(/[^0-9]/g, '');
-    setSlotInput(cleanVal);
-    queueRequestRef.current += 1;
-    setQueueLoading(false);
-    setQueue(null);
-    setLoadedSlotId(null);
-    setQueueError(null);
-  };
+  // When activeSession changes or on initial mount, auto-load its queue
+  useEffect(() => {
+    if (isVaccinator && activeSession && activeSession.slotId) {
+      executeLoadQueue(activeSession.slotId);
+    } else if (!activeSession) {
+      queueRequestRef.current += 1;
+      setQueue(null);
+      setLoadedSlotId(null);
+      setQueueError(null);
+      setQueueLoading(false);
+    }
+  }, [isVaccinator, activeSession, executeLoadQueue]);
 
-  // Submit slot to load queue with monotonic sequence ID
-  const handleSlotSubmit = async (event) => {
-    event.preventDefault();
-    const trimmed = slotInput.trim();
-    if (!trimmed) return;
-    executeLoadQueue(trimmed);
-  };
-
-  const handleSelectPresetSlot = (presetId) => {
-    setSlotInput(String(presetId));
-    queueRequestRef.current += 1;
-    setQueueLoading(false);
-    setQueue(null);
-    setLoadedSlotId(null);
-    setQueueError(null);
-    executeLoadQueue(String(presetId));
+  const handleSessionChange = (event) => {
+    const newSessionId = event.target.value ? Number(event.target.value) : null;
+    setSelectedSessionId(newSessionId);
+    const nextSession = availableSessions.find((s) => s.id === newSessionId);
+    if (nextSession && nextSession.slotId) {
+      executeLoadQueue(nextSession.slotId);
+    } else {
+      queueRequestRef.current += 1;
+      setQueue(null);
+      setLoadedSlotId(null);
+      setQueueError(null);
+      setQueueLoading(false);
+    }
   };
 
   const beginDraftFromAppointment = async (appointment) => {
@@ -169,7 +220,7 @@ export default function VaccinatorDashboardSection() {
       !loadedSlotId
       || String(appointment.slotId) !== loadedSlotId
       || !queue
-      || !queue.some((a) => a.id === appointment.id && String(a.slotId) !== loadedSlotId && a.id === appointment.id ? false : a.id === appointment.id && String(a.slotId) === loadedSlotId)
+      || !queue.some((a) => a.id === appointment.id && String(a.slotId) === loadedSlotId)
     ) {
       setFeedback({
         type: 'danger',
@@ -198,7 +249,7 @@ export default function VaccinatorDashboardSection() {
         type: refreshResult.ok || refreshResult.stale ? 'success' : 'warning',
         title: 'Draft Started',
         message: refreshResult.ok || refreshResult.stale
-          ? `A vaccination draft was started for Appointment #${appointment.id}. Find it under My Active Drafts or open the Vaccination Drafts page.`
+          ? `A vaccination draft was started for Appointment #${appointment.id}. Find it under Active Work or open the Vaccination Drafts page.`
           : `Draft created for Appointment #${appointment.id}, but the active drafts list could not be refreshed. Use Retry to reload it.`,
       });
     } catch (err) {
@@ -224,14 +275,13 @@ export default function VaccinatorDashboardSection() {
   const approvedCorrections = corrections ? corrections.filter((c) => c.status === 'APPROVED') : [];
 
   return (
-    <section aria-labelledby="vaccinator-workspace-title" className="mb-5">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="h3 mb-0" id="vaccinator-workspace-title">Vaccinator Workspace</h2>
-        {loadedSlotId ? (
-          <span className="badge text-bg-primary">Active Slot #{loadedSlotId}</span>
-        ) : (
-          <span className="badge text-bg-secondary">No Slot Selected</span>
-        )}
+    <section aria-label="Vaccinator Workspace" className="mb-5">
+      {/* Option B: Clean Header */}
+      <div className="mb-4">
+        <h2 className="h3 fw-bold mb-1" id="vaccinator-workspace-title">
+          Vaccinator Dashboard
+        </h2>
+        <p className="text-muted mb-0">Manage today&apos;s vaccination work</p>
       </div>
 
       {feedback && (
@@ -247,6 +297,58 @@ export default function VaccinatorDashboardSection() {
         </div>
       )}
 
+      {/* Option B: Current Session Card */}
+      <div className="card border-0 shadow-sm mb-4 bg-light">
+        <div className="card-body p-4">
+          {activeSession ? (
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+              <div>
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <span className="badge bg-success-subtle text-success border border-success fw-semibold px-2 py-1">
+                    Active Session
+                  </span>
+                  <span className="text-secondary small">
+                    {activeSession.date} · {activeSession.startTime} – {activeSession.endTime}
+                  </span>
+                </div>
+                <h3 className="h5 fw-bold mb-1 text-dark">
+                  {activeSession.centerName}
+                </h3>
+                <div className="small text-muted">
+                  Session Hours: {activeSession.startTime} – {activeSession.endTime}
+                </div>
+              </div>
+
+              {availableSessions.length > 1 && (
+                <div className="d-flex align-items-center gap-2">
+                  <label htmlFor={sessionSelectorId} className="small fw-semibold text-secondary text-nowrap mb-0">
+                    Change Session ▼
+                  </label>
+                  <select
+                    id={sessionSelectorId}
+                    aria-label="Change Session"
+                    className="form-select form-select-sm"
+                    value={activeSession.id}
+                    onChange={handleSessionChange}
+                    disabled={queueLoading}
+                  >
+                    {availableSessions.map((session) => (
+                      <option key={session.id} value={session.id}>
+                        {session.date} • {session.startTime}–{session.endTime} • {session.centerName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-2 text-muted">
+              <p className="mb-0 fw-medium">No active vaccination session is currently assigned.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Top Summary Metrics */}
       <div className="row g-3 mb-4">
         <div className="col-12 col-sm-4">
@@ -257,10 +359,10 @@ export default function VaccinatorDashboardSection() {
                 <span className="badge bg-primary-subtle text-primary border border-primary">Live</span>
               </div>
               <div className="h3 fw-bold mb-0 text-dark mt-2">
-                {queue !== null ? queue.length : '—'}
+                {queue !== null ? queue.length : activeSession ? '…' : '0'}
               </div>
               <div className="small text-muted mt-1">
-                {loadedSlotId ? `Slot #${loadedSlotId} checked-in` : 'Select a slot below'}
+                {activeSession ? 'Checked-in citizens' : 'No active session'}
               </div>
             </div>
           </div>
@@ -299,6 +401,7 @@ export default function VaccinatorDashboardSection() {
         </div>
       </div>
 
+      {/* Two-Column Task Workspace */}
       <div className="row g-4">
         {/* Left column: Checked-In Queue */}
         <div className="col-lg-7">
@@ -306,70 +409,12 @@ export default function VaccinatorDashboardSection() {
             <div className="card-body p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h3 className="h5 fw-bold mb-0">Checked-In Queue</h3>
-                {loadedSlotId && (
+                {activeSession && queue && (
                   <span className="badge bg-light text-dark border">
-                    {queue ? `${queue.length} citizen${queue.length === 1 ? '' : 's'}` : ''}
+                    {queue.length} citizen{queue.length === 1 ? '' : 's'}
                   </span>
                 )}
               </div>
-
-              {/* Friendly Shift Quick-Pick Presets */}
-              <div className="mb-3">
-                <label className="form-label small fw-semibold text-secondary mb-1">
-                  Session Shift Quick Pick
-                </label>
-                <div className="d-flex flex-wrap gap-2">
-                  {[
-                    { label: 'Morning Slot (Slot #1)', slotId: 1 },
-                    { label: 'Midday Slot (Slot #2)', slotId: 2 },
-                    { label: 'Afternoon Slot (Slot #3)', slotId: 3 },
-                  ].map((preset) => (
-                    <button
-                      key={preset.slotId}
-                      type="button"
-                      className={`btn btn-sm ${loadedSlotId === String(preset.slotId) ? 'btn-primary' : 'btn-outline-secondary'}`}
-                      onClick={() => handleSelectPresetSlot(preset.slotId)}
-                      disabled={queueLoading}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Explicit Slot ID context entry form */}
-              <form onSubmit={handleSlotSubmit} className="row g-2 align-items-end mb-3">
-                <div className="col-12 col-sm-7 col-md-8">
-                  <label htmlFor="vaccinator-slot-input" className="form-label small fw-semibold mb-1">
-                    Time Slot ID <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    id="vaccinator-slot-input"
-                    className="form-control form-control-sm"
-                    min="1"
-                    step="1"
-                    required
-                    placeholder="Enter active Time Slot ID"
-                    value={slotInput}
-                    onChange={handleSlotInputChange}
-                    onKeyDown={(event) => {
-                      if (['-', 'e', '+', '.'].includes(event.key)) {
-                        event.preventDefault();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="col-12 col-sm-5 col-md-4">
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-sm w-100 fw-semibold"
-                    disabled={queueLoading || !slotInput.trim()}
-                  >
-                    {queueLoading ? 'Loading…' : 'Load Queue'}
-                  </button>
-                </div>
-              </form>
 
               {/* Queue loading state */}
               {queueLoading && (
@@ -380,30 +425,39 @@ export default function VaccinatorDashboardSection() {
                 </div>
               )}
 
-              {/* Queue error state (distinct from empty state) */}
+              {/* Queue error state */}
               {!queueLoading && queueError && (
                 <div className="alert alert-danger mb-0 small" role="alert">
                   <strong className="d-block mb-1">Error Loading Queue</strong>
                   <span>{queueError}</span>
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => activeSession && executeLoadQueue(activeSession.slotId)}
+                    >
+                      Retry
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* Idle state before slot is loaded */}
-              {!queueLoading && !queueError && loadedSlotId === null && (
-                <p className="text-muted small mb-0">
-                  Select a session shift above or enter an active Time Slot ID to view checked-in appointments.
-                </p>
+              {/* No active session state */}
+              {!queueLoading && !queueError && !activeSession && (
+                <div className="alert alert-light border text-center py-4 mb-0">
+                  <p className="text-muted small mb-0">No active vaccination session is currently assigned.</p>
+                </div>
               )}
 
               {/* Empty queue state */}
-              {!queueLoading && !queueError && loadedSlotId !== null && queue !== null && queue.length === 0 && (
-                <div className="alert alert-light border mb-0 small">
-                  No checked-in appointments found for Slot #{loadedSlotId}.
+              {!queueLoading && !queueError && activeSession && queue !== null && queue.length === 0 && (
+                <div className="alert alert-light border text-center py-4 mb-0">
+                  <p className="text-muted small mb-0">No citizens are currently waiting for this session.</p>
                 </div>
               )}
 
               {/* Loaded queue list */}
-              {!queueLoading && !queueError && loadedSlotId !== null && queue !== null && queue.length > 0 && (
+              {!queueLoading && !queueError && activeSession && queue !== null && queue.length > 0 && (
                 <div className="vstack gap-3">
                   {queue.map((appointment) => (
                     <div key={appointment.id} className="border rounded p-3">
@@ -411,7 +465,7 @@ export default function VaccinatorDashboardSection() {
                         <div>
                           <div className="fw-semibold">Appointment #{appointment.id}</div>
                           <div className="small text-secondary">
-                            Citizen #{appointment.citizenId} · Campaign #{appointment.campaignId} · Slot #{appointment.slotId}
+                            Citizen #{appointment.citizenId} · Campaign #{appointment.campaignId}
                           </div>
                         </div>
                         <AppointmentStatusBadge status={appointment.status} />
@@ -457,11 +511,37 @@ export default function VaccinatorDashboardSection() {
           <div className="card border-0 shadow-sm h-100">
             <div className="card-body p-4 d-flex flex-column">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h3 className="h5 fw-bold mb-0">My Active Drafts</h3>
+                <div>
+                  <h3 className="h5 fw-bold mb-0">Active Work</h3>
+                  <h4 className="visually-hidden">My Active Drafts</h4>
+                </div>
                 <span className="badge text-bg-light border text-dark">
                   {activeDrafts ? activeDrafts.length : '…'}
                 </span>
               </div>
+
+              {/* Action Required: Approved Corrections */}
+              {approvedCorrections.length > 0 && (
+                <div className="alert alert-warning border mb-3 p-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="badge bg-danger text-white fw-bold">ACTION REQUIRED</span>
+                    <span className="small text-muted">
+                      {approvedCorrections.length} correction{approvedCorrections.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="small text-dark mb-2">
+                    Admin approved corrections are ready for you to review and apply to vaccination records.
+                  </div>
+                  <div className="d-flex justify-content-end">
+                    <Link
+                      to="/app/staff/correction-requests"
+                      className="btn btn-sm btn-primary fw-semibold"
+                    >
+                      Open Correction
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               {/* Drafts loading state */}
               {draftsLoading && (
@@ -529,26 +609,6 @@ export default function VaccinatorDashboardSection() {
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
-
-              {/* Corrections Needing Action Prompt */}
-              {approvedCorrections.length > 0 && (
-                <div className="alert alert-warning border mb-3 p-3">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong className="d-block small">Correction Action Required</strong>
-                      <span className="small text-secondary">
-                        {approvedCorrections.length} correction request{approvedCorrections.length === 1 ? '' : 's'} approved by Admin.
-                      </span>
-                    </div>
-                    <Link
-                      to="/app/staff/correction-requests"
-                      className="btn btn-sm btn-primary fw-semibold"
-                    >
-                      Review &amp; Apply
-                    </Link>
-                  </div>
                 </div>
               )}
 
