@@ -32,6 +32,7 @@ import com.se2030.vaccinationportal.screening.submission.repository.ScreeningAns
 import com.se2030.vaccinationportal.screening.submission.repository.ScreeningSubmissionRepository;
 import com.se2030.vaccinationportal.screening.eligibility.repository.ScreeningTriggeredRuleEvidenceRepository;
 import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
+import com.se2030.vaccinationportal.screening.validation.TextAnswerValidationStrategy;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -88,7 +89,7 @@ class ScreeningSubmissionConcurrencyGuardTests {
                 versionRepository,
                 itemRepository,
                 consentNoticeService,
-                new ScreeningAnswerValidator(null),
+                new ScreeningAnswerValidator(List.of(new TextAnswerValidationStrategy())),
                 preliminaryScreeningService,
                 eligibilityRuleRepository,
                 evidenceRepository,
