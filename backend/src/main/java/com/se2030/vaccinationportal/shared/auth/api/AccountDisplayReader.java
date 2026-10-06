@@ -9,4 +9,7 @@ import java.util.Optional;
  */
 public interface AccountDisplayReader {
     Optional<String> findFullName(Long accountId);
+
+    /** Full name when present, otherwise the account email for staff display. */
+    Optional<String> findDisplayName(Long accountId);
 }
