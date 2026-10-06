@@ -157,6 +157,9 @@ describe('VaccinatorDashboardSection (Option B)', () => {
     expect(screen.getByText('Active Session')).toBeTruthy();
     expect(screen.getByText('Colombo Central Vaccination Center')).toBeTruthy();
     expect(screen.getByText(/06 Oct 2026 · 09:00 – 12:00/)).toBeTruthy();
+    const facilityImg = screen.getByRole('img', { name: 'Vaccination center facility' });
+    expect(facilityImg).toBeTruthy();
+    expect(facilityImg.getAttribute('src')).toBe('/images/vaccination-center.jpg');
 
     // Summary Metric Cards
     expect(screen.getByText('Waiting in Queue')).toBeTruthy();
@@ -188,6 +191,8 @@ describe('VaccinatorDashboardSection (Option B)', () => {
       expect(screen.getByText('Select or receive an assigned vaccination session to view the queue.')).toBeTruthy();
     });
 
+    const facilityImg = screen.getByRole('img', { name: 'Vaccination center facility' });
+    expect(facilityImg).toBeTruthy();
     expect(screen.queryByText('Active Session')).toBeNull();
     expect(checkInApiMocks.getVaccinatorQueue).not.toHaveBeenCalled();
   });

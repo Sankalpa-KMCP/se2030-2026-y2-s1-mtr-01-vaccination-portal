@@ -281,33 +281,19 @@ export default function VaccinatorDashboardSection({
       >
         <div className="card-body p-4">
           <div className="d-flex flex-column flex-md-row align-items-md-center gap-4">
-            {/* Clinic visual area */}
-            <div
-              className="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3 text-primary"
-              style={{
-                width: '68px',
-                height: '68px',
-                background: 'linear-gradient(135deg, #e0f2ee 0%, #ccece4 100%)',
-                border: '1px solid rgba(15, 110, 91, 0.25)',
-              }}
-              aria-hidden="true"
-            >
-              <svg
-                width="34"
-                height="34"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 21h18" />
-                <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
-                <path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4" />
-                <path d="M10 9h4" />
-                <path d="M12 7v4" />
-              </svg>
+            {/* Clinic visual photo area */}
+            <div className="flex-shrink-0">
+              <img
+                src="/images/vaccination-center.jpg"
+                alt="Vaccination center facility"
+                className="rounded-3 shadow-sm object-fit-cover d-block"
+                style={{
+                  width: '136px',
+                  height: '86px',
+                  border: '1px solid var(--primary-soft-border, #bfe5db)',
+                }}
+                loading="eager"
+              />
             </div>
 
             {/* Content area */}
