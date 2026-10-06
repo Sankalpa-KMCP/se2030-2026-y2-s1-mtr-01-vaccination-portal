@@ -41,7 +41,12 @@ describe('LandingPage', () => {
   it('exposes registration routes and universal login entry points', () => {
     renderLanding();
 
-    expect(screen.getByRole('link', { name: /create citizen account/i }).getAttribute('href')).toBe('/register/citizen');
+    // The landing page intentionally offers several citizen-registration entry
+    // points (hero CTA and care-paths CTA); every one of them must route to the
+    // citizen registration page.
+    const registrationLinks = screen.getAllByRole('link', { name: /create citizen account/i });
+    expect(registrationLinks.length).toBeGreaterThan(0);
+    registrationLinks.forEach((link) => expect(link.getAttribute('href')).toBe('/register/citizen'));
     expect(screen.getByRole('link', { name: /^sign in$/i }).getAttribute('href')).toBe('/login');
     expect(screen.getByRole('link', { name: /request staff account/i }).getAttribute('href')).toBe('/register/staff');
     expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login');

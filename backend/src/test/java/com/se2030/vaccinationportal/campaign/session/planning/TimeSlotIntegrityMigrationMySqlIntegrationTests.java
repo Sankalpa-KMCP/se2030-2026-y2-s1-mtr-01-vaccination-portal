@@ -61,6 +61,9 @@ class TimeSlotIntegrityMigrationMySqlIntegrationTests extends AbstractMySqlTestC
              Statement statement = connection.createStatement()) {
             statement.execute("DELETE FROM time_slots");
             statement.execute("DELETE FROM session_change_events");
+            // Campaign lifecycle events reference the campaign; they must be cleared
+            // before the campaign row or the FK blocks the whole teardown.
+            statement.execute("DELETE FROM campaign_lifecycle_events");
         } catch (Exception ignored) {
         }
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {

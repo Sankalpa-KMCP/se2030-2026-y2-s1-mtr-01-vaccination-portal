@@ -61,8 +61,8 @@ class ScreeningSubmissionMySqlActiveUniquenessIntegrationTests extends AbstractM
     private long insertActiveSubmission(Connection connection, long citizenId, long campaignId,
                                         long versionId, long consentId, String status) throws SQLException {
         String sql = "INSERT INTO screening_submission (citizen_id, campaign_id, version_id, "
-                + "consent_notice_version_id, status, preliminary_result, consent_at, submitted_at) "
-                + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?)";
+                + "consent_notice_version_id, status, preliminary_result, consent_at, submitted_at, created_at) "
+                + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NOW(6))";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setLong(1, citizenId);
             statement.setLong(2, campaignId);
@@ -139,14 +139,16 @@ class ScreeningSubmissionMySqlActiveUniquenessIntegrationTests extends AbstractM
     void duplicateActiveSubmission_violatesUniqueInvariantOnMySql() throws Exception {
         assertConnectedToRealMySql();
         try (Connection connection = dataSource.getConnection()) {
+            // Raw JDBC fixtures pin created_at explicitly: they must not depend on
+            // column DEFAULTs being present in the runtime schema.
             long questionnaireId = insertRowReturningId(connection,
-                    "INSERT INTO questionnaire (code, name, description) VALUES ('R05-MySQL-Q', 'R05 MySQL', 'fixture')");
+                    "INSERT INTO questionnaire (code, name, description, created_at) VALUES ('R05-MySQL-Q', 'R05 MySQL', 'fixture', NOW(6))");
             long versionId = insertRowReturningId(connection,
-                    "INSERT INTO questionnaire_version (questionnaire_id, version_number, status, published_at) "
-                            + "VALUES (" + questionnaireId + ", 1, 'PUBLISHED', NOW(6))");
+                    "INSERT INTO questionnaire_version (questionnaire_id, version_number, status, published_at, created_at) "
+                            + "VALUES (" + questionnaireId + ", 1, 'PUBLISHED', NOW(6), NOW(6))");
             long consentId = insertRowReturningId(connection,
-                    "INSERT INTO consent_notice_version (notice_code, version_number, title, content, content_hash, published_at) "
-                            + "VALUES ('R05_MYSQL_NOTICE', 1, 'Consent', 'Content', 'hash-mysql', NOW(6))");
+                    "INSERT INTO consent_notice_version (notice_code, version_number, title, content, content_hash, published_at, created_at) "
+                            + "VALUES ('R05_MYSQL_NOTICE', 1, 'Consent', 'Content', 'hash-mysql', NOW(6), NOW(6))");
 
             long citizenId = 88001L;
             long campaignId = 88002L;
@@ -172,13 +174,13 @@ class ScreeningSubmissionMySqlActiveUniquenessIntegrationTests extends AbstractM
         assertConnectedToRealMySql();
         try (Connection connection = dataSource.getConnection()) {
             long questionnaireId = insertRowReturningId(connection,
-                    "INSERT INTO questionnaire (code, name, description) VALUES ('R05-MySQL-Q2', 'R05 MySQL 2', 'fixture')");
+                    "INSERT INTO questionnaire (code, name, description, created_at) VALUES ('R05-MySQL-Q2', 'R05 MySQL 2', 'fixture', NOW(6))");
             long versionId = insertRowReturningId(connection,
-                    "INSERT INTO questionnaire_version (questionnaire_id, version_number, status, published_at) "
-                            + "VALUES (" + questionnaireId + ", 1, 'PUBLISHED', NOW(6))");
+                    "INSERT INTO questionnaire_version (questionnaire_id, version_number, status, published_at, created_at) "
+                            + "VALUES (" + questionnaireId + ", 1, 'PUBLISHED', NOW(6), NOW(6))");
             long consentId = insertRowReturningId(connection,
-                    "INSERT INTO consent_notice_version (notice_code, version_number, title, content, content_hash, published_at) "
-                            + "VALUES ('R05_MYSQL_NOTICE2', 1, 'Consent', 'Content', 'hash-mysql-2', NOW(6))");
+                    "INSERT INTO consent_notice_version (notice_code, version_number, title, content, content_hash, published_at, created_at) "
+                            + "VALUES ('R05_MYSQL_NOTICE2', 1, 'Consent', 'Content', 'hash-mysql-2', NOW(6), NOW(6))");
 
             long citizenId = 88003L;
             long campaignId = 88004L;
