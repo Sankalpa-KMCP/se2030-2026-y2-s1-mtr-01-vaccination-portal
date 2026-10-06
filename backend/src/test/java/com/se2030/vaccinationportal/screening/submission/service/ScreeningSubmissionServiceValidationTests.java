@@ -18,7 +18,6 @@ import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuest
 import com.se2030.vaccinationportal.screening.submission.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.eligibility.model.ScreeningTriggeredRuleEvidence;
 import com.se2030.vaccinationportal.screening.exception.ResourceNotFoundException;
-import com.se2030.vaccinationportal.screening.questionnaire.repository.AnswerOptionRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireVersionRepository;
@@ -26,6 +25,7 @@ import com.se2030.vaccinationportal.screening.submission.repository.ScreeningAns
 import com.se2030.vaccinationportal.screening.submission.repository.ScreeningSubmissionRepository;
 import com.se2030.vaccinationportal.screening.eligibility.repository.ScreeningTriggeredRuleEvidenceRepository;
 import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
+import com.se2030.vaccinationportal.screening.validation.TextAnswerValidationStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,8 +70,6 @@ class ScreeningSubmissionServiceValidationTests {
     @Mock
     private ScreeningConsentNoticeService consentNoticeService;
     @Mock
-    private AnswerOptionRepository optionRepository;
-    @Mock
     private PreliminaryScreeningService preliminaryScreeningService;
     @Mock
     private EligibilityRuleRepository eligibilityRuleRepository;
@@ -90,7 +88,7 @@ class ScreeningSubmissionServiceValidationTests {
 
     @BeforeEach
     void setUp() {
-        answerValidator = spy(new ScreeningAnswerValidator(optionRepository));
+        answerValidator = spy(new ScreeningAnswerValidator(List.of(new TextAnswerValidationStrategy())));
         service = new ScreeningSubmissionService(
                 submissionRepository,
                 answerRepository,

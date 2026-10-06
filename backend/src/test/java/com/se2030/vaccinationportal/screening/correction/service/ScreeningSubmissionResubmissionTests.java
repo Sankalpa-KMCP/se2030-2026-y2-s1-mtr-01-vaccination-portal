@@ -19,7 +19,6 @@ import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuest
 import com.se2030.vaccinationportal.screening.submission.model.ScreeningSubmission;
 import com.se2030.vaccinationportal.screening.submission.model.ScreeningSubmissionStatus;
 import com.se2030.vaccinationportal.screening.eligibility.model.ScreeningTriggeredRuleEvidence;
-import com.se2030.vaccinationportal.screening.questionnaire.repository.AnswerOptionRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.EligibilityRuleRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireItemRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireVersionRepository;
@@ -27,6 +26,7 @@ import com.se2030.vaccinationportal.screening.submission.repository.ScreeningAns
 import com.se2030.vaccinationportal.screening.submission.repository.ScreeningSubmissionRepository;
 import com.se2030.vaccinationportal.screening.eligibility.repository.ScreeningTriggeredRuleEvidenceRepository;
 import com.se2030.vaccinationportal.screening.validation.ScreeningAnswerValidator;
+import com.se2030.vaccinationportal.screening.validation.TextAnswerValidationStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,8 +75,6 @@ class ScreeningSubmissionResubmissionTests {
     @Mock
     private ScreeningConsentNoticeService consentNoticeService;
 
-    @Mock
-    private AnswerOptionRepository answerOptionRepository;
 
     @Mock
     private PreliminaryScreeningService preliminaryScreeningService;
@@ -101,7 +99,7 @@ class ScreeningSubmissionResubmissionTests {
 
     @BeforeEach
     void setUp() {
-        ScreeningAnswerValidator answerValidator = new ScreeningAnswerValidator(answerOptionRepository);
+        ScreeningAnswerValidator answerValidator = new ScreeningAnswerValidator(List.of(new TextAnswerValidationStrategy()));
         Clock clock = Clock.fixed(Instant.parse("2026-08-22T08:30:00Z"), ZoneOffset.UTC);
         service = new ScreeningSubmissionService(
                 submissionRepository,

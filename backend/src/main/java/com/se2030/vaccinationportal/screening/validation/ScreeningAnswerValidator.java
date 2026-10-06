@@ -1,32 +1,31 @@
 package com.se2030.vaccinationportal.screening.validation;
 
-import com.se2030.vaccinationportal.screening.questionnaire.model.AnswerOption;
 import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionType;
 import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireItem;
 import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuestion;
-import com.se2030.vaccinationportal.screening.questionnaire.repository.AnswerOptionRepository;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Validates and normalizes answers against the immutable questionnaire version snapshot.
+ * Validates questionnaire rules and delegates answer validation to type-specific strategies.
  */
 @Component
 public class ScreeningAnswerValidator {
+    private final Map<QuestionType, AnswerValidationStrategy> strategies;
 
-    private final AnswerOptionRepository answerOptionRepository;
-
-    public ScreeningAnswerValidator(AnswerOptionRepository answerOptionRepository) {
-        this.answerOptionRepository = answerOptionRepository;
+    public ScreeningAnswerValidator(List<AnswerValidationStrategy> strategies) {
+        Map<QuestionType, AnswerValidationStrategy> byType = new EnumMap<>(QuestionType.class);
+        for (AnswerValidationStrategy strategy : strategies) {
+            if (byType.putIfAbsent(strategy.questionType(), strategy) != null) {
+                throw new IllegalArgumentException("Duplicate answer validation strategy for " + strategy.questionType());
+            }
+        }
+        this.strategies = Map.copyOf(byType);
     }
 
     public List<ValidatedAnswer> validateAndNormalize(
@@ -74,87 +73,11 @@ public class ScreeningAnswerValidator {
             throw new IllegalArgumentException("Question type is missing for question " + questionId);
         }
 
-        return switch (questionType) {
-            case TEXT -> answer;
-            case BOOLEAN -> validateBoolean(questionId, answer);
-            case NUMERIC -> validateNumeric(questionId, answer);
-            case DATE -> validateDate(questionId, answer);
-            case SINGLE_CHOICE -> validateSingleChoice(questionId, answer);
-            case MULTI_CHOICE -> validateMultiChoice(questionId, answer);
-        };
-    }
-
-    private String validateBoolean(Long questionId, String answer) {
-        if (!answer.equalsIgnoreCase("true") && !answer.equalsIgnoreCase("false")) {
-            throw new IllegalArgumentException("Invalid boolean answer for question " + questionId);
+        AnswerValidationStrategy strategy = strategies.get(questionType);
+        if (strategy == null) {
+            throw new IllegalStateException("No answer validation strategy for " + questionType);
         }
-        return answer.toLowerCase();
-    }
-
-    private String validateNumeric(Long questionId, String answer) {
-        try {
-            new BigDecimal(answer);
-            return answer;
-        } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Invalid numeric answer for question " + questionId);
-        }
-    }
-
-    private String validateDate(Long questionId, String answer) {
-        try {
-            LocalDate.parse(answer);
-            return answer;
-        } catch (DateTimeParseException ex) {
-            throw new IllegalArgumentException("Invalid date answer for question " + questionId);
-        }
-    }
-
-    private String validateSingleChoice(Long questionId, String answer) {
-        AnswerOption option = findOption(questionId, answer, loadOptions(questionId));
-        if (option == null) {
-            throw new IllegalArgumentException("Selected option is not valid for question " + questionId);
-        }
-        return option.getTypedValue();
-    }
-
-    private String validateMultiChoice(Long questionId, String answer) {
-        List<AnswerOption> options = loadOptions(questionId);
-        String[] selections = answer.split(",", -1);
-        List<String> normalizedSelections = new ArrayList<>(selections.length);
-        Set<String> selectedOptionKeys = new HashSet<>();
-
-        for (String rawSelection : selections) {
-            String selection = rawSelection.trim();
-            if (selection.isEmpty()) {
-                throw new IllegalArgumentException("Invalid multi-choice answer for question " + questionId);
-            }
-
-            AnswerOption option = findOption(questionId, selection, options);
-            if (option == null) {
-                throw new IllegalArgumentException("Selected option is not valid for question " + questionId);
-            }
-
-            String optionKey = option.getId() != null
-                    ? "ID:" + option.getId()
-                    : "CODE:" + option.getCode();
-            if (!selectedOptionKeys.add(optionKey)) {
-                throw new IllegalArgumentException("Duplicate option selected for question " + questionId);
-            }
-            normalizedSelections.add(option.getTypedValue());
-        }
-        return String.join(",", normalizedSelections);
-    }
-
-    private List<AnswerOption> loadOptions(Long questionId) {
-        return answerOptionRepository.findByQuestionIdOrderByDisplayOrderAsc(questionId);
-    }
-
-    private AnswerOption findOption(Long questionId, String submittedValue, List<AnswerOption> options) {
-        return options.stream()
-                .filter(option -> option.getQuestion() != null && questionId.equals(option.getQuestion().getId()))
-                .filter(option -> submittedValue.equals(option.getCode()) || submittedValue.equals(option.getTypedValue()))
-                .findFirst()
-                .orElse(null);
+        return strategy.validate(questionId, answer);
     }
 
     private boolean isRequired(QuestionnaireItem item) {
