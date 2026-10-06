@@ -19,4 +19,11 @@ public class JpaAccountDisplayReader implements AccountDisplayReader {
     public Optional<String> findFullName(Long accountId) {
         return accounts.findById(accountId).map(UserAccount::getFullName);
     }
+
+    @Override
+    public Optional<String> findDisplayName(Long accountId) {
+        return accounts.findById(accountId).map(account ->
+                account.getFullName() != null && !account.getFullName().isBlank()
+                        ? account.getFullName() : account.getEmail());
+    }
 }

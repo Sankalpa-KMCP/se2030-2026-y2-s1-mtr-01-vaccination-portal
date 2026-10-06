@@ -45,4 +45,17 @@ class JpaAccountDisplayReaderTests {
         when(accounts.findById(null)).thenThrow(failure);
         assertThatThrownBy(() -> reader.findFullName(null)).isSameAs(failure);
     }
+
+    @Test
+    void displayNameUsesFullNameThenEmailWithoutExposingAccount() {
+        UserAccount named = new UserAccount("named@example.com", "hash", AccountStatus.ACTIVE);
+        named.setFullName("Vaccinator Name");
+        UserAccount unnamed = new UserAccount("fallback@example.com", "hash", AccountStatus.ACTIVE);
+        when(accounts.findById(1L)).thenReturn(Optional.of(named));
+        when(accounts.findById(2L)).thenReturn(Optional.of(unnamed));
+
+        assertThat(reader.findDisplayName(1L)).contains("Vaccinator Name");
+        assertThat(reader.findDisplayName(2L)).contains("fallback@example.com");
+        assertThat(reader.findDisplayName(3L)).isEmpty();
+    }
 }

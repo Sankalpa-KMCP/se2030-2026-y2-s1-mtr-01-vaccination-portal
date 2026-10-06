@@ -72,6 +72,39 @@ class InventoryBatchServiceIntegrationTests {
     }
 
     @Test
+    void availableBatchSnapshotIncludesIdentityAndCenterQuantity() {
+        var batch = batches.findById(batchId).orElseThrow();
+        var available = inventoryPort.findAvailableBatches(centerId, batch.getVaccineTypeId(),
+                LocalDate.now(ZoneOffset.UTC));
+
+        assertThat(available).hasSize(1);
+        assertThat(available.get(0).batchId()).isEqualTo(batchId);
+        assertThat(available.get(0).batchNumber()).isEqualTo(batch.getBatchNumber());
+        assertThat(available.get(0).vaccineTypeId()).isEqualTo(batch.getVaccineTypeId());
+        assertThat(available.get(0).availableQuantity()).isEqualTo(2);
+        assertThat(inventoryPort.findBatchDisplay(batchId)).get()
+                .extracting("batchNumber", "vaccineTypeId")
+                .containsExactly(batch.getBatchNumber(), batch.getVaccineTypeId());
+        assertThat(inventoryPort.findBatchDisplay(Long.MAX_VALUE)).isEmpty();
+    }
+
+    @Test
+    void availableBatchLookupExcludesMismatchedInactiveExpiredAndEmptyStock() {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        var batch = batches.findById(batchId).orElseThrow();
+        assertThat(inventoryPort.findAvailableBatches(centerId, batch.getVaccineTypeId() + 1, today)).isEmpty();
+        changeStatus(BatchStatus.INACTIVE);
+        assertThat(inventoryPort.findAvailableBatches(centerId, null, today)).isEmpty();
+        changeStatus(BatchStatus.ACTIVE);
+        assertThat(inventoryPort.findAvailableBatches(centerId, null, today.plusYears(1))).isEmpty();
+        inventories.findById(inventoryId).ifPresent(stock -> {
+            stock.setQuantity(0);
+            inventories.saveAndFlush(stock);
+        });
+        assertThat(inventoryPort.findAvailableBatches(centerId, null, today)).isEmpty();
+    }
+
+    @Test
     void inactiveBatch() {
         changeStatus(BatchStatus.INACTIVE);
         assertUnavailable(batchId, 11002L, BatchAvailabilityReason.INACTIVE_BATCH);

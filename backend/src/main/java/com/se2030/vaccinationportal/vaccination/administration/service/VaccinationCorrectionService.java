@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.vaccination.administration.service;
 
-import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
+import com.se2030.vaccinationportal.shared.auth.api.AccountDisplayReader;
 import com.se2030.vaccinationportal.vaccination.administration.dto.CreateVaccinationCorrectionRequest;
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionDetailResponse;
 import com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationCorrectionException;
@@ -34,7 +34,7 @@ public class VaccinationCorrectionService {
     private final VaccinationCorrectionValueCodec valueCodec;
     private final Clock clock;
     private final DigitalCertificateRepository digitalCertificateRepository;
-    private final UserAccountRepository userAccountRepository;
+    private final AccountDisplayReader accountDisplayReader;
 
     public VaccinationCorrectionService(
             VaccinationRecordRepository vaccinationRecordRepository,
@@ -54,7 +54,7 @@ public class VaccinationCorrectionService {
             VaccinationCorrectionValueCodec valueCodec,
             Clock clock,
             DigitalCertificateRepository digitalCertificateRepository,
-            UserAccountRepository userAccountRepository
+            AccountDisplayReader accountDisplayReader
     ) {
         this.vaccinationRecordRepository = vaccinationRecordRepository;
         this.correctionRepository = correctionRepository;
@@ -62,7 +62,7 @@ public class VaccinationCorrectionService {
         this.valueCodec = valueCodec;
         this.clock = clock != null ? clock : Clock.systemUTC();
         this.digitalCertificateRepository = digitalCertificateRepository;
-        this.userAccountRepository = userAccountRepository;
+        this.accountDisplayReader = accountDisplayReader;
     }
 
     public VaccinationCorrection createCorrection(
@@ -267,20 +267,19 @@ public class VaccinationCorrectionService {
     }
 
     private String resolveCitizenName(Long citizenId) {
-        if (citizenId == null || userAccountRepository == null) {
+        if (citizenId == null || accountDisplayReader == null) {
             return citizenId != null ? "Citizen #" + citizenId : null;
         }
-        return userAccountRepository.findById(citizenId)
-                .map(user -> user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : "Citizen #" + citizenId)
+        return accountDisplayReader.findFullName(citizenId)
+                .filter(name -> !name.isBlank())
                 .orElse("Citizen #" + citizenId);
     }
 
     private String resolveUserName(Long userId) {
-        if (userId == null || userAccountRepository == null) {
+        if (userId == null || accountDisplayReader == null) {
             return userId != null ? "User #" + userId : null;
         }
-        return userAccountRepository.findById(userId)
-                .map(user -> user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : user.getEmail())
+        return accountDisplayReader.findDisplayName(userId)
                 .orElse("User #" + userId);
     }
 
