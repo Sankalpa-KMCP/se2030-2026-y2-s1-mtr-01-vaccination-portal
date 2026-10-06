@@ -61,7 +61,7 @@ describe('VaccinatorCorrectionRequestsPage', () => {
     },
   ];
 
-  it('renders loading state then requests list for administered vaccinations', async () => {
+  it('renders loading state then requests list with priority ordering and summary metrics', async () => {
     certificateApi.listVaccinatorCorrectionRequests.mockResolvedValue(mockRequests);
 
     render(
@@ -79,7 +79,17 @@ describe('VaccinatorCorrectionRequestsPage', () => {
     });
 
     expect(screen.getByText('Administered Correction Requests')).toBeTruthy();
-    expect(screen.getByText('Awaiting Admin Approval')).toBeTruthy();
+    expect(screen.getByText('Needs Action')).toBeTruthy();
+    expect(screen.getByText('Awaiting Admin')).toBeTruthy();
+    expect(screen.getByText('Completed History')).toBeTruthy();
+
+    // Verify Bob Brown (APPROVED) appears before Alice Green (PENDING) in the table due to priority sorting
+    const tableRows = screen.getAllByRole('row');
+    const bobRow = screen.getByText('Bob Brown').closest('tr');
+    const aliceRow = screen.getByText('Alice Green').closest('tr');
+    const bobIndex = tableRows.indexOf(bobRow);
+    const aliceIndex = tableRows.indexOf(aliceRow);
+    expect(bobIndex).toBeLessThan(aliceIndex);
   });
 
   it('does NOT permit applying correction when request is still PENDING', async () => {

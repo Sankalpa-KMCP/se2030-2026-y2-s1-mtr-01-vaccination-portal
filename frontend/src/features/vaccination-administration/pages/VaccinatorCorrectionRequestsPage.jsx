@@ -140,7 +140,7 @@ export default function VaccinatorCorrectionRequestsPage() {
       case 'PENDING':
         return <span className="badge bg-warning-subtle text-warning border border-warning fw-semibold">Awaiting Admin Approval</span>;
       case 'APPROVED':
-        return <span className="badge bg-info-subtle text-info border border-info fw-semibold">Approved (Ready to Apply)</span>;
+        return <span className="badge bg-primary text-white fw-semibold">Action Required</span>;
       case 'REJECTED':
         return <span className="badge bg-danger-subtle text-danger border border-danger fw-semibold">Rejected</span>;
       case 'APPLIED':
@@ -150,8 +150,25 @@ export default function VaccinatorCorrectionRequestsPage() {
     }
   };
 
-  const filteredRequests = requests.filter((r) => {
+  const counts = {
+    APPROVED: requests.filter((r) => r.status === 'APPROVED').length,
+    PENDING: requests.filter((r) => r.status === 'PENDING').length,
+    HISTORY: requests.filter((r) => r.status === 'APPLIED' || r.status === 'REJECTED').length,
+    ALL: requests.length,
+  };
+
+  // Sort requests: APPROVED first (urgent task), then PENDING (waiting), then others
+  const sortedRequests = [...requests].sort((a, b) => {
+    const priority = { APPROVED: 0, PENDING: 1, APPLIED: 2, REJECTED: 3 };
+    const pA = priority[a.status] ?? 4;
+    const pB = priority[b.status] ?? 4;
+    if (pA !== pB) return pA - pB;
+    return new Date(b.correctedAt || 0) - new Date(a.correctedAt || 0);
+  });
+
+  const filteredRequests = sortedRequests.filter((r) => {
     if (filter === 'ALL') return true;
+    if (filter === 'HISTORY') return r.status === 'APPLIED' || r.status === 'REJECTED';
     return r.status === filter;
   });
 
@@ -162,13 +179,13 @@ export default function VaccinatorCorrectionRequestsPage() {
         <div>
           <nav aria-label="breadcrumb">
             <ol className="breadcrumb mb-1 small">
-              <li className="breadcrumb-item"><Link to="/app/staff">Dashboard</Link></li>
+              <li className="breadcrumb-item"><Link to="/app/staff">Vaccinator Workspace</Link></li>
               <li className="breadcrumb-item active" aria-current="page">Correction Requests</li>
             </ol>
           </nav>
           <h1 className="h3 fw-bold text-dark mb-0">Administered Correction Requests</h1>
           <p className="text-secondary small mb-0">
-            View citizen correction requests associated with vaccinations you personally administered, and apply admin-approved clinical corrections.
+            Review citizen correction requests associated with vaccinations you administered, and apply administrative-approved clinical corrections.
           </p>
         </div>
         <div>
@@ -191,18 +208,82 @@ export default function VaccinatorCorrectionRequestsPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="d-flex gap-2 mb-3">
-        {['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'APPLIED'].map((st) => (
-          <button
-            key={st}
-            type="button"
-            className={`btn btn-sm ${filter === st ? 'btn-primary' : 'btn-outline-secondary'}`}
-            onClick={() => setFilter(st)}
+      {/* Summary Metric Cards */}
+      <div className="row g-3 mb-4">
+        <div className="col-12 col-md-4">
+          <div
+            className={`card border-0 shadow-sm h-100 ${filter === 'APPROVED' ? 'border-bottom border-primary border-3' : ''}`}
+            onClick={() => setFilter('APPROVED')}
+            style={{ cursor: 'pointer' }}
           >
-            {st === 'ALL' ? 'All Requests' : st === 'APPLIED' ? 'Completed' : st === 'PENDING' ? 'Awaiting Approval' : st}
-          </button>
-        ))}
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Needs Action</span>
+                <span className="badge bg-primary text-white">Approved</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-primary mt-2">{counts.APPROVED}</div>
+              <div className="small text-muted mt-1">Admin approved · Ready for clinical update</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-md-4">
+          <div
+            className={`card border-0 shadow-sm h-100 ${filter === 'PENDING' ? 'border-bottom border-warning border-3' : ''}`}
+            onClick={() => setFilter('PENDING')}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Awaiting Admin</span>
+                <span className="badge bg-warning-subtle text-warning border border-warning">Pending Review</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">{counts.PENDING}</div>
+              <div className="small text-muted mt-1">Under administrative review</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-md-4">
+          <div
+            className={`card border-0 shadow-sm h-100 ${filter === 'HISTORY' ? 'border-bottom border-secondary border-3' : ''}`}
+            onClick={() => setFilter('HISTORY')}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Completed History</span>
+                <span className="badge bg-secondary-subtle text-secondary border border-secondary">Archive</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">{counts.HISTORY}</div>
+              <div className="small text-muted mt-1">Applied corrections &amp; rejected requests</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2 className="h5 fw-bold text-dark mb-0">
+          {filter === 'APPROVED' ? 'Requests Needing Clinical Action' : filter === 'PENDING' ? 'Requests Awaiting Admin Review' : filter === 'HISTORY' ? 'Correction History' : 'All Administered Requests'}
+        </h2>
+        <div className="d-flex gap-2 flex-wrap">
+          {[
+            { key: 'ALL', label: `All (${counts.ALL})` },
+            { key: 'APPROVED', label: `Needs Action (${counts.APPROVED})` },
+            { key: 'PENDING', label: `Awaiting Admin (${counts.PENDING})` },
+            { key: 'HISTORY', label: `History (${counts.HISTORY})` },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={`btn btn-sm ${filter === key ? 'btn-primary' : 'btn-outline-secondary'}`}
+              onClick={() => setFilter(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (

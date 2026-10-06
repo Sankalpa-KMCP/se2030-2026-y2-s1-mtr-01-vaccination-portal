@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import VaccinatorDashboardSection from './VaccinatorDashboardSection';
 import { getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
@@ -18,12 +18,17 @@ const draftApiMocks = vi.hoisted(() => ({
   createVaccinationDraft: vi.fn(),
 }));
 
+const certificateApiMocks = vi.hoisted(() => ({
+  listVaccinatorCorrectionRequests: vi.fn(),
+}));
+
 vi.mock('../../../auth/context/AuthContext', () => ({
   useAuth: () => ({ user: authMock.user }),
 }));
 
 vi.mock('../../appointment-management/api/checkInApi', () => checkInApiMocks);
 vi.mock('../api/vaccinationDraftApi', () => draftApiMocks);
+vi.mock('../api/certificateApi', () => certificateApiMocks);
 
 function deferred() {
   let resolve;
@@ -99,6 +104,7 @@ describe('VaccinatorDashboardSection', () => {
     };
     draftApiMocks.listMyVaccinationDrafts.mockResolvedValue([]);
     checkInApiMocks.getVaccinatorQueue.mockResolvedValue([]);
+    certificateApiMocks.listVaccinatorCorrectionRequests.mockResolvedValue([]);
   });
 
   afterEach(cleanup);
@@ -122,7 +128,10 @@ describe('VaccinatorDashboardSection', () => {
     expect(screen.getByText('Vaccinator Workspace')).toBeTruthy();
     expect(screen.getByText('Checked-In Queue')).toBeTruthy();
     expect(screen.getByText('My Active Drafts')).toBeTruthy();
-    expect(screen.getByText('0')).toBeTruthy();
+
+    const draftsHeading = screen.getByRole('heading', { name: 'My Active Drafts' });
+    const draftsCard = draftsHeading.closest('.card');
+    expect(within(draftsCard).getByText('0')).toBeTruthy();
     expect(screen.getByText('No active vaccination drafts.')).toBeTruthy();
 
     const openLink = screen.getByRole('link', { name: 'Open Vaccination Drafts' });
@@ -162,8 +171,10 @@ describe('VaccinatorDashboardSection', () => {
       expect(screen.getByText('Draft #11')).toBeTruthy();
     });
 
-    // Badge count should be 2, not 3
-    expect(screen.getByText('2')).toBeTruthy();
+    // Badge count within My Active Drafts should be 2, not 3
+    const draftsHeading = screen.getByRole('heading', { name: 'My Active Drafts' });
+    const draftsCard = draftsHeading.closest('.card');
+    expect(within(draftsCard).getByText('2')).toBeTruthy();
 
     // Draft #12 is FINALIZED and must not appear
     expect(screen.queryByText('Draft #12')).toBeNull();

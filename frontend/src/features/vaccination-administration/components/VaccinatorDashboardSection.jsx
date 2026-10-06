@@ -6,6 +6,7 @@ import {
   createVaccinationDraft,
   listMyVaccinationDrafts,
 } from '../api/vaccinationDraftApi';
+import { listVaccinatorCorrectionRequests } from '../api/certificateApi';
 import AppointmentStatusBadge from '../../appointment-management/components/AppointmentStatusBadge';
 import { getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
 
@@ -29,16 +30,11 @@ function formatDateTime(isoString) {
 
 /**
  * Vaccinator operational workspace section rendered on the staff dashboard.
- *
- * Provides:
- *  1. Explicit Slot ID entry (GET /api/v1/appointments/queue?slotId={slotId})
- *     to view checked-in appointments.
- *  2. "Begin Vaccination Draft" from a checked-in appointment with automatic
- *     default local calendar administration date.
- *  3. "My Active Drafts" summary (strictly IN_PROGRESS and READY_FOR_FINALIZATION;
- *     FINALIZED excluded).
- *  4. Direct navigation link to the dedicated Vaccination Drafts page for all
- *     lifecycle mutations (Edit, Discard, Confirm & Finalize).
+ * Compact, task-oriented dashboard providing:
+ *  1. Top-level summary metric cards: Checked-In Waiting, Active Drafts, Corrections Needing Action.
+ *  2. User-friendly Session Slot selector with shift presets and custom slot lookup.
+ *  3. Checked-In Queue with direct "Begin Vaccination Draft" action.
+ *  4. Active Work column: Active drafts with "Open Draft" actions and pending clinical corrections.
  */
 export default function VaccinatorDashboardSection() {
   const { user } = useAuth();
@@ -62,6 +58,9 @@ export default function VaccinatorDashboardSection() {
   const [draftsLoading, setDraftsLoading] = useState(true);
   const [draftsError, setDraftsError] = useState(null);
   const draftsRequestRef = useRef(0);
+
+  // Correction requests state
+  const [corrections, setCorrections] = useState(null);
 
   const refreshDrafts = useCallback(async () => {
     const requestId = ++draftsRequestRef.current;
@@ -87,11 +86,52 @@ export default function VaccinatorDashboardSection() {
     }
   }, []);
 
+  const refreshCorrections = useCallback(async () => {
+    try {
+      const data = await listVaccinatorCorrectionRequests();
+      setCorrections(Array.isArray(data) ? data : []);
+    } catch {
+      setCorrections([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (isVaccinator) {
       refreshDrafts();
+      refreshCorrections();
     }
-  }, [isVaccinator, refreshDrafts]);
+  }, [isVaccinator, refreshDrafts, refreshCorrections]);
+
+  // Execute loading queue for a specific slot ID
+  const executeLoadQueue = async (targetSlotId) => {
+    const parsed = parseInt(targetSlotId, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) return;
+
+    const currentRequestId = ++queueRequestRef.current;
+    setQueueLoading(true);
+    setQueueError(null);
+    setQueue(null);
+    setLoadedSlotId(null);
+    setFeedback(null);
+
+    try {
+      const data = await getVaccinatorQueue(parsed);
+      if (currentRequestId === queueRequestRef.current) {
+        setQueue(Array.isArray(data) ? data : []);
+        setLoadedSlotId(String(parsed));
+      }
+    } catch (err) {
+      if (currentRequestId === queueRequestRef.current) {
+        setQueue(null);
+        setLoadedSlotId(null);
+        setQueueError(err.message || `Failed to fetch the queue for Slot #${parsed}.`);
+      }
+    } finally {
+      if (currentRequestId === queueRequestRef.current) {
+        setQueueLoading(false);
+      }
+    }
+  };
 
   // Slot input change immediately invalidates old queue to prevent stale context
   const handleSlotInputChange = (event) => {
@@ -110,35 +150,17 @@ export default function VaccinatorDashboardSection() {
     event.preventDefault();
     const trimmed = slotInput.trim();
     if (!trimmed) return;
+    executeLoadQueue(trimmed);
+  };
 
-    const parsed = parseInt(trimmed, 10);
-    if (Number.isNaN(parsed) || parsed <= 0) return;
-
-    const currentRequestId = ++queueRequestRef.current;
-    setQueueLoading(true);
-    setQueueError(null);
+  const handleSelectPresetSlot = (presetId) => {
+    setSlotInput(String(presetId));
+    queueRequestRef.current += 1;
+    setQueueLoading(false);
     setQueue(null);
     setLoadedSlotId(null);
-    setFeedback(null);
-
-    try {
-      const data = await getVaccinatorQueue(parsed);
-      // Stale-response guard: only apply if this request is still latest
-      if (currentRequestId === queueRequestRef.current) {
-        setQueue(Array.isArray(data) ? data : []);
-        setLoadedSlotId(String(parsed));
-      }
-    } catch (err) {
-      if (currentRequestId === queueRequestRef.current) {
-        setQueue(null);
-        setLoadedSlotId(null);
-        setQueueError(err.message || `Failed to fetch the queue for Slot #${parsed}.`);
-      }
-    } finally {
-      if (currentRequestId === queueRequestRef.current) {
-        setQueueLoading(false);
-      }
-    }
+    setQueueError(null);
+    executeLoadQueue(String(presetId));
   };
 
   const beginDraftFromAppointment = async (appointment) => {
@@ -199,6 +221,7 @@ export default function VaccinatorDashboardSection() {
 
   // Active drafts exclude FINALIZED drafts
   const activeDrafts = drafts ? drafts.filter((d) => ACTIVE_STATUSES.includes(d.status)) : null;
+  const approvedCorrections = corrections ? corrections.filter((c) => c.status === 'APPROVED') : [];
 
   return (
     <section aria-labelledby="vaccinator-workspace-title" className="mb-5">
@@ -224,14 +247,97 @@ export default function VaccinatorDashboardSection() {
         </div>
       )}
 
+      {/* Top Summary Metrics */}
+      <div className="row g-3 mb-4">
+        <div className="col-12 col-sm-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Waiting in Queue</span>
+                <span className="badge bg-primary-subtle text-primary border border-primary">Live</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">
+                {queue !== null ? queue.length : '—'}
+              </div>
+              <div className="small text-muted mt-1">
+                {loadedSlotId ? `Slot #${loadedSlotId} checked-in` : 'Select a slot below'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-sm-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Active Drafts</span>
+                <span className="badge bg-warning-subtle text-warning border border-warning">Active Work</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">
+                {activeDrafts !== null ? activeDrafts.length : '…'}
+              </div>
+              <div className="small text-muted mt-1">Unfinalized drafts pending completion</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-sm-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Corrections Needed</span>
+                <span className={`badge ${approvedCorrections.length > 0 ? 'bg-danger text-white' : 'bg-secondary-subtle text-secondary'}`}>
+                  {approvedCorrections.length > 0 ? 'Action Required' : 'Up to date'}
+                </span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">
+                {corrections !== null ? approvedCorrections.length : '…'}
+              </div>
+              <div className="small text-muted mt-1">Admin approved · Ready to apply</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="row g-4">
         {/* Left column: Checked-In Queue */}
         <div className="col-lg-7">
           <div className="card border-0 shadow-sm h-100">
             <div className="card-body p-4">
-              <h3 className="h5 fw-bold mb-3">Checked-In Queue</h3>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h3 className="h5 fw-bold mb-0">Checked-In Queue</h3>
+                {loadedSlotId && (
+                  <span className="badge bg-light text-dark border">
+                    {queue ? `${queue.length} citizen${queue.length === 1 ? '' : 's'}` : ''}
+                  </span>
+                )}
+              </div>
 
-              {/* Explicit Slot ID context entry */}
+              {/* Friendly Shift Quick-Pick Presets */}
+              <div className="mb-3">
+                <label className="form-label small fw-semibold text-secondary mb-1">
+                  Session Shift Quick Pick
+                </label>
+                <div className="d-flex flex-wrap gap-2">
+                  {[
+                    { label: 'Morning Slot (Slot #1)', slotId: 1 },
+                    { label: 'Midday Slot (Slot #2)', slotId: 2 },
+                    { label: 'Afternoon Slot (Slot #3)', slotId: 3 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.slotId}
+                      type="button"
+                      className={`btn btn-sm ${loadedSlotId === String(preset.slotId) ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => handleSelectPresetSlot(preset.slotId)}
+                      disabled={queueLoading}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Explicit Slot ID context entry form */}
               <form onSubmit={handleSlotSubmit} className="row g-2 align-items-end mb-3">
                 <div className="col-12 col-sm-7 col-md-8">
                   <label htmlFor="vaccinator-slot-input" className="form-label small fw-semibold mb-1">
@@ -285,7 +391,7 @@ export default function VaccinatorDashboardSection() {
               {/* Idle state before slot is loaded */}
               {!queueLoading && !queueError && loadedSlotId === null && (
                 <p className="text-muted small mb-0">
-                  Enter an active Time Slot ID above and select Load Queue to view checked-in appointments.
+                  Select a session shift above or enter an active Time Slot ID to view checked-in appointments.
                 </p>
               )}
 
@@ -346,7 +452,7 @@ export default function VaccinatorDashboardSection() {
           </div>
         </div>
 
-        {/* Right column: My Active Drafts (Summary View Only) */}
+        {/* Right column: Active Work & Drafts */}
         <div className="col-lg-5">
           <div className="card border-0 shadow-sm h-100">
             <div className="card-body p-4 d-flex flex-column">
@@ -366,7 +472,7 @@ export default function VaccinatorDashboardSection() {
                 </div>
               )}
 
-              {/* Drafts error state (distinct from empty state) */}
+              {/* Drafts error state */}
               {!draftsLoading && draftsError && (
                 <div className="alert alert-danger mb-3 small" role="alert">
                   <strong className="d-block mb-1">Could Not Load Drafts</strong>
@@ -390,7 +496,7 @@ export default function VaccinatorDashboardSection() {
                 </div>
               )}
 
-              {/* Active drafts summary list */}
+              {/* Active drafts summary list with Open Draft link */}
               {!draftsLoading && !draftsError && activeDrafts && activeDrafts.length > 0 && (
                 <div className="vstack gap-3 mb-3 flex-grow-1">
                   {activeDrafts.map((draft) => (
@@ -410,11 +516,39 @@ export default function VaccinatorDashboardSection() {
                         {draft.doseNumber ? ` · Dose ${draft.doseNumber}` : ''}
                         {draft.vaccineBatchId ? ` · Batch #${draft.vaccineBatchId}` : ''}
                       </div>
-                      <div className="small text-secondary">
-                        Created {formatDateTime(draft.createdAt)}
+                      <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                        <span className="small text-secondary">
+                          {formatDateTime(draft.createdAt)}
+                        </span>
+                        <Link
+                          to="/app/staff/vaccination-drafts"
+                          className="btn btn-sm btn-outline-primary py-0 px-2 small"
+                        >
+                          Open Draft
+                        </Link>
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Corrections Needing Action Prompt */}
+              {approvedCorrections.length > 0 && (
+                <div className="alert alert-warning border mb-3 p-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong className="d-block small">Correction Action Required</strong>
+                      <span className="small text-secondary">
+                        {approvedCorrections.length} correction request{approvedCorrections.length === 1 ? '' : 's'} approved by Admin.
+                      </span>
+                    </div>
+                    <Link
+                      to="/app/staff/correction-requests"
+                      className="btn btn-sm btn-primary fw-semibold"
+                    >
+                      Review &amp; Apply
+                    </Link>
+                  </div>
                 </div>
               )}
 

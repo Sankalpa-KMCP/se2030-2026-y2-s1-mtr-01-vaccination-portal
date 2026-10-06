@@ -74,15 +74,32 @@ describe('Header', () => {
     expect(screen.getByText('Campaigns').getAttribute('href')).toBe('/app/campaigns');
     expect(screen.getByText('Center Operations')).toBeTruthy();
     expect(screen.getByText('Sessions')).toBeTruthy();
-    expect(screen.getByText('Check-In Queue')).toBeTruthy();
+    expect(screen.queryByText('Check-In Queue')).toBeNull();
     expect(screen.getByText('Analytics')).toBeTruthy();
     expect(screen.getByText('Inventory').getAttribute('href')).toBe('/app/inventory');
     expect(screen.getByText('Staff Requests').getAttribute('href')).toBe('/app/admin/staff-requests');
+    expect(screen.getByText('Correction Requests').getAttribute('href')).toBe('/app/admin/correction-requests');
     expect(screen.queryByText('Screening Questions')).toBeNull();
     expect(screen.queryByText('Questionnaires')).toBeNull();
     expect(screen.queryByText('Book Appointment')).toBeNull();
     expect(screen.queryByText('Waitlist')).toBeNull();
     expect(screen.queryByText('Screening Review')).toBeNull();
+  });
+
+  it('shows vaccination links and hides check-in queue for a vaccinator', () => {
+    mockUser({
+      id: 7,
+      fullName: 'Vera Vaccinator',
+      email: 'vaccinator@test.local',
+      roles: ['ROLE_VACCINATOR'],
+    });
+    renderHeader('/app/staff');
+
+    expect(screen.getByText('Dashboard').getAttribute('href')).toBe('/app/staff');
+    expect(screen.getByText('Vaccination Drafts').getAttribute('href')).toBe('/app/staff/vaccination-drafts');
+    expect(screen.getByText('Vaccination Records').getAttribute('href')).toBe('/app/staff/vaccination-records');
+    expect(screen.getByText('Correction Requests').getAttribute('href')).toBe('/app/staff/correction-requests');
+    expect(screen.queryByText('Check-In Queue')).toBeNull();
   });
 
   it('does not show screening configuration links to a system administrator', () => {

@@ -11,7 +11,7 @@ export default function AdminCorrectionRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState('PENDING');
 
   // Action modal state
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -105,6 +105,14 @@ export default function AdminCorrectionRequestsPage() {
     }
   };
 
+  const counts = {
+    PENDING: requests.filter((r) => r.status === 'PENDING').length,
+    APPROVED: requests.filter((r) => r.status === 'APPROVED').length,
+    REJECTED: requests.filter((r) => r.status === 'REJECTED').length,
+    APPLIED: requests.filter((r) => r.status === 'APPLIED').length,
+    ALL: requests.length,
+  };
+
   const filteredRequests = requests.filter((r) => {
     if (filter === 'ALL') return true;
     return r.status === filter;
@@ -117,7 +125,7 @@ export default function AdminCorrectionRequestsPage() {
         <div>
           <nav aria-label="breadcrumb">
             <ol className="breadcrumb mb-1 small">
-              <li className="breadcrumb-item"><Link to="/app/admin">Dashboard</Link></li>
+              <li className="breadcrumb-item"><Link to="/app/admin">Administration</Link></li>
               <li className="breadcrumb-item active" aria-current="page">Correction Requests</li>
             </ol>
           </nav>
@@ -146,18 +154,108 @@ export default function AdminCorrectionRequestsPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="d-flex gap-2 mb-3">
-        {['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'APPLIED'].map((st) => (
-          <button
-            key={st}
-            type="button"
-            className={`btn btn-sm ${filter === st ? 'btn-primary' : 'btn-outline-secondary'}`}
-            onClick={() => setFilter(st)}
+      {/* Summary Metric Cards */}
+      <div className="row g-3 mb-4">
+        <div className="col-6 col-md-3">
+          <div
+            className={`card border-0 shadow-sm h-100 ${filter === 'PENDING' ? 'border-bottom border-warning border-3' : ''}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => setFilter('PENDING')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setFilter('PENDING'); }}
+            style={{ cursor: 'pointer' }}
           >
-            {st === 'ALL' ? 'All Requests' : st === 'APPLIED' ? 'Completed' : st === 'PENDING' ? 'Pending Review' : st}
-          </button>
-        ))}
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Pending Review</span>
+                <span className="badge bg-warning-subtle text-warning border border-warning">Action</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">{counts.PENDING}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-6 col-md-3">
+          <div
+            className={`card border-0 shadow-sm h-100 ${filter === 'APPROVED' ? 'border-bottom border-info border-3' : ''}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => setFilter('APPROVED')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setFilter('APPROVED'); }}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Approved</span>
+                <span className="badge bg-info-subtle text-info border border-info">Vaccinator</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">{counts.APPROVED}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-6 col-md-3">
+          <div
+            className={`card border-0 shadow-sm h-100 ${filter === 'REJECTED' ? 'border-bottom border-danger border-3' : ''}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => setFilter('REJECTED')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setFilter('REJECTED'); }}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Rejected</span>
+                <span className="badge bg-danger-subtle text-danger border border-danger">Closed</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">{counts.REJECTED}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-6 col-md-3">
+          <div
+            className={`card border-0 shadow-sm h-100 ${filter === 'APPLIED' ? 'border-bottom border-success border-3' : ''}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => setFilter('APPLIED')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setFilter('APPLIED'); }}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="card-body p-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="small text-secondary fw-semibold">Completed</span>
+                <span className="badge bg-success-subtle text-success border border-success">Reissued</span>
+              </div>
+              <div className="h3 fw-bold mb-0 text-dark mt-2">{counts.APPLIED}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Tabs & Section Heading */}
+      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+        <h2 className="h5 fw-bold text-dark mb-0">
+          {filter === 'PENDING' ? 'Needs Your Review' : filter === 'ALL' ? 'All Requests' : `${filter === 'APPLIED' ? 'Completed' : filter} Requests`}
+        </h2>
+        <div className="d-flex gap-2 flex-wrap">
+          {[
+            { key: 'PENDING', label: `Pending Review (${counts.PENDING})` },
+            { key: 'APPROVED', label: `Approved (${counts.APPROVED})` },
+            { key: 'REJECTED', label: `Rejected (${counts.REJECTED})` },
+            { key: 'APPLIED', label: `Completed (${counts.APPLIED})` },
+            { key: 'ALL', label: `All (${counts.ALL})` },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={`btn btn-sm ${filter === key ? 'btn-primary' : 'btn-outline-secondary'}`}
+              onClick={() => setFilter(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
