@@ -50,7 +50,14 @@ app.bootstrap.admin.phone=0771234567
 # ------------------------------------------------------------
 # Explicit Console Delivery Mode (Recommended for local evaluation & manual testing)
 # Outputs verification and password-reset links directly to backend console logs.
+# Note: citizen email OTP codes are NEVER logged in any delivery mode; use SMTP
+# delivery against a local mailbox tool when the code itself must be observed.
 app.security.auth.delivery-mode=console
+
+# Email OTP Verification Policy (defaults shown)
+# app.security.auth.otp-ttl-seconds=300
+# app.security.auth.otp-max-attempts=5
+# app.security.auth.otp-resend-cooldown-seconds=60
 
 # Real SMTP Delivery Mode (Optional, uncomment and fill in for actual email dispatch)
 # app.security.auth.delivery-mode=smtp

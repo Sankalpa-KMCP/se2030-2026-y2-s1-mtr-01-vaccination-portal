@@ -100,6 +100,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
             "digital_certificates",
             "eligibility_assessment",
             "eligibility_rule",
+            "email_otp_challenges",
             "email_verification_tokens",
             "operating_hours",
             "operational_resources",
@@ -167,13 +168,13 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should apply all migration versions V0 through V20 with SUCCESS status")
+    @DisplayName("Should apply all migration versions V0 through V22 with SUCCESS status")
     void shouldApplyAllMigrationsSuccessfully() {
         assertNotNull(flyway, "Flyway bean must be configured and injected");
         MigrationInfo[] appliedMigrations = flyway.info().all();
-        assertEquals(21, appliedMigrations.length, "Expected exactly 21 migrations (V0-V20)");
+        assertEquals(23, appliedMigrations.length, "Expected exactly 23 migrations (V0-V22)");
 
-        for (int i = 0; i <= 20; i++) {
+        for (int i = 0; i <= 22; i++) {
             String expectedVersion = String.valueOf(i);
             MigrationInfo info = appliedMigrations[i];
             assertEquals(expectedVersion, info.getVersion().getVersion(), "Migration version mismatch at index " + i);
@@ -182,7 +183,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should verify presence of all 53 physical tables plus flyway schema history")
+    @DisplayName("Should verify presence of all 54 physical tables plus flyway schema history")
     void shouldVerifyAllRequiredTablesExist() throws Exception {
         Set<String> actualTables = new HashSet<>();
         try (Connection connection = dataSource.getConnection()) {
@@ -207,7 +208,7 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
         long appTableCount = actualTables.stream()
                 .filter(t -> !t.equals("flyway_schema_history"))
                 .count();
-        assertEquals(53, appTableCount, "Database must contain exactly 53 application/runtime tables");
+        assertEquals(54, appTableCount, "Database must contain exactly 54 application/runtime tables");
     }
 
     @Test

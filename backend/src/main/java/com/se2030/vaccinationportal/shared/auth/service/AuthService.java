@@ -12,7 +12,6 @@ import com.se2030.vaccinationportal.shared.auth.dto.StaffRegistrationRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.UserProfileResponse;
 import com.se2030.vaccinationportal.shared.auth.dto.VerifyEmailRequest;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingApprovalException;
-import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingVerificationException;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountRejectedException;
 import com.se2030.vaccinationportal.shared.auth.exception.DuplicateEmailException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidAuthActionTokenException;
@@ -81,6 +80,7 @@ public class AuthService {
     private final AuthActionTokenService authActionTokenService;
     private final AuthLinkDeliveryService authLinkDeliveryService;
     private final AuthLinkIssuanceThrottle authLinkIssuanceThrottle;
+    private final EmailVerificationService emailVerificationService;
     private final int verificationTokenExpirationHours;
     private final int resetTokenExpirationMinutes;
 
@@ -96,6 +96,7 @@ public class AuthService {
             AuthActionTokenService authActionTokenService,
             AuthLinkDeliveryService authLinkDeliveryService,
             AuthLinkIssuanceThrottle authLinkIssuanceThrottle,
+            EmailVerificationService emailVerificationService,
             @Value("${app.security.auth.verification-token-expiration-hours:24}") int verificationTokenExpirationHours,
             @Value("${app.security.auth.reset-token-expiration-minutes:30}") int resetTokenExpirationMinutes
     ) {
@@ -110,6 +111,7 @@ public class AuthService {
         this.authActionTokenService = authActionTokenService;
         this.authLinkDeliveryService = authLinkDeliveryService;
         this.authLinkIssuanceThrottle = authLinkIssuanceThrottle;
+        this.emailVerificationService = emailVerificationService;
         this.verificationTokenExpirationHours = verificationTokenExpirationHours;
         this.resetTokenExpirationMinutes = resetTokenExpirationMinutes;
     }
@@ -126,10 +128,10 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password");
         }
 
-        if (account.getAccountStatus() == AccountStatus.PENDING_VERIFICATION) {
-            throw new AccountPendingVerificationException();
-        }
-
+        // Citizens pending email verification must be able to log in: the OTP
+        // verification API is principal-scoped, so login is the gate that lets
+        // them reach it. Booking enforcement for unverified accounts is a
+        // separate concern owned downstream.
         if (account.getAccountStatus() == AccountStatus.PENDING_APPROVAL) {
             throw new AccountPendingApprovalException();
         }
@@ -143,7 +145,10 @@ public class AuthService {
             throw new LockedException("Account is temporarily locked");
         }
 
-        if (account.getAccountStatus() != AccountStatus.ACTIVE) {
+        // PENDING_VERIFICATION stays login-eligible by design (see note above); every
+        // other unexpected status is treated as not active for login.
+        if (account.getAccountStatus() != AccountStatus.ACTIVE
+                && account.getAccountStatus() != AccountStatus.PENDING_VERIFICATION) {
             throw new DisabledException("Account is not active for login");
         }
 
@@ -190,11 +195,10 @@ public class AuthService {
         UserAccount savedAccount = saveRegistration(account);
         citizenProfileRepository.saveAndFlush(new CitizenProfile(savedAccount));
 
-        String rawToken = authActionTokenService.generateToken();
-        String tokenHash = authActionTokenService.hashToken(rawToken);
-        Instant expiresAt = Instant.now().plus(Duration.ofHours(verificationTokenExpirationHours));
-        emailVerificationTokenRepository.saveAndFlush(new EmailVerificationToken(savedAccount, tokenHash, expiresAt));
-        authLinkDeliveryService.sendEmailVerificationLink(savedAccount.getEmail(), rawToken);
+        // The citizen starts email-unverified: the OTP challenge commits atomically
+        // with the account, and the code email is dispatched only after this
+        // transaction commits.
+        emailVerificationService.issueInitialChallenge(savedAccount.getId());
 
         return toRegistrationResponse(savedAccount);
     }

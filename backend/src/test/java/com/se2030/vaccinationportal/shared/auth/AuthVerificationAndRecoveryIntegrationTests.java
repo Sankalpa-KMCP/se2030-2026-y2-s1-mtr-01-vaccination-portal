@@ -14,6 +14,7 @@ import com.se2030.vaccinationportal.shared.auth.model.PasswordResetToken;
 import com.se2030.vaccinationportal.shared.auth.model.RefreshTokenSession;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.EmailOtpChallengeRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.EmailVerificationTokenRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.PasswordResetTokenRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
@@ -69,6 +70,9 @@ class AuthVerificationAndRecoveryIntegrationTests {
     private EmailVerificationTokenRepository emailVerificationTokenRepository;
 
     @Autowired
+    private EmailOtpChallengeRepository emailOtpChallengeRepository;
+
+    @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
@@ -84,6 +88,7 @@ class AuthVerificationAndRecoveryIntegrationTests {
     void setUp() {
         refreshTokenSessionRepository.deleteAll();
         emailVerificationTokenRepository.deleteAll();
+        emailOtpChallengeRepository.deleteAll();
         passwordResetTokenRepository.deleteAll();
         userAccountRepository.deleteAll();
         roleRepository.deleteAll();
@@ -101,8 +106,8 @@ class AuthVerificationAndRecoveryIntegrationTests {
     }
 
     @Test
-    @DisplayName("Scenario 1: Citizen registration creates account in PENDING_VERIFICATION and blocks login with 403")
-    void scenario1_citizenRegistration_pendingVerification_loginBlocked() throws Exception {
+    @DisplayName("Scenario 1: Citizen registration creates a PENDING_VERIFICATION account with an OTP challenge and allows login")
+    void scenario1_citizenRegistration_pendingVerificationWithOtpChallenge_loginAllowed() throws Exception {
         CitizenRegistrationRequest request = new CitizenRegistrationRequest(
                 "Kasun Silva", "kasun.silva@example.com", "0771122334", RAW_PASSWORD);
 
@@ -117,18 +122,26 @@ class AuthVerificationAndRecoveryIntegrationTests {
         assertEquals(AccountStatus.PENDING_VERIFICATION, user.getAccountStatus());
         assertNull(user.getEmailVerifiedAt());
 
-        List<EmailVerificationToken> tokens = emailVerificationTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
-        assertEquals(1, tokens.size());
-        EmailVerificationToken token = tokens.get(0);
-        assertNotNull(token.getTokenHash());
-        assertNull(token.getUsedAt());
-        assertTrue(token.getExpiresAt().isAfter(Instant.now()));
+        // Registration now issues the Auth-owned OTP challenge instead of a link token.
+        assertTrue(emailOtpChallengeRepository.findByUser_Id(user.getId()).isPresent(),
+                "Registration must create the current OTP challenge");
+        assertTrue(challengeTargetMatches(user), "The challenge must be bound to the registered email");
+        assertTrue(emailVerificationTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId()).isEmpty(),
+                "The legacy link-token flow is no longer part of registration");
 
+        // An unverified citizen may log in so the principal-scoped OTP verification API is reachable.
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequest(user.getEmail(), RAW_PASSWORD))))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code", is("ACCOUNT_PENDING_VERIFICATION")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.user.accountStatus", is("PENDING_VERIFICATION")));
+    }
+
+    private boolean challengeTargetMatches(UserAccount user) {
+        return emailOtpChallengeRepository.findByUser_Id(user.getId())
+                .map(challenge -> user.getEmail().equals(challenge.getTargetEmail()))
+                .orElse(false);
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.appointment.booking.service.AppointmentBooki
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentCancellationService;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 
 
 import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
@@ -42,8 +43,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(WaitlistPromotionServiceTests.TestConfig.class)
 class WaitlistPromotionServiceTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -84,6 +93,8 @@ class WaitlistPromotionServiceTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(1001L, 1002L, 1003L);
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
@@ -421,5 +432,113 @@ class WaitlistPromotionServiceTests {
         assertTrue(promotionService.promoteNextForSlot(null, 4001L, now).isEmpty());
         assertTrue(promotionService.promoteNextForSlot(2001L, null, now).isEmpty());
         assertTrue(promotionService.promoteNextForSlot(null, null, now).isEmpty());
+    }
+
+    @Test
+    void promoteNext_unverifiedOldestCandidate_skippedInFavorOfVerifiedLaterCandidate() {
+        Long unverifiedCitizen = 1001L;
+        Long verifiedCitizen = 1002L;
+        Long campaignId = 2001L;
+        Long sessionId = 3001L;
+        Long slotId = 4001L;
+
+        Instant t0 = Instant.parse("2026-10-01T10:00:00Z");
+        Instant t1 = t0.plus(10, ChronoUnit.MINUTES);
+
+        slotCapacityPortDouble.setSessionFull(sessionId, true);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 1);
+        slotCapacityPortDouble.setSlotSession(slotId, sessionId);
+
+        // The oldest candidate is email-unverified (e.g. a legacy queue entry); the later
+        // candidate is verified. Entries are seeded directly so the queue reflects the
+        // pre-enforcement join.
+        emailVerificationStatusReaderDouble.markUnverified(unverifiedCitizen);
+        WaitlistEntry unverifiedEntry = waitlistRepository.save(
+                new WaitlistEntry(unverifiedCitizen, campaignId, sessionId, WaitlistStatus.WAITING, t0));
+        WaitlistEntry verifiedEntry = waitlistRepository.save(
+                new WaitlistEntry(verifiedCitizen, campaignId, sessionId, WaitlistStatus.WAITING, t1));
+
+        Optional<Appointment> promoted = promotionService.promoteNext(sessionId, slotId, t1);
+
+        assertTrue(promoted.isPresent(), "A verified later candidate must still be promotable");
+        assertEquals(verifiedCitizen, promoted.get().getCitizenId(),
+                "FIFO examination order must skip the unverified head without stalling promotion");
+
+        WaitlistEntry skipped = waitlistRepository.findById(unverifiedEntry.getId()).orElseThrow();
+        assertEquals(WaitlistStatus.WAITING, skipped.getStatus(), "Unverified candidate must remain WAITING");
+        assertEquals(t0, skipped.getJoinedAt(), "Skipped candidate must retain its original queue timestamp");
+
+        WaitlistEntry promotedEntry = waitlistRepository.findById(verifiedEntry.getId()).orElseThrow();
+        assertEquals(WaitlistStatus.PROMOTED, promotedEntry.getStatus());
+
+        assertEquals(0, slotCapacityPortDouble.getAvailableCapacity(slotId),
+                "Capacity must be decremented exactly once, only for the promoted candidate");
+    }
+
+    @Test
+    void promoteNext_allCandidatesUnverified_noPromotionNoCapacityChange() {
+        Long campaignId = 2001L;
+        Long sessionId = 3001L;
+        Long slotId = 4001L;
+
+        Instant t0 = Instant.parse("2026-10-01T10:00:00Z");
+        Instant t1 = t0.plus(10, ChronoUnit.MINUTES);
+
+        slotCapacityPortDouble.setSessionFull(sessionId, true);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 2);
+        slotCapacityPortDouble.setSlotSession(slotId, sessionId);
+        int capacityBefore = slotCapacityPortDouble.getAvailableCapacity(slotId);
+
+        emailVerificationStatusReaderDouble.markUnverified(1001L);
+        emailVerificationStatusReaderDouble.markUnverified(1002L);
+        waitlistRepository.save(new WaitlistEntry(1001L, campaignId, sessionId, WaitlistStatus.WAITING, t0));
+        waitlistRepository.save(new WaitlistEntry(1002L, campaignId, sessionId, WaitlistStatus.WAITING, t1));
+
+        Optional<Appointment> promoted = promotionService.promoteNext(sessionId, slotId, t1);
+
+        assertTrue(promoted.isEmpty(), "No appointment may be created while every candidate is unverified");
+        assertEquals(capacityBefore, slotCapacityPortDouble.getAvailableCapacity(slotId),
+                "No capacity may be reserved for unverified candidates");
+        assertEquals(2, waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(sessionId, WaitlistStatus.WAITING).size(),
+                "All entries must remain WAITING without alteration");
+    }
+
+    @Test
+    void promoteNext_previouslySkippedCitizen_promotedAtOriginalFifoPositionOnceVerified() {
+        Long campaignId = 2001L;
+        Long sessionId = 3001L;
+        Long firstSlotId = 4001L;
+        Long secondSlotId = 4002L;
+
+        Instant t0 = Instant.parse("2026-10-01T10:00:00Z");
+        Instant t1 = t0.plus(10, ChronoUnit.MINUTES);
+        Instant t2 = t0.plus(20, ChronoUnit.MINUTES);
+
+        slotCapacityPortDouble.setSessionFull(sessionId, true);
+        slotCapacityPortDouble.setSlotSession(firstSlotId, sessionId);
+        slotCapacityPortDouble.setSlotSession(secondSlotId, sessionId);
+
+        // A joined first but is unverified; B and C are verified and joined later.
+        emailVerificationStatusReaderDouble.markUnverified(1001L);
+        WaitlistEntry aEntry = waitlistRepository.save(
+                new WaitlistEntry(1001L, campaignId, sessionId, WaitlistStatus.WAITING, t0));
+        waitlistRepository.save(new WaitlistEntry(1002L, campaignId, sessionId, WaitlistStatus.WAITING, t1));
+        waitlistRepository.save(new WaitlistEntry(1003L, campaignId, sessionId, WaitlistStatus.WAITING, t2));
+
+        // First freed capacity goes to B: A is skipped, C must not overtake A's position.
+        slotCapacityPortDouble.setAvailableCapacity(firstSlotId, 1);
+        Optional<Appointment> firstPromotion = promotionService.promoteNext(sessionId, firstSlotId, t1);
+        assertTrue(firstPromotion.isPresent());
+        assertEquals(1002L, firstPromotion.get().getCitizenId());
+
+        // A becomes verified; the next freed capacity must honor A's original joinedAt over C.
+        emailVerificationStatusReaderDouble.markVerified(1001L);
+        slotCapacityPortDouble.setAvailableCapacity(secondSlotId, 1);
+        Optional<Appointment> secondPromotion = promotionService.promoteNext(sessionId, secondSlotId, t2);
+
+        assertTrue(secondPromotion.isPresent());
+        assertEquals(1001L, secondPromotion.get().getCitizenId(),
+                "The previously skipped citizen must be considered at its original FIFO position once verified");
+        assertEquals(WaitlistStatus.PROMOTED, waitlistRepository.findById(aEntry.getId()).orElseThrow().getStatus());
     }
 }

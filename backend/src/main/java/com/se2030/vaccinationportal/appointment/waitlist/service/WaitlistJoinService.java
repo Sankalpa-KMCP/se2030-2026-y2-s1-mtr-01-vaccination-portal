@@ -5,6 +5,7 @@ import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
+import com.se2030.vaccinationportal.appointment.exception.EmailVerificationRequiredException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
@@ -13,6 +14,7 @@ import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.shared.auth.api.EmailVerificationStatusReader;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -55,6 +57,7 @@ public class WaitlistJoinService {
     private final CitizenCampaignBookingGuardRepository guardRepository;
     private final EligibilityLookupPort eligibilityLookupPort;
     private final SlotCapacityPort slotCapacityPort;
+    private final EmailVerificationStatusReader emailVerificationStatusReader;
 
     @Autowired
     public WaitlistJoinService(
@@ -62,13 +65,15 @@ public class WaitlistJoinService {
             AppointmentRepository appointmentRepository,
             CitizenCampaignBookingGuardRepository guardRepository,
             @Autowired(required = false) EligibilityLookupPort eligibilityLookupPort,
-            @Autowired(required = false) SlotCapacityPort slotCapacityPort
+            @Autowired(required = false) SlotCapacityPort slotCapacityPort,
+            EmailVerificationStatusReader emailVerificationStatusReader
     ) {
         this.waitlistRepository = waitlistRepository;
         this.appointmentRepository = appointmentRepository;
         this.guardRepository = guardRepository;
         this.eligibilityLookupPort = eligibilityLookupPort;
         this.slotCapacityPort = slotCapacityPort;
+        this.emailVerificationStatusReader = emailVerificationStatusReader;
     }
 
     /**
@@ -132,6 +137,13 @@ public class WaitlistJoinService {
         guardRepository.findByCitizenIdAndCampaignIdForUpdate(citizenId, campaignId)
                 .orElseThrow(() -> new IllegalStateException("Failed to acquire booking guard lock for citizen "
                         + citizenId + " and campaign " + campaignId));
+
+        // Step 2a-1: Require a verified email before any eligibility, duplicate, or queue work.
+        // Viva note: Auth owns the verification state through its public status contract; Appointment owns
+        // the rule. An unverified citizen must not enter the waitlist, so no queue position is ever created.
+        if (!emailVerificationStatusReader.isEmailVerified(citizenId)) {
+            throw new EmailVerificationRequiredException();
+        }
 
         // Step 2b: MF03-BR-01 - Check eligibility via EligibilityLookupPort
         if (eligibilityLookupPort == null) {

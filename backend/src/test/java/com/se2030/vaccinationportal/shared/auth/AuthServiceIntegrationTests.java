@@ -3,7 +3,6 @@ package com.se2030.vaccinationportal.shared.auth;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginResponse;
 import com.se2030.vaccinationportal.shared.auth.dto.UserProfileResponse;
-import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingVerificationException;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
@@ -48,6 +47,7 @@ class AuthServiceIntegrationTests {
 
     private Role centerManagerRole;
     private Role adminRole;
+    private Role citizenRole;
 
     @BeforeEach
     void setUp() {
@@ -56,6 +56,7 @@ class AuthServiceIntegrationTests {
 
         centerManagerRole = roleRepository.save(new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"));
         adminRole = roleRepository.save(new Role("ROLE_ADMIN", "System Administrator"));
+        citizenRole = roleRepository.save(new Role("ROLE_CITIZEN", "Citizen"));
     }
 
     @Test
@@ -106,14 +107,16 @@ class AuthServiceIntegrationTests {
     }
 
     @Test
-    @DisplayName("login with PENDING_VERIFICATION account throws AccountPendingVerificationException")
-    void login_pendingVerificationAccount_throwsAccountPendingVerificationException() {
+    @DisplayName("login with PENDING_VERIFICATION account succeeds so the citizen can reach principal-scoped OTP verification")
+    void login_pendingVerificationAccount_succeedsForOtpVerification() {
         UserAccount account = new UserAccount("unverified@portal.gov", passwordEncoder.encode("Password123!"), AccountStatus.PENDING_VERIFICATION);
+        account.addRole(citizenRole);
         userAccountRepository.save(account);
 
-        assertThrows(AccountPendingVerificationException.class, () ->
-                authService.login(new LoginRequest("unverified@portal.gov", "Password123!"))
-        );
+        LoginResponse response = authService.login(new LoginRequest("unverified@portal.gov", "Password123!"));
+
+        assertNotNull(response.token());
+        assertEquals(AccountStatus.PENDING_VERIFICATION, response.user().accountStatus());
     }
 
     @Test

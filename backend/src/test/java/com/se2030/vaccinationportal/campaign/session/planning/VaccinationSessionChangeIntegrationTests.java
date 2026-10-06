@@ -54,6 +54,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -61,6 +62,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,6 +80,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ActiveProfiles("test")
 @Transactional
 class VaccinationSessionChangeIntegrationTests {
+
+    /**
+     * Pins "now" to an instant before the earliest fixture boundary (campaign and
+     * recurrence windows begin 2026-10-01). Without this, occurrences hard-coded
+     * into the October 2026 window age into the past and the series-change preview
+     * reclassifies them RETAINED -> INELIGIBLE once their start time has passed.
+     * With a fixed clock both the clock and the fixtures are constants, so the
+     * elapsed-session classification is deterministic forever.
+     */
+    @TestConfiguration
+    static class FixedClockConfig {
+        @Bean
+        @Primary
+        Clock fixedClock() {
+            return Clock.fixed(Instant.parse("2026-09-24T10:00:00Z"), ZoneOffset.UTC);
+        }
+    }
 
     @Autowired private VaccinationSessionService sessionService;
     @Autowired private SessionSeriesChangeService seriesChangeService;

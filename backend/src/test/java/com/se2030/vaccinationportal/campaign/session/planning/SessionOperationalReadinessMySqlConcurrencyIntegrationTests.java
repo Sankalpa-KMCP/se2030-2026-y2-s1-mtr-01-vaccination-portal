@@ -55,10 +55,12 @@ import com.se2030.vaccinationportal.campaign.session.planning.service.SessionRes
 import com.se2030.vaccinationportal.campaign.session.planning.service.StaffAssignmentService;
 import com.se2030.vaccinationportal.campaign.session.planning.service.VaccinationSessionService;
 import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -73,6 +75,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -82,6 +87,24 @@ import org.springframework.transaction.support.TransactionTemplate;
  * and operational readiness enforcement against real MySQL/InnoDB.
  */
 class SessionOperationalReadinessMySqlConcurrencyIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
+
+    /**
+     * The deactivation-impact guards in OperationalResourceService and
+     * OperationalStaffRosterService treat an assigned session as a blocking dependency
+     * only while endAt is still in the future (endAt &gt; clock.instant()). These fixtures
+     * pin the session window to 2026-10-01, so once real time passes the session end the
+     * deactivation is no longer blocked and the scheduling race resolves the wrong way.
+     * With a fixed clock the fixture window stays future and both race orderings remain
+     * deterministic forever.
+     */
+    @TestConfiguration
+    static class FixedClockConfig {
+        @Bean
+        @Primary
+        Clock fixedClock() {
+            return Clock.fixed(Instant.parse("2026-09-24T10:00:00Z"), ZoneOffset.UTC);
+        }
+    }
 
     @Autowired private VaccinationSessionService sessionService;
     @Autowired private SessionCapacityPlanService capacityPlanService;

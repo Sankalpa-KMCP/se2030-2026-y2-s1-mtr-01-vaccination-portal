@@ -16,6 +16,7 @@ import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistR
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentBookingService;
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentCancellationService;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistJoinService;
 import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistPromotionService;
 import java.util.Optional;
@@ -60,8 +61,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(SlotCapacityPortCrossModuleIntegrationTests.TestConfig.class)
 class SlotCapacityPortCrossModuleIntegrationTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -122,6 +131,8 @@ class SlotCapacityPortCrossModuleIntegrationTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(501L, 502L, 503L, 601L, 602L);
         cleanDb();
         VaccineType vax = vaccineTypeRepository.save(new VaccineType("VAX-XM-01", "Cross Vaccine"));
         TargetGroup tg = targetGroupRepository.save(new TargetGroup("TG-XM-01", "Cross Target Group"));
