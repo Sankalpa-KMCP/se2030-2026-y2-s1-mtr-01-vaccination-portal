@@ -270,17 +270,25 @@ export default function VaccinatorDashboardSection({
       )}
 
       {/* Option B: Current Session Card */}
-      <div className="card border-0 shadow-sm mb-4 bg-white overflow-hidden" style={{ borderRadius: '0.85rem' }}>
+      <div
+        className="card border mb-4 overflow-hidden"
+        style={{
+          borderRadius: '0.85rem',
+          backgroundColor: '#f4fbf9',
+          borderColor: 'var(--primary-soft-border, #bfe5db)',
+          boxShadow: '0 1px 3px rgba(15, 110, 91, 0.06)',
+        }}
+      >
         <div className="card-body p-4">
           <div className="d-flex flex-column flex-md-row align-items-md-center gap-4">
             {/* Clinic visual area */}
             <div
-              className="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3 text-primary shadow-sm"
+              className="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3 text-primary"
               style={{
                 width: '68px',
                 height: '68px',
-                background: 'linear-gradient(135deg, #e8f5f1 0%, #d1ede5 100%)',
-                border: '1px solid rgba(15, 110, 91, 0.2)',
+                background: 'linear-gradient(135deg, #e0f2ee 0%, #ccece4 100%)',
+                border: '1px solid rgba(15, 110, 91, 0.25)',
               }}
               aria-hidden="true"
             >
@@ -310,7 +318,7 @@ export default function VaccinatorDashboardSection({
                     <span className="text-uppercase small fw-bold text-muted" style={{ letterSpacing: '0.05em', fontSize: '0.72rem' }}>
                       Current Session
                     </span>
-                    <span className="badge bg-success-subtle text-success border border-success fw-semibold px-2 py-1">
+                    <span className="badge bg-success text-white fw-semibold px-2 py-1">
                       Active Session
                     </span>
                   </div>
@@ -335,7 +343,7 @@ export default function VaccinatorDashboardSection({
                     <select
                       id={sessionSelectorId}
                       aria-label="Change Session"
-                      className="form-select form-select-sm"
+                      className="form-select form-select-sm bg-white"
                       value={activeSession.id}
                       onChange={handleSessionChange}
                       disabled={queueLoading}
@@ -375,13 +383,21 @@ export default function VaccinatorDashboardSection({
       <div className="row g-3 mb-4">
         {/* Waiting in Queue */}
         <div className="col-12 col-sm-4">
-          <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
+          <div
+            className="card border h-100"
+            style={{
+              borderRadius: '0.85rem',
+              backgroundColor: '#f8fafc',
+              borderColor: 'var(--border-subtle, #e2e8f0)',
+              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+            }}
+          >
             <div className="card-body p-3 d-flex flex-column justify-content-between">
               <div className="d-flex justify-content-between align-items-start mb-2">
                 <div className="d-flex align-items-center gap-2">
                   <div
-                    className="rounded-2 p-1 text-primary d-inline-flex"
-                    style={{ background: 'var(--primary-soft-bg)' }}
+                    className="rounded-2 p-1 d-inline-flex"
+                    style={{ background: '#e0f2fe', color: '#0369a1' }}
                     aria-hidden="true"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -393,7 +409,7 @@ export default function VaccinatorDashboardSection({
                   </div>
                   <span className="small text-secondary fw-semibold">Waiting in Queue</span>
                 </div>
-                <span className="badge bg-primary-subtle text-primary border border-primary-subtle small">
+                <span className="badge bg-info-subtle text-info-emphasis border border-info-subtle small">
                   Live
                 </span>
               </div>
@@ -411,13 +427,21 @@ export default function VaccinatorDashboardSection({
 
         {/* Active Drafts */}
         <div className="col-12 col-sm-4">
-          <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
+          <div
+            className="card border h-100"
+            style={{
+              borderRadius: '0.85rem',
+              backgroundColor: '#fffdfa',
+              borderColor: 'var(--accent-soft-border, #fde68a)',
+              boxShadow: '0 1px 2px rgba(245, 158, 11, 0.04)',
+            }}
+          >
             <div className="card-body p-3 d-flex flex-column justify-content-between">
               <div className="d-flex justify-content-between align-items-start mb-2">
                 <div className="d-flex align-items-center gap-2">
                   <div
                     className="rounded-2 p-1 text-warning d-inline-flex"
-                    style={{ background: 'var(--accent-soft-bg)' }}
+                    style={{ background: 'var(--accent-soft-bg, #fef3c7)' }}
                     aria-hidden="true"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -446,13 +470,21 @@ export default function VaccinatorDashboardSection({
 
         {/* Corrections Needed */}
         <div className="col-12 col-sm-4">
-          <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
+          <div
+            className="card border h-100"
+            style={{
+              borderRadius: '0.85rem',
+              backgroundColor: approvedCorrections.length > 0 ? '#fff8f8' : '#f8fdf9',
+              borderColor: approvedCorrections.length > 0 ? '#fecaca' : '#bbf7d0',
+              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+            }}
+          >
             <div className="card-body p-3 d-flex flex-column justify-content-between">
               <div className="d-flex justify-content-between align-items-start mb-2">
                 <div className="d-flex align-items-center gap-2">
                   <div
                     className={`rounded-2 p-1 d-inline-flex ${approvedCorrections.length > 0 ? 'text-danger' : 'text-success'}`}
-                    style={{ background: approvedCorrections.length > 0 ? 'var(--danger-soft)' : 'var(--success-soft)' }}
+                    style={{ background: approvedCorrections.length > 0 ? 'var(--danger-soft, #fbeaea)' : 'var(--success-soft, #e6f4ea)' }}
                     aria-hidden="true"
                   >
                     {approvedCorrections.length > 0 ? (
@@ -470,7 +502,7 @@ export default function VaccinatorDashboardSection({
                   </div>
                   <span className="small text-secondary fw-semibold">Corrections Needed</span>
                 </div>
-                <span className={`badge ${approvedCorrections.length > 0 ? 'bg-danger text-white' : 'bg-secondary-subtle text-secondary'} small`}>
+                <span className={`badge ${approvedCorrections.length > 0 ? 'bg-danger text-white' : 'bg-success-subtle text-success border border-success-subtle'} small`}>
                   {approvedCorrections.length > 0 ? 'Action Required' : 'Up to date'}
                 </span>
               </div>
@@ -489,10 +521,10 @@ export default function VaccinatorDashboardSection({
       <div className="row g-4">
         {/* Left column: Checked-In Queue */}
         <div className="col-lg-7">
-          <div className="card border-0 shadow-sm h-100">
+          <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
             <div className="card-body p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h3 className="h5 fw-bold mb-0">Checked-In Queue</h3>
+                <h3 className="h5 fw-bold mb-0 text-dark">Checked-In Queue</h3>
                 {activeSession && queue && (
                   <span className="badge bg-light text-dark border">
                     {queue.length} citizen{queue.length === 1 ? '' : 's'}
@@ -544,10 +576,10 @@ export default function VaccinatorDashboardSection({
               {!queueLoading && !queueError && activeSession && queue !== null && queue.length > 0 && (
                 <div className="vstack gap-3">
                   {queue.map((appointment) => (
-                    <div key={appointment.id} className="border rounded p-3">
+                    <div key={appointment.id} className="border rounded-3 p-3 bg-white shadow-none">
                       <div className="d-flex justify-content-between align-items-start mb-2">
                         <div>
-                          <div className="fw-semibold">Appointment #{appointment.id}</div>
+                          <div className="fw-semibold text-dark">Appointment #{appointment.id}</div>
                           <div className="small text-secondary">
                             Citizen #{appointment.citizenId} · Campaign #{appointment.campaignId}
                           </div>
@@ -592,11 +624,11 @@ export default function VaccinatorDashboardSection({
 
         {/* Right column: Active Work & Drafts */}
         <div className="col-lg-5">
-          <div className="card border-0 shadow-sm h-100">
+          <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
             <div className="card-body p-4 d-flex flex-column">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                  <h3 className="h5 fw-bold mb-0">Active Work</h3>
+                  <h3 className="h5 fw-bold mb-0 text-dark">Active Work</h3>
                   <h4 className="visually-hidden">My Active Drafts</h4>
                 </div>
                 <span className="badge text-bg-light border text-dark">
@@ -606,7 +638,7 @@ export default function VaccinatorDashboardSection({
 
               {/* Action Required: Approved Corrections */}
               {approvedCorrections.length > 0 && (
-                <div className="alert alert-warning border mb-3 p-3">
+                <div className="alert alert-warning border mb-3 p-3" style={{ backgroundColor: '#fffbeb', borderColor: '#fde68a' }}>
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <span className="badge bg-danger text-white fw-bold">ACTION REQUIRED</span>
                     <span className="small text-muted">
@@ -664,12 +696,12 @@ export default function VaccinatorDashboardSection({
               {!draftsLoading && !draftsError && activeDrafts && activeDrafts.length > 0 && (
                 <div className="vstack gap-3 mb-3 flex-grow-1">
                   {activeDrafts.map((draft) => (
-                    <div key={draft.id} className="border rounded p-3">
+                    <div key={draft.id} className="border rounded-3 p-3 bg-white shadow-none">
                       <div className="d-flex justify-content-between align-items-start mb-2">
-                        <div className="fw-semibold">Draft #{draft.id}</div>
+                        <div className="fw-semibold text-dark">Draft #{draft.id}</div>
                         <span
                           className={`badge ${
-                            draft.status === 'IN_PROGRESS' ? 'text-bg-info' : 'text-bg-warning'
+                            draft.status === 'IN_PROGRESS' ? 'bg-info-subtle text-info-emphasis border border-info-subtle' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'
                           }`}
                         >
                           {DRAFT_STATUS_LABELS[draft.status] || draft.status}
