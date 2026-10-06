@@ -134,6 +134,45 @@ class FeatureBoundaryTests {
     }
 
     @Test
+    void emailOtpChallengeTypesRemainInternalToAuth() {
+        String challengeEntity = ROOT + "shared/auth/model/EmailOtpChallenge";
+        String challengeRepository = ROOT + "shared/auth/repository/EmailOtpChallengeRepository";
+        assertThat(edges((source, target) -> !owner(source).equals("shared")
+                && (target.equals(challengeEntity) || target.equals(challengeRepository))))
+                .as("email OTP challenge persistence stays inside Auth")
+                .isEmpty();
+    }
+
+    @Test
+    void publicEmailVerificationReaderIsAMinimalAuthOwnedContract() {
+        ClassFacts reader = classes.get(ROOT + "shared/auth/api/EmailVerificationStatusReader");
+        assertThat(reader).isNotNull();
+        assertThat(reader.dependencies.stream()
+                .filter(dependency -> dependency.startsWith(ROOT))
+                .anyMatch(dependency -> FEATURES.contains(owner(dependency))
+                        || dependency.contains("/service/")
+                        || dependency.contains("/repository/")
+                        || dependency.contains("/model/")))
+                .as("the public verification reader must not expose Auth internals or feature code")
+                .isFalse();
+    }
+
+    @Test
+    void appointmentConsumesAuthVerificationOnlyThroughThePublicContract() {
+        String verificationReader = ROOT + "shared/auth/api/EmailVerificationStatusReader";
+        assertThat(edges((source, target) -> owner(source).equals("appointment")
+                && target.startsWith(ROOT + "shared/auth/")
+                && (target.contains("/model/") || target.contains("/repository/")
+                || target.contains("/service/") || target.contains("/query/"))))
+                .as("appointment must not depend on Auth persistence or implementation internals")
+                .isEmpty();
+        assertThat(edges((source, target) -> owner(source).equals("appointment")
+                && target.equals(verificationReader)))
+                .as("appointment consumes verification state through the public Auth contract")
+                .isNotEmpty();
+    }
+
+    @Test
     void collectorDetectsFullyQualifiedPersistenceFieldsWithoutImportStatements() throws IOException {
         String resource = "/" + getClass().getName().replace('.', '/') + "$PersistenceFixture.class";
         try (var input = getClass().getResourceAsStream(resource)) {

@@ -11,5 +11,18 @@ public record AuthErrorResponse(
         String code,
         String message,
         String path,
-        Map<String, List<String>> fieldErrors
-) {}
+        Map<String, List<String>> fieldErrors,
+        Integer retryAfterSeconds
+) {
+    public AuthErrorResponse(
+            Instant timestamp,
+            int status,
+            String error,
+            String code,
+            String message,
+            String path,
+            Map<String, List<String>> fieldErrors
+    ) {
+        this(timestamp, status, error, code, message, path, fieldErrors, null);
+    }
+}

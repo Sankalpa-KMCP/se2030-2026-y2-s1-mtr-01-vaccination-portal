@@ -21,6 +21,7 @@ import com.se2030.vaccinationportal.appointment.checkin.service.CheckInService;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotAvailabilityPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -45,6 +46,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -59,8 +61,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(AppointmentControllerTests.TestConfig.class)
 class AppointmentControllerTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -129,6 +139,8 @@ class AppointmentControllerTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(1001L, 1002L, 1003L, 1004L, 1005L, 1006L, 1007L, 1008L, 1009L, 1010L, 1011L);
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
@@ -246,6 +258,31 @@ class AppointmentControllerTests {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.citizenId", is(citizenId.intValue())))
                 .andExpect(jsonPath("$.status", is("CONFIRMED")));
+    }
+
+    @Test
+    void bookAppointment_unverifiedCitizen_returns403WithEmailVerificationRequired() throws Exception {
+        Long unverifiedCitizen = 1999L;
+        Long campaignId = 2001L;
+        Long slotId = 4001L;
+
+        authenticate(unverifiedCitizen, "ROLE_CITIZEN");
+        // The request would otherwise succeed: eligible and capacity available.
+        eligibilityPortDouble.setEligibility(unverifiedCitizen, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        int capacityBefore = slotCapacityPortDouble.getAvailableCapacity(slotId);
+
+        AppointmentBookingRequest request = new AppointmentBookingRequest(unverifiedCitizen, campaignId, slotId);
+
+        mockMvc.perform(post("/api/v1/appointments/book")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error", is("EMAIL_VERIFICATION_REQUIRED")))
+                .andExpect(jsonPath("$.message", containsString("Verify your email")));
+
+        assertEquals(capacityBefore, slotCapacityPortDouble.getAvailableCapacity(slotId),
+                "Rejected booking must not consume capacity");
     }
 
     @Test

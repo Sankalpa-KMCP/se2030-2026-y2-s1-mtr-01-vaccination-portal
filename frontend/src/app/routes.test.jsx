@@ -399,7 +399,11 @@ describe('shared routing and role guards', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: /create citizen account/i })).toBeTruthy();
+    // Citizen registration is reachable from several intentional landing CTAs;
+    // the route-level guarantee is that at least one public entry link exists.
+    const registrationLinks = screen.getAllByRole('link', { name: /create citizen account/i });
+    expect(registrationLinks.length).toBeGreaterThan(0);
+    registrationLinks.forEach((link) => expect(link.getAttribute('href')).toBe('/register/citizen'));
     expect(screen.getByRole('link', { name: /^sign in$/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: /request staff account/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: /enter staff portal/i })).toBeTruthy();

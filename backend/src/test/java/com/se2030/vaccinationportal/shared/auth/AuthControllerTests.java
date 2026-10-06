@@ -20,6 +20,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
@@ -88,6 +90,62 @@ class AuthControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/login with wrong password returns 401 INVALID_CREDENTIALS")
+    void login_wrongPassword_returns401WithMachineCode() throws Exception {
+        LoginRequest request = new LoginRequest("manager@portal.gov", "WrongPassword123!");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")))
+                .andExpect(jsonPath("$.message", is("Invalid email or password")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/login with unknown email returns the same enumeration-safe 401")
+    void login_unknownEmail_returnsSameEnumerationSafeResponse() throws Exception {
+        LoginRequest request = new LoginRequest("ghost.unknown@portal.gov", "Whatever123!");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")))
+                .andExpect(jsonPath("$.message", is("Invalid email or password")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/login with an active timed lock returns 423 ACCOUNT_LOCKED")
+    void login_timedLockedAccount_returns423WithMachineCode() throws Exception {
+        testUser.setLockedUntil(Instant.now().plus(15, ChronoUnit.MINUTES));
+        userAccountRepository.saveAndFlush(testUser);
+
+        LoginRequest request = new LoginRequest("manager@portal.gov", "Password123!");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isLocked())
+                .andExpect(jsonPath("$.code", is("ACCOUNT_LOCKED")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/login with an ineligible account returns 403 ACCOUNT_NOT_ACTIVE")
+    void login_ineligibleAccount_returns403WithMachineCode() throws Exception {
+        testUser.setAccountStatus(AccountStatus.SUSPENDED);
+        userAccountRepository.saveAndFlush(testUser);
+
+        LoginRequest request = new LoginRequest("manager@portal.gov", "Password123!");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("ACCOUNT_NOT_ACTIVE")));
     }
 
     @Test

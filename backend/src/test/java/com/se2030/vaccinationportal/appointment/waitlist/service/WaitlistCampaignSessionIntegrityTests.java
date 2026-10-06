@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.appointment.waitlist.service;
 
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,8 +43,16 @@ import org.springframework.test.context.ActiveProfiles;
 @Import(WaitlistCampaignSessionIntegrityTests.TestConfig.class)
 class WaitlistCampaignSessionIntegrityTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -87,6 +96,8 @@ class WaitlistCampaignSessionIntegrityTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(1101L, 1102L);
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();

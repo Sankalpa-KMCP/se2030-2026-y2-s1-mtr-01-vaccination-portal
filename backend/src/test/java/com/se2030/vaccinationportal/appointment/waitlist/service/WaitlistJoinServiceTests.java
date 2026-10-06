@@ -3,11 +3,13 @@ package com.se2030.vaccinationportal.appointment.waitlist.service;
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentBookingService;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 
 
 import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
+import com.se2030.vaccinationportal.appointment.exception.EmailVerificationRequiredException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
@@ -52,8 +54,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(WaitlistJoinServiceTests.TestConfig.class)
 class WaitlistJoinServiceTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -88,6 +98,8 @@ class WaitlistJoinServiceTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(1001L, 1002L, 1003L, 1004L, 2001L);
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
@@ -103,6 +115,25 @@ class WaitlistJoinServiceTests {
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
         slotCapacityPortDouble.clearSessionCampaignMap();
+    }
+
+    @Test
+    void joinWaitlist_unverifiedCitizen_rejectedWithoutCreatingQueuePosition() {
+        Long unverifiedCitizen = 2999L;
+        Long campaignId = 2001L;
+        Long sessionId = 3001L;
+        Instant now = Instant.parse("2026-10-01T10:00:00Z");
+
+        // The request would otherwise succeed: eligible and the session is full.
+        eligibilityPortDouble.setEligibility(unverifiedCitizen, campaignId, EligibilityStatus.ELIGIBLE);
+        slotCapacityPortDouble.setSessionFull(sessionId, true);
+
+        assertThrows(EmailVerificationRequiredException.class,
+                () -> waitlistJoinService.joinWaitlist(unverifiedCitizen, campaignId, sessionId, now));
+
+        assertEquals(0, waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
+                        unverifiedCitizen, campaignId, WaitlistStatus.WAITING).stream().count(),
+                "An unverified citizen must not enter the waitlist");
     }
 
     @Test

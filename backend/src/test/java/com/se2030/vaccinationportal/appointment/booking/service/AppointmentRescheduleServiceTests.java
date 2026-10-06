@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.appointment.booking.service;
 
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 
 
 import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
@@ -49,8 +50,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(AppointmentRescheduleServiceTests.TestConfig.class)
 class AppointmentRescheduleServiceTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -82,6 +91,8 @@ class AppointmentRescheduleServiceTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(1001L, 1002L, 1003L, 1004L, 1009L, 1010L, 2001L, 2002L);
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);

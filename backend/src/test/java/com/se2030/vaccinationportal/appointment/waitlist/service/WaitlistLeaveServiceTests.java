@@ -2,6 +2,7 @@ package com.se2030.vaccinationportal.appointment.waitlist.service;
 
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 
 
 import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
@@ -34,8 +35,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(WaitlistLeaveServiceTests.TestConfig.class)
 class WaitlistLeaveServiceTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -75,6 +84,8 @@ class WaitlistLeaveServiceTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(2001L, 2002L);
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();

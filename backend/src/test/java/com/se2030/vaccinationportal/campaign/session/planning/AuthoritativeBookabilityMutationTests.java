@@ -19,6 +19,7 @@ import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCa
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentBookingService;
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentRescheduleService;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistPromotionService;
 import com.se2030.vaccinationportal.campaign.core.model.CampaignStatus;
 import com.se2030.vaccinationportal.campaign.center.model.CenterStatus;
@@ -64,8 +65,16 @@ import org.springframework.test.context.ActiveProfiles;
 @Import(AuthoritativeBookabilityMutationTests.TestConfig.class)
 class AuthoritativeBookabilityMutationTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -124,6 +133,8 @@ class AuthoritativeBookabilityMutationTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(6101L, 6102L, 6103L, 6104L, 6105L, 6106L, 6197L, 6198L, 6199L, 6201L, 6202L, 6203L, 6204L, 6205L, 6206L);
         cleanDb();
         String suffix = UUID.randomUUID().toString().substring(0, 8);
 

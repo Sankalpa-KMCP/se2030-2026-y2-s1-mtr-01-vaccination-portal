@@ -5,6 +5,7 @@ import com.se2030.vaccinationportal.appointment.booking.service.AppointmentCance
 import com.se2030.vaccinationportal.appointment.checkin.service.CheckInService;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
+import com.se2030.vaccinationportal.appointment.testsupport.TestEmailVerificationStatusReaderDouble;
 
 
 import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
@@ -54,6 +55,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(AppointmentWaitlistEndToEndIntegrationTests.TestConfig.class)
 class AppointmentWaitlistEndToEndIntegrationTests {
 
+    @Autowired
+    private TestEmailVerificationStatusReaderDouble emailVerificationStatusReaderDouble;
+
     // -------------------------------------------------------------------------
     // Test fixture constants — unique IDs avoid cross-test interference
     // -------------------------------------------------------------------------
@@ -81,6 +85,11 @@ class AppointmentWaitlistEndToEndIntegrationTests {
 
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public TestEmailVerificationStatusReaderDouble emailVerificationStatusReader() {
+            return new TestEmailVerificationStatusReaderDouble();
+        }
+
         @Bean
         public TestEligibilityLookupPortDouble eligibilityLookupPort() {
             return new TestEligibilityLookupPortDouble();
@@ -115,6 +124,8 @@ class AppointmentWaitlistEndToEndIntegrationTests {
 
     @BeforeEach
     void setUp() {
+        emailVerificationStatusReaderDouble.clear();
+        emailVerificationStatusReaderDouble.markVerified(7001L, 7002L);
         // Matches the cleanup pattern of all other service integration tests
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();

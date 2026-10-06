@@ -11,6 +11,7 @@ import com.se2030.vaccinationportal.shared.auth.model.PasswordResetToken;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
 import com.se2030.vaccinationportal.shared.auth.repository.CitizenProfileRepository;
+import com.se2030.vaccinationportal.shared.auth.repository.EmailOtpChallengeRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.EmailVerificationTokenRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.PasswordResetTokenRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
@@ -19,6 +20,7 @@ import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository
 import com.se2030.vaccinationportal.shared.auth.security.AuthActionTokenService;
 import com.se2030.vaccinationportal.shared.auth.service.AuthLinkDeliveryService;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
+import com.se2030.vaccinationportal.shared.auth.service.EmailOtpDeliveryService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -90,6 +92,12 @@ class AuthDeliveryFailureIntegrationTests {
     @MockitoBean
     private AuthLinkDeliveryService authLinkDeliveryService;
 
+    @MockitoBean
+    private EmailOtpDeliveryService emailOtpDeliveryService;
+
+    @Autowired
+    private EmailOtpChallengeRepository emailOtpChallengeRepository;
+
     @BeforeEach
     void setUp() {
         tearDown();
@@ -112,6 +120,8 @@ class AuthDeliveryFailureIntegrationTests {
         refreshTokenSessionRepository.flush();
         emailVerificationTokenRepository.deleteAll();
         emailVerificationTokenRepository.flush();
+        emailOtpChallengeRepository.deleteAll();
+        emailOtpChallengeRepository.flush();
         passwordResetTokenRepository.deleteAll();
         passwordResetTokenRepository.flush();
         citizenProfileRepository.deleteAll();
@@ -187,10 +197,11 @@ class AuthDeliveryFailureIntegrationTests {
     }
 
     @Test
-    @DisplayName("Citizen registration during delivery outage returns HTTP 503 and rolls back account registration")
-    void registerCitizen_smtpFailure_returns503AndRollsBackRegistration() throws Exception {
+    @DisplayName("Citizen registration with OTP delivery outage keeps the account and challenge for later resend")
+    void registerCitizen_otpDeliveryFailure_keepsAccountAndChallenge() throws Exception {
         doThrow(new AuthEmailDeliveryException("SMTP outage", new MailSendException("Connection refused")))
-                .when(authLinkDeliveryService).sendEmailVerificationLink(anyString(), anyString());
+                .when(emailOtpDeliveryService)
+                .sendVerificationOtp(anyString(), anyString(), any(java.time.Duration.class));
 
         CitizenRegistrationRequest request = new CitizenRegistrationRequest(
                 "Nimal Perera", "nimal.failed@example.com", "0778899001", RAW_PASSWORD);
@@ -198,16 +209,26 @@ class AuthDeliveryFailureIntegrationTests {
         mockMvc.perform(post("/api/v1/auth/register/citizen")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.code", is("EMAIL_DELIVERY_FAILED")));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.accountStatus", is("PENDING_VERIFICATION")));
 
-        // Verify user account was rolled back
-        assertTrue(userAccountRepository.findByEmailIgnoreCase("nimal.failed@example.com").isEmpty(),
-                "User account must not be persisted when registration email delivery fails");
+        // Delivery failure must never delete or roll back the committed account.
+        UserAccount persisted = userAccountRepository.findByEmailIgnoreCase("nimal.failed@example.com").orElseThrow();
+        assertEquals(AccountStatus.PENDING_VERIFICATION, persisted.getAccountStatus());
+        assertNull(persisted.getEmailVerifiedAt(), "The account remains email-unverified after a delivery outage");
 
-        // Verify no tokens were persisted
+        assertTrue(emailOtpChallengeRepository.findByUser_Id(persisted.getId()).isPresent(),
+                "The OTP challenge must survive so the citizen can request a resend");
         assertTrue(emailVerificationTokenRepository.findAll().isEmpty(),
-                "No verification token should be persisted when registration email delivery fails");
+                "Registration no longer issues legacy verification link tokens");
+
+        // The citizen can still authenticate and reach the principal-scoped verification flow.
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new com.se2030.vaccinationportal.shared.auth.dto.LoginRequest(
+                                        "nimal.failed@example.com", RAW_PASSWORD))))
+                .andExpect(status().isOk());
     }
 
     @Test

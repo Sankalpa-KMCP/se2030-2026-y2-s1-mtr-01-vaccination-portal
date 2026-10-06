@@ -55,6 +55,15 @@ public class UserAccount {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
+    /**
+     * Durable consecutive failed-login counter driving the automatic brute-force
+     * timed lock (canonical Appendix E "System" lock actor). Reset to zero on
+     * successful login, on password reset, and when the threshold transition
+     * establishes a timed lock.
+     */
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",
@@ -213,6 +222,14 @@ public class UserAccount {
 
     public void setLockedUntil(Instant lockedUntil) {
         this.lockedUntil = lockedUntil;
+    }
+
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public void setFailedLoginAttempts(int failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
     }
 
     public Set<Role> getRoles() {
