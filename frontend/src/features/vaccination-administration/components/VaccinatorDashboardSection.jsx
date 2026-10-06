@@ -270,104 +270,216 @@ export default function VaccinatorDashboardSection({
       )}
 
       {/* Option B: Current Session Card */}
-      <div className="card border-0 shadow-sm mb-4 bg-light">
+      <div className="card border-0 shadow-sm mb-4 bg-white overflow-hidden" style={{ borderRadius: '0.85rem' }}>
         <div className="card-body p-4">
-          {activeSession ? (
-            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-              <div>
-                <div className="d-flex align-items-center gap-2 mb-2">
-                  <span className="badge bg-success-subtle text-success border border-success fw-semibold px-2 py-1">
-                    Active Session
-                  </span>
-                  <span className="text-secondary small">
-                    {activeSession.date} · {activeSession.startTime} – {activeSession.endTime}
-                  </span>
-                </div>
-                <h3 className="h5 fw-bold mb-1 text-dark">
-                  {activeSession.centerName}
-                </h3>
-                <div className="small text-muted">
-                  Session Hours: {activeSession.startTime} – {activeSession.endTime}
-                </div>
-              </div>
+          <div className="d-flex flex-column flex-md-row align-items-md-center gap-4">
+            {/* Clinic visual area */}
+            <div
+              className="d-flex align-items-center justify-content-center flex-shrink-0 rounded-3 text-primary shadow-sm"
+              style={{
+                width: '68px',
+                height: '68px',
+                background: 'linear-gradient(135deg, #e8f5f1 0%, #d1ede5 100%)',
+                border: '1px solid rgba(15, 110, 91, 0.2)',
+              }}
+              aria-hidden="true"
+            >
+              <svg
+                width="34"
+                height="34"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.9"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 21h18" />
+                <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+                <path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4" />
+                <path d="M10 9h4" />
+                <path d="M12 7v4" />
+              </svg>
+            </div>
 
-              {availableSessions.length > 1 && (
-                <div className="d-flex align-items-center gap-2">
-                  <label htmlFor={sessionSelectorId} className="small fw-semibold text-secondary text-nowrap mb-0">
-                    Change Session ▼
-                  </label>
-                  <select
-                    id={sessionSelectorId}
-                    aria-label="Change Session"
-                    className="form-select form-select-sm"
-                    value={activeSession.id}
-                    onChange={handleSessionChange}
-                    disabled={queueLoading}
-                  >
-                    {availableSessions.map((session) => (
-                      <option key={session.id} value={session.id}>
-                        {session.date} • {session.startTime}–{session.endTime} • {session.centerName}
-                      </option>
-                    ))}
-                  </select>
+            {/* Content area */}
+            {activeSession ? (
+              <div className="flex-grow-1 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <span className="text-uppercase small fw-bold text-muted" style={{ letterSpacing: '0.05em', fontSize: '0.72rem' }}>
+                      Current Session
+                    </span>
+                    <span className="badge bg-success-subtle text-success border border-success fw-semibold px-2 py-1">
+                      Active Session
+                    </span>
+                  </div>
+                  <h3 className="h5 fw-bold mb-1 text-dark">
+                    {activeSession.centerName}
+                  </h3>
+                  <div className="text-secondary small">
+                    {[
+                      activeSession.date,
+                      activeSession.startTime && activeSession.endTime
+                        ? `${activeSession.startTime} – ${activeSession.endTime}`
+                        : null,
+                    ].filter(Boolean).join(' · ')}
+                  </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-2 text-muted">
-              <p className="mb-0 fw-medium">No active vaccination session is currently assigned.</p>
-            </div>
-          )}
+
+                {availableSessions.length > 1 && (
+                  <div className="d-flex align-items-center gap-2">
+                    <label htmlFor={sessionSelectorId} className="small fw-semibold text-secondary text-nowrap mb-0">
+                      Change Session ▼
+                    </label>
+                    <select
+                      id={sessionSelectorId}
+                      aria-label="Change Session"
+                      className="form-select form-select-sm"
+                      value={activeSession.id}
+                      onChange={handleSessionChange}
+                      disabled={queueLoading}
+                    >
+                      {availableSessions.map((session) => (
+                        <option key={session.id} value={session.id}>
+                          {session.date} • {session.startTime}–{session.endTime} • {session.centerName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-grow-1">
+                <div className="d-flex align-items-center gap-2 mb-1">
+                  <span className="text-uppercase small fw-bold text-muted" style={{ letterSpacing: '0.05em', fontSize: '0.72rem' }}>
+                    Current Session
+                  </span>
+                  <span className="badge bg-secondary-subtle text-secondary border border-secondary-subtle fw-semibold px-2 py-1">
+                    No Active Session
+                  </span>
+                </div>
+                <h3 className="h6 fw-semibold text-dark mb-1">
+                  No active vaccination session is currently assigned.
+                </h3>
+                <p className="small text-muted mb-0">
+                  You can continue working with active drafts and approved corrections.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Top Summary Metrics */}
       <div className="row g-3 mb-4">
+        {/* Waiting in Queue */}
         <div className="col-12 col-sm-4">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body p-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <span className="small text-secondary fw-semibold">Waiting in Queue</span>
-                <span className="badge bg-primary-subtle text-primary border border-primary">Live</span>
+          <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-2 p-1 text-primary d-inline-flex"
+                    style={{ background: 'var(--primary-soft-bg)' }}
+                    aria-hidden="true"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </div>
+                  <span className="small text-secondary fw-semibold">Waiting in Queue</span>
+                </div>
+                <span className="badge bg-primary-subtle text-primary border border-primary-subtle small">
+                  Live
+                </span>
               </div>
-              <div className="h3 fw-bold mb-0 text-dark mt-2">
-                {queue !== null ? queue.length : activeSession ? '…' : '0'}
-              </div>
-              <div className="small text-muted mt-1">
-                {activeSession ? 'Checked-in citizens' : 'No active session'}
+              <div>
+                <div className="h3 fw-bold mb-0 text-dark">
+                  {queue !== null ? queue.length : activeSession ? '…' : '0'}
+                </div>
+                <div className="small text-muted mt-1">
+                  {activeSession ? 'Checked-in citizens' : 'No active session'}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Active Drafts */}
         <div className="col-12 col-sm-4">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body p-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <span className="small text-secondary fw-semibold">Active Drafts</span>
-                <span className="badge bg-warning-subtle text-warning border border-warning">Active Work</span>
+          <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-2 p-1 text-warning d-inline-flex"
+                    style={{ background: 'var(--accent-soft-bg)' }}
+                    aria-hidden="true"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                  </div>
+                  <span className="small text-secondary fw-semibold">Active Drafts</span>
+                </div>
+                <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
+                  Active Work
+                </span>
               </div>
-              <div className="h3 fw-bold mb-0 text-dark mt-2">
-                {activeDrafts !== null ? activeDrafts.length : '…'}
+              <div>
+                <div className="h3 fw-bold mb-0 text-dark">
+                  {activeDrafts !== null ? activeDrafts.length : '…'}
+                </div>
+                <div className="small text-muted mt-1">Unfinalized drafts pending completion</div>
               </div>
-              <div className="small text-muted mt-1">Unfinalized drafts pending completion</div>
             </div>
           </div>
         </div>
 
+        {/* Corrections Needed */}
         <div className="col-12 col-sm-4">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body p-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <span className="small text-secondary fw-semibold">Corrections Needed</span>
-                <span className={`badge ${approvedCorrections.length > 0 ? 'bg-danger text-white' : 'bg-secondary-subtle text-secondary'}`}>
+          <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className={`rounded-2 p-1 d-inline-flex ${approvedCorrections.length > 0 ? 'text-danger' : 'text-success'}`}
+                    style={{ background: approvedCorrections.length > 0 ? 'var(--danger-soft)' : 'var(--success-soft)' }}
+                    aria-hidden="true"
+                  >
+                    {approvedCorrections.length > 0 ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="small text-secondary fw-semibold">Corrections Needed</span>
+                </div>
+                <span className={`badge ${approvedCorrections.length > 0 ? 'bg-danger text-white' : 'bg-secondary-subtle text-secondary'} small`}>
                   {approvedCorrections.length > 0 ? 'Action Required' : 'Up to date'}
                 </span>
               </div>
-              <div className="h3 fw-bold mb-0 text-dark mt-2">
-                {corrections !== null ? approvedCorrections.length : '…'}
+              <div>
+                <div className="h3 fw-bold mb-0 text-dark">
+                  {corrections !== null ? approvedCorrections.length : '…'}
+                </div>
+                <div className="small text-muted mt-1">Admin approved · Ready to apply</div>
               </div>
-              <div className="small text-muted mt-1">Admin approved · Ready to apply</div>
             </div>
           </div>
         </div>

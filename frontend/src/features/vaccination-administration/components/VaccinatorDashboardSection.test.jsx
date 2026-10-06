@@ -149,9 +149,11 @@ describe('VaccinatorDashboardSection (Option B)', () => {
 
     // Option B Header
     expect(screen.getByRole('heading', { name: 'Vaccinator Dashboard' })).toBeTruthy();
+    expect(screen.getByText(/Welcome, Vera Vaccinator • Vaccinator/)).toBeTruthy();
     expect(screen.getByText("Manage today's vaccination work")).toBeTruthy();
 
     // Option B Active Session Card
+    expect(screen.getByText('Current Session')).toBeTruthy();
     expect(screen.getByText('Active Session')).toBeTruthy();
     expect(screen.getByText('Colombo Central Vaccination Center')).toBeTruthy();
     expect(screen.getByText(/06 Oct 2026 · 09:00 – 12:00/)).toBeTruthy();
@@ -181,6 +183,8 @@ describe('VaccinatorDashboardSection (Option B)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('No active vaccination session is currently assigned.')).toBeTruthy();
+      expect(screen.getByText('No Active Session')).toBeTruthy();
+      expect(screen.getByText('You can continue working with active drafts and approved corrections.')).toBeTruthy();
       expect(screen.getByText('Select or receive an assigned vaccination session to view the queue.')).toBeTruthy();
     });
 
