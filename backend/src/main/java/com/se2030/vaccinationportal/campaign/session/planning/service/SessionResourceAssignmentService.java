@@ -107,7 +107,7 @@ public class SessionResourceAssignmentService {
         if (!sessionRepository.existsById(sessionId)) {
             throw new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId);
         }
-        return assignmentRepository.findBySessionIdOrderByStartAtAscIdAsc(sessionId);
+        return assignmentRepository.findBySessionIdWithResource(sessionId);
     }
 
     /**
@@ -125,7 +125,7 @@ public class SessionResourceAssignmentService {
             throw new ResourceNotFoundException("Vaccination session not found with ID: " + sessionId);
         }
 
-        SessionResourceAssignment assignment = assignmentRepository.findById(assignmentId)
+        SessionResourceAssignment assignment = assignmentRepository.findByIdWithResource(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource assignment not found with ID: " + assignmentId));
 
         if (!assignment.getSession().getId().equals(sessionId)) {
