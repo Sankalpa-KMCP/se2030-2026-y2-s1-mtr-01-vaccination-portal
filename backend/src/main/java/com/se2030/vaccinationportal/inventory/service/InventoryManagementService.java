@@ -25,6 +25,9 @@ import com.se2030.vaccinationportal.inventory.repository.ManufacturerRepository;
 import com.se2030.vaccinationportal.inventory.repository.StockTransactionRepository;
 import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
 import java.util.List;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,15 +39,24 @@ public class InventoryManagementService {
     private final CenterInventoryRepository inventories;
     private final StockTransactionRepository transactions;
     private final CampaignReferenceDataReader campaignReferences;
+    private final EntityManager entityManager;
 
     public InventoryManagementService(ManufacturerRepository manufacturers, VaccineBatchRepository batches,
             CenterInventoryRepository inventories, StockTransactionRepository transactions,
             CampaignReferenceDataReader campaignReferences) {
+        this(manufacturers, batches, inventories, transactions, campaignReferences, null);
+    }
+
+    @Autowired
+    public InventoryManagementService(ManufacturerRepository manufacturers, VaccineBatchRepository batches,
+            CenterInventoryRepository inventories, StockTransactionRepository transactions,
+            CampaignReferenceDataReader campaignReferences, EntityManager entityManager) {
         this.manufacturers = manufacturers;
         this.batches = batches;
         this.inventories = inventories;
         this.transactions = transactions;
         this.campaignReferences = campaignReferences;
+        this.entityManager = entityManager;
     }
 
     @Transactional(readOnly = true)
@@ -88,7 +100,7 @@ public class InventoryManagementService {
 
     @Transactional
     public VaccineBatchResponse updateBatch(Long id, VaccineBatchRequest request) {
-        VaccineBatch batch = batch(id);
+        VaccineBatch batch = lockedBatch(id);
         // Manufacturer and vaccine type are the batch identity (uk_vaccine_batch_identity) and are
         // immutable after creation; the entity update path cannot change them, so a requested identity
         // change must be rejected instead of silently persisted as the pre-update identity.
@@ -110,7 +122,7 @@ public class InventoryManagementService {
 
     @Transactional
     public void deleteBatch(Long id) {
-        batch(id);
+        lockedBatch(id);
         if (inventories.existsByBatchId(id)) {
             throw new InventoryConflictException("Batch has center inventory and cannot be deleted");
         }
@@ -133,11 +145,14 @@ public class InventoryManagementService {
         if (inventories.findByCenterIdAndBatchId(request.centerId(), request.batchId()).isPresent()) {
             throw new InventoryConflictException("Center inventory already exists for this batch");
         }
+        VaccineBatch batch = lockedBatch(request.batchId());
+        if (request.quantity() > 0) {
+            requireActor(actorId);
+            validateUsableBatch(batch);
+        }
         CenterInventory inventory = inventories.saveAndFlush(
                 new CenterInventory(request.centerId(), request.batchId(), 0));
         if (request.quantity() > 0) {
-            requireActor(actorId);
-            validateUsableBatch(batch(request.batchId()));
             inventory.applyChange(request.quantity());
             inventories.saveAndFlush(inventory);
             transactions.saveAndFlush(StockTransaction.stockChange(inventory.getId(),
@@ -160,7 +175,7 @@ public class InventoryManagementService {
 
     @Transactional
     public void deleteInventory(Long id) {
-        CenterInventory inventory = inventory(id);
+        CenterInventory inventory = lockedInventory(id);
         if (transactions.existsByInventoryId(inventory.getId())) {
             throw new InventoryConflictException("Inventory has audit transactions and cannot be deleted");
         }
@@ -170,8 +185,10 @@ public class InventoryManagementService {
     @Transactional
     public CenterInventoryResponse receiveStock(StockReceiptRequest request, Long actorId) {
         requireActor(actorId);
+        Long batchId = inventoryBatchId(request.inventoryId());
+        VaccineBatch batch = lockedBatch(batchId);
+        validateUsableBatch(batch);
         CenterInventory inventory = lockedInventory(request.inventoryId());
-        validateUsableBatch(batch(inventory.getBatchId()));
         int before = inventory.getQuantity();
         inventory.applyChange(request.quantity());
         inventories.saveAndFlush(inventory);
@@ -184,11 +201,12 @@ public class InventoryManagementService {
     public CenterInventoryResponse adjustStock(StockAdjustmentRequest request, Long actorId) {
         requireActor(actorId);
         if (request.quantityChange() == 0) throw new IllegalArgumentException("Quantity change cannot be zero");
-        CenterInventory inventory = lockedInventory(request.inventoryId());
-        VaccineBatch batch = batch(inventory.getBatchId());
+        Long batchId = inventoryBatchId(request.inventoryId());
+        VaccineBatch batch = lockedBatch(batchId);
         if (batch.getExpiryDate().isBefore(LocalDate.now()) || batch.getBatchStatus() == BatchStatus.EXPIRED) {
             throw new InventoryConflictException("Expired batch stock cannot be adjusted");
         }
+        CenterInventory inventory = lockedInventory(request.inventoryId());
         int before = inventory.getQuantity();
         try { inventory.applyChange(request.quantityChange()); }
         catch (IllegalStateException exception) { throw new InventoryConflictException("Adjustment would make inventory negative"); }
@@ -226,7 +244,6 @@ public class InventoryManagementService {
 
     private void requireReferences(CenterInventoryRequest request) {
         if (!campaignReferences.centerExists(request.centerId())) throw new IllegalArgumentException("Center not found");
-        batch(request.batchId());
     }
 
     private Manufacturer saveManufacturer(Manufacturer item) {
@@ -249,6 +266,17 @@ public class InventoryManagementService {
     private VaccineBatch batch(Long id) {
         return batches.findById(id).orElseThrow(() -> new IllegalArgumentException("Batch not found: " + id));
     }
+    private VaccineBatch lockedBatch(Long id) {
+        if (entityManager != null) {
+            VaccineBatch cached = entityManager.find(VaccineBatch.class, id);
+            if (cached != null) {
+                entityManager.detach(cached);
+            }
+        }
+        VaccineBatch batch = batches.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException("Batch not found: " + id));
+        return batch;
+    }
     private CenterInventory inventory(Long id) {
         return inventories.findById(id).orElseThrow(() -> new IllegalArgumentException("Center inventory not found: " + id));
     }
@@ -256,9 +284,16 @@ public class InventoryManagementService {
         return inventories.findByIdForUpdate(id)
                 .orElseThrow(() -> new IllegalArgumentException("Center inventory not found: " + id));
     }
+    private Long inventoryBatchId(Long inventoryId) {
+        return inventories.findBatchIdById(inventoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Center inventory not found: " + inventoryId));
+    }
     private boolean batchHasTransactions(Long batchId) {
-        return inventories.findAllByBatchId(batchId).stream()
-                .anyMatch(item -> transactions.existsByInventoryId(item.getId()));
+        List<Long> inventoryIds = inventories.findIdsByBatchIdForUpdate(batchId);
+        if (inventoryIds.isEmpty()) {
+            return false;
+        }
+        return !transactions.findIdsByInventoryIdsForUpdate(inventoryIds).isEmpty();
     }
     private void validateUsableBatch(VaccineBatch batch) {
         if (batch.getBatchStatus() != BatchStatus.ACTIVE || batch.getExpiryDate().isBefore(LocalDate.now())) {
