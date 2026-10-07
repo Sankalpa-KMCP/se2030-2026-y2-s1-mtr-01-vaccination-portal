@@ -1,14 +1,15 @@
+import AppointmentNotice from '../components/AppointmentNotice';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import WaitlistCard from '../components/WaitlistCard';
 import WaitlistPosition from '../components/WaitlistPosition';
 import { getWaitlistStatus, leaveWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
-import AppointmentNotice from '../components/AppointmentNotice';
-import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
-import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
-import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
+import CitizenErrorState from '../../../shared/ui/citizen/CitizenErrorState';
+import CitizenPageHeader from '../../../shared/ui/citizen/CitizenPageHeader';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenWorkflowGuide from '../../../shared/ui/citizen/CitizenWorkflowGuide';
+import '../citizen-appointment.css';
 
 /**
  * Citizen Waitlist Page (US-05).

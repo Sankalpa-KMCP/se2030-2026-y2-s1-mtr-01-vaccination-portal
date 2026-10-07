@@ -14,7 +14,9 @@ The frontend application for the Web-Based Vaccination Portal is a single-page a
 
 ## Prerequisites
 
-- **Node.js**: v18+ or v20+ recommended (verified on Node.js v24.x)
+- **Node.js**: Node 22.x (22.22.2 or newer), Node 24.x (24.15.0 or newer), or Node 26+ (verified on Node.js v24.x).
+  These ranges follow the locked toolchain engine declarations: Vite requires `^20.19.0 || >=22.12.0`, and JSDOM (used by the
+  test suite) requires `^22.22.2 || ^24.15.0 || >=26.0.0`, which excludes Node 18/20 and odd-numbered majors (21, 23, 25).
 - **npm**: v9+ or v10+ recommended (verified on npm v11.x)
 
 ## Environment Setup
@@ -78,41 +80,64 @@ The frontend uses React Router DOM with a centralized route tree defined in `src
 - `/` - Public home landing page with portal overview, hero artwork, readiness indicators, and trust metrics
 - `/how-it-works` - Citizen and provider workflow guide
 - `/about` - Public portal mission, architecture, and healthcare governance overview
-- `/login` - Generic authentication entry point
-- `/login/citizen` - Dedicated citizen authentication
-- `/login/staff` - Operational and healthcare staff authentication
+- `/login` - Universal authentication entry point for all roles (legacy `/login/citizen` and `/login/staff` routes redirect to `/login`)
 - `/register/citizen` - Citizen self-registration
 - `/register/staff` - Operational and medical staff account registration request
 
+All active citizen and staff accounts authenticate through `/login`. Upon authentication, users are redirected to their designated workspace according to their assigned role. Citizen registration (`/register/citizen`) and staff access requests (`/register/staff`) remain separate workflows.
+
 ### Protected Routes (`/app/*`)
 Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticated session. Users are automatically directed to their role-specific view:
-- `/app/citizen` - Citizen Dashboard (accessible to `ROLE_CITIZEN`)
+- `/app/citizen` - Citizen Dashboard (`ROLE_CITIZEN`)
+- `/app/citizen/profile` - Citizen profile management (`ROLE_CITIZEN`)
+- `/app/citizen/vaccinations` - Personal administered vaccination records and digital certificates (`ROLE_CITIZEN`, alias `/app/vaccinations`)
+- `/app/screening` - Citizen pre-vaccination screening campaigns (`ROLE_CITIZEN`)
+- `/app/screening/eligibility` - Citizen pre-vaccination eligibility status overview (`ROLE_CITIZEN`)
+- `/app/screening/history` - Screening history, details, and correction submissions (`ROLE_CITIZEN`)
 - `/app/appointments/book` - Vaccination session availability search and appointment booking (`ROLE_CITIZEN`)
 - `/app/appointments/mine` - Personal appointment listing, rescheduling, and cancellation management (`ROLE_CITIZEN`)
-- `/app/staff` - Staff Operations Dashboard (accessible to healthcare, campaign, and center staff)
+- `/app/appointments/waitlist` - Citizen waitlist status and registration (`ROLE_CITIZEN`)
+- `/app/staff` - Staff Operations Dashboard (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_HEALTHCARE_OFFICER`, `ROLE_INVENTORY_OFFICER`, `ROLE_MANAGEMENT_USER`, `ROLE_VACCINATOR`)
+- `/app/staff/vaccination-drafts` - Clinical vaccination draft recording and finalization (`ROLE_VACCINATOR`)
+- `/app/staff/screening/reviews` - Clinical screening review queue and history (`ROLE_HEALTHCARE_OFFICER`)
+- `/app/campaigns` - Vaccination campaign management and dose programme configuration (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_MANAGEMENT_USER`)
+- `/app/center-operations` - Center master data, operating hours, and closures (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`, `ROLE_MANAGEMENT_USER`)
+- `/app/sessions` - Vaccination session planning, recurrence series, and staff rostering (`ROLE_ADMIN`, `ROLE_CENTER_MANAGER`, `ROLE_CAMPAIGN_OFFICER`)
+- `/app/analytics` - Operational analytics and program metrics visualization (`ROLE_ADMIN`, `ROLE_CAMPAIGN_OFFICER`, `ROLE_CENTER_MANAGER`)
+- `/app/checkin/queue` - Clinic arrival check-in queue management (`ROLE_ADMIN`, `ROLE_CENTER_MANAGER`, `ROLE_VACCINATOR`)
+- `/app/inventory` - Vaccine inventory, stock levels, and batch allocations (`ROLE_ADMIN`, `ROLE_INVENTORY_OFFICER`)
+- `/app/screening/questions` - Screening question configuration (`ROLE_HEALTHCARE_OFFICER`)
+- `/app/screening/questionnaires` - Screening questionnaire versioning (`ROLE_HEALTHCARE_OFFICER`)
 - `/app/admin` - System Administration Dashboard (`ROLE_ADMIN`)
 - `/app/admin/staff-requests` - Pending staff registration request management (`ROLE_ADMIN`)
-- `/app/campaigns` - Vaccination campaign management and dose programme configuration
-- `/app/center-operations` - Center master data, operating hours, and closures
-- `/app/sessions` - Vaccination session planning, recurrence series, and staff rostering
-- `/app/analytics` - Operational analytics and program metrics visualization
-- `/app/screening/questions` - Screening question configuration (`ROLE_ADMIN`)
-- `/app/screening/questionnaires` - Screening questionnaire versioning (`ROLE_ADMIN`)
 
 ## Implemented Feature Areas & Status
 
 | Feature Module | Directory | Current Implementation Status |
 | :--- | :--- | :--- |
+| **Project-Wide AI Assistant** | `src/features/assistant/` | **Implemented**: Floating `AssistantWidget` accessible on public and authenticated pages, in-memory conversation state, role-filtered route navigation pills, and personalized citizen queries. |
 | **Public Landing & Information** | `src/features/public-landing/` | **Implemented**: Multi-page informational experience (`/`, `/how-it-works`, `/about`), accessible navigation, journey timelines, and responsive styling. |
-| **Authentication & Access Control** | `src/auth/` | **Implemented**: Stateless JWT authentication, citizen registration, staff registration requests, admin review, and role-based route protection. |
+| **Authentication & Access Control** | `src/auth/` | **Implemented**: Memory-only access JWT/principal state, cookie-backed rotating refresh sessions, citizen registration, staff registration requests, admin review, and role-based route protection. |
+| **Pre-Vaccination Screening & Eligibility** | `src/features/screening/` | **Implemented**: Screening questions/questionnaires, citizen screening workflows, eligibility status, history tracking, and healthcare officer review queue. |
 | **Campaign Management** | `src/features/campaign-management/` | **Implemented**: Campaign lifecycle states, dose programme versions, target groups, and location targeting. |
 | **Center Operations** | `src/features/center-operations/` | **Implemented**: Vaccination center master records, operating calendars, and closure management. |
 | **Session Management** | `src/features/session-management/` | **Implemented**: Recurring session generation, time slots, operational capacity, and staff rostering. |
+| **Appointment Management** | `src/features/appointment-management/` | **Implemented**: Availability search, slot booking (`/app/appointments/book`), personal appointment management (`/app/appointments/mine`), citizen waitlist (`/app/appointments/waitlist`), and staff arrival check-in queue (`/app/checkin/queue`). |
+| **Vaccine Inventory** | `src/features/inventory-management/` | **Implemented**: Center inventory management, stock levels, lot allocations, and replenishment tracking. |
+| **Vaccination Administration** | `src/features/vaccination-administration/` | **Implemented**: Clinical vaccination draft recording, citizen vaccination history (`/app/citizen/vaccinations`), and public digital certificate verification (`/verify-certificate`). |
 | **Operational Analytics** | `src/features/analytics/` | **Implemented**: Interactive operations analytics view with filterable program metrics. |
-| **Screening & Eligibility** | `src/features/screening/` | **Implemented**: Screening question definition, answer options, and questionnaire version administration. |
-| **Vaccination Administration** | `src/features/vaccination-administration/` | **Partial**: Certificate verification form component implemented; complete clinical administration workflow UI is pending. |
-| **Appointment Management** | `src/features/appointment-management/` | **Partial**: Availability search, appointment booking (`/app/appointments/book`), appointment listing, rescheduling, and cancellation UI (`/app/appointments/mine`) implemented for citizens; waitlist join/management and staff check-in queue UI remain pending. |
-| **Vaccine Inventory** | `src/features/inventory-management/` | **Planned**: Not implemented in current frontend release. |
+
+## Project-Wide AI Assistant Widget
+
+The frontend incorporates a floating AI assistant widget (`AssistantWidget`) available across both public pages and authenticated portals:
+
+- **Universal Placement**: Mounted in `src/app/App.jsx` and anchored to the viewport; visible to anonymous visitors, citizens, and staff members.
+- **Backend Communication**: Communicates exclusively with backend REST endpoints (`GET /api/v1/assistant/status` and `POST /api/v1/assistant/messages`) through `apiClient.js`.
+- **Zero Frontend Secrets**: React **never receives or stores an OpenAI API key**. All model invocations and tool executions occur server-side.
+- **In-Memory Conversation Isolation**: Conversation dialogue is maintained strictly in React component state in browser memory. Conversation state automatically clears upon user logout, account switch, or manual reset to guarantee privacy across sessions.
+- **Graceful Disabled State**: If the backend reports `available: false` (or is unreachable), the widget displays an accessible notification banner, disables input, and provides a retry button while allowing all other portal features to remain fully operational.
+- **Role-Aware Suggested Actions**: Displays suggested route action pills that dynamically adapt based on caller role authorities, enabling quick navigation across the portal.
+- **Setup & Evaluation Guide**: See [docs/AI_ASSISTANT_SETUP_AND_DEMO.md](../docs/AI_ASSISTANT_SETUP_AND_DEMO.md) for full configuration and demonstration steps.
 
 ## Directory Structure
 
@@ -144,14 +169,49 @@ frontend/
     |-- features/
     |   |-- analytics/
     |   |-- appointment-management/
+    |   |-- assistant/
+    |   |   |-- api/
+    |   |   |-- components/
+    |   |   |-- hooks/
+    |   |   \-- styles/
     |   |-- campaign-management/
     |   |-- center-operations/
+    |   |-- citizen-dashboard/
+    |   |-- citizen-profile/
+    |   |-- inventory-management/
     |   |-- public-landing/
     |   |-- screening/
     |   |-- session-management/
     |   \-- vaccination-administration/
-    |-- services/
-    |   \-- apiClient.js
+    |-- shared/
+    |   |-- api/          # HTTP infrastructure and error facts
+    |   |-- auth/         # memory token/principal/generation infrastructure
+    |   |-- time/
+    |   |-- assets/
+    |   \-- ui/citizen/
     \-- styles/
         \-- global.css
 ```
+
+## Workflow ownership and enforcement
+
+The large session recurrence, session change-control, questionnaire builder and Inventory workflows
+use feature-owned hooks. Presentation remains in their existing pages/components; APIs, loading/error
+semantics and routes are unchanged. `app` composes routes; `auth` owns authentication workflows.
+`shared/api/apiClient.js`, `shared/auth/authStorage.js` and `shared/time/timezoneUtils.js` are reusable
+infrastructure. Shared citizen components load shared-owned CSS explicitly. Screening owns
+`CitizenSection`, and Appointment/Screening own their feature-specific citizen styles.
+
+`npm run lint` enforces the resolved-path architecture rule in `eslint/featureBoundaries.js`.
+Features may consume another feature's API/constants and the explicitly listed provider-owned
+presentation entries. Shared code cannot depend on feature internals or Auth workflows.
+See the [current architecture](../docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md)
+for the boundary exceptions and test strategy. Tests stay beside their components/hooks.
+
+## Current session lifecycle
+
+Access token, stable principal ID and session generation live only in module memory; no authentication state is persisted to localStorage/sessionStorage. Login binds a new local generation/principal. Cold bootstrap uses the HttpOnly refresh cookie then /me, while independent bootstrap-attempt ownership prevents stale/StrictMode completion.
+
+Established refresh must match both generation and principal before token installation or replay. Different-user cross-tab cookie replacement ends the stale local session; same-principal renewal remains allowed. Concurrent recovery is single-flight, delayed same-session 401s replay at most once, and transient refresh failures preserve current memory state. Logout clears token/principal and calls backend family revocation/cookie clearing.
+
+See [current shared evidence](../docs/evidence/current/shared-authentication.md), [auth sequence](../docs/diagrams/current/auth-session-sequence.md) and [capture checklist](../docs/evidence/current/capture-checklist.md). Secure=false is only an explicit local HTTP backend override; HTTPS uses the Secure default.

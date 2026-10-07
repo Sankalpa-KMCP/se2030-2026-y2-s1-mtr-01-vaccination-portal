@@ -4,7 +4,7 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import CitizenScreeningHistoryDetailsPage from './CitizenScreeningHistoryDetailsPage';
 
-const mocks = vi.hoisted(() => ({ getScreeningHistoryDetails: vi.fn(), getEligibilityAssessmentBySubmission: vi.fn(), getCampaignById: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getScreeningHistoryDetails: vi.fn(), getEligibilityAssessmentBySubmission: vi.fn(), listCitizenCampaigns: vi.fn() }));
 vi.mock('../../../auth/context/AuthContext', () => ({ useAuth: () => ({ user: { id: 71 } }) }));
 vi.mock('../api/screeningApi', () => mocks);
 vi.mock('../../campaign-management/api/campaignApi', () => mocks);
@@ -20,7 +20,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.getScreeningHistoryDetails.mockResolvedValue(details());
   mocks.getEligibilityAssessmentBySubmission.mockResolvedValue(null);
-  mocks.getCampaignById.mockResolvedValue({ id: 22, name: 'Historic campaign', code: 'HISTORIC' });
+  mocks.listCitizenCampaigns.mockResolvedValue([{ id: 22, name: 'Historic campaign', code: 'HISTORIC' }]);
 });
 afterEach(cleanup);
 describe('citizen historical screening details', () => {
@@ -34,13 +34,14 @@ describe('citizen historical screening details', () => {
     render(page());
     expect(await screen.findByRole('heading', { name: 'Historic campaign' })).toBeTruthy();
     expect(mocks.getScreeningHistoryDetails).toHaveBeenCalledExactlyOnceWith('42');
-    expect(mocks.getCampaignById).toHaveBeenCalledExactlyOnceWith(22);
+    expect(mocks.listCitizenCampaigns).toHaveBeenCalledOnce();
     expect(mocks.getEligibilityAssessmentBySubmission).toHaveBeenCalledExactlyOnceWith('42');
     expect(screen.getByText('Campaign code: HISTORIC')).toBeTruthy();
     expect(screen.getByText('2026-08-30')).toBeTruthy();
     expect(screen.getByText('Questionnaire version').nextElementSibling.textContent).toBe('3');
     expect(screen.getByRole('link', { name: /Back to Screening History/ }).getAttribute('href')).toBe('/app/screening/history');
     expect(screen.queryByRole('button', { name: /edit|resubmit/i })).toBeNull();
+    expect(screen.queryByText(/Campaign (information|details) (is|are) temporarily unavailable/i)).toBeNull();
   });
   it('renders friendly backend display answers for every type and preserves backend order', async () => {
     render(page());
@@ -49,22 +50,56 @@ describe('citizen historical screening details', () => {
     for (const answer of answers) expect(screen.getByText(answer.displayAnswer)).toBeTruthy();
     expect(screen.queryByText('RAW MUST NOT APPEAR')).toBeNull();
   });
-  it('shows the correction action for a currently active correction request', async () => {
-    mocks.getScreeningHistoryDetails.mockResolvedValue(details({ status: 'CORRECTIONS_REQUIRED', correctionInstructions: 'Please clarify the date.', correctionRequestedAt: '2026-08-28' }));
+  it('shows prominent amber Action Required treatment and CTA for CORRECTIONS_REQUIRED', async () => {
+    mocks.getScreeningHistoryDetails.mockResolvedValue(details({
+      status: 'CORRECTIONS_REQUIRED',
+      correctionInstructions: 'Please clarify the date.',
+      correctionRequestedAt: '2026-08-28',
+    }));
     render(page());
+    // 1. CORRECTIONS_REQUIRED shows prominent Action Required treatment
     expect(await screen.findByText('Please clarify the date.')).toBeTruthy();
     expect(screen.getByText(/2026-08-28/)).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Corrections requested' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Action Required' })).toBeTruthy();
+    expect(screen.getByText('Corrections requested')).toBeTruthy();
+    expect(screen.getAllByText('Action Required').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: 'Correct Screening' }).getAttribute('href'))
       .toBe('/app/screening/history/42/correct');
   });
-  it.each(['PENDING_REVIEW', 'REVIEWED'])('keeps historical correction information without an action for %s', async (status) => {
-    mocks.getScreeningHistoryDetails.mockResolvedValue(details({ status, correctionInstructions: 'Please clarify the date.', correctionRequestedAt: '2026-08-28' }));
-    render(page());
-    expect(await screen.findByText('Please clarify the date.')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Corrections requested — historical information' })).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Correct Screening' })).toBeNull();
-  });
+  it.each(['PENDING_REVIEW', 'REVIEWED'])(
+    'displays resolved historical correction without active warning treatment or CTA for %s',
+    async (status) => {
+      mocks.getScreeningHistoryDetails.mockResolvedValue(details({
+        status,
+        correctionInstructions: 'Please clarify the date.',
+        correctionRequestedAt: '2026-08-28',
+      }));
+      render(page());
+
+      // 2. REVIEWED submission with previous correction request does NOT show active warning treatment
+      expect(await screen.findByText('Please clarify the date.')).toBeTruthy();
+      expect(screen.queryByText('Corrections requested — historical information')).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Action Required' })).toBeNull();
+      expect(screen.queryByLabelText('Action Required')).toBeNull();
+
+      // 3. REVIEWED submission still shows historical correction information
+      expect(screen.getByText('Please clarify the date.')).toBeTruthy();
+      expect(screen.getByText(/2026-08-28/)).toBeTruthy();
+
+      // 4. Historical correction is labelled Resolved / Previous correction request
+      expect(screen.getByRole('heading', { name: 'Previous correction request' })).toBeTruthy();
+      expect(screen.getByText('Resolved')).toBeTruthy();
+
+      // 5. No correction CTA appears for resolved corrections
+      expect(screen.queryByRole('link', { name: 'Correct Screening' })).toBeNull();
+
+      // 6. Existing questionnaire answers, campaign name, preliminary result, and submission details remain unchanged
+      expect(screen.getByRole('heading', { name: 'Historic campaign' })).toBeTruthy();
+      expect(screen.getByText('Asthma, Diabetes')).toBeTruthy();
+      expect(screen.getByText('Preliminary screening passed')).toBeTruthy();
+      expect(screen.getByText(/Submission reference 42/)).toBeTruthy();
+    },
+  );
   it('treats a null assessment as not yet recorded rather than ineligible', async () => {
     render(page());
     expect(await screen.findByText('No final eligibility assessment has been recorded for this screening yet.')).toBeTruthy();
@@ -77,12 +112,15 @@ describe('citizen historical screening details', () => {
     for (const text of ['Citizen-facing reason', '2026-08-31', '2026-09-30', '2026-09-01', 'Recorded revocation']) expect(screen.getByText(text)).toBeTruthy();
     for (const text of ['SECRET CLINICAL CONTENT', 'PRIVATE REVIEWER', 'INTERNAL RESCREENING']) expect(screen.queryByText(text)).toBeNull();
   });
-  it('retains readable answers when campaign metadata fails', async () => {
-    mocks.getCampaignById.mockRejectedValue(new Error('Metadata unavailable'));
+  it('retains readable answers and shows citizen-friendly fallback when campaign metadata fails', async () => {
+    mocks.listCitizenCampaigns.mockRejectedValue(new Error('Metadata unavailable'));
     render(page());
-    expect(await screen.findByText(/Your screening details remain available/)).toBeTruthy();
+    expect(await screen.findByText('Campaign details are temporarily unavailable.')).toBeTruthy();
+    expect(screen.getByText(/Your screening details remain available/)).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Campaign #22' })).toBeTruthy();
     expect(screen.getByText('Asthma, Diabetes')).toBeTruthy();
+    expect(screen.queryByText('Campaign information is unavailable')).toBeNull();
+    expect(screen.queryByText(/record references remain visible/i)).toBeNull();
   });
   it('distinguishes assessment request failure from no recorded assessment', async () => {
     mocks.getEligibilityAssessmentBySubmission.mockRejectedValue(new Error('Assessment lookup failed'));
@@ -96,14 +134,41 @@ describe('citizen historical screening details', () => {
     render(page());
     expect((await screen.findByRole('alert')).className).toContain('citizen-state--error');
     expect(screen.queryByText('Asthma, Diabetes')).toBeNull();
-    expect(mocks.getCampaignById).not.toHaveBeenCalled();
+    expect(mocks.listCitizenCampaigns).not.toHaveBeenCalled();
     expect(mocks.getEligibilityAssessmentBySubmission).not.toHaveBeenCalled();
   });
   it('keeps primary answers visible while supplementary requests are pending', async () => {
-    mocks.getCampaignById.mockReturnValue(new Promise(() => {}));
+    mocks.listCitizenCampaigns.mockReturnValue(new Promise(() => {}));
     render(page());
     expect(await screen.findByText('Asthma, Diabetes')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toBe('Loading assessment information...');
+  });
+  it('resolves campaign name via citizen endpoint and renders details cleanly without technical error banner', async () => {
+    mocks.listCitizenCampaigns.mockResolvedValue([
+      { id: 22, name: 'Seasonal Influenza Vaccination 2026', code: 'FLU-2026' },
+      { id: 99, name: 'Other Campaign', code: 'OTHER' },
+    ]);
+    render(page(42));
+    // 1. Real campaign name renders when citizen lookup succeeds
+    expect(await screen.findByRole('heading', { name: 'Seasonal Influenza Vaccination 2026' })).toBeTruthy();
+    expect(screen.getByText('Campaign code: FLU-2026')).toBeTruthy();
+
+    // 2. Warning banner is NOT shown when metadata resolves
+    expect(screen.queryByText('Campaign information is unavailable')).toBeNull();
+    expect(screen.queryByText('Campaign details are temporarily unavailable.')).toBeNull();
+    expect(screen.queryByText(/record references remain visible/i)).toBeNull();
+
+    // 3. Screening answers render normally
+    expect(screen.getByText('Asthma, Diabetes')).toBeTruthy();
+    expect(screen.getByText('Citizen supplied text')).toBeTruthy();
+
+    // 4. Submission reference, status, and questionnaire info remain intact
+    expect(screen.getByText(/Submission reference 42/)).toBeTruthy();
+    expect(screen.getAllByText('Pending review').length).toBeGreaterThan(0);
+    expect(screen.getByText('Questionnaire version').nextElementSibling.textContent).toBe('3');
+
+    // 5. Existing routes and back links remain intact
+    expect(screen.getByRole('link', { name: /Back to Screening History/ }).getAttribute('href')).toBe('/app/screening/history');
   });
   it('does not let a late response from an old detail page overwrite the next page', async () => {
     let resolveOld;

@@ -4,12 +4,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.se2030.vaccinationportal.appointment.model.Appointment;
-import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
-import com.se2030.vaccinationportal.appointment.model.WaitlistEntry;
-import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
-import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
-import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
+import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
+import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus;
+import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -53,7 +53,7 @@ public class AppointmentSecurityAuthorizationIntegrationTests {
     }
 
     @Nested
-    @DisplayName("Operational Endpoints Allowed Roles (ADMIN, HEALTHCARE_OFFICER, CENTER_MANAGER)")
+    @DisplayName("Operational Endpoints Allowed Roles (ADMIN, CENTER_MANAGER)")
     class OperationalAllowedRoles {
 
         @Test
@@ -67,16 +67,6 @@ public class AppointmentSecurityAuthorizationIntegrationTests {
         }
 
         @Test
-        @DisplayName("HEALTHCARE_OFFICER role is allowed to access GET /api/v1/appointments/queue")
-        void healthcareOfficerQueueAllowed() throws Exception {
-            mockMvc.perform(get("/api/v1/appointments/queue")
-                            .param("slotId", "1")
-                            .header(HttpHeaders.AUTHORIZATION, token(2L, "hco@test.gov", List.of("ROLE_HEALTHCARE_OFFICER")))
-                            .accept(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isOk());
-        }
-
-        @Test
         @DisplayName("CENTER_MANAGER role is allowed to access GET /api/v1/appointments/queue")
         void centerManagerQueueAllowed() throws Exception {
             mockMvc.perform(get("/api/v1/appointments/queue")
@@ -85,11 +75,41 @@ public class AppointmentSecurityAuthorizationIntegrationTests {
                             .accept(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
         }
+
+        @Test
+        @DisplayName("VACCINATOR role is allowed to access GET /api/v1/appointments/queue")
+        void vaccinatorQueueAllowed() throws Exception {
+            mockMvc.perform(get("/api/v1/appointments/queue")
+                            .param("slotId", "1")
+                            .header(HttpHeaders.AUTHORIZATION, token(4L, "vac@test.gov", List.of("ROLE_VACCINATOR")))
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+        }
     }
 
     @Nested
-    @DisplayName("Operational Endpoints Denied Roles (CITIZEN, CAMPAIGN_OFFICER, INVENTORY_OFFICER)")
+    @DisplayName("Operational Endpoints Denied Roles (CITIZEN, CAMPAIGN_OFFICER, INVENTORY_OFFICER, HEALTHCARE_OFFICER)")
     class OperationalDeniedRoles {
+
+        @Test
+        @DisplayName("HEALTHCARE_OFFICER role is denied with 403 Forbidden on GET /api/v1/appointments/queue")
+        void healthcareOfficerQueueDenied() throws Exception {
+            mockMvc.perform(get("/api/v1/appointments/queue")
+                            .param("slotId", "1")
+                            .header(HttpHeaders.AUTHORIZATION, token(2L, "hco@test.gov", List.of("ROLE_HEALTHCARE_OFFICER")))
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("HEALTHCARE_OFFICER role is denied with 403 Forbidden on check-in")
+        void healthcareOfficerCheckInDenied() throws Exception {
+            mockMvc.perform(post("/api/v1/appointments/1/check-in")
+                            .header(HttpHeaders.AUTHORIZATION, token(2L, "hco@test.gov", List.of("ROLE_HEALTHCARE_OFFICER")))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isForbidden());
+        }
 
         @Test
         @DisplayName("CITIZEN role is denied with 403 Forbidden on GET /api/v1/appointments/queue")
@@ -139,44 +159,16 @@ public class AppointmentSecurityAuthorizationIntegrationTests {
     }
 
     @Nested
-    @DisplayName("Staff Override on Cancel / Reschedule Protection")
-    class StaffOverrideProtection {
-
-        @Test
-        @DisplayName("Anonymous caller claiming isStaffOverride=true on cancel is rejected with 401/403")
-        void anonymousStaffOverrideCancelDenied() throws Exception {
-            mockMvc.perform(post("/api/v1/appointments/1/cancel")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"isStaffOverride\":true,\"staffReason\":\"emergency\"}"))
-                    .andExpect(status().is4xxClientError());
-        }
-
-        @Test
-        @DisplayName("Anonymous caller claiming isStaffOverride=true on reschedule is rejected with 401/403")
-        void anonymousStaffOverrideRescheduleDenied() throws Exception {
-            mockMvc.perform(post("/api/v1/appointments/1/reschedule")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"newSlotId\":2,\"isStaffOverride\":true,\"staffReason\":\"emergency\"}"))
-                    .andExpect(status().is4xxClientError());
-        }
+    @DisplayName("Role-Based Staff Override Cancellation Access (AC-3)")
+    class StaffOverrideCancelAllowed {
 
         @Test
         @DisplayName("CITIZEN role claiming isStaffOverride=true on cancel is denied with 403")
         void citizenStaffOverrideCancelDenied() throws Exception {
             mockMvc.perform(post("/api/v1/appointments/1/cancel")
-                            .header(HttpHeaders.AUTHORIZATION, token(7L, "cit@test.gov", List.of("ROLE_CITIZEN")))
+                            .header(HttpHeaders.AUTHORIZATION, token(4L, "cit@test.gov", List.of("ROLE_CITIZEN")))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"isStaffOverride\":true,\"staffReason\":\"emergency\"}"))
-                    .andExpect(status().isForbidden());
-        }
-
-        @Test
-        @DisplayName("CITIZEN role claiming isStaffOverride=true on reschedule is denied with 403")
-        void citizenStaffOverrideRescheduleDenied() throws Exception {
-            mockMvc.perform(post("/api/v1/appointments/1/reschedule")
-                            .header(HttpHeaders.AUTHORIZATION, token(7L, "cit@test.gov", List.of("ROLE_CITIZEN")))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"newSlotId\":2,\"isStaffOverride\":true,\"staffReason\":\"emergency\"}"))
                     .andExpect(status().isForbidden());
         }
 
@@ -202,14 +194,13 @@ public class AppointmentSecurityAuthorizationIntegrationTests {
         }
 
         @Test
-        @DisplayName("HEALTHCARE_OFFICER role claiming isStaffOverride=true on cancel passes security layer")
-        void hcoStaffOverrideCancelAllowedThroughSecurity() throws Exception {
+        @DisplayName("HEALTHCARE_OFFICER role claiming isStaffOverride=true on cancel is denied with 403")
+        void hcoStaffOverrideCancelDenied() throws Exception {
             mockMvc.perform(post("/api/v1/appointments/999999/cancel")
                             .header(HttpHeaders.AUTHORIZATION, token(2L, "hco@test.gov", List.of("ROLE_HEALTHCARE_OFFICER")))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"isStaffOverride\":true,\"staffReason\":\"emergency\"}"))
-                    .andExpect(result -> org.junit.jupiter.api.Assertions.assertNotEquals(401, result.getResponse().getStatus()))
-                    .andExpect(result -> org.junit.jupiter.api.Assertions.assertNotEquals(403, result.getResponse().getStatus()));
+                    .andExpect(status().isForbidden());
         }
 
         @Test

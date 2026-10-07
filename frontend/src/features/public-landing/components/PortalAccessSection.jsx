@@ -22,6 +22,17 @@ export default function PortalAccessSection() {
 
         <div className="home-access__ledger" data-reveal="access">
           <article className="home-access__citizen">
+            <div className="home-access__media">
+              <img
+                src="/images/citizen-vaccination-care.jpg"
+                alt="Healthcare professional caring for patient in comfortable clinic"
+                className="home-access__img"
+                loading="lazy"
+              />
+              <span className="home-access__pill">
+                <i className="bi bi-heart-pulse-fill me-1" /> Citizen Self-Service
+              </span>
+            </div>
             <div className="home-access__body">
               <h3>Plan and keep track of your vaccination care.</h3>
               <p>
@@ -42,6 +53,17 @@ export default function PortalAccessSection() {
           </article>
 
           <article className="home-access__staff">
+            <div className="home-access__media">
+              <img
+                src="/images/staff-operations-team.jpg"
+                alt="Hospital command center and clinical coordination staff"
+                className="home-access__img"
+                loading="lazy"
+              />
+              <span className="home-access__pill">
+                <i className="bi bi-hospital-fill me-1" /> Clinical Operations Suite
+              </span>
+            </div>
             <div className="home-access__body">
               <h3>Coordinate campaigns, clinics, and sessions.</h3>
               <p>

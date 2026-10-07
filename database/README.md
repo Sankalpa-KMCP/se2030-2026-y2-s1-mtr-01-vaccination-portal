@@ -2,6 +2,10 @@
 
 This directory contains database-related documentation, environment configuration, seed data guidelines, and design diagrams for the Web-Based Vaccination Portal.
 
+## Architecture ownership (current)
+
+See the [current architecture and file tree](../docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md) for capability packages, provider-owned APIs, transaction invariants and enforced import boundaries. Historical handoffs do not define the current package tree.
+
 ## Declared Technology Baseline
 
 - **Database Engine**: MySQL 8.4.10 LTS
@@ -12,7 +16,7 @@ This directory contains database-related documentation, environment configuratio
 
 ## Database Architecture & Flyway Migrations
 
-Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V12` (13 active migrations).
+Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V24` (25 active migrations).
 
 ### Active Migration Schedule
 
@@ -31,10 +35,22 @@ Database schema versioning is managed via Flyway migrations located in [`../back
 | `V10` | `V10__mf02_campaign_session_supporting_tables.sql` | MF-02: Recurrence rules, Rosters, Closures, Location targets |
 | `V11` | `V11__mf05_vaccination_foundation.sql` | MF-05: Vaccination administration, Drafts & Certificates |
 | `V12` | `V12__shared_auth_registration_foundation.sql` | Shared Auth: Citizen self-registration & staff registration request audit |
+| `V13` | `V13__mf02_time_slot_integrity_constraints.sql` | mf02 time slot integrity constraints |
+| `V14` | `V14__citizen_profile_foundation.sql` | citizen profile foundation |
+| `V15` | `V15__mf04_inventory_foundation.sql` | mf04 inventory foundation |
+| `V16` | `V16__add_super_admin_role.sql` | add super admin role |
+| `V17` | `V17__auth_verification_and_password_recovery.sql` | auth verification and password recovery |
+| `V18` | `V18__mf05_correction_certificate_lifecycle.sql` | mf05 correction certificate lifecycle |
+| `V19` | `V19__add_vaccinator_auth_role.sql` | add vaccinator auth role |
+| `V20` | `V20__vaccination_draft_deletion_audit.sql` | vaccination draft deletion audit |
+| `V21` | `V21__screening_submission_active_uniqueness.sql` | screening submission active uniqueness |
+| `V22` | `V22__add_email_verification.sql` | Citizen OTP challenge and existing-active verification backfill |
+| `V23` | `V23__user_account_login_lockout.sql` | Failed-login counters and timed lock state |
+| `V24` | `V24__add_refresh_token_sessions_family_revocation_index.sql` | Refresh-family revocation index (token_family_id, revoked_at) |
 
 ## Directory Structure
 
-- `migrations/` - Reference DDL exports and supplemental database scripts
+- `migrations/` - Historical reference scripts only: `V1__mf03_appointment_foundation.sql`, `V2__mf03_waitlist_foundation.sql`, `V002__mf01_screening_foundation.sql`. These versions overlap the active history and are not runtime inputs. Do not add this directory to Flyway locations or run it alongside the active scripts.
 - `seeds/` - Synthetic development, testing, and benchmark seed data
 - `diagrams/` - Entity-Relationship (ER) diagrams and database design materials
 
@@ -100,3 +116,7 @@ Contributors must strictly adhere to the following policies:
 - **Future seed data must be 100% synthetic.**
 - **Never commit production database dumps** or exports to this repository.
 
+
+## Current evidence and refresh persistence
+
+V4 created refresh_token_sessions; V24 adds its family-revocation index. Only cryptographic token hashes are stored. Rotation claims/successor creation are transactional; reuse security writes commit despite outward authentication rejection. Password reset revokes all account sessions. See [physical ER excerpt](../docs/diagrams/current/physical-er-model.md) and [shared evidence](../docs/evidence/current/shared-authentication.md). Local Compose MySQL 8.4.10 and CI refresh-test MySQL 8.4.3 are distinct versioned environments.

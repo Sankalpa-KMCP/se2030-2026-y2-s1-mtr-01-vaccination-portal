@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import { listVaccineTypes, listTargetGroups } from '../api/campaignApi';
+import { getQuestionnaireVersion } from '../api/campaignConfigurationApi';
 
 /**
  * Formats a Date instance, ISO-8601 string, or local string into YYYY-MM-DDTHH:mm for datetime-local inputs.
@@ -37,6 +38,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
   const [serviceEndDate, setServiceEndDate] = useState(initialCampaign?.serviceEndDate || '');
   const [bookingOpenAt, setBookingOpenAt] = useState(formatForDateTimeLocal(initialCampaign?.bookingOpenAt));
   const [bookingCloseAt, setBookingCloseAt] = useState(formatForDateTimeLocal(initialCampaign?.bookingCloseAt));
+  const [assignedVersion, setAssignedVersion] = useState(null);
   const [clientError, setClientError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -60,8 +62,14 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
     });
   };
 
+  const campaignKeyRef = useRef(
+    initialCampaign ? (initialCampaign.id ?? initialCampaign.code ?? 'initial') : null
+  );
+
   useEffect(() => {
-    if (initialCampaign) {
+    const key = initialCampaign ? (initialCampaign.id ?? initialCampaign.code ?? 'loaded') : null;
+    if (initialCampaign && key !== campaignKeyRef.current) {
+      campaignKeyRef.current = key;
       setCode(initialCampaign.code || '');
       setName(initialCampaign.name || '');
       setDescription(initialCampaign.description || '');
@@ -75,6 +83,24 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       setClientError(null);
     }
   }, [initialCampaign]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (initialCampaign?.questionnaireVersionId && typeof getQuestionnaireVersion === 'function') {
+      getQuestionnaireVersion(initialCampaign.questionnaireVersionId)
+        .then((data) => {
+          if (isMounted) setAssignedVersion(data);
+        })
+        .catch(() => {
+          if (isMounted) setAssignedVersion(null);
+        });
+    } else {
+      setAssignedVersion(null);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [initialCampaign?.questionnaireVersionId]);
 
   useEffect(() => {
     if (isEditMode) {
@@ -228,7 +254,12 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
         <h5 className="mb-0 fw-bold">{isEditMode ? 'Edit Campaign' : 'Create New Vaccination Campaign'}</h5>
       </div>
       <div className="card-body p-4">
-        <ApiErrorAlert error={clientError || (!isEditMode ? masterDataError : null) || error} onDismiss={() => setClientError(null)} />
+        <ApiErrorAlert
+          error={clientError || (!isEditMode ? masterDataError : null) || error}
+          onDismiss={() => {
+            setClientError(null);
+          }}
+        />
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="row g-3">
@@ -393,6 +424,35 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                   <div className="form-text small">Select an eligible active target demographic group.</div>
                 </>
               )}
+            </div>
+
+            {/* Screening Questionnaire Read-Only View */}
+            <div className="col-12">
+              <label className="form-label fw-semibold text-secondary small">
+                Screening Questionnaire
+              </label>
+              <div className="p-3 bg-light rounded border">
+                {initialCampaign?.questionnaireVersionId ? (
+                  <>
+                    <div className="fw-semibold text-dark">
+                      {assignedVersion?.questionnaireName || `Questionnaire Version #${initialCampaign.questionnaireVersionId}`}
+                    </div>
+                    <div className="small text-secondary mb-1">
+                      Version {assignedVersion?.versionNumber ?? initialCampaign.questionnaireVersionId} · Published
+                    </div>
+                    <div className="form-text small text-muted mb-0">
+                      Clinical questionnaire managed by Healthcare Officer
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="fw-semibold text-muted mb-1">Not assigned yet</div>
+                    <div className="form-text small text-muted mb-0">
+                      A Healthcare Officer must configure the screening questionnaire before this campaign can be scheduled.
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Service Period */}

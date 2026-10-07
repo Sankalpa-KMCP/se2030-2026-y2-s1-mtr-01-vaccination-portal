@@ -1,4 +1,4 @@
-import { apiRequestData } from '../../../services/apiClient';
+import { apiRequestData } from '../../../shared/api/apiClient';
 
 const PROFILE_PATH = '/v1/profile/me';
 

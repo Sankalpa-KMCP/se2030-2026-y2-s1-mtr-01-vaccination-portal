@@ -8,16 +8,16 @@ function HubPage() {
   return (
     <section>
       <h1 tabIndex="-1">Access Hub</h1>
-      <Link to="/login/citizen">Citizen route</Link>
+      <Link to="/register/citizen">Citizen registration</Link>
     </section>
   );
 }
 
-function CitizenPage() {
+function CitizenRegistrationPage() {
   const navigate = useNavigate();
   return (
     <section>
-      <h1 tabIndex="-1">Citizen Access</h1>
+      <h1 tabIndex="-1">Citizen Registration</h1>
       <button type="button" onClick={() => navigate(-1)}>Back</button>
     </section>
   );
@@ -29,7 +29,7 @@ function renderExperience() {
       <Routes>
         <Route element={<AuthExperience />}>
           <Route path="/login" element={<HubPage />} />
-          <Route path="/login/citizen" element={<CitizenPage />} />
+          <Route path="/register/citizen" element={<CitizenRegistrationPage />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -48,9 +48,9 @@ describe('AuthExperience route transitions', () => {
     document.documentElement.scrollTop = 120;
 
     expect(container.querySelectorAll('.auth-route-layer')).toHaveLength(1);
-    expect(screen.getByRole('navigation', { name: 'Access navigation' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'All access' }).getAttribute('aria-current')).toBe('page');
-    fireEvent.click(screen.getByRole('link', { name: 'Citizen route' }));
+    expect(screen.getByRole('link', { name: 'Portal home' })).toBeTruthy();
+    expect(screen.queryByRole('navigation', { name: 'Access navigation' })).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'Citizen registration' }));
 
     const outgoing = container.querySelector('[data-auth-transition="outgoing"]');
     const incoming = container.querySelector('[data-auth-transition="incoming"]');
@@ -58,21 +58,20 @@ describe('AuthExperience route transitions', () => {
     expect(outgoing?.hasAttribute('inert')).toBe(true);
     expect(outgoing?.getAttribute('aria-hidden')).toBe('true');
     expect(outgoing?.classList.contains('auth-route-layer--forward')).toBe(true);
-    expect(incoming?.getAttribute('data-auth-path')).toBe('/login/citizen');
+    expect(incoming?.getAttribute('data-auth-path')).toBe('/register/citizen');
     expect(document.documentElement.scrollTop).toBe(0);
 
     act(() => vi.advanceTimersByTime(479));
     expect(container.querySelectorAll('.auth-route-layer')).toHaveLength(2);
     act(() => vi.advanceTimersByTime(1));
     expect(container.querySelectorAll('.auth-route-layer')).toHaveLength(1);
-    expect(container.querySelector('[data-auth-transition="current"]')?.getAttribute('data-auth-path')).toBe('/login/citizen');
-    expect(screen.getByRole('link', { name: 'Citizen' }).getAttribute('aria-current')).toBe('page');
+    expect(container.querySelector('[data-auth-transition="current"]')?.getAttribute('data-auth-path')).toBe('/register/citizen');
   });
 
   it('uses backward direction for browser-history navigation', () => {
     vi.useFakeTimers();
     const { container } = renderExperience();
-    fireEvent.click(screen.getByRole('link', { name: 'Citizen route' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Citizen registration' }));
     act(() => vi.advanceTimersByTime(480));
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));

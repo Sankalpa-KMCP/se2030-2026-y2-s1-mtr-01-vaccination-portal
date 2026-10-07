@@ -1,5 +1,7 @@
 # MF-03 AI Development Handoff and Scrum Roadmap
 
+> Historical specification/evidence: package trees, implementation status and migration counts below describe their original revision. Current ownership and setup are recorded in the [current architecture](Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md). Applied runtime Flyway history is V0–V21 under `backend/src/main/resources/db/migration`; reference scripts are not runtime migrations. Business requirements remain reference material.
+
 ## Web-Based Vaccination Portal
 
 **Function:** Appointment, Waitlist and Check-In Management  

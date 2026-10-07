@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.shared.auth;
 
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.testcontainers.AbstractIsolatedMySqlMigrationIntegrationTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -16,7 +18,12 @@ import java.sql.Statement;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SharedAuthRegistrationMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
+class SharedAuthRegistrationMigrationMySqlIntegrationTests extends AbstractIsolatedMySqlMigrationIntegrationTest {
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        configureIsolatedDatabase(registry, "historical_auth_v12");
+    }
 
     @Test
     @Timeout(30)
@@ -28,11 +35,15 @@ class SharedAuthRegistrationMigrationMySqlIntegrationTests extends AbstractMySql
              Statement statement = connection.createStatement()) {
             connection.setAutoCommit(true);
 
-            statement.execute("DROP TABLE IF EXISTS refresh_token_sessions");
-            statement.execute("DROP TABLE IF EXISTS user_roles");
-            statement.execute("DROP TABLE IF EXISTS citizen_profiles");
-            statement.execute("DROP TABLE IF EXISTS user_accounts");
-            statement.execute("DROP TABLE IF EXISTS roles");
+            statement.execute("SET FOREIGN_KEY_CHECKS = 0;");
+            statement.execute("DROP TABLE IF EXISTS email_verification_tokens;");
+            statement.execute("DROP TABLE IF EXISTS password_reset_tokens;");
+            statement.execute("DROP TABLE IF EXISTS refresh_token_sessions;");
+            statement.execute("DROP TABLE IF EXISTS user_roles;");
+            statement.execute("DROP TABLE IF EXISTS citizen_profiles;");
+            statement.execute("DROP TABLE IF EXISTS user_accounts;");
+            statement.execute("DROP TABLE IF EXISTS roles;");
+            statement.execute("SET FOREIGN_KEY_CHECKS = 1;");
 
             executeMigration(statement, "db/migration/V4__shared_authentication_foundation.sql");
             statement.executeUpdate("""

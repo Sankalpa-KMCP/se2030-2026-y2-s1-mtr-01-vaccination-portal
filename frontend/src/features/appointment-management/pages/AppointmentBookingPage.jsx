@@ -1,14 +1,16 @@
+import AppointmentNotice from '../components/AppointmentNotice';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AvailabilitySearch from '../components/AvailabilitySearch';
+import EmailVerificationDialog from '../components/EmailVerificationDialog';
 import { bookAppointment } from '../api/appointmentApi';
 import { joinWaitlist } from '../api/waitlistApi';
 import { useAuth } from '../../../auth/context/AuthContext';
-import AppointmentNotice from '../components/AppointmentNotice';
-import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
-import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
-import CitizenWorkflowGuide from '../../citizen-ui/components/CitizenWorkflowGuide';
+import CitizenErrorState from '../../../shared/ui/citizen/CitizenErrorState';
+import CitizenPageHeader from '../../../shared/ui/citizen/CitizenPageHeader';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenWorkflowGuide from '../../../shared/ui/citizen/CitizenWorkflowGuide';
+import '../citizen-appointment.css';
 
 /**
  * Appointment Booking Page (US-03).
@@ -36,6 +38,7 @@ export default function AppointmentBookingPage() {
   const [bookingSessionId, setBookingSessionId] = useState(null);
   const [joiningWaitlist, setJoiningWaitlist] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
 
   const handleBookSession = async (session) => {
     const slotId = session.slotId;
@@ -67,6 +70,18 @@ export default function AppointmentBookingPage() {
         message: `Appointment #${response.id} successfully booked at Center ${session.centerName || session.centerId}. Status: ${response.status}`,
       });
     } catch (err) {
+      // Machine-code check first: an unverified citizen's 403 must never be
+      // misreported as screening ineligibility (backend code is authoritative).
+      if (err.error === 'EMAIL_VERIFICATION_REQUIRED') {
+        setFeedback({
+          type: 'danger',
+          title: 'Email verification required',
+          message: 'Verify your email before booking an appointment.',
+          verificationRequired: true,
+        });
+        return;
+      }
+
       let userMessage = err.message || 'An unexpected error occurred during booking.';
       let isSlotFull = false;
 
@@ -109,6 +124,15 @@ export default function AppointmentBookingPage() {
       });
       navigate('/app/appointments/waitlist');
     } catch (waitlistErr) {
+      if (waitlistErr.error === 'EMAIL_VERIFICATION_REQUIRED') {
+        setFeedback({
+          type: 'danger',
+          title: 'Email verification required',
+          message: 'Verify your email before joining the appointment waitlist.',
+          verificationRequired: true,
+        });
+        return;
+      }
       setFeedback({
         type: 'danger',
         title: 'Waitlist Join Failed',
@@ -159,6 +183,15 @@ export default function AppointmentBookingPage() {
           title={feedback.title}
           actions={(
             <>
+              {feedback.verificationRequired && (
+                <button
+                  type="button"
+                  className="citizen-action citizen-action--primary"
+                  onClick={() => setShowVerificationDialog(true)}
+                >
+                  Verify Email
+                </button>
+              )}
               {feedback.isSlotFull && feedback.sessionToWaitlist && (
                 <button
                   type="button"
@@ -186,6 +219,10 @@ export default function AppointmentBookingPage() {
           bookingSessionId={bookingSessionId}
         />
       </section>
+
+      {showVerificationDialog && (
+        <EmailVerificationDialog onClose={() => setShowVerificationDialog(false)} />
+      )}
     </div>
   );
 }

@@ -65,6 +65,18 @@ describe('CitizenRegistrationPage', () => {
     expect(registerCitizen).not.toHaveBeenCalled();
   });
 
+  it('blocks passwords shorter than 8 characters before calling the API', () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: 'Citizen User' } });
+    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'citizen@example.com' } });
+    fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: '0771234567' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } });
+    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'short' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
+    expect(screen.getByRole('alert').textContent).toBe('Password must be between 8 and 128 characters.');
+    expect(registerCitizen).not.toHaveBeenCalled();
+  });
+
   it.each(['student', 'student@', '@gmail.com', 'student gmail.com', 'student@domain'])(
     'blocks malformed email %s and preserves the entered value',
     (email) => {
@@ -91,14 +103,13 @@ describe('CitizenRegistrationPage', () => {
     },
   );
 
-  it('registers, automatically signs in, and redirects a citizen', async () => {
+  it('registers a citizen and displays OTP verification guidance for the login step', async () => {
     registerCitizen.mockResolvedValue({ id: 1 });
-    auth.login.mockResolvedValue({ success: true, user: { roles: ['ROLE_CITIZEN'] } });
     renderPage();
     fillCitizenForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
 
-    await screen.findByRole('heading', { name: 'Citizen Home' });
+    await screen.findByRole('heading', { name: 'A verification code has been sent to your email.' });
     expect(registerCitizen).toHaveBeenCalledTimes(1);
     expect(registerCitizen).toHaveBeenCalledWith({
       fullName: 'Citizen User',
@@ -106,19 +117,10 @@ describe('CitizenRegistrationPage', () => {
       phoneNumber: '0771234567',
       password: 'Secret123!',
     });
-    expect(auth.login).toHaveBeenCalledWith('citizen@example.com', 'Secret123!');
     expect(registerCitizen.mock.calls[0][0]).not.toHaveProperty('confirmPassword');
-  });
-
-  it('preserves account-created success when automatic login fails', async () => {
-    registerCitizen.mockResolvedValue({ id: 1 });
-    auth.login.mockResolvedValue({ success: false, error: 'Login unavailable' });
-    renderPage();
-    fillCitizenForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
-
-    expect(await screen.findByRole('heading', { name: 'Your citizen account is ready.' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Go to Citizen Login' })).toBeTruthy();
+    expect(screen.getByText(/Sign in, then verify your email with the code before booking an appointment./i)).toBeTruthy();
+    expect(screen.queryByText(/click the verification link/i)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Go to Citizen Login' }).getAttribute('href')).toBe('/login');
   });
 
   it('shows a backend registration error', async () => {
@@ -128,6 +130,5 @@ describe('CitizenRegistrationPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Email is already registered'));
-    expect(auth.login).not.toHaveBeenCalled();
   });
 });

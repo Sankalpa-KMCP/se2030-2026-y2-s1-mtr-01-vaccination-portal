@@ -36,38 +36,46 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      {isSuperAdmin && (
-        <>
-          <h2 className="h3 mb-3">Operational Management</h2>
-          <div className="row g-4">
-            <DashboardServiceCard
-              title="Campaign Management"
-              description="Configure, schedule, and oversee vaccination campaigns."
-              to="/app/campaigns"
-            />
-            <DashboardServiceCard
-              title="Center Operations"
-              description="Manage vaccination centers, operating hours, and resource allocations."
-              to="/app/center-operations"
-            />
-            <DashboardServiceCard
-              title="Session Management"
-              description="Schedule sessions, manage time slots, and monitor booking capacity."
-              to="/app/sessions"
-            />
-            <DashboardServiceCard
-              title="Operational Analytics"
-              description="Review operational throughput and vaccination metrics."
-              to="/app/analytics"
-            />
-            <DashboardServiceCard
-              title="Screening Review Queue"
-              description="Review citizen pre-vaccination screenings and record clinical decisions."
-              to="/app/staff/screening/reviews"
-            />
-          </div>
-        </>
-      )}
+      <h2 className="h3 mb-3">Operational Management</h2>
+      <div className="row g-4">
+        <DashboardServiceCard
+          title="Campaign Management"
+          description="Configure, schedule, and oversee vaccination campaigns."
+          to="/app/campaigns"
+        />
+        <DashboardServiceCard
+          title="Center Operations"
+          description="Manage vaccination centers, operating hours, and resource allocations."
+          to="/app/center-operations"
+        />
+        <DashboardServiceCard
+          title="Session Management"
+          description="Schedule sessions, manage time slots, and monitor booking capacity."
+          to="/app/sessions"
+        />
+        <DashboardServiceCard
+          title="Operational Analytics"
+          description="Review operational throughput and vaccination metrics."
+          to="/app/analytics"
+        />
+        <DashboardServiceCard
+          title="Inventory & Batches"
+          description="Manage MF-04 manufacturers, vaccine batches, and center stock."
+          to="/app/inventory"
+        />
+        <DashboardServiceCard
+          title="Check-In & Queue Management"
+          description="Process citizen arrival check-ins, manage status overrides, record no-shows, and monitor clinic flow."
+          to="/app/checkin/queue"
+        />
+        {isSuperAdmin && (
+          <DashboardServiceCard
+            title="Screening Review Queue"
+            description="Review citizen pre-vaccination screenings and record clinical decisions."
+            to="/app/staff/screening/reviews"
+          />
+        )}
+      </div>
     </section>
   );
 }

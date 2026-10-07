@@ -1,30 +1,19 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { registerCitizen } from '../api/authApi';
 import AccountRegistrationForm from '../components/AccountRegistrationForm';
 import { AuthRegistrationLayout, AuthSuccessState } from '../components/AuthRegistrationLayout';
-import { useAuth } from '../context/AuthContext';
-import { getRoleHomePath } from '../utils/roleRedirect';
 
 export default function CitizenRegistrationPage() {
-  const { login, clearLoginError } = useAuth();
-  const navigate = useNavigate();
   const [apiError, setApiError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [createdWithoutLogin, setCreatedWithoutLogin] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (registration) => {
     setApiError(null);
     setIsSubmitting(true);
-    clearLoginError();
     try {
       await registerCitizen(registration);
-      const result = await login(registration.email, registration.password);
-      if (result.success) {
-        navigate(getRoleHomePath(result.user), { replace: true });
-        return;
-      }
-      setCreatedWithoutLogin(true);
+      setSubmitted(true);
     } catch (error) {
       setApiError(error);
     } finally {
@@ -34,7 +23,7 @@ export default function CitizenRegistrationPage() {
 
   return (
     <AuthRegistrationLayout audience="citizen">
-      {createdWithoutLogin ? (
+      {submitted ? (
         <AuthSuccessState audience="citizen" />
       ) : (
         <AccountRegistrationForm

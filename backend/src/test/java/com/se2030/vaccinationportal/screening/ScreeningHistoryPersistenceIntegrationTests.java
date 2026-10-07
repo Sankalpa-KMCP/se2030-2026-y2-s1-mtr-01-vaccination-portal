@@ -1,11 +1,24 @@
 package com.se2030.vaccinationportal.screening;
 
-import com.se2030.vaccinationportal.campaign.model.CampaignQuestionnaireAssignment;
-import com.se2030.vaccinationportal.campaign.model.TargetGroup;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.model.VaccineType;
-import com.se2030.vaccinationportal.screening.model.*;
-import com.se2030.vaccinationportal.screening.service.ScreeningHistoryService;
+import com.se2030.vaccinationportal.screening.questionnaire.model.AnswerOption;
+import com.se2030.vaccinationportal.screening.questionnaire.model.ConsentNoticeVersion;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionType;
+import com.se2030.vaccinationportal.screening.questionnaire.model.Questionnaire;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireItem;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireVersion;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireVersionStatus;
+import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuestion;
+import com.se2030.vaccinationportal.screening.submission.model.PreliminaryScreeningResult;
+import com.se2030.vaccinationportal.screening.submission.model.ScreeningAnswer;
+import com.se2030.vaccinationportal.screening.submission.model.ScreeningSubmission;
+import com.se2030.vaccinationportal.screening.submission.model.ScreeningSubmissionStatus;
+
+
+import com.se2030.vaccinationportal.campaign.questionnaire.model.CampaignQuestionnaireAssignment;
+import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.screening.query.service.ScreeningHistoryService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;

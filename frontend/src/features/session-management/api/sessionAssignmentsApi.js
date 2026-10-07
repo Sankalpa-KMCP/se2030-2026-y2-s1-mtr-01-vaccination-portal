@@ -4,7 +4,7 @@
  * Responsibility: Session staff/resource assignment and capacity planning
  */
 
-import { apiRequest } from '../../../services/apiClient';
+import { apiRequest } from '../../../shared/api/apiClient';
 
 /**
  * Helper to process Fetch API responses and unpack backend JSON or structured error payloads.

@@ -80,6 +80,28 @@ describe('PendingStaffRequestsPage', () => {
     expect(listStaffRequests).toHaveBeenCalledTimes(2);
   });
 
+  it('renders each approvable role option exactly once without duplicates', async () => {
+    listStaffRequests.mockResolvedValue([request]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+
+    const roleSelect = screen.getByLabelText('Approved Role');
+    const options = Array.from(roleSelect.querySelectorAll('option'));
+    const optionValues = options.map((opt) => opt.value);
+    const optionLabels = options.map((opt) => opt.textContent);
+
+    expect(new Set(optionValues).size).toBe(optionValues.length);
+    expect(optionValues.filter((v) => v === 'ROLE_VACCINATOR')).toHaveLength(1);
+    expect(optionLabels.filter((l) => l === 'Vaccinator')).toHaveLength(1);
+    expect(optionValues).toEqual([
+      'ROLE_HEALTHCARE_OFFICER',
+      'ROLE_CENTER_MANAGER',
+      'ROLE_CAMPAIGN_OFFICER',
+      'ROLE_INVENTORY_OFFICER',
+      'ROLE_VACCINATOR',
+    ]);
+  });
+
   it('requires a nonblank rejection reason', async () => {
     listStaffRequests.mockResolvedValue([request]);
     renderPage();

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { listCampaigns } from '../../campaign-management/api/campaignApi';
+import { listCitizenCampaigns } from '../../campaign-management/api/campaignApi';
 import { listCitizenEligibilityAssessments, listCitizenScreeningSubmissions } from '../api/screeningApi';
 
 /** One shared initial load; supplementary failures must not erase a citizen's history. */
@@ -11,7 +11,7 @@ export default function useCitizenScreeningRecords(citizenId) {
     Promise.allSettled([
       listCitizenScreeningSubmissions(citizenId),
       listCitizenEligibilityAssessments(citizenId),
-      listCampaigns(),
+      listCitizenCampaigns(),
     ]).then((results) => {
       if (!active) return;
       const next = { loading: false, errors: {} };

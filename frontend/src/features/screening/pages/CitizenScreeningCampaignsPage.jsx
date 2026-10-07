@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
-import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
-import CitizenSection from '../../citizen-ui/components/CitizenSection';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
-import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
+import CitizenErrorState from '../../../shared/ui/citizen/CitizenErrorState';
+import CitizenPageHeader from '../../../shared/ui/citizen/CitizenPageHeader';
+import CitizenSection from '../components/CitizenSection';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
 import { listCitizenCampaigns } from '../../campaign-management/api/campaignApi';
+import '../citizen-screening.css';
 
 const CITIZEN_INTAKE_STATUSES = new Set(['PUBLISHED', 'ACTIVE']);
 
@@ -93,7 +94,9 @@ export default function CitizenScreeningCampaignsPage() {
                       <h3 id={`campaign-${campaign.id}-title`}>{campaign.name}</h3>
                       <p className="citizen-campaign-card__code">Campaign code: {campaign.code}</p>
                     </div>
-                    <CitizenStatusBadge tone="active">{campaign.status}</CitizenStatusBadge>
+                    <CitizenStatusBadge tone={campaign.currentlyAcceptingScreening ? 'positive' : 'neutral'}>
+                      {campaign.currentlyAcceptingScreening ? 'Screening available' : 'Screening closed'}
+                    </CitizenStatusBadge>
                   </div>
                   <dl className="citizen-data-grid">
                     <div><dt>Vaccine</dt><dd>{campaign.vaccineTypeCode || 'Not specified'}</dd></div>

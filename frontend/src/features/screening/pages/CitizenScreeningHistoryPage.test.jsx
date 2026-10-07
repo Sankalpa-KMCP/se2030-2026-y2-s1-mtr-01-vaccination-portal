@@ -4,7 +4,12 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CitizenScreeningHistoryPage from './CitizenScreeningHistoryPage';
 
-const mocks = vi.hoisted(() => ({ listCitizenScreeningSubmissions: vi.fn(), listCitizenEligibilityAssessments: vi.fn(), listCampaigns: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  listCitizenScreeningSubmissions: vi.fn(),
+  listCitizenEligibilityAssessments: vi.fn(),
+  listCampaigns: vi.fn(),
+  listCitizenCampaigns: vi.fn(),
+}));
 vi.mock('../../../auth/context/AuthContext', () => ({ useAuth: () => ({ user: { id: 71 } }) }));
 vi.mock('../api/screeningApi', () => mocks);
 vi.mock('../../campaign-management/api/campaignApi', () => mocks);
@@ -18,6 +23,7 @@ beforeEach(() => {
   ]);
   mocks.listCitizenEligibilityAssessments.mockResolvedValue([{ submissionId: 42, campaignId: 22, status: 'INELIGIBLE', clinicalNotes: 'SECRET' }]);
   mocks.listCampaigns.mockResolvedValue([{ id: 22, name: 'Historical campaign' }]);
+  mocks.listCitizenCampaigns.mockResolvedValue([{ id: 22, name: 'Historical campaign' }]);
 });
 afterEach(cleanup);
 describe('citizen screening history', () => {
@@ -75,6 +81,7 @@ describe('citizen screening history', () => {
   });
   it('retains rows using campaign references if metadata fails', async () => {
     mocks.listCampaigns.mockRejectedValue(new Error('Campaign unavailable'));
+    mocks.listCitizenCampaigns.mockRejectedValue(new Error('Campaign unavailable'));
     show();
     expect(await screen.findByRole('list', { name: 'Screening history records' })).toBeTruthy();
     expect(screen.getAllByRole('heading', { name: 'Campaign #22' })).toHaveLength(2);

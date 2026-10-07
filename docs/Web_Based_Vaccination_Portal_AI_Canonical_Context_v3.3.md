@@ -1,5 +1,7 @@
 Web-Based Vaccination Portal
 
+> Historical specification/evidence: package trees, implementation status and migration counts below describe their original revision. Current ownership and setup are recorded in the [current architecture](Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md). Applied runtime Flyway history is V0–V21 under `backend/src/main/resources/db/migration`; reference scripts are not runtime migrations. Business requirements remain reference material.
+
 AI Canonical Project Specification
 
 This file is the canonical, self-contained context package for the Web-Based Vaccination Portal. It is written for use by AI systems and by human project members. It defines the project scope, ownership boundaries, workflows, business rules, data model, status models, technical baseline, security rules, use cases, test coverage and resolved design decisions.

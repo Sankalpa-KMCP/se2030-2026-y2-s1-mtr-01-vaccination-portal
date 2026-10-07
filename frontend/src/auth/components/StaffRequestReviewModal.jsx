@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  APPROVABLE_STAFF_ROLES,
   getRoleLabel,
   REQUESTABLE_STAFF_ROLES,
   REQUESTABLE_STAFF_ROLE_CODES,
@@ -98,7 +99,7 @@ export default function StaffRequestReviewModal({ mode, request, isProcessing, o
                     onChange={(event) => setApprovedRole(event.target.value)}
                     disabled={isProcessing}
                   >
-                    {REQUESTABLE_STAFF_ROLES.map(({ code, label }) => (
+                    {APPROVABLE_STAFF_ROLES.map(({ code, label }) => (
                       <option key={code} value={code}>{label}</option>
                     ))}
                   </select>

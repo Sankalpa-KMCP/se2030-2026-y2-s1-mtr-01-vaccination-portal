@@ -4,12 +4,12 @@
  * <h2>Evaluator review map</h2>
  * <p>This package is the backend entry point for the complete MF-03 workflow:</p>
  * <ol>
- *   <li>{@code web/AppointmentController} and {@code web/WaitlistController} expose the REST API.</li>
- *   <li>{@code dto/*} validates and defines the JSON request/response contract.</li>
- *   <li>{@code service/*} contains the business rules and transaction boundaries.</li>
- *   <li>{@code repository/*} provides Spring Data JPA database access.</li>
- *   <li>{@code model/*} maps appointments and waitlist entries to MySQL tables.</li>
- *   <li>{@code dependency/*} connects MF-03 to MF-01 eligibility and MF-02 slot capacity.</li>
+ *   <li>{@code booking/web/AppointmentController} and {@code waitlist/web/WaitlistController} expose the REST API.</li>
+ *   <li>Capability-local {@code dto/*} validates and defines the JSON request/response contract.</li>
+ *   <li>Capability-local {@code service/*} contains the business rules and transaction boundaries.</li>
+ *   <li>{@code persistence/repository/*} provides Spring Data JPA database access.</li>
+ *   <li>{@code persistence/model/*} maps appointments and waitlist entries to MySQL tables.</li>
+ *   <li>Provider-owned {@code screening/api/eligibility} and {@code campaign/api/capacity} connect MF-03 to eligibility and slot capacity.</li>
  *   <li>{@code web/AppointmentExceptionHandler} converts domain failures into consistent HTTP errors.</li>
  * </ol>
  *

@@ -1,0 +1,254 @@
+package com.se2030.vaccinationportal.vaccination.certificate.service;
+
+import com.se2030.vaccinationportal.vaccination.query.service.EffectiveVaccinationRecordService;
+
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CertificateVerificationResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.exception.CertificateVerificationNotFoundException;
+import com.se2030.vaccinationportal.vaccination.certificate.exception.DigitalCertificateNotFoundException;
+import com.se2030.vaccinationportal.vaccination.certificate.exception.DuplicateDigitalCertificateException;
+import com.se2030.vaccinationportal.vaccination.certificate.exception.InvalidCertificateVerificationTokenException;
+import com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationRecordNotFoundException;
+import com.se2030.vaccinationportal.vaccination.certificate.model.CertificateStatus;
+import com.se2030.vaccinationportal.vaccination.certificate.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
+import com.se2030.vaccinationportal.vaccination.certificate.repository.DigitalCertificateRepository;
+import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+@ExtendWith(MockitoExtension.class)
+class DigitalCertificateServiceTests {
+
+    private static final Instant NOW = Instant.parse("2026-09-02T08:30:00Z");
+    private static final Long RECORD_ID = 101L;
+
+    @Mock
+    private VaccinationRecordRepository vaccinationRecordRepository;
+
+    @Mock
+    private DigitalCertificateRepository certificateRepository;
+
+    @Mock
+    private EffectiveVaccinationRecordService effectiveRecordService;
+
+    private DigitalCertificateService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new DigitalCertificateService(
+                vaccinationRecordRepository,
+                certificateRepository,
+                effectiveRecordService,
+                Clock.fixed(NOW, ZoneOffset.UTC)
+        );
+    }
+
+    @Test
+    void validVaccinationRecordIssuesValidCertificateWithRandomIdentifiers() {
+        VaccinationRecord record = org.mockito.Mockito.mock(VaccinationRecord.class);
+        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(certificateRepository.existsByVaccinationRecordId(RECORD_ID)).thenReturn(false);
+        when(effectiveRecordService.resolve(record)).thenReturn(effectiveRecord());
+        when(certificateRepository.saveAndFlush(any(DigitalCertificate.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        DigitalCertificate issued = service.issueCertificateForVaccinationRecord(RECORD_ID);
+
+        assertEquals(RECORD_ID, issued.getVaccinationRecordId());
+        assertEquals(CertificateStatus.VALID, issued.getStatus());
+        assertEquals(NOW, issued.getIssuedAt());
+        assertFalse(issued.getCertificateReference().isBlank());
+        assertFalse(issued.getVerificationToken().isBlank());
+        assertEquals(56L, issued.getIssuedVaccineBatchId());
+        assertEquals(2, issued.getIssuedDoseNumber());
+        assertEquals(NOW.minusSeconds(3600), issued.getIssuedAdministrationTime());
+
+        ArgumentCaptor<DigitalCertificate> certificateCaptor = ArgumentCaptor.forClass(DigitalCertificate.class);
+        verify(certificateRepository).saveAndFlush(certificateCaptor.capture());
+        assertSame(issued, certificateCaptor.getValue());
+        verify(vaccinationRecordRepository, never()).save(any(VaccinationRecord.class));
+    }
+
+    @Test
+    void duplicateCertificateForVaccinationRecordIsRejectedWithoutPersistence() {
+        VaccinationRecord record = org.mockito.Mockito.mock(VaccinationRecord.class);
+        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(certificateRepository.existsByVaccinationRecordId(RECORD_ID)).thenReturn(true);
+
+        assertThrows(
+                DuplicateDigitalCertificateException.class,
+                () -> service.issueCertificateForVaccinationRecord(RECORD_ID)
+        );
+
+        verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
+    }
+
+    @Test
+    void unknownVaccinationRecordIsRejectedBeforeCertificateRepositoryAccess() {
+        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.empty());
+
+        assertThrows(
+                VaccinationRecordNotFoundException.class,
+                () -> service.issueCertificateForVaccinationRecord(RECORD_ID)
+        );
+
+        verifyNoInteractions(certificateRepository);
+    }
+
+    @Test
+    void getCertificateByIdReturnsExistingCertificate() {
+        DigitalCertificate certificate = certificate();
+        when(certificateRepository.findById(201L)).thenReturn(Optional.of(certificate));
+
+        assertSame(certificate, service.getCertificateById(201L));
+    }
+
+    @Test
+    void getCertificateByIdRejectsUnknownCertificate() {
+        when(certificateRepository.findById(201L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                DigitalCertificateNotFoundException.class,
+                () -> service.getCertificateById(201L)
+        );
+    }
+
+    @Test
+    void getCertificateByReferenceReturnsExistingCertificate() {
+        DigitalCertificate certificate = certificate();
+        when(certificateRepository.findByCertificateReference("CERT-EXISTING"))
+                .thenReturn(Optional.of(certificate));
+
+        assertSame(certificate, service.getCertificateByReference("CERT-EXISTING"));
+    }
+
+    @Test
+    void getCertificateByReferenceRejectsUnknownCertificate() {
+        when(certificateRepository.findByCertificateReference("CERT-UNKNOWN"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                DigitalCertificateNotFoundException.class,
+                () -> service.getCertificateByReference("CERT-UNKNOWN")
+        );
+    }
+
+    @Test
+    void validVerificationTokenReturnsValidResponseWithoutMutation() {
+        DigitalCertificate certificate = certificate();
+        when(certificateRepository.findByVerificationToken("secure-token"))
+                .thenReturn(Optional.of(certificate));
+
+        CertificateVerificationResponse response = service.verifyCertificate(" secure-token ");
+
+        assertEquals("CERT-EXISTING", response.certificateReference());
+        assertEquals(RECORD_ID, response.vaccinationRecordId());
+        assertEquals(NOW, response.issuedAt());
+        assertEquals(CertificateStatus.VALID, response.status());
+        assertEquals(2, response.doseNumber());
+        assertEquals(NOW.minusSeconds(3600), response.administrationTime());
+        assertTrue(response.valid());
+        assertEquals(CertificateStatus.VALID, certificate.getStatus());
+        verify(certificateRepository, never()).save(any(DigitalCertificate.class));
+        verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
+    }
+
+    @Test
+    void revokedCertificateReturnsInvalidResponseWithoutChangingStatus() {
+        DigitalCertificate certificate = certificate();
+        ReflectionTestUtils.setField(certificate, "status", CertificateStatus.REVOKED);
+        when(certificateRepository.findByVerificationToken("revoked-token"))
+                .thenReturn(Optional.of(certificate));
+
+        CertificateVerificationResponse response = service.verifyCertificate("revoked-token");
+
+        assertFalse(response.valid());
+        assertEquals(CertificateStatus.REVOKED, response.status());
+        assertEquals(CertificateStatus.REVOKED, certificate.getStatus());
+        verify(certificateRepository, never()).save(any(DigitalCertificate.class));
+        verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
+    }
+
+    @Test
+    void supersededCertificateTokenStillResolvesAsInvalidWithoutMutation() {
+        DigitalCertificate certificate = certificate();
+        certificate.supersede(NOW.plusSeconds(1), 501L, "Reissued after correction");
+        when(certificateRepository.findByVerificationToken("secure-token"))
+                .thenReturn(Optional.of(certificate));
+
+        CertificateVerificationResponse response = service.verifyCertificate("secure-token");
+
+        assertFalse(response.valid());
+        assertEquals(CertificateStatus.SUPERSEDED, response.status());
+        assertEquals(2, response.doseNumber());
+        verify(certificateRepository, never()).save(any(DigitalCertificate.class));
+        verify(certificateRepository, never()).saveAndFlush(any(DigitalCertificate.class));
+    }
+
+    @Test
+    void unknownVerificationTokenIsRejected() {
+        when(certificateRepository.findByVerificationToken("unknown-token"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                CertificateVerificationNotFoundException.class,
+                () -> service.verifyCertificate("unknown-token")
+        );
+    }
+
+    @Test
+    void blankOrMissingVerificationTokenIsRejectedBeforeRepositoryAccess() {
+        assertThrows(
+                InvalidCertificateVerificationTokenException.class,
+                () -> service.verifyCertificate("   ")
+        );
+        assertThrows(
+                InvalidCertificateVerificationTokenException.class,
+                () -> service.verifyCertificate(null)
+        );
+
+        verifyNoInteractions(certificateRepository);
+    }
+
+    private DigitalCertificate certificate() {
+        return new DigitalCertificate(
+                RECORD_ID,
+                "CERT-EXISTING",
+                "secure-token",
+                NOW,
+                null,
+                56L,
+                2,
+                NOW.minusSeconds(3600)
+        );
+    }
+
+    private EffectiveVaccinationRecordSnapshot effectiveRecord() {
+        return new EffectiveVaccinationRecordSnapshot(
+                RECORD_ID, 1L, 2L, 3L, 4L, 5L, 56L, 2,
+                NOW.minusSeconds(3600), null, null, NOW.minusSeconds(3500)
+        );
+    }
+}

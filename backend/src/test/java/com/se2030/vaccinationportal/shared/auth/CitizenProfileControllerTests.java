@@ -4,9 +4,11 @@ import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
 import com.se2030.vaccinationportal.shared.auth.repository.CitizenProfileRepository;
+import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,6 +48,7 @@ class CitizenProfileControllerTests {
     @Autowired private CitizenProfileRepository citizenProfileRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private RoleRepository roleRepository;
+    @Autowired private RefreshTokenSessionRepository refreshTokenSessionRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtTokenService jwtTokenService;
 
@@ -53,9 +56,7 @@ class CitizenProfileControllerTests {
 
     @BeforeEach
     void setUp() {
-        citizenProfileRepository.deleteAll();
-        userAccountRepository.deleteAll();
-        roleRepository.deleteAll();
+        cleanup();
         roleRepository.saveAll(List.of(
                 new Role("ROLE_ADMIN", "System Administrator"),
                 new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"),
@@ -67,6 +68,19 @@ class CitizenProfileControllerTests {
         ));
         citizen = saveActive("citizen.profile@example.com", "Citizen Before", "+94 77 000 1111",
                 "ROLE_CITIZEN");
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanup();
+    }
+
+    private void cleanup() {
+        citizenProfileRepository.deleteAll();
+        refreshTokenSessionRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        roleRepository.deleteAll();
+        roleRepository.flush();
     }
 
     @Test

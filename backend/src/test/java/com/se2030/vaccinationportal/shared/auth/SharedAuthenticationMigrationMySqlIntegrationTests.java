@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.shared.auth;
 
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.testcontainers.AbstractIsolatedMySqlMigrationIntegrationTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -25,7 +27,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * of Flyway migration script V4 on mysql:8.4.3, including table creation, foreign keys, unique indexes,
  * canonical role catalog seeds, and zero user credential seeds.
  */
-class SharedAuthenticationMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
+class SharedAuthenticationMigrationMySqlIntegrationTests extends AbstractIsolatedMySqlMigrationIntegrationTest {
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        configureIsolatedDatabase(registry, "historical_auth_v4");
+    }
 
     @Test
     @Timeout(30)
@@ -52,12 +59,16 @@ class SharedAuthenticationMigrationMySqlIntegrationTests extends AbstractMySqlTe
             }
 
             try (Statement stmt = conn.createStatement()) {
-                // Drop V4-owned tables in dependency-safe order so test proves V4 creates schema independently of Hibernate auto-DDL
+                // Drop tables in dependency-safe order so test proves V4 creates schema independently of Hibernate auto-DDL
+                stmt.execute("SET FOREIGN_KEY_CHECKS = 0;");
+                stmt.execute("DROP TABLE IF EXISTS email_verification_tokens;");
+                stmt.execute("DROP TABLE IF EXISTS password_reset_tokens;");
                 stmt.execute("DROP TABLE IF EXISTS refresh_token_sessions;");
                 stmt.execute("DROP TABLE IF EXISTS user_roles;");
                 stmt.execute("DROP TABLE IF EXISTS citizen_profiles;");
                 stmt.execute("DROP TABLE IF EXISTS user_accounts;");
                 stmt.execute("DROP TABLE IF EXISTS roles;");
+                stmt.execute("SET FOREIGN_KEY_CHECKS = 1;");
 
                 // Execute statements in V4 migration script (strip SQL comments line-by-line first)
                 String[] lines = v4Sql.split("\\R");

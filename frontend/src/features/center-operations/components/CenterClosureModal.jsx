@@ -4,7 +4,7 @@ import {
   localToUtcIso,
   utcToLocalDateAndTime,
   isValidIanaTimezone,
-} from '../../../services/timezoneUtils';
+} from '../../../shared/time/timezoneUtils';
 
 function toTimezoneDatetimeInputString(isoString, timeZone = 'UTC') {
   if (!isoString) return '';

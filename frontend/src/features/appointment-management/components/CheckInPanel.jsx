@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AppointmentStatusBadge from './AppointmentStatusBadge';
+
+function getFocusableElements(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  ));
+}
 
 /**
  * Panel component displaying details of a queued appointment and providing
@@ -30,13 +37,77 @@ export default function CheckInPanel({
   onReverseCheckIn,
   onMarkNoShow,
   isProcessing = false,
+  canMutate = true,
 }) {
-  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [activeDialog, setActiveDialog] = useState(null);
   const [isStaffOverride, setIsStaffOverride] = useState(false);
   const [staffReason, setStaffReason] = useState('');
+  const activeDialogRef = useRef(null);
+  const triggerButtonRef = useRef(null);
+  const dialogRef = useRef(null);
+  const initialFocusRef = useRef(null);
+  const panelRef = useRef(null);
 
-  const [showReverseModal, setShowReverseModal] = useState(false);
-  const [showNoShowModal, setShowNoShowModal] = useState(false);
+  const openDialog = useCallback((dialog, trigger) => {
+    triggerButtonRef.current = trigger;
+    activeDialogRef.current = dialog;
+    setActiveDialog(dialog);
+  }, []);
+
+  const closeDialog = useCallback(() => {
+    activeDialogRef.current = null;
+    setActiveDialog(null);
+    const trigger = triggerButtonRef.current;
+    const panel = panelRef.current;
+    window.setTimeout(() => {
+      if (activeDialogRef.current !== null) return;
+      if (trigger?.isConnected && !trigger.disabled && typeof trigger.focus === 'function') {
+        trigger.focus();
+        return;
+      }
+      if (panel?.isConnected && typeof panel.focus === 'function') {
+        panel.focus();
+      }
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (!activeDialog) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDialog();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusableElements(dialogRef.current);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current?.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeDialog, closeDialog]);
+
+  useEffect(() => {
+    if (!activeDialog) return;
+    (initialFocusRef.current || dialogRef.current)?.focus();
+  }, [activeDialog]);
 
   if (!appointment) return null;
 
@@ -57,7 +128,7 @@ export default function CheckInPanel({
       isStaffOverride,
       staffReason: isStaffOverride ? staffReason : null,
     });
-    setShowCheckInModal(false);
+    closeDialog();
     setIsStaffOverride(false);
     setStaffReason('');
   };
@@ -65,23 +136,33 @@ export default function CheckInPanel({
   const handleReverseSubmit = (e) => {
     e.preventDefault();
     onReverseCheckIn(appointment.id);
-    setShowReverseModal(false);
+    closeDialog();
   };
 
   const handleNoShowSubmit = (e) => {
     e.preventDefault();
     onMarkNoShow(appointment.id);
-    setShowNoShowModal(false);
+    closeDialog();
   };
 
+  const appointmentHeadingId = `check-in-appointment-title-${appointment.id}`;
+  const checkInDialogTitleId = `check-in-dialog-title-${appointment.id}`;
+  const reverseDialogTitleId = `reverse-check-in-dialog-title-${appointment.id}`;
+  const noShowDialogTitleId = `no-show-dialog-title-${appointment.id}`;
+
   return (
-    <div className="card shadow-sm border-0 mb-3 hover-shadow transition-all">
+    <article
+      ref={panelRef}
+      tabIndex="-1"
+      aria-labelledby={appointmentHeadingId}
+      className="card shadow-sm border-0 mb-3 hover-shadow transition-all focus-ring focus-ring-primary"
+    >
       <div className="card-body p-4">
         <div className="d-flex justify-content-between align-items-start mb-3">
           <div>
-            <h5 className="card-title text-primary mb-1 fw-bold">
+            <h3 id={appointmentHeadingId} className="card-title h5 text-primary mb-1 fw-bold">
               Appointment #{appointment.id}
-            </h5>
+            </h3>
             <small className="text-muted">
               Booked on: {formatDate(appointment.bookedAt)}
             </small>
@@ -111,22 +192,45 @@ export default function CheckInPanel({
         )}
 
         {/* Operational Actions */}
-        <div className="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
-          {isConfirmed && (
-            <>
+        {canMutate && (
+          <div className="d-flex flex-wrap justify-content-end gap-2 mt-3 pt-2 border-top">
+            {isConfirmed && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm px-3 fw-semibold"
+                  disabled={isProcessing}
+                  aria-label={`Mark appointment ${appointment.id} as no-show`}
+                  onClick={(event) => openDialog('no-show', event.currentTarget)}
+                >
+                  Mark No-Show
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success btn-sm px-4 fw-bold shadow-sm"
+                  disabled={isProcessing}
+                  aria-label={`Check in appointment ${appointment.id}`}
+                  onClick={(event) => openDialog('check-in', event.currentTarget)}
+                >
+                  {isProcessing ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    'Check In'
+                  )}
+                </button>
+              </>
+            )}
+
+            {isCheckedIn && (
               <button
                 type="button"
-                className="btn btn-outline-danger btn-sm px-3 fw-semibold"
+                className="btn btn-outline-warning btn-sm px-3 fw-semibold text-dark"
                 disabled={isProcessing}
-                onClick={() => setShowNoShowModal(true)}
-              >
-                Mark No-Show
-              </button>
-              <button
-                type="button"
-                className="btn btn-success btn-sm px-4 fw-bold shadow-sm"
-                disabled={isProcessing}
-                onClick={() => setShowCheckInModal(true)}
+                aria-label={`Reverse check-in for appointment ${appointment.id}`}
+                onClick={(event) => openDialog('reverse', event.currentTarget)}
               >
                 {isProcessing ? (
                   <>
@@ -134,44 +238,33 @@ export default function CheckInPanel({
                     Processing...
                   </>
                 ) : (
-                  'Check In'
+                  'Reverse Check-In'
                 )}
               </button>
-            </>
-          )}
-
-          {isCheckedIn && (
-            <button
-              type="button"
-              className="btn btn-outline-warning btn-sm px-3 fw-semibold text-dark"
-              disabled={isProcessing}
-              onClick={() => setShowReverseModal(true)}
-            >
-              {isProcessing ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Processing...
-                </>
-              ) : (
-                'Reverse Check-In'
-              )}
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Check-In Modal with optional Staff Override */}
-      {showCheckInModal && (
-        <div className="modal fade show d-block bg-dark bg-opacity-50" tabIndex="-1" role="dialog" aria-modal="true">
+      {canMutate && activeDialog === 'check-in' && (
+        <div
+          ref={dialogRef}
+          className="modal fade show d-block bg-dark bg-opacity-50"
+          tabIndex="-1"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={checkInDialogTitleId}
+        >
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content border-0 shadow">
               <div className="modal-header bg-success text-white">
-                <h5 className="modal-title fw-bold">Confirm Check-In</h5>
+                <h2 id={checkInDialogTitleId} className="modal-title h5 fw-bold">Confirm Check-In</h2>
                 <button
                   type="button"
                   className="btn-close btn-close-white"
-                  aria-label="Close"
-                  onClick={() => setShowCheckInModal(false)}
+                  aria-label="Close check-in dialog"
+                  onClick={closeDialog}
                 ></button>
               </div>
               <form onSubmit={handleCheckInSubmit}>
@@ -212,9 +305,10 @@ export default function CheckInPanel({
                 </div>
                 <div className="modal-footer">
                   <button
+                    ref={initialFocusRef}
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => setShowCheckInModal(false)}
+                    onClick={closeDialog}
                   >
                     Cancel
                   </button>
@@ -229,17 +323,24 @@ export default function CheckInPanel({
       )}
 
       {/* Reverse Check-In Confirmation Modal */}
-      {showReverseModal && (
-        <div className="modal fade show d-block bg-dark bg-opacity-50" tabIndex="-1" role="dialog" aria-modal="true">
+      {canMutate && activeDialog === 'reverse' && (
+        <div
+          ref={dialogRef}
+          className="modal fade show d-block bg-dark bg-opacity-50"
+          tabIndex="-1"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={reverseDialogTitleId}
+        >
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content border-0 shadow">
               <div className="modal-header bg-warning text-dark">
-                <h5 className="modal-title fw-bold">Confirm Reverse Check-In</h5>
+                <h2 id={reverseDialogTitleId} className="modal-title h5 fw-bold">Confirm Reverse Check-In</h2>
                 <button
                   type="button"
                   className="btn-close"
-                  aria-label="Close"
-                  onClick={() => setShowReverseModal(false)}
+                  aria-label="Close reverse check-in dialog"
+                  onClick={closeDialog}
                 ></button>
               </div>
               <form onSubmit={handleReverseSubmit}>
@@ -253,9 +354,10 @@ export default function CheckInPanel({
                 </div>
                 <div className="modal-footer">
                   <button
+                    ref={initialFocusRef}
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => setShowReverseModal(false)}
+                    onClick={closeDialog}
                   >
                     Keep Checked In
                   </button>
@@ -270,17 +372,24 @@ export default function CheckInPanel({
       )}
 
       {/* Mark No-Show Confirmation Modal */}
-      {showNoShowModal && (
-        <div className="modal fade show d-block bg-dark bg-opacity-50" tabIndex="-1" role="dialog" aria-modal="true">
+      {canMutate && activeDialog === 'no-show' && (
+        <div
+          ref={dialogRef}
+          className="modal fade show d-block bg-dark bg-opacity-50"
+          tabIndex="-1"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={noShowDialogTitleId}
+        >
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content border-0 shadow">
               <div className="modal-header bg-danger text-white">
-                <h5 className="modal-title fw-bold">Confirm Mark No-Show</h5>
+                <h2 id={noShowDialogTitleId} className="modal-title h5 fw-bold">Confirm Mark No-Show</h2>
                 <button
                   type="button"
                   className="btn-close btn-close-white"
-                  aria-label="Close"
-                  onClick={() => setShowNoShowModal(false)}
+                  aria-label="Close no-show dialog"
+                  onClick={closeDialog}
                 ></button>
               </div>
               <form onSubmit={handleNoShowSubmit}>
@@ -294,9 +403,10 @@ export default function CheckInPanel({
                 </div>
                 <div className="modal-footer">
                   <button
+                    ref={initialFocusRef}
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => setShowNoShowModal(false)}
+                    onClick={closeDialog}
                   >
                     Cancel
                   </button>
@@ -309,6 +419,6 @@ export default function CheckInPanel({
           </div>
         </div>
       )}
-    </div>
+    </article>
   );
 }

@@ -11,10 +11,14 @@ import com.se2030.vaccinationportal.shared.auth.exception.StaffRequestNotPending
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
+import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
 import com.se2030.vaccinationportal.shared.auth.service.StaffRequestReviewService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,27 +40,29 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class StaffRequestReviewServiceIntegrationTests {
 
-    private static final String RAW_PASSWORD = "ReviewPassword123!";
+    private static final String RAW_PASSWORD = "ValidPassword123!";
 
     @Autowired private StaffRequestReviewService reviewService;
     @Autowired private AuthService authService;
+    @Autowired private RefreshTokenSessionRepository refreshTokenSessionRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private RoleRepository roleRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private JwtTokenService jwtTokenService;
 
     private UserAccount administrator;
     private Role requestedRole;
 
     @BeforeEach
     void setUp() {
-        userAccountRepository.deleteAll();
-        roleRepository.deleteAll();
+        cleanup();
         roleRepository.saveAll(List.of(
                 new Role("ROLE_ADMIN", "System Administrator"),
                 new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"),
                 new Role("ROLE_HEALTHCARE_OFFICER", "Healthcare Officer"),
                 new Role("ROLE_CAMPAIGN_OFFICER", "Campaign Officer"),
                 new Role("ROLE_INVENTORY_OFFICER", "Inventory Officer"),
+                new Role("ROLE_VACCINATOR", "Vaccinator"),
                 new Role("ROLE_CITIZEN", "Citizen"),
                 new Role("ROLE_MANAGEMENT_USER", "Management User")
         ));
@@ -65,6 +71,38 @@ class StaffRequestReviewServiceIntegrationTests {
                 "reviewer@example.com", passwordEncoder.encode(RAW_PASSWORD), AccountStatus.ACTIVE);
         administrator.addRole(roleRepository.findByCode("ROLE_ADMIN").orElseThrow());
         administrator = userAccountRepository.saveAndFlush(administrator);
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanup();
+    }
+
+    private void cleanup() {
+        refreshTokenSessionRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        roleRepository.deleteAll();
+        roleRepository.flush();
+    }
+
+    @Test
+    @DisplayName("approval assigns ROLE_VACCINATOR and preserves it through principal and JWT authority handling")
+    void approveVaccinator_assignsGlobalAuthorityAndEnablesLogin() {
+        UserAccount pending = savePending("vaccinator@example.com");
+
+        reviewService.approve(
+                pending.getId(), new StaffApprovalRequest(" role_vaccinator "), administrator.getId());
+
+        UserAccount approved = userAccountRepository.findById(pending.getId()).orElseThrow();
+        assertEquals(List.of("ROLE_VACCINATOR"), approved.getRoles().stream().map(Role::getCode).toList());
+
+        UserPrincipal principal = UserPrincipal.fromUserAccount(approved);
+        assertEquals(List.of("ROLE_VACCINATOR"), principal.getRoleCodes());
+        assertEquals("ROLE_VACCINATOR", principal.getAuthorities().iterator().next().getAuthority());
+
+        LoginResponse login = authService.login(new LoginRequest(approved.getEmail(), RAW_PASSWORD)).response();
+        assertEquals(List.of("ROLE_VACCINATOR"), login.user().roles());
+        assertEquals(List.of("ROLE_VACCINATOR"), jwtTokenService.extractRoles(login.token()));
     }
 
     @Test
@@ -84,7 +122,7 @@ class StaffRequestReviewServiceIntegrationTests {
         assertNull(approved.getRejectionReason());
         assertEquals(administrator.getId(), response.reviewedByUserId());
 
-        LoginResponse login = authService.login(new LoginRequest(approved.getEmail(), RAW_PASSWORD));
+        LoginResponse login = authService.login(new LoginRequest(approved.getEmail(), RAW_PASSWORD)).response();
         assertNotNull(login.token());
         assertEquals(List.of("ROLE_CENTER_MANAGER"), login.user().roles());
     }

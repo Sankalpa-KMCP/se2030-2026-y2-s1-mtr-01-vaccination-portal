@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getMyAppointments } from '../../appointment-management/api/appointmentApi';
-import { listCampaigns } from '../../campaign-management/api/campaignApi';
+import { listCampaigns, listCitizenCampaigns } from '../../campaign-management/api/campaignApi';
 import {
   listCitizenEligibilityAssessments,
   listCitizenScreeningSubmissions,
@@ -113,7 +113,11 @@ export default function useCitizenDashboardData(citizenId) {
         });
       });
 
-    listCampaigns()
+    const getCampaigns = typeof listCitizenCampaigns === 'function'
+      ? () => listCitizenCampaigns().catch(() => listCampaigns())
+      : listCampaigns;
+
+    getCampaigns()
       .then((data) => {
         if (!active) return;
         setScreening((prev) => {

@@ -1,10 +1,11 @@
 package com.se2030.vaccinationportal.appointment.web;
 
-import com.se2030.vaccinationportal.appointment.dto.ErrorResponse;
+import com.se2030.vaccinationportal.appointment.booking.dto.ErrorResponse;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateActiveAppointmentException;
 import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntryException;
+import com.se2030.vaccinationportal.appointment.exception.EmailVerificationRequiredException;
 import com.se2030.vaccinationportal.appointment.exception.InvalidAppointmentStateException;
 import com.se2030.vaccinationportal.appointment.exception.InvalidCheckInWindowException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * <p><b>HTTP Status Code Architecture:</b>
  * <ul>
  *   <li><b>403 FORBIDDEN:</b> Medical ineligibility ({@link NotEligibleException} - MF03-BR-01),
+ *       missing verified email ({@link EmailVerificationRequiredException}),
  *       unauthorized modification inside 24-hour window ({@link RequiresStaffOverrideException} - MF03-BR-04),
  *       or unauthorized role access ({@link AccessDeniedException}).</li>
  *   <li><b>409 CONFLICT:</b> State conflicts including duplicate active appointments ({@link DuplicateActiveAppointmentException} - MF03-BR-02),
@@ -48,6 +50,12 @@ public class AppointmentExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotEligible(NotEligibleException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse(HttpStatus.FORBIDDEN.value(), "FORBIDDEN", ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmailVerificationRequiredException.class)
+    public ResponseEntity<ErrorResponse> handleEmailVerificationRequired(EmailVerificationRequiredException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(HttpStatus.FORBIDDEN.value(), "EMAIL_VERIFICATION_REQUIRED", ex.getMessage()));
     }
 
     @ExceptionHandler(RequiresStaffOverrideException.class)

@@ -1,0 +1,528 @@
+/* Healthcare Officer Dashboard Scoped Styles */
+
+.hco-dashboard {
+  background-color: #f8fafc;
+  min-height: calc(100vh - 70px);
+  padding: 1.5rem 0 2.5rem;
+  color: #1e293b;
+}
+
+.hco-dashboard .container-xl {
+  max-width: 1260px;
+}
+
+/* Header & Account Card */
+.hco-header-badge {
+  display: inline-block;
+  background-color: #0f6e5b;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}
+
+.hco-welcome-title {
+  color: #0f172a;
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.hco-welcome-subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin-bottom: 0;
+  max-width: 620px;
+}
+
+.hco-account-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.875rem 1.125rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.hco-account-card-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  margin-bottom: 0.4rem;
+}
+
+.hco-account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e8f5f1;
+  color: #0f6e5b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.hco-account-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.hco-account-contact {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.hco-account-role-badge {
+  display: inline-block;
+  background-color: #e8f5f1;
+  color: #0f6e5b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+}
+
+.hco-account-status-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #059669;
+}
+
+.hco-account-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #059669;
+  display: inline-block;
+}
+
+/* Metric Cards */
+.hco-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hco-metric-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  color: inherit;
+}
+
+.hco-metric-icon-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.hco-icon-pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.hco-icon-corrections {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.hco-icon-decisions {
+  background: #def7ec;
+  color: #03543f;
+}
+
+.hco-icon-drafts {
+  background: #e1effe;
+  color: #1e429f;
+}
+
+.hco-metric-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 0.15rem;
+}
+
+.hco-metric-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.hco-metric-action-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f6e5b;
+}
+
+.hco-metric-link-text {
+  font-size: 0.72rem;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+}
+
+.hco-metric-chevron {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  transition: transform 160ms ease;
+  margin-left: 0.5rem;
+}
+
+.hco-metric-card:hover .hco-metric-chevron {
+  transform: translateX(2px);
+  color: #0f6e5b;
+}
+
+/* Dashboard Section Cards */
+.hco-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.hco-card-header {
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hco-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hco-card-title-icon {
+  color: #0f6e5b;
+  font-size: 1.05rem;
+}
+
+.hco-card-link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0f6e5b;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: transform 150ms ease;
+}
+
+.hco-card-link:hover {
+  color: #0b5848;
+  text-decoration: underline;
+}
+
+.hco-card-body {
+  padding: 1rem 1.125rem;
+}
+
+/* Review Queue Table */
+.hco-table {
+  width: 100%;
+  margin-bottom: 0;
+  font-size: 0.825rem;
+}
+
+.hco-table th {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.hco-table td {
+  padding: 0.65rem 0.75rem;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.hco-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.hco-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.hco-btn-review {
+  background-color: #ffffff;
+  border: 1px solid #0f6e5b;
+  color: #0f6e5b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 150ms ease;
+}
+
+.hco-btn-review:hover {
+  background-color: #0f6e5b;
+  color: #ffffff;
+}
+
+/* Today's Focus Action Rows */
+.hco-focus-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  background: #ffffff;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.hco-focus-row:last-child {
+  margin-bottom: 0;
+}
+
+.hco-focus-row:hover {
+  transform: translateY(-1px);
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  color: inherit;
+}
+
+.hco-focus-icon-container {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-right: 0.75rem;
+}
+
+.hco-focus-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.hco-focus-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.25;
+}
+
+.hco-focus-chevron {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  transition: transform 150ms ease;
+  margin-left: 0.5rem;
+}
+
+.hco-focus-row:hover .hco-focus-chevron {
+  transform: translateX(2px);
+  color: #0f6e5b;
+}
+
+/* Portal Areas */
+.hco-portal-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.125rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.hco-portal-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+}
+
+.hco-portal-icon-container {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #e8f5f1;
+  color: #0f6e5b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.hco-portal-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.hco-portal-desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+  margin-bottom: 0.75rem;
+}
+
+.hco-portal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0f6e5b;
+  background-color: #f3faf7;
+  border: 1px solid #c6e7de;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  text-decoration: none;
+  align-self: flex-start;
+  transition: all 150ms ease;
+}
+
+.hco-portal-btn:hover {
+  background-color: #0f6e5b;
+  border-color: #0f6e5b;
+  color: #ffffff;
+}
+
+/* Workflow & Guidance */
+.hco-workflow-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: #0f6e5b;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-right: 0.65rem;
+}
+
+.hco-workflow-step-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.hco-workflow-step-desc {
+  font-size: 0.775rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.hco-assurance-panel {
+  background: #e8f5f1;
+  border: 1px solid #c6e7de;
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+}
+
+.hco-assurance-icon {
+  color: #0f6e5b;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.hco-assurance-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f6e5b;
+  margin-bottom: 0.2rem;
+}
+
+.hco-assurance-desc {
+  font-size: 0.75rem;
+  color: #1e3a34;
+  line-height: 1.35;
+  margin-bottom: 0;
+}
+
+/* Skeleton Loading */
+.hco-skeleton-row {
+  height: 28px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: hco-shimmer 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes hco-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Empty State */
+.hco-empty-state {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: #64748b;
+}
+
+.hco-empty-icon {
+  font-size: 2rem;
+  color: #cbd5e1;
+  margin-bottom: 0.5rem;
+}
+
+.hco-empty-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0;
+}
