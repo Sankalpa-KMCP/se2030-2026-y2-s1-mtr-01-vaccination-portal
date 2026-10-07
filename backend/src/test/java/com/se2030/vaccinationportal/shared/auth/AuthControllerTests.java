@@ -6,9 +6,11 @@ import com.se2030.vaccinationportal.shared.auth.dto.LoginRequest;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,9 @@ class AuthControllerTests {
     private RoleRepository roleRepository;
 
     @Autowired
+    private RefreshTokenSessionRepository refreshTokenSessionRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -59,14 +64,25 @@ class AuthControllerTests {
 
     @BeforeEach
     void setUp() {
-        userAccountRepository.deleteAll();
-        roleRepository.deleteAll();
+        cleanup();
 
         Role role = roleRepository.save(new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"));
         testUser = new UserAccount("manager@portal.gov", passwordEncoder.encode("Password123!"), AccountStatus.ACTIVE);
         testUser.setPhoneNumber("+94 77 123 4567");
         testUser.addRole(role);
         testUser = userAccountRepository.save(testUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanup();
+    }
+
+    private void cleanup() {
+        refreshTokenSessionRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        roleRepository.deleteAll();
+        roleRepository.flush();
     }
 
     @Test

@@ -80,6 +80,8 @@ class RefreshTokenSessionPersistenceIntegrationTests {
     private void cleanup() {
         refreshTokenSessionRepository.deleteAll();
         userAccountRepository.deleteAll();
+        roleRepository.deleteAll();
+        roleRepository.flush();
     }
 
     private UserAccount createActiveUser(String email) {

@@ -51,6 +51,7 @@ class SuperAdminCitizenIsolationTests {
     void setUp() {
         userAccountRepository.deleteAll();
         roleRepository.deleteAll();
+        roleRepository.flush();
 
         roleRepository.saveAll(List.of(
                 new Role("ROLE_SUPER_ADMIN", "Super Administrator"),

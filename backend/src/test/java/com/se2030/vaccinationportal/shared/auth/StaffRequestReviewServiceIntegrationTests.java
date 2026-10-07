@@ -11,12 +11,14 @@ import com.se2030.vaccinationportal.shared.auth.exception.StaffRequestNotPending
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
 import com.se2030.vaccinationportal.shared.auth.service.StaffRequestReviewService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,7 @@ class StaffRequestReviewServiceIntegrationTests {
 
     @Autowired private StaffRequestReviewService reviewService;
     @Autowired private AuthService authService;
+    @Autowired private RefreshTokenSessionRepository refreshTokenSessionRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private RoleRepository roleRepository;
     @Autowired private PasswordEncoder passwordEncoder;
@@ -52,8 +55,7 @@ class StaffRequestReviewServiceIntegrationTests {
 
     @BeforeEach
     void setUp() {
-        userAccountRepository.deleteAll();
-        roleRepository.deleteAll();
+        cleanup();
         roleRepository.saveAll(List.of(
                 new Role("ROLE_ADMIN", "System Administrator"),
                 new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"),
@@ -69,6 +71,18 @@ class StaffRequestReviewServiceIntegrationTests {
                 "reviewer@example.com", passwordEncoder.encode(RAW_PASSWORD), AccountStatus.ACTIVE);
         administrator.addRole(roleRepository.findByCode("ROLE_ADMIN").orElseThrow());
         administrator = userAccountRepository.saveAndFlush(administrator);
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanup();
+    }
+
+    private void cleanup() {
+        refreshTokenSessionRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        roleRepository.deleteAll();
+        roleRepository.flush();
     }
 
     @Test

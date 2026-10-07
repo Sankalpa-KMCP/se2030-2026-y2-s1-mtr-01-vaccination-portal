@@ -9,12 +9,14 @@ import com.se2030.vaccinationportal.shared.auth.model.PasswordResetToken;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
 import com.se2030.vaccinationportal.shared.auth.repository.PasswordResetTokenRepository;
+import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.security.AuthActionTokenService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -80,18 +82,33 @@ class AuthServiceIntegrationTests {
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @Autowired
+    private RefreshTokenSessionRepository refreshTokenSessionRepository;
+
     private Role centerManagerRole;
     private Role adminRole;
     private Role citizenRole;
 
     @BeforeEach
     void setUp() {
-        userAccountRepository.deleteAll();
-        roleRepository.deleteAll();
+        cleanup();
 
         centerManagerRole = roleRepository.save(new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"));
         adminRole = roleRepository.save(new Role("ROLE_ADMIN", "System Administrator"));
         citizenRole = roleRepository.save(new Role("ROLE_CITIZEN", "Citizen"));
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanup();
+    }
+
+    private void cleanup() {
+        passwordResetTokenRepository.deleteAll();
+        refreshTokenSessionRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        roleRepository.deleteAll();
+        roleRepository.flush();
     }
 
     @Test

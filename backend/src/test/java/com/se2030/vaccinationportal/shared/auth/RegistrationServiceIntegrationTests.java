@@ -59,6 +59,7 @@ class RegistrationServiceIntegrationTests {
         citizenProfileRepository.deleteAll();
         userAccountRepository.deleteAll();
         roleRepository.deleteAll();
+        roleRepository.flush();
         roleRepository.saveAll(List.of(
                 new Role("ROLE_ADMIN", "System Administrator"),
                 new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"),
