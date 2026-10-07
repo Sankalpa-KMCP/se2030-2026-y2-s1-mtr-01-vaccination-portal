@@ -60,7 +60,8 @@ public class SecurityConfig {
                         "CENTER_MANAGER",
                         "HEALTHCARE_OFFICER",
                         "INVENTORY_OFFICER",
-                        "MANAGEMENT_USER"
+                        "MANAGEMENT_USER",
+                        "VACCINATOR"
                 )
                 .build();
     }
@@ -90,15 +91,27 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        // Public Authentication Endpoint
+                        // Public Authentication Endpoints
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        // Refresh/logout self-validate the refresh cookie and stay generic on failure
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                "/api/v1/auth/refresh",
+                                "/api/v1/auth/logout"
+                        ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,
                                 "/api/v1/auth/register/citizen",
-                                "/api/v1/auth/register/staff"
+                                "/api/v1/auth/register/staff",
+                                "/api/v1/auth/verify-email",
+                                "/api/v1/auth/resend-verification",
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/reset-password"
                         ).permitAll()
 
                         // Protected Current User Profile Endpoint
                         .requestMatchers("/api/v1/auth/me").authenticated()
+
+                        // Principal-scoped citizen email OTP verification (method security enforces ROLE_CITIZEN)
+                        .requestMatchers("/api/v1/auth/email-verification/**").authenticated()
 
                         // Citizen-only self-service profile endpoints (method security enforces ROLE_CITIZEN)
                         .requestMatchers("/api/v1/profile/**").authenticated()
@@ -127,8 +140,15 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
 
+                        // Assistant Endpoints: per-endpoint rules (never permit wildcard /api/v1/assistant/**)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/assistant/status").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/assistant/messages").permitAll()
+
                         // Protected Appointments and Waitlist Endpoints (MF-03)
                         .requestMatchers("/api/v1/appointments/**", "/api/v1/waitlist/**").authenticated()
+
+                        // Draft CRUD is vaccinator-only; enforce anonymous rejection at the HTTP boundary.
+                        .requestMatchers("/api/v1/vaccination/drafts", "/api/v1/vaccination/drafts/**").hasRole("VACCINATOR")
 
                         // Functional REST endpoints delegate method-level security to @PreAuthorize
                         .requestMatchers("/api/v1/**").permitAll()

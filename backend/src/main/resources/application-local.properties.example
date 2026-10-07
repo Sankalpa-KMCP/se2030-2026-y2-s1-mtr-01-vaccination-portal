@@ -23,6 +23,14 @@
 # ============================================================
 
 # ------------------------------------------------------------
+# Reverse Proxy / Forwarded Headers Configuration
+# ------------------------------------------------------------
+# Set to 'framework' ONLY when running behind a trusted reverse proxy (NGINX, Cloudflare, AWS ALB)
+# that sanitizes and overwrites incoming X-Forwarded-For headers.
+# Defaults to 'none' for direct deployment security.
+# SERVER_FORWARD_HEADERS_STRATEGY=none
+
+# ------------------------------------------------------------
 # Database
 # ------------------------------------------------------------
 spring.datasource.url=jdbc:mysql://localhost:3307/vaccination_portal
@@ -36,3 +44,64 @@ app.bootstrap.admin.email=admin@local.test
 app.bootstrap.admin.password=Admin123!
 app.bootstrap.admin.full-name=Local Administrator
 app.bootstrap.admin.phone=0771234567
+
+# ------------------------------------------------------------
+# Authentication Delivery Mode (smtp / console / disabled)
+# ------------------------------------------------------------
+# Explicit Console Delivery Mode (Recommended for local evaluation & manual testing)
+# Outputs verification and password-reset links directly to backend console logs.
+# Note: citizen email OTP codes are NEVER logged in any delivery mode; use SMTP
+# delivery against a local mailbox tool when the code itself must be observed.
+app.security.auth.delivery-mode=console
+
+# Email OTP Verification Policy (defaults shown)
+# app.security.auth.otp-ttl-seconds=300
+# app.security.auth.otp-max-attempts=5
+# app.security.auth.otp-resend-cooldown-seconds=60
+
+# Real SMTP Delivery Mode (Optional, uncomment and fill in for actual email dispatch)
+# app.security.auth.delivery-mode=smtp
+# app.security.auth.mail-from=noreply@example.com
+# spring.mail.host=smtp.example.com
+# spring.mail.port=587
+# spring.mail.username=YOUR_SMTP_USERNAME
+# spring.mail.password=YOUR_SMTP_PASSWORD
+# spring.mail.properties.mail.smtp.auth=true
+# spring.mail.properties.mail.smtp.starttls.enable=true
+#
+# ------------------------------------------------------------
+# Refresh-Token Cookie Configuration (Local Development Only)
+# ------------------------------------------------------------
+# Canonical base configuration enforces Secure=true on the refresh cookie.
+# For plain HTTP local development (e.g. http://localhost:5173 without HTTPS),
+# opt out by setting this property to false so browsers will accept the cookie.
+app.security.auth.refresh-cookie-secure=false
+# Alternatively set via environment variable:
+# AUTH_REFRESH_COOKIE_SECURE=false
+
+# ------------------------------------------------------------
+# Project-Wide AI Assistant (Phase 1)
+# ------------------------------------------------------------
+# The AI assistant is disabled by default.
+# The portal starts and operates normally when the AI assistant is unavailable or disabled.
+# API keys (OPENAI_API_KEY, GOOGLE_API_KEY) belong ONLY on the backend; NEVER place them in VITE_* variables,
+# and NEVER commit a populated API key to version control.
+# Standard unit and integration tests use a fake provider and never call live APIs.
+AI_ASSISTANT_ENABLED=false
+# Supported providers: openai, ollama, gemini
+AI_ASSISTANT_PROVIDER=openai
+# For gemini, model defaults to gemini-flash-latest if unset; can be overridden (e.g., gemini-2.5-flash)
+AI_ASSISTANT_MODEL=
+OPENAI_API_KEY=
+# Legacy OpenAI-only model variable; AI_ASSISTANT_MODEL takes precedence.
+OPENAI_MODEL=
+# Google Gemini API key (Google AI Studio) - canonical GOOGLE_API_KEY, fallback GEMINI_API_KEY
+GOOGLE_API_KEY=
+GEMINI_API_KEY=
+OLLAMA_BASE_URL=http://localhost:11434
+AI_ASSISTANT_TIMEOUT=15s
+AI_ASSISTANT_MAX_INPUT_CHARACTERS=1500
+AI_ASSISTANT_MAX_HISTORY_MESSAGES=10
+AI_ASSISTANT_MAX_OUTPUT_TOKENS=500
+AI_ASSISTANT_ANONYMOUS_RPM=5
+AI_ASSISTANT_AUTHENTICATED_RPM=15

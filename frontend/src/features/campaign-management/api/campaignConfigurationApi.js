@@ -1,4 +1,4 @@
-import { apiRequest } from '../../../services/apiClient';
+import { apiRequest } from '../../../shared/api/apiClient';
 
 /**
  * Helper to process Fetch API responses and unpack backend JSON or structured error payloads.
@@ -130,6 +130,18 @@ export async function getQuestionnaireVersions(questionnaireId) {
  */
 export async function getQuestionnaireVersion(versionId) {
   const response = await apiRequest(`/v1/screening/questionnaire-versions/${versionId}`, {
+    method: 'GET',
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Fetch all published questionnaire versions available for campaign assignment from MF-01.
+ *
+ * @returns {Promise<Array>} List of PublishedQuestionnaireVersionResponse objects
+ */
+export async function getPublishedQuestionnaireVersions() {
+  const response = await apiRequest('/v1/screening/questionnaire-versions/published', {
     method: 'GET',
   });
   return handleResponse(response);

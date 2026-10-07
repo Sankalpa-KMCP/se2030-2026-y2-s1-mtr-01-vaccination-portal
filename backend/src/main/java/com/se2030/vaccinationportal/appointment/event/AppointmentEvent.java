@@ -1,6 +1,6 @@
 package com.se2030.vaccinationportal.appointment.event;
 
-import com.se2030.vaccinationportal.appointment.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import java.time.Instant;
 
 /** Immutable snapshot: observers never receive a managed JPA entity. */

@@ -3,11 +3,11 @@ package com.se2030.vaccinationportal.inventory.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.se2030.vaccinationportal.campaign.model.CenterStatus;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCenter;
-import com.se2030.vaccinationportal.campaign.model.VaccineType;
-import com.se2030.vaccinationportal.campaign.repository.VaccinationCenterRepository;
-import com.se2030.vaccinationportal.campaign.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.center.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
 import com.se2030.vaccinationportal.inventory.dependency.BatchAvailabilityReason;
 import com.se2030.vaccinationportal.inventory.dependency.InventoryBatchPort;
 import com.se2030.vaccinationportal.inventory.exception.BatchUnavailableException;
@@ -22,6 +22,7 @@ import com.se2030.vaccinationportal.inventory.repository.ManufacturerRepository;
 import com.se2030.vaccinationportal.inventory.repository.StockTransactionRepository;
 import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,6 +72,39 @@ class InventoryBatchServiceIntegrationTests {
     }
 
     @Test
+    void availableBatchSnapshotIncludesIdentityAndCenterQuantity() {
+        var batch = batches.findById(batchId).orElseThrow();
+        var available = inventoryPort.findAvailableBatches(centerId, batch.getVaccineTypeId(),
+                LocalDate.now(ZoneOffset.UTC));
+
+        assertThat(available).hasSize(1);
+        assertThat(available.get(0).batchId()).isEqualTo(batchId);
+        assertThat(available.get(0).batchNumber()).isEqualTo(batch.getBatchNumber());
+        assertThat(available.get(0).vaccineTypeId()).isEqualTo(batch.getVaccineTypeId());
+        assertThat(available.get(0).availableQuantity()).isEqualTo(2);
+        assertThat(inventoryPort.findBatchDisplay(batchId)).get()
+                .extracting("batchNumber", "vaccineTypeId")
+                .containsExactly(batch.getBatchNumber(), batch.getVaccineTypeId());
+        assertThat(inventoryPort.findBatchDisplay(Long.MAX_VALUE)).isEmpty();
+    }
+
+    @Test
+    void availableBatchLookupExcludesMismatchedInactiveExpiredAndEmptyStock() {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        var batch = batches.findById(batchId).orElseThrow();
+        assertThat(inventoryPort.findAvailableBatches(centerId, batch.getVaccineTypeId() + 1, today)).isEmpty();
+        changeStatus(BatchStatus.INACTIVE);
+        assertThat(inventoryPort.findAvailableBatches(centerId, null, today)).isEmpty();
+        changeStatus(BatchStatus.ACTIVE);
+        assertThat(inventoryPort.findAvailableBatches(centerId, null, today.plusYears(1))).isEmpty();
+        inventories.findById(inventoryId).ifPresent(stock -> {
+            stock.setQuantity(0);
+            inventories.saveAndFlush(stock);
+        });
+        assertThat(inventoryPort.findAvailableBatches(centerId, null, today)).isEmpty();
+    }
+
+    @Test
     void inactiveBatch() {
         changeStatus(BatchStatus.INACTIVE);
         assertUnavailable(batchId, 11002L, BatchAvailabilityReason.INACTIVE_BATCH);
@@ -81,9 +115,12 @@ class InventoryBatchServiceIntegrationTests {
         VaccineBatch batch = batches.findById(batchId).orElseThrow();
         // Expiry is immutable lot data. Create an already-expired batch instead.
         String suffix = UUID.randomUUID().toString().substring(0, 8);
+        // The service evaluates expiry against the production UTC clock, so the expired batch
+        // must be created relative to the UTC date to stay deterministic across time zones.
         VaccineBatch expired = batches.save(new VaccineBatch(
                 manufacturerId, batch.getVaccineTypeId(),
-                "EXP-" + suffix, LocalDate.now().minusDays(60), LocalDate.now().minusDays(1),
+                "EXP-" + suffix, LocalDate.now(ZoneOffset.UTC).minusDays(60),
+                LocalDate.now(ZoneOffset.UTC).minusDays(1),
                 BatchStatus.ACTIVE));
         inventories.save(new CenterInventory(centerId, expired.getId(), 2));
         assertUnavailable(expired.getId(), 11003L, BatchAvailabilityReason.EXPIRED_BATCH);

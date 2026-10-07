@@ -1,4 +1,4 @@
-import { apiRequest, parseApiResponse } from '../../../services/apiClient';
+import { apiRequest, parseApiResponse } from '../../../shared/api/apiClient';
 
 const SCREENING_BASE_PATH = '/v1/screening';
 
@@ -93,6 +93,26 @@ export function addQuestionnaireItem(versionId, payload) {
   return screeningRequest(`/questionnaire-versions/${versionId}/items`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export function removeQuestionnaireItem(versionId, itemId) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/items/${itemId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function updateQuestionnaireItem(versionId, itemId, payload) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/items/${itemId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function reorderQuestionnaireItems(versionId, itemIds) {
+  return screeningRequest(`/questionnaire-versions/${versionId}/items/reorder`, {
+    method: 'PUT',
+    body: JSON.stringify({ itemIds }),
   });
 }
 

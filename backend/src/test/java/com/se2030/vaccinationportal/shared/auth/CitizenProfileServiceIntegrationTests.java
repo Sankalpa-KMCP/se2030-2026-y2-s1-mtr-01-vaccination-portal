@@ -49,6 +49,7 @@ class CitizenProfileServiceIntegrationTests {
         citizenProfileRepository.deleteAll();
         userAccountRepository.deleteAll();
         roleRepository.deleteAll();
+        roleRepository.flush();
         citizenRole = roleRepository.save(new Role("ROLE_CITIZEN", "Citizen"));
         adminRole = roleRepository.save(new Role("ROLE_ADMIN", "System Administrator"));
     }

@@ -122,3 +122,18 @@ Resolve conflicts using:
 2. Approved GitHub issues and architectural decisions
 3. Team discussion
 4. Team-leader coordination when necessary
+
+## Architecture changes
+
+Use provider-owned APIs and immutable snapshots for cross-feature facts. Do not import another
+feature's repositories/entities or internal services. The documented Assistant application services
+and single-statement SessionImpact JPQL join are explicit exceptions, not general permission.
+Place implementation providers under capability `query`/`adapter`, not public `api`.
+Frontend route composition stays in `app`; business workflow hooks/APIs/styles stay in their feature.
+
+Backend `FeatureBoundaryTests` runs in the ordinary Maven suite; frontend ESLint boundary checks
+run with `npm run lint`. Tool unit tests mock provider queries, provider tests mock/persist repositories,
+and integration tests use real production wiring. After Java package moves, remove stale compiled
+output with Maven `clean` before validating; never mistake old `target` classes for current source.
+Applied Flyway migrations are immutable; only `classpath:db/migration` is active.
+See [current architecture](docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md).

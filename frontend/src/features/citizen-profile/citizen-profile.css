@@ -1,11 +1,13 @@
 .citizen-profile {
-  --citizen-profile-ink: #102f3a;
-  --citizen-profile-muted: #52676c;
-  --citizen-profile-line: #d7e2dd;
+  --citizen-profile-ink: var(--citizen-ui-ink, #1E293B);
+  --citizen-profile-muted: var(--citizen-ui-muted, #64748B);
+  --citizen-profile-line: var(--citizen-ui-line, #E2E8F0);
+  --citizen-profile-green: var(--citizen-ui-green, #0F6E5B);
+  --citizen-profile-green-soft: var(--citizen-ui-green-soft, #e8f5f1);
   display: grid;
   gap: clamp(1rem, 2.5vw, 1.5rem);
   color: var(--citizen-profile-ink);
-  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans, "Inter", system-ui, -apple-system, sans-serif);
 }
 
 .citizen-profile__sections {
@@ -27,8 +29,10 @@
 
 .citizen-profile__details > div {
   min-width: 0;
-  padding-left: 0.8rem;
-  border-left: 2px solid var(--citizen-profile-line);
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: #f8faf9;
+  border: 1px solid var(--citizen-profile-line);
 }
 
 .citizen-profile__details dt {
@@ -70,8 +74,8 @@
 }
 
 .citizen-profile__form :is(.form-control, .form-select):focus {
-  border-color: #2f855f;
-  box-shadow: 0 0 0 0.2rem rgba(32, 98, 69, 0.13);
+  border-color: var(--citizen-profile-green);
+  box-shadow: 0 0 0 0.2rem rgba(15, 110, 91, 0.15);
 }
 
 .citizen-profile__actions {

@@ -30,7 +30,7 @@ describe('StaffRegistrationRequestPage', () => {
   });
   afterEach(cleanup);
 
-  it('renders only the four publicly requestable staff roles', () => {
+  it('renders the five publicly requestable staff roles including Vaccinator', () => {
     renderPage();
     expect(screen.getByLabelText('Phone Number').maxLength).toBe(10);
     expect(screen.getByLabelText('Phone Number').inputMode).toBe('numeric');
@@ -40,8 +40,10 @@ describe('StaffRegistrationRequestPage', () => {
       'Center Manager',
       'Campaign Officer',
       'Inventory Officer',
+      'Vaccinator',
     ]);
     expect(options.map((option) => option.value)).not.toContain('ROLE_ADMIN');
+    expect(options.map((option) => option.value)).toContain('ROLE_VACCINATOR');
   });
 
   it('blocks mismatched passwords', () => {
@@ -49,6 +51,15 @@ describe('StaffRegistrationRequestPage', () => {
     fillStaffForm({ confirmPassword: 'Mismatch123!' });
     fireEvent.click(screen.getByRole('button', { name: 'Submit Staff Account Request' }));
     expect(screen.getByRole('alert').textContent).toContain('Passwords do not match');
+    expect(registerStaff).not.toHaveBeenCalled();
+  });
+
+  it('blocks passwords shorter than 8 characters', () => {
+    renderPage();
+    fillStaffForm({ confirmPassword: 'short' });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit Staff Account Request' }));
+    expect(screen.getByRole('alert').textContent).toBe('Password must be between 8 and 128 characters.');
     expect(registerStaff).not.toHaveBeenCalled();
   });
 

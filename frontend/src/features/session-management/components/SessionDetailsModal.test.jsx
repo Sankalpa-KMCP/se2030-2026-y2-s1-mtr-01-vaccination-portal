@@ -59,7 +59,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('SessionDetailsModal UC-10B authorization', () => {
-  it.each(['ROLE_ADMIN', 'ROLE_CENTER_MANAGER', 'ROLE_HEALTHCARE_OFFICER'])(
+  it.each(['ROLE_ADMIN', 'ROLE_CENTER_MANAGER'])(
     'shows UC-10B tabs to %s',
     async (role) => {
       mocks.auth.user = { roles: [role] };
@@ -70,16 +70,19 @@ describe('SessionDetailsModal UC-10B authorization', () => {
     },
   );
 
-  it('hides UC-10B tabs and does not mount their children for CAMPAIGN_OFFICER', async () => {
-    mocks.auth.user = { roles: ['ROLE_CAMPAIGN_OFFICER'] };
-    renderModal();
+  it.each(['ROLE_CAMPAIGN_OFFICER', 'ROLE_HEALTHCARE_OFFICER'])(
+    'hides UC-10B tabs and does not mount their children for %s',
+    async (role) => {
+      mocks.auth.user = { roles: [role] };
+      renderModal();
 
-    expect(await screen.findByRole('button', { name: 'Overview' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Operational Assignments' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Capacity Plan' })).toBeNull();
-    expect(mocks.assignmentsChild).not.toHaveBeenCalled();
-    expect(mocks.capacityChild).not.toHaveBeenCalled();
-  });
+      expect(await screen.findByRole('button', { name: 'Overview' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Operational Assignments' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Capacity Plan' })).toBeNull();
+      expect(mocks.assignmentsChild).not.toHaveBeenCalled();
+      expect(mocks.capacityChild).not.toHaveBeenCalled();
+    },
+  );
 
   it('keeps unrelated session tabs available', async () => {
     mocks.auth.user = { roles: ['ROLE_CAMPAIGN_OFFICER'] };
@@ -95,7 +98,7 @@ describe('SessionDetailsModal UC-10B authorization', () => {
     ['Operational Assignments', 'assignments-child'],
     ['Capacity Plan', 'capacity-child'],
   ])('resets %s to overview when view permission disappears', async (tabName, childTestId) => {
-    mocks.auth.user = { roles: ['ROLE_HEALTHCARE_OFFICER'] };
+    mocks.auth.user = { roles: ['ROLE_CENTER_MANAGER'] };
     const view = renderModal();
 
     fireEvent.click(await screen.findByRole('button', { name: tabName }));

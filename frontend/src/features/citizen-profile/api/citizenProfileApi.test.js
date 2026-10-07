@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setToken } from '../../../auth/authStorage';
+import { setToken } from '../../../shared/auth/authStorage';
 import {
   buildCitizenProfileUpdate,
   getCitizenProfile,

@@ -1,4 +1,4 @@
-import { apiRequestData } from '../../services/apiClient';
+import { apiRequestData } from '../../shared/api/apiClient';
 
 const STAFF_REQUESTS_PATH = '/v1/admin/staff-requests';
 

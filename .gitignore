@@ -157,3 +157,6 @@ domscribe.config.json
 # OpenCode artifacts
 .opencode/
 
+# Freebuff artifacts
+.freebuff/
+

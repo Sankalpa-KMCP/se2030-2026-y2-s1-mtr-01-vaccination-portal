@@ -6,11 +6,16 @@ import CampaignForm from './CampaignForm';
 const apiMocks = vi.hoisted(() => ({
   listVaccineTypes: vi.fn(),
   listTargetGroups: vi.fn(),
+  getQuestionnaireVersion: vi.fn(),
 }));
 
 vi.mock('../api/campaignApi', () => ({
   listVaccineTypes: apiMocks.listVaccineTypes,
   listTargetGroups: apiMocks.listTargetGroups,
+}));
+
+vi.mock('../api/campaignConfigurationApi', () => ({
+  getQuestionnaireVersion: apiMocks.getQuestionnaireVersion,
 }));
 
 describe('CampaignForm — Create and Edit Modes', () => {
@@ -38,6 +43,15 @@ describe('CampaignForm — Create and Edit Modes', () => {
     apiMocks.listTargetGroups.mockResolvedValue([
       { id: 2, code: 'TG-01', description: 'Target One' },
     ]);
+    apiMocks.getQuestionnaireVersion.mockResolvedValue({
+      id: 101,
+      questionnaireId: 1,
+      questionnaireCode: 'COVID-SCREEN',
+      questionnaireName: '2026 General Vaccination Screening',
+      versionNumber: 1,
+      status: 'PUBLISHED',
+      publishedAt: '2026-09-01T10:00:00Z',
+    });
   });
 
   afterEach(() => {
@@ -288,5 +302,77 @@ describe('CampaignForm — Create and Edit Modes', () => {
     expect(payload.targetGroupId).toBe(2);
     expect(payload.serviceStartDate).toBe('2026-11-01');
     expect(payload.serviceEndDate).toBe('2026-11-30');
+    expect(payload.questionnaireVersionId).toBeUndefined();
+  });
+
+  it('create mode displays read-only unassigned questionnaire guidance', async () => {
+    render(
+      <CampaignForm
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Screening Questionnaire')).toBeTruthy();
+    expect(screen.getByText('Not assigned yet')).toBeTruthy();
+    expect(
+      screen.getByText(/A Healthcare Officer must configure the screening questionnaire before this campaign can be scheduled/i)
+    ).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: /Screening Questionnaire/i })).toBeNull();
+  });
+
+  it('edit mode with unassigned campaign displays read-only unassigned guidance and omits questionnaireVersionId on submit', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <CampaignForm
+        initialCampaign={sampleCampaign}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Screening Questionnaire')).toBeTruthy();
+    expect(screen.getByText('Not assigned yet')).toBeTruthy();
+    expect(
+      screen.getByText(/A Healthcare Officer must configure the screening questionnaire before this campaign can be scheduled/i)
+    ).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: /Screening Questionnaire/i })).toBeNull();
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const payload = onSubmit.mock.calls[0][0];
+    expect(payload.questionnaireVersionId).toBeUndefined();
+  });
+
+  it('edit mode with assigned questionnaire displays published version info and HCO management guidance', async () => {
+    const onSubmit = vi.fn();
+    const campaignWithQ = {
+      ...sampleCampaign,
+      questionnaireVersionId: 101,
+    };
+    render(
+      <CampaignForm
+        initialCampaign={campaignWithQ}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('2026 General Vaccination Screening')).toBeTruthy();
+    });
+
+    expect(screen.getByText(/Version 1 · Published/i)).toBeTruthy();
+    expect(screen.getByText(/Clinical questionnaire managed by Healthcare Officer/i)).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: /Screening Questionnaire/i })).toBeNull();
+
+    const submitBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(submitBtn);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const payload = onSubmit.mock.calls[0][0];
+    expect(payload.questionnaireVersionId).toBeUndefined();
   });
 });

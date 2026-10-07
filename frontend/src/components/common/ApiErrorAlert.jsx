@@ -1,5 +1,5 @@
 import React from 'react';
-import { PERMISSION_DENIED_MESSAGE } from '../../services/apiClient';
+import { readApiErrorDetails } from '../../shared/api/readApiErrorDetails';
 
 function getAlertTitle(status) {
   if (status === 0) return 'Connection Error';
@@ -7,23 +7,6 @@ function getAlertTitle(status) {
   if (status === 404) return 'Not Found';
   if (status === 409) return 'Request Conflict';
   return 'Request Error';
-}
-
-function normalizeFieldErrors(fieldErrors) {
-  if (Array.isArray(fieldErrors)) {
-    return fieldErrors.filter((item) => item?.message);
-  }
-
-  if (fieldErrors && typeof fieldErrors === 'object') {
-    return Object.entries(fieldErrors).flatMap(([field, messages]) => {
-      const fieldMessages = Array.isArray(messages) ? messages : [messages];
-      return fieldMessages
-        .filter(Boolean)
-        .map((message) => ({ field, message }));
-    });
-  }
-
-  return [];
 }
 
 /**
@@ -34,15 +17,10 @@ function normalizeFieldErrors(fieldErrors) {
  * @param {Function} [props.onDismiss] - Optional callback to clear/dismiss the error
  */
 export default function ApiErrorAlert({ error, onDismiss }) {
-  if (!error) return null;
-
-  const status = typeof error === 'string' ? null : error.status;
-  const errorMessage = status === 403
-    ? PERMISSION_DENIED_MESSAGE
-    : typeof error === 'string'
-      ? error
-      : error.message || 'An unexpected error occurred';
-  const fieldErrors = normalizeFieldErrors(error?.data?.fieldErrors);
+  const details = readApiErrorDetails(error);
+  if (!details) return null;
+  const { status, fieldErrors } = details;
+  const errorMessage = details.message || 'An unexpected error occurred';
 
   return (
     <div className="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">

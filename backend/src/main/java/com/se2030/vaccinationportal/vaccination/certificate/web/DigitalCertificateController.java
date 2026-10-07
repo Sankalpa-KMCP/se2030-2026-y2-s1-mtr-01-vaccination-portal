@@ -1,0 +1,211 @@
+package com.se2030.vaccinationportal.vaccination.certificate.web;
+
+import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
+import com.se2030.vaccinationportal.vaccination.administration.dto.AvailableVaccineBatchResponse;
+import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinatorVaccinationRecordResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CertificateReissueResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CertificateVerificationResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.CitizenCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.DigitalCertificateResponse;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.ReissueDigitalCertificateRequest;
+import com.se2030.vaccinationportal.vaccination.certificate.dto.RevokeDigitalCertificateRequest;
+import com.se2030.vaccinationportal.vaccination.certificate.mapper.DigitalCertificateMapper;
+import com.se2030.vaccinationportal.vaccination.certificate.model.DigitalCertificate;
+import com.se2030.vaccinationportal.vaccination.certificate.service.DigitalCertificateService;
+import com.se2030.vaccinationportal.vaccination.query.dto.CitizenVaccinationRecordResponse;
+import jakarta.validation.Valid;
+import java.util.List;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * REST endpoints for digital vaccination certificate lifecycle management and verification.
+ */
+@RestController
+@RequestMapping("/api/v1/vaccination")
+public class DigitalCertificateController {
+
+    private final DigitalCertificateService certificateService;
+
+    public DigitalCertificateController(DigitalCertificateService certificateService) {
+        this.certificateService = certificateService;
+    }
+
+    @GetMapping("/certificates/verify/{token}")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<CertificateVerificationResponse> verifyCertificate(@PathVariable String token) {
+        return ResponseEntity.ok(certificateService.verifyCertificate(token));
+    }
+
+    @GetMapping("/certificates/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CITIZEN', 'VACCINATOR') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<DigitalCertificateResponse> getCertificateById(
+            @PathVariable Long id,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        DigitalCertificate certificate = certificateService.getCertificateById(id);
+        certificateService.assertCertificateAccess(certificate, resolvePrincipal(authentication));
+        return ResponseEntity.ok(
+                DigitalCertificateMapper.toResponse(certificate)
+        );
+    }
+
+    @GetMapping("/certificates/reference/{certificateReference}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CITIZEN', 'VACCINATOR') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<DigitalCertificateResponse> getCertificateByReference(
+            @PathVariable String certificateReference,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        DigitalCertificate certificate = certificateService.getCertificateByReference(certificateReference);
+        certificateService.assertCertificateAccess(certificate, resolvePrincipal(authentication));
+        return ResponseEntity.ok(
+                DigitalCertificateMapper.toResponse(certificate)
+        );
+    }
+
+    @PostMapping("/certificates/{certificateId}/revoke")
+    @PreAuthorize("hasRole('ADMIN') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<DigitalCertificateResponse> revokeCertificate(
+            @PathVariable Long certificateId,
+            @Valid @RequestBody RevokeDigitalCertificateRequest request,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        Long actorId = resolveActorId(authentication, request != null ? request.revokedBy() : null);
+        return ResponseEntity.ok(
+                DigitalCertificateMapper.toResponse(
+                        certificateService.revokeCertificate(
+                                certificateId,
+                                new RevokeDigitalCertificateRequest(request.reason(), actorId)
+                        )
+                )
+        );
+    }
+
+    @PostMapping("/records/{recordId}/certificates/reissue")
+    @PreAuthorize("hasRole('ADMIN') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<CertificateReissueResponse> reissueCertificate(
+            @PathVariable Long recordId,
+            @Valid @RequestBody ReissueDigitalCertificateRequest request,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        Long actorId = resolveActorId(authentication, request != null ? request.reissuedBy() : null);
+        return ResponseEntity.ok(
+                certificateService.reissueCertificate(
+                        recordId,
+                        new ReissueDigitalCertificateRequest(request.reason(), actorId)
+                )
+        );
+    }
+
+    @GetMapping("/records/{recordId}/certificates")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CITIZEN', 'VACCINATOR') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<DigitalCertificateResponse>> getCertificateHistory(
+            @PathVariable Long recordId,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        certificateService.assertRecordAccess(recordId, resolvePrincipal(authentication));
+        return ResponseEntity.ok(certificateService.getCertificateHistory(recordId));
+    }
+
+    @GetMapping("/records/{recordId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CITIZEN', 'VACCINATOR') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<VaccinatorVaccinationRecordResponse> getRecordById(
+            @PathVariable Long recordId,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        certificateService.assertRecordAccess(recordId, principal);
+        return ResponseEntity.ok(certificateService.getVaccinationRecordDetails(recordId));
+    }
+
+    @GetMapping("/records/vaccinator/mine")
+    @PreAuthorize("hasRole('VACCINATOR') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<VaccinatorVaccinationRecordResponse>> getMyVaccinatorRecords(
+            org.springframework.security.core.Authentication authentication
+    ) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        if (principal == null) {
+            throw new AccessDeniedException("Vaccinator authentication is required to access vaccination records");
+        }
+        return ResponseEntity.ok(certificateService.getVaccinatorVaccinationHistory(principal.getUserId()));
+    }
+
+    @GetMapping("/batches/available")
+    @PreAuthorize("hasAnyRole('VACCINATOR', 'ADMIN') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<AvailableVaccineBatchResponse>> getAvailableBatches(
+            @RequestParam(name = "appointmentId") Long appointmentId
+    ) {
+        return ResponseEntity.ok(certificateService.getAvailableBatchesForAppointment(appointmentId));
+    }
+
+    @GetMapping({"/records/mine", "/history/mine"})
+    @PreAuthorize("hasRole('CITIZEN') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<CitizenVaccinationRecordResponse>> getMyVaccinationHistory(
+            org.springframework.security.core.Authentication authentication
+    ) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        if (principal == null) {
+            throw new AccessDeniedException("Citizen authentication is required to access vaccination history");
+        }
+        return ResponseEntity.ok(certificateService.getCitizenVaccinationHistory(principal.getUserId()));
+    }
+
+    @GetMapping("/certificates/mine")
+    @PreAuthorize("hasRole('CITIZEN') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<CitizenCertificateResponse>> getMyCertificates(
+            org.springframework.security.core.Authentication authentication
+    ) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        if (principal == null) {
+            throw new AccessDeniedException("Citizen authentication is required to access digital certificates");
+        }
+        return ResponseEntity.ok(certificateService.getCitizenCertificates(principal.getUserId()));
+    }
+
+    @GetMapping("/certificates/{id}/download")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CITIZEN', 'VACCINATOR') and !hasRole('SUPER_ADMIN')")
+    public ResponseEntity<byte[]> downloadCertificate(
+            @PathVariable Long id,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        DigitalCertificate certificate = certificateService.getCertificateById(id);
+        certificateService.assertCertificateAccess(certificate, principal);
+        byte[] pdfContent = certificateService.generateCertificatePdf(id, principal);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificate-" + certificate.getCertificateReference() + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfContent);
+    }
+
+    private UserPrincipal resolvePrincipal(org.springframework.security.core.Authentication authentication) {
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
+            return principal;
+        }
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+            return principal;
+        }
+        return null;
+    }
+
+    private Long resolveActorId(org.springframework.security.core.Authentication authentication, Long requestActorId) {
+        UserPrincipal principal = resolvePrincipal(authentication);
+        if (principal != null) {
+            return principal.getUserId();
+        }
+        return requestActorId != null ? requestActorId : 1L;
+    }
+}

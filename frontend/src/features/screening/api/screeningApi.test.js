@@ -5,7 +5,7 @@ const clientMocks = vi.hoisted(() => ({
   parseApiResponse: vi.fn(),
 }));
 
-vi.mock('../../../services/apiClient', () => clientMocks);
+vi.mock('../../../shared/api/apiClient', () => clientMocks);
 
 import {
   addQuestionnaireItem,
@@ -79,7 +79,7 @@ describe('screeningApi', () => {
   });
 
   it('uses the real shared parser to return null for a 204 assessment', async () => {
-    const { parseApiResponse } = await vi.importActual('../../../services/apiClient');
+    const { parseApiResponse } = await vi.importActual('../../../shared/api/apiClient');
     clientMocks.apiRequest.mockResolvedValueOnce(new Response(null, { status: 204 }));
     clientMocks.parseApiResponse.mockImplementationOnce(parseApiResponse);
     await expect(getEligibilityAssessmentBySubmission(42)).resolves.toBeNull();

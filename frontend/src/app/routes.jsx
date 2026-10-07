@@ -10,7 +10,10 @@ import { useAuth } from '../auth/context/AuthContext';
 import LoginPage from '../auth/pages/LoginPage';
 import CitizenRegistrationPage from '../auth/pages/CitizenRegistrationPage';
 import StaffRegistrationRequestPage from '../auth/pages/StaffRegistrationRequestPage';
-import CitizenDashboardPage from '../auth/pages/CitizenDashboardPage';
+import ForgotPasswordPage from '../auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '../auth/pages/ResetPasswordPage';
+import VerifyEmailPage from '../auth/pages/VerifyEmailPage';
+import CitizenDashboardPage from '../features/citizen-dashboard/pages/CitizenDashboardPage';
 import StaffDashboardPage from '../auth/pages/StaffDashboardPage';
 import AdminDashboardPage from '../auth/pages/AdminDashboardPage';
 import PendingStaffRequestsPage from '../auth/pages/PendingStaffRequestsPage';
@@ -45,6 +48,12 @@ import MyAppointmentsPage from '../features/appointment-management/pages/MyAppoi
 import WaitlistPage from '../features/appointment-management/pages/WaitlistPage';
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
 import InventoryManagementPage from '../features/inventory-management/pages/InventoryManagementPage';
+import VaccinationDraftsPage from '../features/vaccination-administration/pages/VaccinationDraftsPage';
+import VaccinatorVaccinationRecordsPage from '../features/vaccination-administration/pages/VaccinatorVaccinationRecordsPage';
+import VaccinatorCorrectionRequestsPage from '../features/vaccination-administration/pages/VaccinatorCorrectionRequestsPage';
+import AdminCorrectionRequestsPage from '../features/vaccination-administration/pages/AdminCorrectionRequestsPage';
+import CitizenVaccinationsPage from '../features/vaccination-administration/pages/CitizenVaccinationsPage';
+import PublicCertificateVerificationPage from '../features/vaccination-administration/pages/PublicCertificateVerificationPage';
 import AuthenticatedLayout from './AuthenticatedLayout';
 import ProtectedRoute from './ProtectedRoute';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -55,7 +64,6 @@ const CAMPAIGN_VIEW_ROLES = [
   'ROLE_ADMIN',
   'ROLE_CAMPAIGN_OFFICER',
   'ROLE_CENTER_MANAGER',
-  'ROLE_HEALTHCARE_OFFICER',
   'ROLE_MANAGEMENT_USER',
 ];
 
@@ -65,7 +73,6 @@ const SESSION_VIEW_ROLES = [
   'ROLE_ADMIN',
   'ROLE_CENTER_MANAGER',
   'ROLE_CAMPAIGN_OFFICER',
-  'ROLE_HEALTHCARE_OFFICER',
 ];
 
 const ANALYTICS_VIEW_ROLES = [
@@ -76,8 +83,8 @@ const ANALYTICS_VIEW_ROLES = [
 
 const CHECK_IN_STAFF_ROLES = [
   'ROLE_ADMIN',
-  'ROLE_HEALTHCARE_OFFICER',
   'ROLE_CENTER_MANAGER',
+  'ROLE_VACCINATOR',
 ];
 
 const INVENTORY_ROLES = ['ROLE_ADMIN', 'ROLE_INVENTORY_OFFICER'];
@@ -198,12 +205,19 @@ export default function PortalRoutes() {
             : <AboutPage onLoginClick={() => navigate('/login')} />
         }
       />
+      <Route
+        path="/verify-certificate"
+        element={<PublicCertificateVerificationPage onLoginClick={() => navigate('/login')} />}
+      />
       <Route element={isAuthenticated ? <RoleHomeRedirect user={user} /> : <AuthExperience />}>
-        <Route path="/login" element={<LoginPage audience="generic" />} />
-        <Route path="/login/citizen" element={<LoginPage audience="citizen" />} />
-        <Route path="/login/staff" element={<LoginPage audience="staff" />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login/citizen" element={<Navigate to="/login" replace />} />
+        <Route path="/login/staff" element={<Navigate to="/login" replace />} />
         <Route path="/register/citizen" element={<CitizenRegistrationPage />} />
         <Route path="/register/staff" element={<StaffRegistrationRequestPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>
@@ -215,6 +229,8 @@ export default function PortalRoutes() {
           <Route element={<ProtectedRoute allowedRoles={[CITIZEN_ROLE]} />}>
             <Route path="citizen" element={<CitizenDashboardPage />} />
             <Route path="citizen/profile" element={<CitizenProfilePage />} />
+            <Route path="citizen/vaccinations" element={<CitizenVaccinationsPage />} />
+            <Route path="vaccinations" element={<CitizenVaccinationsPage />} />
             <Route path="screening" element={<CitizenScreeningCampaignsPage />} />
             <Route path="screening/campaigns/:campaignId" element={<CitizenScreeningPage />} />
             <Route path="screening/eligibility" element={<CitizenEligibilityPage />} />
@@ -230,6 +246,12 @@ export default function PortalRoutes() {
             <Route path="staff" element={<StaffDashboardPage />} />
           </Route>
 
+          <Route element={<ProtectedRoute allowedRoles={['ROLE_VACCINATOR']} />}>
+            <Route path="staff/vaccination-drafts" element={<VaccinationDraftsPage />} />
+            <Route path="staff/vaccination-records" element={<VaccinatorVaccinationRecordsPage />} />
+            <Route path="staff/correction-requests" element={<VaccinatorCorrectionRequestsPage />} />
+          </Route>
+
           <Route element={<ProtectedRoute allowedRoles={SCREENING_REVIEW_ROLES} />}>
             <Route path="staff/screening/reviews" element={<HealthcareOfficerScreeningReviewQueuePage />} />
             <Route path="staff/screening/reviews/:submissionId" element={<HealthcareOfficerScreeningReviewDetailsPage />} />
@@ -239,6 +261,7 @@ export default function PortalRoutes() {
           <Route element={<ProtectedRoute allowedRoles={[ADMIN_ROLE]} />}>
             <Route path="admin" element={<AdminDashboardPage />} />
             <Route path="admin/staff-requests" element={<PendingStaffRequestsPage />} />
+            <Route path="admin/correction-requests" element={<AdminCorrectionRequestsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={CAMPAIGN_VIEW_ROLES} />}>

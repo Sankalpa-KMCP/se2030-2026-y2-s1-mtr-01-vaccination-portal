@@ -24,7 +24,7 @@ function newOption(key, displayOrder = 1) {
 export default function AddQuestionnaireItemModal({
   show,
   questions,
-  suggestedOrder,
+  suggestedOrder = 1,
   processing,
   apiError,
   creationProgress = null,
@@ -43,9 +43,12 @@ export default function AddQuestionnaireItemModal({
 
   useEffect(() => {
     if (show) {
+      const initialDisplayOrder = Number.isInteger(Number(suggestedOrder)) && Number(suggestedOrder) >= 1
+        ? Number(suggestedOrder)
+        : 1;
       setMode(MODE.EXISTING);
       setQuestionId(questions[0]?.id ? String(questions[0].id) : '');
-      setDisplayOrder(suggestedOrder);
+      setDisplayOrder(initialDisplayOrder);
       setRequiredOverride(REQUIRED_OVERRIDE.DEFAULT);
       setNewQuestion(EMPTY_QUESTION);
       setOptions([]);
@@ -129,9 +132,10 @@ export default function AddQuestionnaireItemModal({
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const numericOrder = Number(displayOrder);
-    if (!Number.isInteger(numericOrder)) {
-      setClientError('Enter a whole-number display order.');
+    const orderString = String(displayOrder ?? '').trim();
+    const numericOrder = Number(orderString);
+    if (!orderString || !Number.isInteger(numericOrder) || numericOrder < 1) {
+      setClientError('Display order must be a whole number of 1 or greater.');
       return;
     }
 
@@ -145,7 +149,7 @@ export default function AddQuestionnaireItemModal({
     if (mode === MODE.EXISTING) {
       const numericQuestionId = Number(questionId);
       if (!numericQuestionId) {
-        setClientError('Select a question and enter a whole-number display order.');
+        setClientError('Select a question.');
         return;
       }
       setClientError(null);
@@ -285,7 +289,7 @@ export default function AddQuestionnaireItemModal({
               <div className="row g-3 mt-1">
                 <div className="col-sm-6">
                   <label className="form-label fw-semibold" htmlFor="questionnaireItemOrder">Display Order <span className="text-danger">*</span></label>
-                  <input id="questionnaireItemOrder" className="form-control" type="number" step="1" value={displayOrder} onChange={(event) => setDisplayOrder(event.target.value)} disabled={processing} required />
+                  <input id="questionnaireItemOrder" className="form-control" type="number" min="1" step="1" value={displayOrder} onChange={(event) => { setDisplayOrder(event.target.value); setClientError(null); }} disabled={processing} required />
                 </div>
                 <div className="col-sm-6">
                   <label className="form-label fw-semibold" htmlFor="questionnaireItemRequired">Required Override</label>

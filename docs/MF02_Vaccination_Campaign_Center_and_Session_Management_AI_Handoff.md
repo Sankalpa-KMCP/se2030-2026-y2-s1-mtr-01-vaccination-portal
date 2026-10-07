@@ -1,4 +1,6 @@
 # MF-02 — Vaccination Campaign, Center and Session Management
+
+> Historical specification/evidence: package trees, implementation status and migration counts below describe their original revision. Current ownership and setup are recorded in the [current architecture](Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md). Applied runtime Flyway history is V0–V21 under `backend/src/main/resources/db/migration`; reference scripts are not runtime migrations. Business requirements remain reference material.
 ## AI Engineering Handoff
 
 **Project:** Web-Based Vaccination Portal (`WBVP-SE2030`)

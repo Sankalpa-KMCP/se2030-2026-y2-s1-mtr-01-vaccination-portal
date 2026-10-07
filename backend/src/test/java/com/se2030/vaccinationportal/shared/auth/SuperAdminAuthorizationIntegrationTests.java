@@ -1,9 +1,38 @@
 package com.se2030.vaccinationportal.shared.auth;
 
+import com.se2030.vaccinationportal.campaign.center.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.center.model.OperationalResource;
+import com.se2030.vaccinationportal.campaign.center.model.OperationalResourceStatus;
+import com.se2030.vaccinationportal.campaign.center.model.OperationalStaffRoster;
+import com.se2030.vaccinationportal.campaign.center.model.OperationalStaffStatus;
+import com.se2030.vaccinationportal.campaign.center.model.ResourceType;
+import com.se2030.vaccinationportal.campaign.center.model.StaffRole;
+import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.center.repository.OperationalResourceRepository;
+import com.se2030.vaccinationportal.campaign.center.repository.OperationalStaffRosterRepository;
+import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.core.model.CampaignDoseProgramme;
+import com.se2030.vaccinationportal.campaign.core.model.CampaignStatus;
+import com.se2030.vaccinationportal.campaign.core.model.DoseCategory;
+import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.core.repository.CampaignDoseProgrammeRepository;
+import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaignRepository;
+import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.reference.repository.TargetGroupRepository;
+import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionCapacityPlan;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionResourceAssignment;
+import com.se2030.vaccinationportal.campaign.session.planning.model.StaffAssignment;
+import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.SessionCapacityPlanRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.SessionResourceAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.StaffAssignmentRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.repository.VaccinationSessionRepository;
+
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.se2030.vaccinationportal.campaign.CampaignTestFixtures;
-import com.se2030.vaccinationportal.campaign.model.*;
-import com.se2030.vaccinationportal.campaign.repository.*;
 import com.se2030.vaccinationportal.shared.auth.dto.StaffApprovalRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.StaffRejectionRequest;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
@@ -335,11 +364,11 @@ class SuperAdminAuthorizationIntegrationTests {
     // =========================================================================
 
     @Test
-    @DisplayName("ROLE_SUPER_ADMIN can access vaccination draft operational endpoints")
-    void superAdmin_canAccessVaccinationDrafts() throws Exception {
+    @DisplayName("ROLE_SUPER_ADMIN cannot access vaccination draft operational endpoints")
+    void superAdmin_cannotAccessVaccinationDrafts() throws Exception {
         mockMvc.perform(get("/api/v1/vaccination/drafts")
                         .header(HttpHeaders.AUTHORIZATION, superAdminToken())
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 }

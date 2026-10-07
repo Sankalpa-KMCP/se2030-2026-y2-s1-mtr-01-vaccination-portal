@@ -16,7 +16,23 @@ class JwtTokenServiceTests {
 
     @BeforeEach
     void setUp() {
-        jwtTokenService = new JwtTokenService(TEST_SECRET, 60);
+        jwtTokenService = new JwtTokenService(TEST_SECRET, 15);
+    }
+
+    @Test
+    @DisplayName("generateToken issues token with canonical 15-minute expiration")
+    void generateToken_has15MinuteExpiration() {
+        long beforeSeconds = System.currentTimeMillis() / 1000;
+        String token = jwtTokenService.generateToken(101L, "user@portal.gov", List.of("ROLE_CITIZEN"));
+        long afterSeconds = System.currentTimeMillis() / 1000;
+
+        io.jsonwebtoken.Claims claims = jwtTokenService.extractAllClaims(token);
+        long issuedAtSeconds = claims.getIssuedAt().getTime() / 1000;
+        long expirationSeconds = claims.getExpiration().getTime() / 1000;
+        long durationMinutes = (expirationSeconds - issuedAtSeconds) / 60;
+
+        assertEquals(15, durationMinutes, "Token must expire exactly 15 minutes after issuance");
+        assertTrue(issuedAtSeconds >= beforeSeconds && issuedAtSeconds <= afterSeconds);
     }
 
     @Test

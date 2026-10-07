@@ -17,6 +17,7 @@ vi.mock('../../screening/api/screeningApi', () => ({
 }));
 vi.mock('../../campaign-management/api/campaignApi', () => ({
   listCampaigns: apiMocks.listCampaigns,
+  listCitizenCampaigns: apiMocks.listCampaigns,
 }));
 
 import useCitizenDashboardData from './useCitizenDashboardData';

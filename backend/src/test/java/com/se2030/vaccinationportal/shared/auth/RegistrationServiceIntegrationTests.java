@@ -59,12 +59,14 @@ class RegistrationServiceIntegrationTests {
         citizenProfileRepository.deleteAll();
         userAccountRepository.deleteAll();
         roleRepository.deleteAll();
+        roleRepository.flush();
         roleRepository.saveAll(List.of(
                 new Role("ROLE_ADMIN", "System Administrator"),
                 new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"),
                 new Role("ROLE_HEALTHCARE_OFFICER", "Healthcare Officer"),
                 new Role("ROLE_CAMPAIGN_OFFICER", "Campaign Officer"),
                 new Role("ROLE_INVENTORY_OFFICER", "Inventory Officer"),
+                new Role("ROLE_VACCINATOR", "Vaccinator"),
                 new Role("ROLE_CITIZEN", "Citizen"),
                 new Role("ROLE_MANAGEMENT_USER", "Management User")
         ));
@@ -84,14 +86,14 @@ class RegistrationServiceIntegrationTests {
         assertEquals("nimal.perera@example.com", persisted.getEmail());
         assertEquals("Nimal Perera", persisted.getFullName());
         assertEquals("+94 77 123 4567", persisted.getPhoneNumber());
-        assertEquals(AccountStatus.ACTIVE, persisted.getAccountStatus());
+        assertEquals(AccountStatus.PENDING_VERIFICATION, persisted.getAccountStatus());
         assertEquals(List.of("ROLE_CITIZEN"), persisted.getRoles().stream().map(Role::getCode).sorted().toList());
         assertNull(persisted.getRequestedRole());
         assertNotEquals(RAW_PASSWORD, persisted.getPasswordHash());
         assertTrue(passwordEncoder.matches(RAW_PASSWORD, persisted.getPasswordHash()));
 
         assertEquals(persisted.getId(), response.id());
-        assertEquals(AccountStatus.ACTIVE, response.accountStatus());
+        assertEquals(AccountStatus.PENDING_VERIFICATION, response.accountStatus());
         assertEquals(List.of("ROLE_CITIZEN"), response.roles());
         assertNull(response.requestedRoleCode());
 
@@ -119,7 +121,8 @@ class RegistrationServiceIntegrationTests {
             "ROLE_HEALTHCARE_OFFICER",
             "ROLE_CENTER_MANAGER",
             "ROLE_CAMPAIGN_OFFICER",
-            "ROLE_INVENTORY_OFFICER"
+            "ROLE_INVENTORY_OFFICER",
+            "ROLE_VACCINATOR"
     })
     void registerStaff_allowedRole_persistsPendingRequestWithoutAuthority(String requestedRoleCode) {
         String email = requestedRoleCode.toLowerCase() + "@example.com";

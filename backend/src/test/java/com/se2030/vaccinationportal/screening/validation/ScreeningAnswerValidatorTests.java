@@ -1,14 +1,16 @@
 package com.se2030.vaccinationportal.screening.validation;
 
-import com.se2030.vaccinationportal.screening.model.AnswerOption;
-import com.se2030.vaccinationportal.screening.model.QuestionType;
-import com.se2030.vaccinationportal.screening.model.QuestionnaireItem;
-import com.se2030.vaccinationportal.screening.model.QuestionnaireVersion;
-import com.se2030.vaccinationportal.screening.model.ScreeningQuestion;
-import com.se2030.vaccinationportal.screening.repository.AnswerOptionRepository;
+import com.se2030.vaccinationportal.screening.questionnaire.model.AnswerOption;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionType;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireItem;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireVersion;
+import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuestion;
+import com.se2030.vaccinationportal.screening.questionnaire.repository.AnswerOptionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -18,6 +20,10 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,9 +37,46 @@ class ScreeningAnswerValidatorTests {
 
     @BeforeEach
     void setUp() {
-        validator = new ScreeningAnswerValidator(optionRepository);
+        validator = new ScreeningAnswerValidator(List.of(
+                new TextAnswerValidationStrategy(),
+                new BooleanAnswerValidationStrategy(),
+                new NumericAnswerValidationStrategy(),
+                new DateAnswerValidationStrategy(),
+                new SingleChoiceAnswerValidationStrategy(optionRepository),
+                new MultiChoiceAnswerValidationStrategy(optionRepository)
+        ));
         version = new QuestionnaireVersion();
         version.setId(50L);
+    }
+
+    @ParameterizedTest
+    @EnumSource(QuestionType.class)
+    void delegatesTrimmedAnswerToStrategyForQuestionType(QuestionType type) {
+        AnswerValidationStrategy nonMatching = mock(AnswerValidationStrategy.class);
+        QuestionType otherType = type == QuestionType.TEXT ? QuestionType.BOOLEAN : QuestionType.TEXT;
+        when(nonMatching.questionType()).thenReturn(otherType);
+
+        AnswerValidationStrategy matching = mock(AnswerValidationStrategy.class);
+        when(matching.questionType()).thenReturn(type);
+        when(matching.validate(1L, "value")).thenReturn("delegated");
+        validator = new ScreeningAnswerValidator(List.of(nonMatching, matching));
+
+        assertThat(validate(item(question(1L, type, true), null), Map.of(1L, " value "))
+                .getFirst().typedAnswer()).isEqualTo("delegated");
+        verify(matching).validate(1L, "value");
+        verify(nonMatching, never()).validate(any(), any());
+    }
+
+    @Test
+    void rejectsDuplicateStrategyRegistrations() {
+        AnswerValidationStrategy first = mock(AnswerValidationStrategy.class);
+        AnswerValidationStrategy second = mock(AnswerValidationStrategy.class);
+        when(first.questionType()).thenReturn(QuestionType.TEXT);
+        when(second.questionType()).thenReturn(QuestionType.TEXT);
+
+        assertThatThrownBy(() -> new ScreeningAnswerValidator(List.of(first, second)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Duplicate answer validation strategy for TEXT");
     }
 
     @Test

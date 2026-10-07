@@ -1,4 +1,4 @@
-import { apiRequestData } from '../../../services/apiClient';
+import { apiRequestData } from '../../../shared/api/apiClient';
 
 const json = (method, body) => ({ method, body: JSON.stringify(body) });
 const resource = (name) => `/v1/inventory/${name}`;

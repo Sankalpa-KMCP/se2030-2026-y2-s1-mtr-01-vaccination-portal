@@ -1,16 +1,19 @@
 package com.se2030.vaccinationportal.screening;
 
-import com.se2030.vaccinationportal.screening.controller.QuestionnaireController;
-import com.se2030.vaccinationportal.screening.controller.ScreeningConfigurationController;
-import com.se2030.vaccinationportal.screening.service.EligibilityReviewService;
-import com.se2030.vaccinationportal.screening.service.QuestionnaireVersionService;
-import com.se2030.vaccinationportal.screening.service.ScreeningConfigurationService;
-import com.se2030.vaccinationportal.screening.service.CitizenScreeningAccessService;
-import com.se2030.vaccinationportal.screening.service.ScreeningHistoryService;
-import com.se2030.vaccinationportal.screening.model.EligibilityAssessment;
-import com.se2030.vaccinationportal.screening.model.EligibilityAssessmentStatus;
-import com.se2030.vaccinationportal.screening.model.PreliminaryScreeningResult;
-import com.se2030.vaccinationportal.screening.model.ScreeningSubmission;
+import com.se2030.vaccinationportal.screening.questionnaire.web.QuestionnaireController;
+import com.se2030.vaccinationportal.screening.questionnaire.web.ScreeningConfigurationController;
+import com.se2030.vaccinationportal.screening.eligibility.service.EligibilityReviewService;
+import com.se2030.vaccinationportal.screening.questionnaire.service.QuestionnaireVersionService;
+import com.se2030.vaccinationportal.screening.questionnaire.service.ScreeningConfigurationService;
+import com.se2030.vaccinationportal.screening.submission.service.CitizenScreeningAccessService;
+import com.se2030.vaccinationportal.screening.query.service.ScreeningHistoryService;
+import com.se2030.vaccinationportal.screening.eligibility.model.EligibilityAssessment;
+import com.se2030.vaccinationportal.screening.eligibility.model.EligibilityAssessmentStatus;
+import com.se2030.vaccinationportal.screening.submission.model.PreliminaryScreeningResult;
+import com.se2030.vaccinationportal.screening.submission.model.ScreeningSubmission;
+import com.se2030.vaccinationportal.screening.questionnaire.model.Questionnaire;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireVersion;
+import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireVersionStatus;
 import com.se2030.vaccinationportal.screening.validation.RequireRoles;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,8 @@ import java.time.Instant;
 import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -283,6 +288,53 @@ class ScreeningSecurityAuthorizationIntegrationTests {
                         .header(LEGACY_ROLE_HEADER, "CITIZEN")
                         .header(ALTERNATE_LEGACY_ROLE_HEADER, "CITIZEN"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void campaignOfficerCanAccessPublishedQuestionnaireVersions() throws Exception {
+        when(questionnaireVersionService.getPublishedVersions()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/screening/questionnaire-versions/published")
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_CAMPAIGN_OFFICER")))
+                .andExpect(status().isOk());
+
+        verify(questionnaireVersionService).getPublishedVersions();
+        verify(questionnaireVersionService, never()).getVersionById(anyLong());
+    }
+
+    @Test
+    void campaignOfficerCanAccessQuestionnaireVersionById() throws Exception {
+        Questionnaire q = new Questionnaire("TEST-Q", "Test Questionnaire", "Desc");
+        q.setId(10L);
+        QuestionnaireVersion v = new QuestionnaireVersion(q, 1, QuestionnaireVersionStatus.PUBLISHED);
+        v.setId(123L);
+        when(questionnaireVersionService.getVersionById(123L)).thenReturn(v);
+
+        mockMvc.perform(get("/api/v1/screening/questionnaire-versions/{versionId}", 123L)
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_CAMPAIGN_OFFICER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(123L));
+
+        verify(questionnaireVersionService).getVersionById(123L);
+    }
+
+    @Test
+    void invalidTextualVersionIdReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/screening/questionnaire-versions/not-a-number")
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_CAMPAIGN_OFFICER")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid value for parameter 'versionId'"));
+
+        verify(questionnaireVersionService, never()).getVersionById(anyLong());
+    }
+
+    @Test
+    void citizenCannotAccessPublishedQuestionnaireVersions() throws Exception {
+        mockMvc.perform(get("/api/v1/screening/questionnaire-versions/published")
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_CITIZEN")))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(questionnaireVersionService);
     }
 
     private void assertHealthcareOfficerOnly(Class<?> controllerType, String... methodNames) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InventoryManagementPage from './InventoryManagementPage';
 import { inventoryApi } from '../api/inventoryApi';
@@ -11,9 +11,21 @@ vi.mock('../api/inventoryApi', () => ({
   },
 }));
 
+// Batch dates must stay relative to "now": a hardcoded expiry silently turned the
+// fixture batch EXPIRED (disabling adjustments and zeroing the available-doses
+// summary) once the calendar passed it. 60 days ahead stays outside the 30-day
+// near-expiry window; manufacture stays 30 days behind.
+const isoDate = (offsetDays) => {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
 const payload = [
   [{ id: 1, code: 'ACME', name: 'Acme Vaccines' }],
-  [{ id: 2, manufacturerId: 1, vaccineTypeId: 3, batchNumber: 'LOT-42', manufactureDate: '2026-08-01', expiryDate: '2026-09-30', batchStatus: 'ACTIVE' }],
+  [{ id: 2, manufacturerId: 1, vaccineTypeId: 3, batchNumber: 'LOT-42', manufactureDate: isoDate(-30), expiryDate: isoDate(60), batchStatus: 'ACTIVE' }],
   [{ id: 4, centerId: 5, batchId: 2, quantity: 8, lockVersion: 0 }],
   { vaccineTypes: [{ id: 3, code: 'MRNA', name: 'mRNA' }], centers: [{ id: 5, code: 'CTR', name: 'Central Clinic' }] },
   [{ id: 6, inventoryId: 4, type: 'RECEIPT', quantityChange: 8, beforeQuantity: 0, afterQuantity: 8, actorId: 7, reason: 'Delivery', createdAt: '2026-09-16T08:00:00Z' }],
@@ -26,10 +38,12 @@ describe('InventoryManagementPage', () => {
   it('renders live summaries, canonical alerts, and the inventory overview', async () => {
     render(<InventoryManagementPage />);
     expect(await screen.findByRole('heading', { name: 'Inventory & Batch Management' })).toBeTruthy();
-    expect(screen.getByText('8', { selector: '.display-6' })).toBeTruthy();
+    const dosesCard = screen.getByText('Available doses').closest('article');
+    expect(within(dosesCard).getByText('8')).toBeTruthy();
     expect(screen.getByText('Central Clinic')).toBeTruthy();
     expect(screen.getAllByText(/Low stock/i).length).toBeGreaterThan(0);
     expect(screen.getByText('LOT-42')).toBeTruthy();
+    expect(screen.getByText('Available')).toBeTruthy();
   });
 
   it('shows read-only transaction history', async () => {

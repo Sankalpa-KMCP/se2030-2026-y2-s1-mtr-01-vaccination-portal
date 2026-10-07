@@ -1,24 +1,39 @@
 package com.se2030.vaccinationportal.shared.auth.service;
 
 import com.se2030.vaccinationportal.shared.auth.dto.CitizenRegistrationRequest;
+import com.se2030.vaccinationportal.shared.auth.dto.ForgotPasswordRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginResponse;
+import com.se2030.vaccinationportal.shared.auth.dto.MessageResponse;
 import com.se2030.vaccinationportal.shared.auth.dto.RegistrationResponse;
+import com.se2030.vaccinationportal.shared.auth.dto.ResendVerificationRequest;
+import com.se2030.vaccinationportal.shared.auth.dto.ResetPasswordRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.StaffRegistrationRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.UserProfileResponse;
+import com.se2030.vaccinationportal.shared.auth.dto.VerifyEmailRequest;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingApprovalException;
 import com.se2030.vaccinationportal.shared.auth.exception.AccountRejectedException;
 import com.se2030.vaccinationportal.shared.auth.exception.DuplicateEmailException;
+import com.se2030.vaccinationportal.shared.auth.exception.InvalidAuthActionTokenException;
 import com.se2030.vaccinationportal.shared.auth.exception.InvalidRequestedRoleException;
+import com.se2030.vaccinationportal.shared.auth.exception.TokenAlreadyUsedException;
+import com.se2030.vaccinationportal.shared.auth.exception.TokenExpiredException;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.CitizenProfile;
+import com.se2030.vaccinationportal.shared.auth.model.EmailVerificationToken;
+import com.se2030.vaccinationportal.shared.auth.model.PasswordResetToken;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
 import com.se2030.vaccinationportal.shared.auth.repository.CitizenProfileRepository;
+import com.se2030.vaccinationportal.shared.auth.repository.EmailVerificationTokenRepository;
+import com.se2030.vaccinationportal.shared.auth.repository.PasswordResetTokenRepository;
+import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
+import com.se2030.vaccinationportal.shared.auth.security.AuthActionTokenService;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -27,10 +42,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,35 +56,107 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class AuthService {
 
+    public static final String GENERIC_RESEND_VERIFICATION_MESSAGE =
+            "If the account exists and is pending verification, a verification email has been sent.";
+    public static final String GENERIC_FORGOT_PASSWORD_MESSAGE =
+            "If an eligible account is associated with this email address, password reset instructions have been sent.";
+
     private static final String CITIZEN_ROLE_CODE = "ROLE_CITIZEN";
     private static final Set<String> PUBLIC_STAFF_ROLE_CODES = Set.of(
             "ROLE_HEALTHCARE_OFFICER",
             "ROLE_CENTER_MANAGER",
             "ROLE_CAMPAIGN_OFFICER",
-            "ROLE_INVENTORY_OFFICER"
+            "ROLE_INVENTORY_OFFICER",
+            "ROLE_VACCINATOR"
     );
 
     private final UserAccountRepository userAccountRepository;
     private final RoleRepository roleRepository;
     private final CitizenProfileRepository citizenProfileRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RefreshTokenSessionRepository refreshTokenSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
+    private final AuthActionTokenService authActionTokenService;
+    private final AuthLinkDeliveryService authLinkDeliveryService;
+    private final AuthLinkIssuanceThrottle authLinkIssuanceThrottle;
+    private final EmailVerificationService emailVerificationService;
+    private final RefreshTokenSessionService refreshTokenSessionService;
+    private final Clock clock;
+    private final int verificationTokenExpirationHours;
+    private final int resetTokenExpirationMinutes;
+    private final int maxFailedLoginAttempts;
+    private final int loginLockDurationSeconds;
 
     public AuthService(
             UserAccountRepository userAccountRepository,
             RoleRepository roleRepository,
             CitizenProfileRepository citizenProfileRepository,
+            EmailVerificationTokenRepository emailVerificationTokenRepository,
+            PasswordResetTokenRepository passwordResetTokenRepository,
+            RefreshTokenSessionRepository refreshTokenSessionRepository,
             PasswordEncoder passwordEncoder,
-            JwtTokenService jwtTokenService
+            JwtTokenService jwtTokenService,
+            AuthActionTokenService authActionTokenService,
+            AuthLinkDeliveryService authLinkDeliveryService,
+            AuthLinkIssuanceThrottle authLinkIssuanceThrottle,
+            EmailVerificationService emailVerificationService,
+            RefreshTokenSessionService refreshTokenSessionService,
+            Clock clock,
+            @Value("${app.security.auth.verification-token-expiration-hours:24}") int verificationTokenExpirationHours,
+            @Value("${app.security.auth.reset-token-expiration-minutes:30}") int resetTokenExpirationMinutes,
+            @Value("${app.security.auth.login-max-failed-attempts:${AUTH_LOGIN_MAX_FAILED_ATTEMPTS:5}}") int maxFailedLoginAttempts,
+            @Value("${app.security.auth.login-lock-duration-seconds:${AUTH_LOGIN_LOCK_DURATION_SECONDS:900}}") int loginLockDurationSeconds
     ) {
+        // Fail fast on invalid lockout policy: a permissive value here would silently
+        // disable the brute-force control (e.g. a non-positive duration yields a lock
+        // that is already expired). Application startup must refuse such configuration.
+        if (maxFailedLoginAttempts < 1) {
+            throw new IllegalArgumentException(
+                    "app.security.auth.login-max-failed-attempts must be at least 1 (configured value: "
+                            + maxFailedLoginAttempts + ")");
+        }
+        if (loginLockDurationSeconds <= 0) {
+            throw new IllegalArgumentException(
+                    "app.security.auth.login-lock-duration-seconds must be greater than 0 (configured value: "
+                            + loginLockDurationSeconds + ")");
+        }
         this.userAccountRepository = userAccountRepository;
         this.roleRepository = roleRepository;
         this.citizenProfileRepository = citizenProfileRepository;
+        this.emailVerificationTokenRepository = emailVerificationTokenRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.refreshTokenSessionRepository = refreshTokenSessionRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenService = jwtTokenService;
+        this.authActionTokenService = authActionTokenService;
+        this.authLinkDeliveryService = authLinkDeliveryService;
+        this.authLinkIssuanceThrottle = authLinkIssuanceThrottle;
+        this.emailVerificationService = emailVerificationService;
+        this.refreshTokenSessionService = refreshTokenSessionService;
+        this.clock = clock;
+        this.verificationTokenExpirationHours = verificationTokenExpirationHours;
+        this.resetTokenExpirationMinutes = resetTokenExpirationMinutes;
+        this.maxFailedLoginAttempts = maxFailedLoginAttempts;
+        this.loginLockDurationSeconds = loginLockDurationSeconds;
     }
 
-    public LoginResponse login(LoginRequest request) {
+    /**
+     * {@code noRollbackFor} is load-bearing: the failed-login counter update must
+     * commit even though the transaction ends with BadCredentialsException, or every
+     * rejected attempt would be rolled back together with the rejection itself.
+     */
+    /**
+     * Login result carrying the JSON response plus the refresh-token issuance the
+     * controller must deliver as a Secure HttpOnly cookie (canonical §17.1).
+     */
+    public record LoginResult(LoginResponse response, String refreshToken, Instant refreshTokenExpiresAt) {}
+
+    public record RefreshSessionResult(LoginResponse response, String refreshToken, Instant refreshTokenExpiresAt) {}
+
+    @Transactional(noRollbackFor = BadCredentialsException.class)
+    public LoginResult login(LoginRequest request) {
         Objects.requireNonNull(request, "LoginRequest must not be null");
 
         String normalizedEmail = UserAccount.normalizeEmail(request.email());
@@ -75,9 +165,18 @@ public class AuthService {
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.password(), account.getPasswordHash())) {
+            recordFailedLoginAttempt(account);
             throw new BadCredentialsException("Invalid email or password");
         }
 
+        // Correct password: an elapsed timed lock unlocks by System-after-expiry
+        // (canonical Appendix E) before the lock gate runs.
+        clearExpiredTimedLock(account);
+
+        // Citizens pending email verification must be able to log in: the OTP
+        // verification API is principal-scoped, so login is the gate that lets
+        // them reach it. Booking enforcement for unverified accounts is a
+        // separate concern owned downstream.
         if (account.getAccountStatus() == AccountStatus.PENDING_APPROVAL) {
             throw new AccountPendingApprovalException();
         }
@@ -87,13 +186,18 @@ public class AuthService {
         }
 
         if (account.getAccountStatus() == AccountStatus.LOCKED
-                || (account.getLockedUntil() != null && Instant.now().isBefore(account.getLockedUntil()))) {
+                || (account.getLockedUntil() != null && clock.instant().isBefore(account.getLockedUntil()))) {
             throw new LockedException("Account is temporarily locked");
         }
 
-        if (account.getAccountStatus() != AccountStatus.ACTIVE) {
+        // PENDING_VERIFICATION stays login-eligible by design (see note above); every
+        // other unexpected status is treated as not active for login.
+        if (account.getAccountStatus() != AccountStatus.ACTIVE
+                && account.getAccountStatus() != AccountStatus.PENDING_VERIFICATION) {
             throw new DisabledException("Account is not active for login");
         }
+
+        userAccountRepository.resetFailedLoginAttempts(account.getId());
 
         List<String> roleCodes = account.getRoles().stream()
                 .map(Role::getCode)
@@ -103,7 +207,68 @@ public class AuthService {
         String token = jwtTokenService.generateToken(account.getId(), account.getEmail(), roleCodes);
         UserProfileResponse userProfile = toUserProfile(account, roleCodes);
 
-        return new LoginResponse(token, userProfile);
+        RefreshTokenSessionService.IssuedRefreshToken refresh =
+                refreshTokenSessionService.issueRootSession(account);
+        return new LoginResult(new LoginResponse(token, userProfile), refresh.rawToken(), refresh.expiresAt());
+    }
+
+    /**
+     * Rotates the presented refresh token (canonical §17.1 single-use rotation with
+     * family reuse detection) and issues a fresh short-lived access token.
+     */
+    @Transactional(noRollbackFor = BadCredentialsException.class)
+    public RefreshSessionResult refresh(String rawRefreshToken) {
+        RefreshTokenSessionService.RotatedRefreshSession rotated =
+                refreshTokenSessionService.rotate(rawRefreshToken);
+
+        List<String> roleCodes = rotated.account().getRoles().stream()
+                .map(Role::getCode)
+                .sorted()
+                .collect(Collectors.toList());
+
+        String token = jwtTokenService.generateToken(rotated.account().getId(), rotated.account().getEmail(), roleCodes);
+        UserProfileResponse userProfile = toUserProfile(rotated.account(), roleCodes);
+
+        return new RefreshSessionResult(new LoginResponse(token, userProfile), rotated.rawToken(), rotated.expiresAt());
+    }
+
+    /**
+     * Revokes the token family presented by the caller (canonical logout semantics).
+     * Unknown or blank tokens are a no-op so the endpoint stays idempotent.
+     */
+    @Transactional
+    public void logout(String rawRefreshToken) {
+        refreshTokenSessionService.revokeFamilyByRawToken(rawRefreshToken);
+    }
+
+    /**
+     * Records one failed password attempt through the atomic threshold-transition
+     * update (no lost increments under concurrent failures). While a timed lock is
+     * active the statement matches no rows, so attempts during a lock neither count
+     * toward the next lock nor extend the current one.
+     */
+    private void recordFailedLoginAttempt(UserAccount account) {
+        Instant now = clock.instant();
+        userAccountRepository.recordFailedLoginAttempt(
+                account.getId(),
+                maxFailedLoginAttempts,
+                now.plus(Duration.ofSeconds(loginLockDurationSeconds)),
+                now
+        );
+    }
+
+    /**
+     * Clears an elapsed timed lock together with the failure counter. Unknown-email
+     * attempts never reach this path, so no state is created for nonexistent
+     * accounts, and permanent LOCKED account status is untouched.
+     */
+    private void clearExpiredTimedLock(UserAccount account) {
+        Instant now = clock.instant();
+        if (account.getLockedUntil() != null && !account.getLockedUntil().isAfter(now)) {
+            userAccountRepository.clearExpiredTimedLock(account.getId(), now);
+            account.setLockedUntil(null);
+            account.setFailedLoginAttempts(0);
+        }
     }
 
     public UserProfileResponse getCurrentUserProfile(UserPrincipal principal) {
@@ -129,7 +294,7 @@ public class AuthService {
         UserAccount account = new UserAccount(
                 normalizedEmail,
                 passwordEncoder.encode(request.password()),
-                AccountStatus.ACTIVE
+                AccountStatus.PENDING_VERIFICATION
         );
         account.setFullName(request.fullName());
         account.setPhoneNumber(request.phoneNumber());
@@ -137,7 +302,156 @@ public class AuthService {
 
         UserAccount savedAccount = saveRegistration(account);
         citizenProfileRepository.saveAndFlush(new CitizenProfile(savedAccount));
+
+        // The citizen starts email-unverified: the OTP challenge commits atomically
+        // with the account, and the code email is dispatched only after this
+        // transaction commits.
+        emailVerificationService.issueInitialChallenge(savedAccount.getId());
+
         return toRegistrationResponse(savedAccount);
+    }
+
+    @Transactional
+    public MessageResponse verifyEmail(VerifyEmailRequest request) {
+        Objects.requireNonNull(request, "VerifyEmailRequest must not be null");
+        String rawToken = request.token();
+        String tokenHash = authActionTokenService.hashToken(rawToken);
+
+        EmailVerificationToken token = emailVerificationTokenRepository.findByTokenHashForUpdate(tokenHash)
+                .orElseThrow(InvalidAuthActionTokenException::new);
+
+        if (token.isConsumed()) {
+            throw new TokenAlreadyUsedException();
+        }
+
+        Instant now = clock.instant();
+        if (token.isExpired(now)) {
+            throw new TokenExpiredException();
+        }
+
+        UserAccount user = token.getUser();
+        if (user == null || user.getAccountStatus() != AccountStatus.PENDING_VERIFICATION) {
+            throw new InvalidAuthActionTokenException();
+        }
+
+        token.markUsed(now);
+        emailVerificationTokenRepository.saveAndFlush(token);
+
+        user.setEmailVerifiedAt(now);
+        user.setAccountStatus(AccountStatus.ACTIVE);
+        userAccountRepository.saveAndFlush(user);
+
+        return new MessageResponse("Email verified successfully");
+    }
+
+    @Transactional
+    public MessageResponse resendVerification(ResendVerificationRequest request) {
+        Objects.requireNonNull(request, "ResendVerificationRequest must not be null");
+        String normalizedEmail = UserAccount.normalizeEmail(request.email());
+
+        Optional<UserAccount> userOpt = userAccountRepository.findByEmailIgnoreCase(normalizedEmail);
+        if (userOpt.isPresent()) {
+            UserAccount user = userOpt.get();
+            if (user.getAccountStatus() == AccountStatus.PENDING_VERIFICATION) {
+                // Bounded abuse protection (R06 / F2-DOS / F2-ALIAS): the cooldown is keyed to the
+                // resolved account's immutable primary key (user.getId()), not request-supplied text.
+                // Collation-equivalent aliases (e.g. accents, case, Unicode under utf8mb4_unicode_ci)
+                // resolve to the same account and share one cooldown, while nonexistent identities
+                // never consume throttle capacity.
+                if (!authLinkIssuanceThrottle.tryRecordIssuance(user.getId(), clock.instant())) {
+                    return new MessageResponse(GENERIC_RESEND_VERIFICATION_MESSAGE);
+                }
+
+                Instant now = clock.instant();
+                List<EmailVerificationToken> existingTokens = emailVerificationTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
+                for (EmailVerificationToken existingToken : existingTokens) {
+                    existingToken.markUsed(now);
+                }
+                if (!existingTokens.isEmpty()) {
+                    emailVerificationTokenRepository.saveAllAndFlush(existingTokens);
+                }
+
+                String rawToken = authActionTokenService.generateToken();
+                String tokenHash = authActionTokenService.hashToken(rawToken);
+                Instant expiresAt = now.plus(Duration.ofHours(verificationTokenExpirationHours));
+                emailVerificationTokenRepository.saveAndFlush(new EmailVerificationToken(user, tokenHash, expiresAt));
+                authLinkDeliveryService.sendEmailVerificationLink(user.getEmail(), rawToken);
+            }
+        }
+
+        return new MessageResponse(GENERIC_RESEND_VERIFICATION_MESSAGE);
+    }
+
+    @Transactional
+    public MessageResponse forgotPassword(ForgotPasswordRequest request) {
+        Objects.requireNonNull(request, "ForgotPasswordRequest must not be null");
+        String normalizedEmail = UserAccount.normalizeEmail(request.email());
+
+        Optional<UserAccount> userOpt = userAccountRepository.findByEmailIgnoreCase(normalizedEmail);
+        if (userOpt.isPresent()) {
+            UserAccount user = userOpt.get();
+            if (user.getAccountStatus() != AccountStatus.REJECTED) {
+                // Bounded abuse protection (R06 / F2-DOS / F2-ALIAS): same per-account cooldown gate as
+                // resend-verification — keyed to the immutable user.getId() so collation aliases, alternate
+                // spellings, and formatting variants cannot bypass the cooldown or rotate reset tokens.
+                if (!authLinkIssuanceThrottle.tryRecordIssuance(user.getId(), clock.instant())) {
+                    return new MessageResponse(GENERIC_FORGOT_PASSWORD_MESSAGE);
+                }
+
+                Instant now = clock.instant();
+                List<PasswordResetToken> existingTokens = passwordResetTokenRepository.findAllByUser_IdAndUsedAtIsNull(user.getId());
+                for (PasswordResetToken existingToken : existingTokens) {
+                    existingToken.markUsed(now);
+                }
+                if (!existingTokens.isEmpty()) {
+                    passwordResetTokenRepository.saveAllAndFlush(existingTokens);
+                }
+
+                String rawToken = authActionTokenService.generateToken();
+                String tokenHash = authActionTokenService.hashToken(rawToken);
+                Instant expiresAt = now.plus(Duration.ofMinutes(resetTokenExpirationMinutes));
+                passwordResetTokenRepository.saveAndFlush(new PasswordResetToken(user, tokenHash, expiresAt));
+                authLinkDeliveryService.sendPasswordResetLink(user.getEmail(), rawToken);
+            }
+        }
+
+        return new MessageResponse(GENERIC_FORGOT_PASSWORD_MESSAGE);
+    }
+
+    @Transactional
+    public MessageResponse resetPassword(ResetPasswordRequest request) {
+        Objects.requireNonNull(request, "ResetPasswordRequest must not be null");
+        String rawToken = request.token();
+        String tokenHash = authActionTokenService.hashToken(rawToken);
+
+        PasswordResetToken token = passwordResetTokenRepository.findByTokenHashForUpdate(tokenHash)
+                .orElseThrow(InvalidAuthActionTokenException::new);
+
+        if (token.isConsumed()) {
+            throw new TokenAlreadyUsedException();
+        }
+
+        Instant now = clock.instant();
+        if (token.isExpired(now)) {
+            throw new TokenExpiredException();
+        }
+
+        UserAccount user = token.getUser();
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(now)) {
+            user.setLockedUntil(null);
+        }
+        // A password reset proves credential ownership: clear any residual
+        // failed-login accounting so post-reset logins start from a clean slate.
+        user.setFailedLoginAttempts(0);
+        userAccountRepository.saveAndFlush(user);
+
+        token.markUsed(now);
+        passwordResetTokenRepository.saveAndFlush(token);
+
+        refreshTokenSessionRepository.revokeAllActiveSessionsForUser(user.getId(), now);
+
+        return new MessageResponse("Password has been reset successfully");
     }
 
     @Transactional

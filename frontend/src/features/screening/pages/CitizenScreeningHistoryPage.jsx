@@ -1,11 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
-import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
-import CitizenSection from '../../citizen-ui/components/CitizenSection';
-import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
-import CitizenStatusBadge from '../../citizen-ui/components/CitizenStatusBadge';
+import CitizenErrorState from '../../../shared/ui/citizen/CitizenErrorState';
+import CitizenPageHeader from '../../../shared/ui/citizen/CitizenPageHeader';
+import CitizenSection from '../components/CitizenSection';
+import CitizenStatePanel from '../../../shared/ui/citizen/CitizenStatePanel';
+import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
+import '../citizen-screening.css';
 import { CITIZEN_PRELIMINARY_RESULT_LABELS, ELIGIBILITY_ASSESSMENT_STATUS_LABELS, SCREENING_SUBMISSION_STATUS_LABELS } from '../constants/screeningConstants';
 import useCitizenScreeningRecords from '../hooks/useCitizenScreeningRecords';
 import { assessmentsBySubmission, campaignName, formatScreeningTimestamp } from '../utils/screeningHistory';

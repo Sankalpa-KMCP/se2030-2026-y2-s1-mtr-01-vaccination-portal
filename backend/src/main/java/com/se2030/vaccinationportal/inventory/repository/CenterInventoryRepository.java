@@ -13,6 +13,7 @@ public interface CenterInventoryRepository extends JpaRepository<CenterInventory
     boolean existsByBatchId(Long batchId);
     Optional<CenterInventory> findByCenterIdAndBatchId(Long centerId, Long batchId);
     List<CenterInventory> findAllByBatchId(Long batchId);
+    List<CenterInventory> findByCenterId(Long centerId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from CenterInventory i where i.id = :id")

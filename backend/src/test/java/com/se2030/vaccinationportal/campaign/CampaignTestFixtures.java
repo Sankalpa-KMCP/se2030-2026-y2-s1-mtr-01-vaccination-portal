@@ -1,9 +1,9 @@
 package com.se2030.vaccinationportal.campaign;
 
-import com.se2030.vaccinationportal.campaign.model.CampaignStatus;
-import com.se2030.vaccinationportal.campaign.model.TargetGroup;
-import com.se2030.vaccinationportal.campaign.model.VaccinationCampaign;
-import com.se2030.vaccinationportal.campaign.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.core.model.CampaignStatus;
+import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
+import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.LocalDate;
