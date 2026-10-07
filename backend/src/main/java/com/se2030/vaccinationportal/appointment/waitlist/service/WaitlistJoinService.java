@@ -131,8 +131,8 @@ public class WaitlistJoinService {
             throw new IllegalArgumentException("Session " + sessionId + " does not belong to campaign " + campaignId);
         }
 
-        // Step 2a: Acquire pessimistic write lock on CitizenCampaignBookingGuard (Canonical Section 12.4).
-        // Viva note: Must be acquired first to prevent race conditions against concurrent booking or promotion threads.
+        // Serialize booking, waitlist join, and promotion for the same citizen and campaign.
+        // Lock before checking duplicates so concurrent requests cannot both pass the check.
         guardRepository.insertGuardIfAbsent(citizenId, campaignId);
         guardRepository.findByCitizenIdAndCampaignIdForUpdate(citizenId, campaignId)
                 .orElseThrow(() -> new IllegalStateException("Failed to acquire booking guard lock for citizen "

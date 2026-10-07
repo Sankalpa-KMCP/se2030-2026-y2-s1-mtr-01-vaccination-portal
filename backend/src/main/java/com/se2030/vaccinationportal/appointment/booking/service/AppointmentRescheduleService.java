@@ -179,12 +179,7 @@ public class AppointmentRescheduleService {
             throw new IllegalArgumentException("Target time slot " + newSlotId + " is not bookable: " + bookability);
         }
 
-        // Step 1f: CRITICAL VIVA PROBE: "Reserve-Before-Release" Ordering (MF03-BR-05, F1)
-        // Why reserve newSlotId BEFORE releasing oldSlotId?
-        // If we released the old slot first and then attempted to reserve the new slot only to find it full
-        // (or failing due to a concurrent booking race), the citizen would be left stranded with NEITHER slot!
-        // By reserving newSlotId first, any failure (SlotFullException / IllegalArgumentException) leaves the
-        // citizen's existing slot and appointment completely intact.
+        // Reserve the replacement first so an unavailable slot cannot cost the citizen their old booking.
         SlotReservationResult reservationResult = slotCapacityPort.reserveCapacityForNewBooking(newSlotId, effectiveNow);
         if (reservationResult == SlotReservationResult.NOT_BOOKABLE) {
             throw new IllegalArgumentException("Target time slot " + newSlotId + " is not bookable");

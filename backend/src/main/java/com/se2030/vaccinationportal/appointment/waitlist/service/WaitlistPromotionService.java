@@ -220,8 +220,8 @@ public class WaitlistPromotionService {
                 }
             }
 
-            // Step 1a: Acquire pessimistic write lock for citizen+campaign (Canonical Section 12.4).
-            // Viva note: Ensures mutual exclusion against concurrent citizen bookings during promotion evaluation.
+            // Serialize booking, waitlist join, and promotion for the same citizen and campaign.
+            // Lock before checking duplicates so concurrent requests cannot both pass the check.
             guardRepository.insertGuardIfAbsent(citizenId, campaignId);
             guardRepository.findByCitizenIdAndCampaignIdForUpdate(citizenId, campaignId);
 
