@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.shared.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.se2030.vaccinationportal.shared.auth.controller.RefreshTokenCookieSupport;
 import com.se2030.vaccinationportal.shared.auth.dto.LoginRequest;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
@@ -20,10 +21,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -197,5 +200,115 @@ class AuthControllerTests {
     void securedBusinessEndpoint_deniesAnonymousAccess() throws Exception {
         mockMvc.perform(get("/api/v1/campaigns"))
                 .andExpect(status().isForbidden());
+    }
+
+    private String loginAndCaptureRefreshCookie() throws Exception {
+        String setCookie = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new LoginRequest("manager@portal.gov", "Password123!"))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getHeader("Set-Cookie");
+        assertNotNull(setCookie, "Login must issue the refresh-token cookie");
+        return setCookie;
+    }
+
+    private Cookie refreshCookieFrom(String setCookie) {
+        String pair = setCookie.split(";", 2)[0];
+        String value = pair.substring(pair.indexOf("refresh_token=") + "refresh_token=".length());
+        return new Cookie("refresh_token", value);
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/login issues an HttpOnly SameSite=Lax Secure refresh cookie scoped to /api/v1/auth by default")
+    void login_issuesHardenedRefreshCookie() throws Exception {
+        String setCookie = loginAndCaptureRefreshCookie();
+
+        assertTrue(setCookie.startsWith("refresh_token="), "Cookie must carry the opaque refresh token");
+        assertTrue(setCookie.contains("HttpOnly"), "Refresh cookie must be HttpOnly");
+        assertTrue(setCookie.contains("SameSite=Lax"), "Refresh cookie must be SameSite=Lax");
+        assertTrue(setCookie.contains("Path=/api/v1/auth"), "Refresh cookie must be scoped to auth endpoints");
+        assertTrue(setCookie.contains("Max-Age=604800"), "Refresh cookie Max-Age must match the 7-day lifetime");
+        assertTrue(setCookie.contains("Secure"), "Canonical base configuration serves the cookie with Secure by default");
+    }
+
+    @Test
+    @DisplayName("RefreshTokenCookieSupport respects secure flag for production vs local dev opt-out")
+    void cookieSupport_respectsSecureFlag() {
+        org.springframework.http.ResponseCookie secureCookie = RefreshTokenCookieSupport.build("refresh_token", "raw-token", 604800, true);
+        assertTrue(secureCookie.isSecure(), "Production/default cookie must be Secure");
+        assertTrue(secureCookie.toString().contains("Secure"));
+
+        org.springframework.http.ResponseCookie plainCookie = RefreshTokenCookieSupport.build("refresh_token", "raw-token", 604800, false);
+        assertFalse(plainCookie.isSecure(), "Local dev opt-out cookie must not be Secure");
+        assertFalse(plainCookie.toString().contains("Secure"));
+
+        org.springframework.http.ResponseCookie clearedPlain = RefreshTokenCookieSupport.clear("refresh_token", false);
+        assertFalse(clearedPlain.isSecure());
+        assertEquals(0, clearedPlain.getMaxAge().getSeconds());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/refresh rotates the cookie and returns a new access token")
+    void refresh_withValidCookie_rotatesAndReturnsAccessToken() throws Exception {
+        String originalCookie = loginAndCaptureRefreshCookie();
+        Cookie originalRefresh = refreshCookieFrom(originalCookie);
+
+        String refreshedSetCookie = mockMvc.perform(post("/api/v1/auth/refresh").cookie(originalRefresh))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.user.email", is("manager@portal.gov")))
+                .andReturn()
+                .getResponse()
+                .getHeader("Set-Cookie");
+        assertNotNull(refreshedSetCookie, "Refresh must set a replacement cookie");
+
+        Cookie rotatedRefresh = refreshCookieFrom(refreshedSetCookie);
+        assertNotEquals(originalRefresh.getValue(), rotatedRefresh.getValue(),
+                "Rotation must replace the presented refresh token");
+
+        // The old token is single-use: presenting it again is reuse and revokes the family.
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(originalRefresh))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
+
+        // The rotated successor is dead too: family revocation covers it.
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(rotatedRefresh))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/logout revokes the family and clears the cookie idempotently")
+    void logout_revokesFamilyAndClearsCookie() throws Exception {
+        String originalCookie = loginAndCaptureRefreshCookie();
+        Cookie refresh = refreshCookieFrom(originalCookie);
+
+        String clearedSetCookie = mockMvc.perform(post("/api/v1/auth/logout").cookie(refresh))
+                .andExpect(status().isNoContent())
+                .andReturn()
+                .getResponse()
+                .getHeader("Set-Cookie");
+        assertNotNull(clearedSetCookie);
+        assertTrue(clearedSetCookie.contains("Max-Age=0"), "Logout must expire the refresh cookie");
+
+        // Idempotent repetition and cookie-less logout stay 204 without disclosure.
+        mockMvc.perform(post("/api/v1/auth/logout").cookie(refresh)).andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/v1/auth/logout")).andExpect(status().isNoContent());
+
+        // The presented family is revoked: refresh with the old cookie is rejected.
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/refresh without a cookie returns a generic 401")
+    void refresh_withoutCookie_returnsGeneric401() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/refresh"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code", is("INVALID_CREDENTIALS")));
     }
 }

@@ -50,7 +50,7 @@ The backend follows an explicit hexagonal / ports-and-adapters architecture unde
 
 Database schema versioning is managed strictly through Flyway migrations located in `src/main/resources/db/migration/`.
 
-- **Active Migration Range**: Current migrations span `V0` through `V21` (22 active migrations).
+- **Active Migration Range**: Current migrations span `V0` through `V24` (25 active migrations).
 - **Migration Execution**: Flyway migrations run automatically upon application startup when connected to a configured MySQL database.
 - **DDL Validation**: Production safety is enforced via `spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:validate}`, verifying that Hibernate entities match the Flyway-applied schema without runtime auto-modification.
 - **Testing Profile (`application-test.properties`)**: Standard unit and integration tests run against an in-memory H2 database (`MODE=MySQL`) with `create-drop` lifecycle for fast, isolated execution.
@@ -67,8 +67,17 @@ DB_USERNAME=vaccination_app
 DB_PASSWORD=replace_with_local_password
 JPA_DDL_AUTO=validate
 JWT_SECRET=replace_with_base64_or_hex_jwt_secret_min_256_bits
-JWT_EXPIRATION_MINUTES=60
+JWT_EXPIRATION_MINUTES=15
+AUTH_REFRESH_COOKIE_SECURE=true
+AUTH_REFRESH_TOKEN_EXPIRATION_DAYS=7
 ```
+
+### Authentication & Token Session Policy
+- **Access Tokens**: Short-lived JWTs with a canonical 15-minute expiration (`JWT_EXPIRATION_MINUTES=15`).
+- **Refresh Tokens**: Cryptographically random 256-bit opaque tokens with a 7-day expiration (`AUTH_REFRESH_TOKEN_EXPIRATION_DAYS=7`). Stored server-side solely as SHA-256 hashes.
+- **Refresh Cookie**: Delivered in an `HttpOnly`, `SameSite=Lax` cookie scoped to `/api/v1/auth`. Configured with `Secure=true` by default (`AUTH_REFRESH_COOKIE_SECURE=true`); local HTTP development environments may opt out by setting `AUTH_REFRESH_COOKIE_SECURE=false`.
+- **Rotation & Reuse Detection**: Tokens rotate on every refresh. Reuse of a previously rotated token immediately revokes the entire token family.
+
 
 ### Optional First Administrator Bootstrap
 The backend supports automatic creation of an initial administrative account on startup if all four bootstrap environment variables are provided:

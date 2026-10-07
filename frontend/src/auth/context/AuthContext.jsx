@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { getToken, setToken, clearToken, onUnauthorized } from '../../shared/auth/authStorage';
-import { loginApi, getCurrentUserApi } from '../api/authApi';
+import { onUnauthorized, notifyUnauthorized, startAuthSession, endAuthSession, getToken, getSessionPrincipalId, normalizePrincipalId } from '../../shared/auth/authStorage';
+import { bootstrapSession } from '../../shared/api/apiClient';
+import { loginApi, getCurrentUserApi, logoutApi } from '../api/authApi';
 
 const AuthContext = createContext(null);
 
@@ -13,43 +14,92 @@ export function AuthProvider({ children }) {
   const [loginError, setLoginError] = useState(null);
 
   const authGenerationRef = useRef(0);
+  const bootstrapAttemptRef = useRef(0);
 
   const invalidatePendingAuth = useCallback(() => {
     authGenerationRef.current += 1;
     return authGenerationRef.current;
   }, []);
 
-  const bootstrapAuth = useCallback(async () => {
-    const currentGeneration = invalidatePendingAuth();
-    const token = getToken();
+  const startBootstrapAttempt = useCallback(() => {
+    bootstrapAttemptRef.current += 1;
+    return bootstrapAttemptRef.current;
+  }, []);
 
-    if (!token) {
-      if (currentGeneration === authGenerationRef.current) {
-        setUser(null);
-        setIsAuthenticated(false);
-        setInitializationError(null);
+  const cancelBootstrapOwnership = useCallback(() => {
+    bootstrapAttemptRef.current += 1;
+  }, []);
+
+  const bootstrapAuth = useCallback(async () => {
+    const currentAttempt = startBootstrapAttempt();
+    const currentGeneration = invalidatePendingAuth();
+    setIsInitializing(true);
+
+    // Session bootstrap rides on the HttpOnly refresh cookie (canonical §17.1):
+    // no token is ever read from browser storage. A definitive refresh failure
+    // means logged out; a transport failure keeps the initialization error so
+    // retryBootstrap can be used.
+    let refreshedToken = null;
+    try {
+      refreshedToken = await bootstrapSession();
+    } catch (err) {
+      if (currentAttempt === bootstrapAttemptRef.current) {
+        if (currentGeneration === authGenerationRef.current) {
+          setUser(null);
+          setIsAuthenticated(false);
+          setInitializationError(
+            err?.message || 'Authentication service is temporarily unavailable. Please check your connection and retry.'
+          );
+        }
         setIsInitializing(false);
       }
       return;
     }
 
+    if (!refreshedToken) {
+      // Definitive unauthenticated result (401 / no cookie / invalid session).
+      // Only settle if this bootstrap attempt still owns the initialization lifecycle.
+      if (currentAttempt === bootstrapAttemptRef.current) {
+        if (currentGeneration === authGenerationRef.current || !getToken()) {
+          setUser(null);
+          setIsAuthenticated(false);
+          setInitializationError(null);
+        }
+        setIsInitializing(false);
+      }
+      return;
+    }
+
+    // A token was returned from refresh. If the attempt was superseded while
+    // refresh was in flight (e.g. by another bootstrap, login, or logout),
+    // abort without mutating state or settling initialization.
+    if (currentAttempt !== bootstrapAttemptRef.current || currentGeneration !== authGenerationRef.current) {
+      return;
+    }
+
     try {
       const userProfile = await getCurrentUserApi();
-      if (currentGeneration === authGenerationRef.current) {
+      if (currentAttempt === bootstrapAttemptRef.current && currentGeneration === authGenerationRef.current) {
+        if (normalizePrincipalId(userProfile?.id) === null
+          || normalizePrincipalId(userProfile.id) !== getSessionPrincipalId()) {
+          endAuthSession();
+          notifyUnauthorized();
+          return;
+        }
         setUser(userProfile);
         setIsAuthenticated(true);
         setInitializationError(null);
       }
     } catch (err) {
-      if (currentGeneration === authGenerationRef.current) {
+      if (currentAttempt === bootstrapAttemptRef.current && currentGeneration === authGenerationRef.current) {
         if (err?.status === 401) {
-          // Token is expired or invalid -> clear stored token and show login
-          clearToken();
+          // Refreshed access token was already rejected server-side: logged out.
+          endAuthSession();
           setUser(null);
           setIsAuthenticated(false);
           setInitializationError(null);
         } else {
-          // Transient network or server outage -> retain token and display retry state
+          // Transient network or server outage -> display retry state
           setUser(null);
           setIsAuthenticated(false);
           setInitializationError(
@@ -58,11 +108,11 @@ export function AuthProvider({ children }) {
         }
       }
     } finally {
-      if (currentGeneration === authGenerationRef.current) {
+      if (currentAttempt === bootstrapAttemptRef.current) {
         setIsInitializing(false);
       }
     }
-  }, [invalidatePendingAuth]);
+  }, [invalidatePendingAuth, startBootstrapAttempt]);
 
   useEffect(() => {
     bootstrapAuth();
@@ -70,36 +120,33 @@ export function AuthProvider({ children }) {
     // Subscribe to global 401 unauthorized notifications from apiClient
     const unsubscribe = onUnauthorized(() => {
       invalidatePendingAuth();
-      clearToken();
+      endAuthSession();
       setUser(null);
       setIsAuthenticated(false);
       setLoginError(null);
     });
 
     return () => {
+      cancelBootstrapOwnership();
       invalidatePendingAuth();
       unsubscribe();
     };
-  }, [bootstrapAuth, invalidatePendingAuth]);
+  }, [bootstrapAuth, cancelBootstrapOwnership, invalidatePendingAuth]);
 
   const login = useCallback(async (email, password) => {
     setLoginError(null);
     try {
       const data = await loginApi(email, password);
-      if (data?.token && data?.user) {
-        const persisted = setToken(data.token);
-        if (!persisted) {
-          clearToken();
-          setUser(null);
-          setIsAuthenticated(false);
-          const storageError = 'Unable to start your browser session. Please check browser storage settings and try again.';
-          setLoginError(storageError);
-          return { success: false, error: storageError };
-        }
+      if (data?.token && normalizePrincipalId(data?.user?.id) !== null) {
+        // The access token lives in memory only; the refresh token rides in the
+        // HttpOnly cookie set by the server (canonical §17.1).
+        cancelBootstrapOwnership();
+        startAuthSession(data.token, data.user.id);
         invalidatePendingAuth();
         setUser(data.user);
         setIsAuthenticated(true);
         setInitializationError(null);
+        setIsInitializing(false);
         return { success: true, user: data.user };
       } else {
         throw new Error('Authentication response was incomplete');
@@ -109,16 +156,23 @@ export function AuthProvider({ children }) {
       setLoginError(message);
       return { success: false, error: message };
     }
-  }, [invalidatePendingAuth]);
+  }, [cancelBootstrapOwnership, invalidatePendingAuth]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    cancelBootstrapOwnership();
     invalidatePendingAuth();
-    clearToken();
+    endAuthSession();
+    try {
+      await logoutApi();
+    } catch {
+      // Backend revocation is best-effort; local state clears regardless.
+    }
     setUser(null);
     setIsAuthenticated(false);
     setLoginError(null);
     setInitializationError(null);
-  }, [invalidatePendingAuth]);
+    setIsInitializing(false);
+  }, [cancelBootstrapOwnership, invalidatePendingAuth]);
 
   const retryBootstrap = useCallback(() => {
     setInitializationError(null);

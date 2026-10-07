@@ -91,8 +91,13 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        // Public Authentication Endpoint
+                        // Public Authentication Endpoints
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        // Refresh/logout self-validate the refresh cookie and stay generic on failure
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                "/api/v1/auth/refresh",
+                                "/api/v1/auth/logout"
+                        ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,
                                 "/api/v1/auth/register/citizen",
                                 "/api/v1/auth/register/staff",

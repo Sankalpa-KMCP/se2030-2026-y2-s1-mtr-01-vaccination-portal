@@ -24,7 +24,7 @@ public class JwtTokenService {
 
     public JwtTokenService(
             @Value("${app.security.jwt.secret:}") String secret,
-            @Value("${app.security.jwt.expiration-minutes:60}") long expirationMinutes
+            @Value("${app.security.jwt.expiration-minutes:15}") long expirationMinutes
     ) {
         this.secret = secret;
         this.expirationMinutes = expirationMinutes;

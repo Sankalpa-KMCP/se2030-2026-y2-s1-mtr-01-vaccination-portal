@@ -101,7 +101,7 @@ class AuthServiceIntegrationTests {
         account.addRole(centerManagerRole);
         userAccountRepository.save(account);
 
-        LoginResponse response = authService.login(new LoginRequest("manager@portal.gov", "Password123!"));
+        LoginResponse response = authService.login(new LoginRequest("manager@portal.gov", "Password123!")).response();
 
         assertNotNull(response);
         assertNotNull(response.token());
@@ -116,7 +116,7 @@ class AuthServiceIntegrationTests {
         UserAccount account = new UserAccount("nurse@portal.gov", passwordEncoder.encode("SecretPass123!"), AccountStatus.ACTIVE);
         userAccountRepository.save(account);
 
-        LoginResponse response = authService.login(new LoginRequest("  NURSE@PORTAL.GOV  ", "SecretPass123!"));
+        LoginResponse response = authService.login(new LoginRequest("  NURSE@PORTAL.GOV  ", "SecretPass123!")).response();
 
         assertNotNull(response);
         assertEquals("nurse@portal.gov", response.user().email());
@@ -148,7 +148,7 @@ class AuthServiceIntegrationTests {
         account.addRole(citizenRole);
         userAccountRepository.save(account);
 
-        LoginResponse response = authService.login(new LoginRequest("unverified@portal.gov", "Password123!"));
+        LoginResponse response = authService.login(new LoginRequest("unverified@portal.gov", "Password123!")).response();
 
         assertNotNull(response.token());
         assertEquals(AccountStatus.PENDING_VERIFICATION, response.user().accountStatus());
@@ -284,7 +284,7 @@ class AuthServiceIntegrationTests {
         userAccountRepository.saveAndFlush(locked);
         entityManager.clear();
 
-        LoginResponse response = authService.login(new LoginRequest("lockout.expired@portal.gov", "Password123!"));
+        LoginResponse response = authService.login(new LoginRequest("lockout.expired@portal.gov", "Password123!")).response();
         assertNotNull(response.token(), "Login after lock expiry must succeed");
 
         UserAccount unlocked = reloadByEmail("lockout.expired@portal.gov");
@@ -298,7 +298,7 @@ class AuthServiceIntegrationTests {
         createAccountWithEmail("lockout.reset@portal.gov");
         failLoginTimes("lockout.reset@portal.gov", 2);
 
-        LoginResponse response = authService.login(new LoginRequest("lockout.reset@portal.gov", "Password123!"));
+        LoginResponse response = authService.login(new LoginRequest("lockout.reset@portal.gov", "Password123!")).response();
         assertNotNull(response.token());
         entityManager.flush();
         entityManager.clear();
@@ -349,7 +349,7 @@ class AuthServiceIntegrationTests {
         assertNull(afterReset.getLockedUntil(), "Password reset must clear the active timed lock");
         assertEquals(0, afterReset.getFailedLoginAttempts(), "Password reset must reset the counter");
 
-        LoginResponse response = authService.login(new LoginRequest(email, "NewPassword123!"));
+        LoginResponse response = authService.login(new LoginRequest(email, "NewPassword123!")).response();
         assertNotNull(response.token(), "Login with the new password must succeed immediately after reset");
     }
 

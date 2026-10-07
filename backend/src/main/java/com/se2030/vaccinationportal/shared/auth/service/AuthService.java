@@ -82,6 +82,7 @@ public class AuthService {
     private final AuthLinkDeliveryService authLinkDeliveryService;
     private final AuthLinkIssuanceThrottle authLinkIssuanceThrottle;
     private final EmailVerificationService emailVerificationService;
+    private final RefreshTokenSessionService refreshTokenSessionService;
     private final Clock clock;
     private final int verificationTokenExpirationHours;
     private final int resetTokenExpirationMinutes;
@@ -101,6 +102,7 @@ public class AuthService {
             AuthLinkDeliveryService authLinkDeliveryService,
             AuthLinkIssuanceThrottle authLinkIssuanceThrottle,
             EmailVerificationService emailVerificationService,
+            RefreshTokenSessionService refreshTokenSessionService,
             Clock clock,
             @Value("${app.security.auth.verification-token-expiration-hours:24}") int verificationTokenExpirationHours,
             @Value("${app.security.auth.reset-token-expiration-minutes:30}") int resetTokenExpirationMinutes,
@@ -132,6 +134,7 @@ public class AuthService {
         this.authLinkDeliveryService = authLinkDeliveryService;
         this.authLinkIssuanceThrottle = authLinkIssuanceThrottle;
         this.emailVerificationService = emailVerificationService;
+        this.refreshTokenSessionService = refreshTokenSessionService;
         this.clock = clock;
         this.verificationTokenExpirationHours = verificationTokenExpirationHours;
         this.resetTokenExpirationMinutes = resetTokenExpirationMinutes;
@@ -144,8 +147,16 @@ public class AuthService {
      * commit even though the transaction ends with BadCredentialsException, or every
      * rejected attempt would be rolled back together with the rejection itself.
      */
+    /**
+     * Login result carrying the JSON response plus the refresh-token issuance the
+     * controller must deliver as a Secure HttpOnly cookie (canonical §17.1).
+     */
+    public record LoginResult(LoginResponse response, String refreshToken, Instant refreshTokenExpiresAt) {}
+
+    public record RefreshSessionResult(LoginResponse response, String refreshToken, Instant refreshTokenExpiresAt) {}
+
     @Transactional(noRollbackFor = BadCredentialsException.class)
-    public LoginResponse login(LoginRequest request) {
+    public LoginResult login(LoginRequest request) {
         Objects.requireNonNull(request, "LoginRequest must not be null");
 
         String normalizedEmail = UserAccount.normalizeEmail(request.email());
@@ -196,7 +207,38 @@ public class AuthService {
         String token = jwtTokenService.generateToken(account.getId(), account.getEmail(), roleCodes);
         UserProfileResponse userProfile = toUserProfile(account, roleCodes);
 
-        return new LoginResponse(token, userProfile);
+        RefreshTokenSessionService.IssuedRefreshToken refresh =
+                refreshTokenSessionService.issueRootSession(account);
+        return new LoginResult(new LoginResponse(token, userProfile), refresh.rawToken(), refresh.expiresAt());
+    }
+
+    /**
+     * Rotates the presented refresh token (canonical §17.1 single-use rotation with
+     * family reuse detection) and issues a fresh short-lived access token.
+     */
+    @Transactional(noRollbackFor = BadCredentialsException.class)
+    public RefreshSessionResult refresh(String rawRefreshToken) {
+        RefreshTokenSessionService.RotatedRefreshSession rotated =
+                refreshTokenSessionService.rotate(rawRefreshToken);
+
+        List<String> roleCodes = rotated.account().getRoles().stream()
+                .map(Role::getCode)
+                .sorted()
+                .collect(Collectors.toList());
+
+        String token = jwtTokenService.generateToken(rotated.account().getId(), rotated.account().getEmail(), roleCodes);
+        UserProfileResponse userProfile = toUserProfile(rotated.account(), roleCodes);
+
+        return new RefreshSessionResult(new LoginResponse(token, userProfile), rotated.rawToken(), rotated.expiresAt());
+    }
+
+    /**
+     * Revokes the token family presented by the caller (canonical logout semantics).
+     * Unknown or blank tokens are a no-op so the endpoint stays idempotent.
+     */
+    @Transactional
+    public void logout(String rawRefreshToken) {
+        refreshTokenSessionService.revokeFamilyByRawToken(rawRefreshToken);
     }
 
     /**

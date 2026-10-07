@@ -86,7 +86,7 @@ class StaffRequestReviewServiceIntegrationTests {
         assertEquals(List.of("ROLE_VACCINATOR"), principal.getRoleCodes());
         assertEquals("ROLE_VACCINATOR", principal.getAuthorities().iterator().next().getAuthority());
 
-        LoginResponse login = authService.login(new LoginRequest(approved.getEmail(), RAW_PASSWORD));
+        LoginResponse login = authService.login(new LoginRequest(approved.getEmail(), RAW_PASSWORD)).response();
         assertEquals(List.of("ROLE_VACCINATOR"), login.user().roles());
         assertEquals(List.of("ROLE_VACCINATOR"), jwtTokenService.extractRoles(login.token()));
     }
@@ -108,7 +108,7 @@ class StaffRequestReviewServiceIntegrationTests {
         assertNull(approved.getRejectionReason());
         assertEquals(administrator.getId(), response.reviewedByUserId());
 
-        LoginResponse login = authService.login(new LoginRequest(approved.getEmail(), RAW_PASSWORD));
+        LoginResponse login = authService.login(new LoginRequest(approved.getEmail(), RAW_PASSWORD)).response();
         assertNotNull(login.token());
         assertEquals(List.of("ROLE_CENTER_MANAGER"), login.user().roles());
     }

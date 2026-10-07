@@ -68,6 +68,16 @@ app.security.auth.delivery-mode=console
 # spring.mail.password=YOUR_SMTP_PASSWORD
 # spring.mail.properties.mail.smtp.auth=true
 # spring.mail.properties.mail.smtp.starttls.enable=true
+#
+# ------------------------------------------------------------
+# Refresh-Token Cookie Configuration (Local Development Only)
+# ------------------------------------------------------------
+# Canonical base configuration enforces Secure=true on the refresh cookie.
+# For plain HTTP local development (e.g. http://localhost:5173 without HTTPS),
+# opt out by setting this property to false so browsers will accept the cookie.
+app.security.auth.refresh-cookie-secure=false
+# Alternatively set via environment variable:
+# AUTH_REFRESH_COOKIE_SECURE=false
 
 # ------------------------------------------------------------
 # Project-Wide AI Assistant (Phase 1)
