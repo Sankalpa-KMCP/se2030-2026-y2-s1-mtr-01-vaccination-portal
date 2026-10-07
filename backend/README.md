@@ -12,7 +12,7 @@ See the [current architecture and file tree](../docs/Web_Based_Vaccination_Porta
 - **Framework**: Spring Boot (v4.1.0) with Spring Web MVC
 - **Persistence**: Spring Data JPA / Hibernate ORM
 - **Database Migrations**: Flyway (`spring-boot-starter-flyway`, `flyway-mysql`)
-- **Security**: Spring Security with stateless JWT (`jjwt` v0.12.6) and Role-Based Access Control (RBAC)
+- **Security**: Spring Security with stateless access JWT validation (`jjwt` v0.12.6), persisted refresh sessions and RBAC
 - **Validation**: Jakarta Bean Validation (`spring-boot-starter-validation`)
 - **Database Engine (Runtime)**: MySQL 8.4 LTS (via `mysql-connector-j`)
 - **Database Engine (Testing)**: In-memory H2 database (MySQL mode) & Testcontainers MySQL 8.4
@@ -25,7 +25,7 @@ See the [current architecture and file tree](../docs/Web_Based_Vaccination_Porta
 The backend follows an explicit hexagonal / ports-and-adapters architecture under package `com.se2030.vaccinationportal`:
 
 - **Shared Authentication & Access Control (`shared/auth`)**:
-  - Stateless JWT token lifecycle (`JwtTokenService`, `JwtAuthenticationFilter`, `SecurityConfig`).
+  - Stateless access JWT validation and persisted rotating refresh-session lifecycle (`JwtTokenService`, `JwtAuthenticationFilter`, `SecurityConfig`).
   - User identity models (`UserAccount`, `Role`, `Permission`, `StaffRegistrationRequest`).
   - Endpoints for login (`/api/v1/auth/login`), citizen self-registration (`/api/v1/auth/register/citizen`), staff registration requests (`/api/v1/auth/register/staff`), authenticated user inspection (`/api/v1/auth/me`), and administrator request review (`/api/v1/admin/staff-requests`).
 - **MF-01: Screening & Medical Eligibility (`screening`)**:
@@ -294,7 +294,7 @@ backend/
     |       \-- db/
     |           \-- migration/
     |               |-- V0__core_campaign_center_session_foundation.sql
-    |               \-- ... (V1 through V21)
+    |               \-- ... (V1 through V24)
     \-- test/
         |-- java/
         |   \-- com/
@@ -303,3 +303,9 @@ backend/
         \-- resources/
             \-- application-test.properties
 ```
+
+## Current authentication endpoint inventory
+
+AuthController exposes POST `/api/v1/auth/login`, `/refresh`, `/logout`, `/register/citizen`, `/register/staff`, `/verify-email`, `/resend-verification`, `/forgot-password`, `/reset-password` and GET `/api/v1/auth/me` (all abbreviated paths share `/api/v1/auth`). Citizen OTP status/verify/resend are under `/api/v1/auth/email-verification`. See [current endpoint inventory](../docs/api/current-endpoints.md) and [scoped OpenAPI](../docs/api/openapi.yaml) for signatures/policies.
+
+Login/refresh set the HttpOnly cookie; logout clears matching attributes and revokes the presented family. Password reset revokes all account refresh sessions. Frontend principal/generation checks preserve identity across refresh; refresh JWT/profile is not permission to silently switch an established user. [Shared authentication evidence](../docs/evidence/current/shared-authentication.md) links decisive tests and merged CI.

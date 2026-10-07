@@ -13,7 +13,7 @@ The Web-Based Vaccination Portal (WBVP-SE2030) is a healthcare orchestration pla
 - **Frontend**: React 19, React Router DOM 7, Vite 8, Bootstrap 5 / Vanilla CSS, Vitest 4, Testing Library
 - **Backend**: Java 21, Spring Boot (Spring Web MVC, Spring Security, Spring Data JPA, Jakarta Validation, Spring Boot Actuator)
 - **Database Engine**: MySQL 8.4 LTS (Flyway migration framework)
-- **Security & Auth**: Stateless JWT authentication (`jjwt` v0.12.6) with Role-Based Access Control (RBAC)
+- **Security & Auth**: Stateless access JWT validation (`jjwt` v0.12.6), persisted rotating refresh sessions and Role-Based Access Control (RBAC)
 - **Build Tooling**: Maven (with embedded wrapper) & npm
 - **Continuous Integration**: GitHub Actions (Node.js 24 for frontend; Java 21 Temurin for backend)
 
@@ -22,14 +22,14 @@ The Web-Based Vaccination Portal (WBVP-SE2030) is a healthcare orchestration pla
 The backend follows an explicit hexagonal architecture (ports and adapters) under package `com.se2030.vaccinationportal`:
 
 - **Decoupled Inter-Module Communication**: Domain interactions across module boundaries use explicit ports (e.g. `EligibilityLookupPort`, `SlotCapacityPort`) to prevent direct database coupling between domains.
-- **Relational Integrity & Migrations**: Schema evolution is controlled entirely via Flyway database migrations in `backend/src/main/resources/db/migration/`. Current migrations span `V0` through `V21` (22 active migrations).
+- **Relational Integrity & Migrations**: Schema evolution is controlled entirely via Flyway database migrations in `backend/src/main/resources/db/migration/`. Current migrations span `V0` through `V24` (25 active migrations).
 - **Dual Verification Suite**: Backend verification combines fast in-memory H2 unit/integration tests with real MySQL Testcontainers for database schema and concurrency assurance.
 
 ## Functional Capabilities & Implementation Status
 
 | Module / Capability | Backend Package | Frontend Feature | Implementation Status | Scope & Responsibilities |
 | :--- | :--- | :--- | :--- | :--- |
-| **Shared Authentication & Access Control** | `shared/auth` | `src/auth/` | **Implemented** | Stateless JWT authentication, citizen self-registration, staff registration requests, admin review, and role-based route protection. |
+| **Shared Authentication & Access Control** | `shared/auth` | `src/auth/` | **Implemented** | 15-minute access JWTs, seven-day rotating refresh-cookie sessions, citizen self-registration, staff registration requests, admin review, and role-based route protection. |
 | **MF-01: Pre-Vaccination Screening & Eligibility** | `screening` | `src/features/screening/` | **Implemented** | Screening question definitions, questionnaire versioning, dynamic rule evaluation, submission processing, and clinical eligibility reviews. |
 | **MF-02: Campaign, Center & Session Management** | `campaign` | `campaign-management`, `session-management`, `center-operations` | **Implemented** | Campaigns, target groups, dose programmes, geographic target allocations, vaccination centers, operating hours, closures, recurrence rule series generation, time slot capacity, and staff rostering. |
 | **MF-03: Appointment, Waitlist & Check-In** | `appointment` | `src/features/appointment-management/` | **Implemented** | Citizen booking, cancellation/rescheduling, waitlist management and staff check-in; guard-row and capacity transaction invariants remain explicit. |
@@ -93,7 +93,7 @@ docker compose --env-file database/.env up -d mysql
 ```
 
 - **Connection URL**: `jdbc:mysql://localhost:3306/vaccination_portal`
-- **Flyway Migrations**: Applied automatically on backend application startup. Current migrations span `V0` through `V21`.
+- **Flyway Migrations**: Applied automatically on backend application startup. Current migrations span `V0` through `V24` (25 migrations total).
 - See [database/README.md](database/README.md) for full database workflow instructions.
 
 ### 2. Backend Development
@@ -179,3 +179,9 @@ GitHub Actions workflows validate pull requests and merged commits targeting `de
 - [AI Assistant Setup & Evaluation Guide](docs/AI_ASSISTANT_SETUP_AND_DEMO.md) - Architecture, environment configuration, cURL commands, and evaluation walkthrough
 - [Database Configuration Guide](database/README.md)
 - [Contribution Guidelines](CONTRIBUTING.md)
+
+## Current assessment evidence
+
+Five assessed functions are permitted per project/controller confirmation: `VERIFIED_FINAL_BY_USER_CONSTRAINT`. The [current evidence index](docs/evidence/current/README.md) maps MF01–MF05 and shared supporting capabilities to source, tests and baseline CI. See [submission assembly](docs/submission/README.md) for unresolved human fields.
+
+Access JWT/principal state is memory-only in the frontend; cookie bootstrap restores a session. Refresh preserves the initiating principal and generation, rejecting different-user cross-tab adoption. Logout revokes the presented refresh family; password reset revokes all refresh sessions.

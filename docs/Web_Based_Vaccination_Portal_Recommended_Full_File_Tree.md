@@ -89,7 +89,7 @@ frontend/
 
 Tests follow their components/capabilities. The removed `features/citizen-ui` and `src/services`
 areas have no replacement compatibility shims. `CitizenSection` belongs to Screening.
-Auth owns login/session workflows; shared auth storage only owns browser token infrastructure.
+Auth owns login/session workflows; shared auth storage owns memory-only token, principal and generation infrastructure.
 
 ## Feature dependency direction
 
@@ -172,7 +172,7 @@ are outside static resolution; none are needed by the current production graph.
 ## Migrations and validation
 
 Active Flyway location: `backend/src/main/resources/db/migration` (`classpath:db/migration`).
-There are 22 applied-history scripts, V0 through V21. Their contents and schema are unchanged.
+There are 25 applied-history scripts, V0 through V24. V22 adds citizen OTP challenge state, V23 login lockout state and V24 the refresh-family revocation index. Historical migration contents remain immutable.
 `database/migrations` contains historical reference scripts, not an additional Flyway location;
 see [database guide](../database/README.md). Do not apply them in addition to runtime migrations.
 
@@ -182,7 +182,9 @@ and locking checks. From `frontend`, run `npm test`, `npm run lint` and `npm run
 Run `git diff --check` and `git diff --cached --check` before committing an ownership milestone.
 See [contributing](../CONTRIBUTING.md) for the development workflow.
 
-## Refactor invariant audit
+## Refactor invariant audit (historical checkpoint)
+
+The following comparison records the earlier refactor milestone, not the current merged authentication implementation or CI totals.
 
 Compared with starting commit `975c039e510a5f0630fc2223bfe17b004f40a9ed`:
 
@@ -209,3 +211,9 @@ The earlier provider-next-to-interface package debt and repository-mocked Assist
 are resolved: providers now live under implementation capabilities, and unit/provider/integration
 responsibilities are separated. The existing public presentation allowlist and SessionImpact join
 are retained architectural exceptions rather than unfinished package moves.
+
+## Current session and assessment evidence
+
+At develop `444364d4b742fa08455c4acf0538baa836e9529a`, access JWT validation remains stateless, while seven-day rotating refresh-session families are persisted server-side as hashes. Logout revokes the presented family; password reset revokes all account refresh sessions. The frontend keeps access token/principal/generation in memory and checks principal continuity before installing refresh results or replaying requests. AuthContext bootstrap-attempt ownership is distinct from auth generation.
+
+[Current evidence index](evidence/current/README.md), [API inventory](api/current-endpoints.md) and [diagram sources](diagrams/current/README.md) document the integrated state. Exactly five assessed functions are permitted per project/controller confirmation: VERIFIED_FINAL_BY_USER_CONSTRAINT; shared auth is supporting evidence. Earlier refactor test counts below/above describe their historical validation context, not the current integrated CI totals.

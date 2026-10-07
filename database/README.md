@@ -16,7 +16,7 @@ See the [current architecture and file tree](../docs/Web_Based_Vaccination_Porta
 
 ## Database Architecture & Flyway Migrations
 
-Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V21` (22 active migrations).
+Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V24` (25 active migrations).
 
 ### Active Migration Schedule
 
@@ -44,6 +44,9 @@ Database schema versioning is managed via Flyway migrations located in [`../back
 | `V19` | `V19__add_vaccinator_auth_role.sql` | add vaccinator auth role |
 | `V20` | `V20__vaccination_draft_deletion_audit.sql` | vaccination draft deletion audit |
 | `V21` | `V21__screening_submission_active_uniqueness.sql` | screening submission active uniqueness |
+| `V22` | `V22__add_email_verification.sql` | Citizen OTP challenge and existing-active verification backfill |
+| `V23` | `V23__user_account_login_lockout.sql` | Failed-login counters and timed lock state |
+| `V24` | `V24__add_refresh_token_sessions_family_revocation_index.sql` | Refresh-family revocation index (token_family_id, revoked_at) |
 
 ## Directory Structure
 
@@ -113,3 +116,7 @@ Contributors must strictly adhere to the following policies:
 - **Future seed data must be 100% synthetic.**
 - **Never commit production database dumps** or exports to this repository.
 
+
+## Current evidence and refresh persistence
+
+V4 created refresh_token_sessions; V24 adds its family-revocation index. Only cryptographic token hashes are stored. Rotation claims/successor creation are transactional; reuse security writes commit despite outward authentication rejection. Password reset revokes all account sessions. See [physical ER excerpt](../docs/diagrams/current/physical-er-model.md) and [shared evidence](../docs/evidence/current/shared-authentication.md). Local Compose MySQL 8.4.10 and CI refresh-test MySQL 8.4.3 are distinct versioned environments.

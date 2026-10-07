@@ -1,0 +1,492 @@
+openapi: 3.0.3
+info:
+  title: WBVP current shared-auth contract
+  version: develop-444364d
+  description: Source-derived ten AuthController operations at 444364d4b742fa08455c4acf0538baa836e9529a.
+    Other domain and OTP controller DTO schemas are intentionally omitted; see current-endpoints.md.
+    No hosting server is asserted.
+paths:
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags:
+      - Shared authentication
+      security: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh cookie; SameSite=Lax; Path=/api/v1/auth;
+                Secure default. Seven-day Max-Age on issue; Max-Age=0 on logout. Name
+                is configurable.
+              schema:
+                type: string
+        '400':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '401':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '403':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '423':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /api/v1/auth/refresh:
+    post:
+      operationId: refresh
+      tags:
+      - Shared authentication
+      security:
+      - refreshCookie: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh cookie; SameSite=Lax; Path=/api/v1/auth;
+                Secure default. Seven-day Max-Age on issue; Max-Age=0 on logout. Name
+                is configurable.
+              schema:
+                type: string
+        '401':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '403':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '423':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+      description: No JSON body. Consumes and rotates refresh cookie. Reuse revokes
+        its family. Client must enforce established principal continuity before installing
+        access token. Definitive authentication failure clears cookie.
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      tags:
+      - Shared authentication
+      security: []
+      responses:
+        '204':
+          description: Successful response
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh cookie; SameSite=Lax; Path=/api/v1/auth;
+                Secure default. Seven-day Max-Age on issue; Max-Age=0 on logout. Name
+                is configurable.
+              schema:
+                type: string
+      description: Idempotent with missing/invalid cookie; optionally sends the browser
+        refresh cookie to revoke the current family.
+  /api/v1/auth/register/citizen:
+    post:
+      operationId: register_citizen
+      tags:
+      - Shared authentication
+      security: []
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationResponse'
+        '400':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '409':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CitizenRegistrationRequest'
+  /api/v1/auth/register/staff:
+    post:
+      operationId: register_staff
+      tags:
+      - Shared authentication
+      security: []
+      responses:
+        '202':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationResponse'
+        '400':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+        '409':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffRegistrationRequest'
+  /api/v1/auth/verify-email:
+    post:
+      operationId: verify_email
+      tags:
+      - Shared authentication
+      security: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+  /api/v1/auth/resend-verification:
+    post:
+      operationId: resend_verification
+      tags:
+      - Shared authentication
+      security: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+  /api/v1/auth/forgot-password:
+    post:
+      operationId: forgot_password
+      tags:
+      - Shared authentication
+      security: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+  /api/v1/auth/reset-password:
+    post:
+      operationId: reset_password
+      tags:
+      - Shared authentication
+      security: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+  /api/v1/auth/me:
+    get:
+      operationId: me
+      tags:
+      - Shared authentication
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: Authentication, state or input rejection; see exception handler
+            and controller.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 15-minute access token, memory only.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: Default configurable HttpOnly cookie name. Browser-managed; opaque
+        value never available to frontend JS. Seven days; Secure default.
+  schemas:
+    LoginRequest:
+      type: object
+      properties:
+        email: &id001
+          type: string
+          format: email
+          maxLength: 255
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+          writeOnly: true
+      required:
+      - email
+      - password
+    UserProfileResponse:
+      type: object
+      properties:
+        id: &id002
+          type: integer
+          format: int64
+        fullName: &id003
+          type: string
+        email: &id004
+          type: string
+          format: email
+        phoneNumber: &id005
+          type: string
+          nullable: true
+        accountStatus: &id006
+          type: string
+          enum:
+          - ACTIVE
+          - PENDING_VERIFICATION
+          - PENDING_APPROVAL
+          - REJECTED
+          - LOCKED
+          - SUSPENDED
+        roles: &id007
+          type: array
+          items:
+            type: string
+      required:
+      - id
+      - fullName
+      - email
+      - accountStatus
+      - roles
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Short-lived access JWT; retain only in memory.
+        user:
+          $ref: '#/components/schemas/UserProfileResponse'
+      required:
+      - token
+      - user
+    CitizenRegistrationRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email: *id001
+        phoneNumber:
+          type: string
+          pattern: ^[0-9]{10}$
+        password: &id008
+          type: string
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+      required:
+      - fullName
+      - email
+      - phoneNumber
+      - password
+    StaffRegistrationRequest:
+      allOf:
+      - $ref: '#/components/schemas/CitizenRegistrationRequest'
+      - type: object
+        properties:
+          requestedRoleCode:
+            type: string
+            minLength: 1
+            maxLength: 64
+        required:
+        - requestedRoleCode
+    RegistrationResponse:
+      type: object
+      properties:
+        id: *id002
+        fullName: *id003
+        email: *id004
+        phoneNumber: *id005
+        accountStatus: *id006
+        roles: *id007
+        requestedRoleCode:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+      - message
+    VerifyEmailRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+          writeOnly: true
+      required:
+      - token
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+          writeOnly: true
+        newPassword: *id008
+      required:
+      - token
+      - newPassword
+    EmailRequest:
+      type: object
+      properties:
+        email: *id001
+      required:
+      - email
+    AuthErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        retryAfterSeconds:
+          type: integer
+          format: int32
+          nullable: true

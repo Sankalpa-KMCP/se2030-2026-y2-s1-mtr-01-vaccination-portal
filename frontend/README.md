@@ -117,7 +117,7 @@ Access to `/app` is guarded by `ProtectedRoute` and requires a valid authenticat
 | :--- | :--- | :--- |
 | **Project-Wide AI Assistant** | `src/features/assistant/` | **Implemented**: Floating `AssistantWidget` accessible on public and authenticated pages, in-memory conversation state, role-filtered route navigation pills, and personalized citizen queries. |
 | **Public Landing & Information** | `src/features/public-landing/` | **Implemented**: Multi-page informational experience (`/`, `/how-it-works`, `/about`), accessible navigation, journey timelines, and responsive styling. |
-| **Authentication & Access Control** | `src/auth/` | **Implemented**: Stateless JWT authentication, citizen registration, staff registration requests, admin review, and role-based route protection. |
+| **Authentication & Access Control** | `src/auth/` | **Implemented**: Memory-only access JWT/principal state, cookie-backed rotating refresh sessions, citizen registration, staff registration requests, admin review, and role-based route protection. |
 | **Pre-Vaccination Screening & Eligibility** | `src/features/screening/` | **Implemented**: Screening questions/questionnaires, citizen screening workflows, eligibility status, history tracking, and healthcare officer review queue. |
 | **Campaign Management** | `src/features/campaign-management/` | **Implemented**: Campaign lifecycle states, dose programme versions, target groups, and location targeting. |
 | **Center Operations** | `src/features/center-operations/` | **Implemented**: Vaccination center master records, operating calendars, and closure management. |
@@ -185,7 +185,7 @@ frontend/
     |   \-- vaccination-administration/
     |-- shared/
     |   |-- api/          # HTTP infrastructure and error facts
-    |   |-- auth/         # token storage, not Auth workflows
+    |   |-- auth/         # memory token/principal/generation infrastructure
     |   |-- time/
     |   |-- assets/
     |   \-- ui/citizen/
@@ -207,3 +207,11 @@ Features may consume another feature's API/constants and the explicitly listed p
 presentation entries. Shared code cannot depend on feature internals or Auth workflows.
 See the [current architecture](../docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md)
 for the boundary exceptions and test strategy. Tests stay beside their components/hooks.
+
+## Current session lifecycle
+
+Access token, stable principal ID and session generation live only in module memory; no authentication state is persisted to localStorage/sessionStorage. Login binds a new local generation/principal. Cold bootstrap uses the HttpOnly refresh cookie then /me, while independent bootstrap-attempt ownership prevents stale/StrictMode completion.
+
+Established refresh must match both generation and principal before token installation or replay. Different-user cross-tab cookie replacement ends the stale local session; same-principal renewal remains allowed. Concurrent recovery is single-flight, delayed same-session 401s replay at most once, and transient refresh failures preserve current memory state. Logout clears token/principal and calls backend family revocation/cookie clearing.
+
+See [current shared evidence](../docs/evidence/current/shared-authentication.md), [auth sequence](../docs/diagrams/current/auth-session-sequence.md) and [capture checklist](../docs/evidence/current/capture-checklist.md). Secure=false is only an explicit local HTTP backend override; HTTPS uses the Secure default.
