@@ -405,9 +405,8 @@ describe('shared routing and role guards', () => {
     const registrationLinks = screen.getAllByRole('link', { name: /create citizen account/i });
     expect(registrationLinks.length).toBeGreaterThan(0);
     registrationLinks.forEach((link) => expect(link.getAttribute('href')).toBe('/register/citizen'));
-    expect(screen.getByRole('link', { name: /^sign in$/i })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /request staff account/i })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /enter staff portal/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /^sign in$/i }).getAttribute('href')).toBe('/login');
+    expect(screen.getByRole('link', { name: /request staff account/i }).getAttribute('href')).toBe('/register/staff');
     expect(screen.getByRole('link', { name: /manage your appointments/i }).getAttribute('href')).toBe('/login');
   });
 
@@ -530,7 +529,7 @@ describe('shared routing and role guards', () => {
     setAuth({ isAuthenticated: false });
 
     render(<MemoryRouter key="home" initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { level: 1, name: /your next step to a healthier tomorrow/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: /manage your vaccination journey in one place/i })).toBeTruthy();
     cleanup();
 
     render(<MemoryRouter key="how" initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
