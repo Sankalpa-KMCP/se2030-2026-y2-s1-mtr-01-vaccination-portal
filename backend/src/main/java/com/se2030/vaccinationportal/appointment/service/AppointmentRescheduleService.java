@@ -155,12 +155,7 @@ public class AppointmentRescheduleService {
                 .orElseThrow(() -> new IllegalStateException("Failed to acquire booking guard lock for citizen "
                         + appointment.getCitizenId() + " and campaign " + appointment.getCampaignId()));
 
-        // Step 1e: CRITICAL VIVA PROBE: "Reserve-Before-Release" Ordering (MF03-BR-05)
-        // Why reserve newSlotId BEFORE releasing oldSlotId?
-        // If we released the old slot first and then attempted to reserve the new slot only to find it full
-        // (or failing due to a concurrent booking race), the citizen would be left stranded with NEITHER slot!
-        // By reserving newSlotId first, any failure (SlotFullException) leaves the citizen's existing slot
-        // and appointment completely intact.
+        // Reserve the replacement first so an unavailable slot cannot cost the citizen their old booking.
         SlotReservationResult reservationResult = slotCapacityPort.reserveCapacity(newSlotId);
         if (reservationResult != SlotReservationResult.SUCCESS) {
             throw new SlotFullException("Target time slot " + newSlotId + " capacity reservation failed with result: " + reservationResult);

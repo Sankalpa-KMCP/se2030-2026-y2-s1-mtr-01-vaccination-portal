@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getSearchDate } from '../utils/searchDates';
 import SessionAvailabilityCard from './SessionAvailabilityCard';
 import { searchAvailableAppointments } from '../api/availabilityApi';
 import { listCitizenCenters, listCenters } from '../../center-operations/api/centerOperationsApi';
@@ -20,21 +21,14 @@ import { listCitizenCampaigns } from '../../campaign-management/api/campaignApi'
  * </ul>
  */
 export default function AvailabilitySearch({ onBookSession, bookingSessionId, citizenId }) {
-  const getTodayStr = () => new Date().toISOString().split('T')[0];
-  const getNextWeekStr = () => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d.toISOString().split('T')[0];
-  };
-
   const [campaignId, setCampaignId] = useState('1');
   const [campaigns, setCampaigns] = useState([]);
   const [centers, setCenters] = useState([]);
   const [selectedCenterCode, setSelectedCenterCode] = useState('');
   const [centerId, setCenterId] = useState('');
   const [centersLoading, setCentersLoading] = useState(false);
-  const [fromDate, setFromDate] = useState(getTodayStr());
-  const [toDate, setToDate] = useState(getNextWeekStr());
+  const [fromDate, setFromDate] = useState(() => getSearchDate());
+  const [toDate, setToDate] = useState(() => getSearchDate(7));
 
   const [sessions, setSessions] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -333,8 +327,8 @@ export default function AvailabilitySearch({ onBookSession, bookingSessionId, ci
                   onClick={() => {
                     setSelectedCenterCode('');
                     setCenterId('');
-                    setFromDate(getTodayStr());
-                    setToDate(getNextWeekStr());
+                    setFromDate(getSearchDate());
+                    setToDate(getSearchDate(7));
                     setSessions(null);
                     setError(null);
                   }}

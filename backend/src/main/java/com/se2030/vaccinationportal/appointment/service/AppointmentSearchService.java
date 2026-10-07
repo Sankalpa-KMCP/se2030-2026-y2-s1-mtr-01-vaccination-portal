@@ -7,7 +7,6 @@ import com.se2030.vaccinationportal.appointment.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.repository.WaitlistRepository;
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -95,7 +94,7 @@ public class AppointmentSearchService {
                 slotAvailabilityPort.findAvailableSessions(campaignId, centerId, fromDate, toDate);
 
         if (candidates == null || candidates.isEmpty()) {
-            return Collections.emptyList();
+            return List.of();
         }
 
         // Hide already-held time slots, but keep alternatives available for rescheduling.
@@ -105,17 +104,14 @@ public class AppointmentSearchService {
                         List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN)).stream()
                 .map(appointment -> appointment.getSlotId())
                 .collect(Collectors.toSet());
-        candidates = candidates.stream()
+        // Waitlists exclude an entire session; appointments exclude only their held slot.
+        var waitingEntry = waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
+                citizenId, campaignId, WaitlistStatus.WAITING);
+        return candidates.stream()
                 .filter(candidate -> !bookedSlotIds.contains(candidate.slotId()))
+                .filter(candidate -> waitingEntry
+                        .map(entry -> !entry.getSessionId().equals(candidate.sessionId()))
+                        .orElse(true))
                 .toList();
-        final var availableSlots = candidates;
-
-        // Waitlists refer to sessions, while appointments refer to concrete time slots.
-        return waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
-                        citizenId, campaignId, WaitlistStatus.WAITING)
-                .map(entry -> availableSlots.stream()
-                        .filter(candidate -> !entry.getSessionId().equals(candidate.sessionId()))
-                        .collect(Collectors.toList()))
-                .orElse(availableSlots);
     }
 }

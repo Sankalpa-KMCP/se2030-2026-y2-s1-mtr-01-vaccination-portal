@@ -57,10 +57,7 @@ public class SessionAvailabilityAdapter implements SlotAvailabilityPort {
         Instant now = clock.instant();
         return sessions.getSessions(campaignId, centerId, SessionLifecycleStatus.SCHEDULED).stream()
                 .filter(session -> acceptsBooking(session, now))
-                .filter(session -> {
-                    LocalDate date = session.getStartAt().atZone(ZoneId.of(session.getScheduleTimezone())).toLocalDate();
-                    return !date.isBefore(fromDate) && !date.isAfter(toDate);
-                })
+                .filter(session -> isWithinDateRange(session, fromDate, toDate))
                 .flatMap(session -> slots.getSlotsForSession(session.getId()).stream()
                         .filter(slot -> slot.hasAvailableCapacity() && slot.getStartTime().isAfter(now))
                         .map(slot -> new AvailableSessionSummary(
@@ -72,6 +69,12 @@ public class SessionAvailabilityAdapter implements SlotAvailabilityPort {
                         .thenComparing(AvailableSessionSummary::sessionId)
                         .thenComparing(AvailableSessionSummary::slotId))
                 .toList();
+    }
+
+    private boolean isWithinDateRange(VaccinationSession session, LocalDate fromDate, LocalDate toDate) {
+        // Match dates in the session's scheduling timezone, including both range endpoints.
+        LocalDate date = session.getStartAt().atZone(ZoneId.of(session.getScheduleTimezone())).toLocalDate();
+        return !date.isBefore(fromDate) && !date.isAfter(toDate);
     }
 
     private boolean acceptsBooking(VaccinationSession session, Instant now) {

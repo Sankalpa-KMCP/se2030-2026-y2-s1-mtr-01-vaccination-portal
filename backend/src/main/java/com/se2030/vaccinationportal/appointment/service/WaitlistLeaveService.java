@@ -78,6 +78,7 @@ public class WaitlistLeaveService {
         if (citizenId == null || campaignId == null) {
             return Optional.empty();
         }
+        // Prefer an active queue entry; otherwise show the latest successful promotion.
         Optional<WaitlistEntry> waiting = waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
                 citizenId, campaignId, WaitlistStatus.WAITING);
         if (waiting.isPresent()) {

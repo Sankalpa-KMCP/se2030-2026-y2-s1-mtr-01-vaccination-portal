@@ -4,6 +4,7 @@ import AppointmentCard from '../components/AppointmentCard';
 import RescheduleDialog from '../components/RescheduleDialog';
 import { getMyAppointments, cancelAppointment } from '../api/appointmentApi';
 import { useAuth } from '../../../auth/context/AuthContext';
+import AppointmentNotice from '../components/AppointmentNotice';
 import CitizenErrorState from '../../citizen-ui/components/CitizenErrorState';
 import CitizenPageHeader from '../../citizen-ui/components/CitizenPageHeader';
 import CitizenStatePanel from '../../citizen-ui/components/CitizenStatePanel';
@@ -138,21 +139,7 @@ export default function MyAppointmentsPage() {
           )}
         />
       ) : feedback ? (
-        <div className="citizen-page__notice">
-          <div
-            className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
-            role="alert"
-          >
-          <h4 className="h6 alert-heading fw-bold mb-1">{feedback.title}</h4>
-          <p className="mb-0">{feedback.message}</p>
-          <button
-            type="button"
-            className="btn-close"
-            aria-label="Close"
-            onClick={() => setFeedback(null)}
-          ></button>
-          </div>
-        </div>
+        <AppointmentNotice feedback={feedback} onDismiss={() => setFeedback(null)} />
       ) : null}
 
       {loading && (
