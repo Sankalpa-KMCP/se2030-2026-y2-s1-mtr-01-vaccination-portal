@@ -5,6 +5,7 @@ import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotBookability;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotReservationResult;
+import com.se2030.vaccinationportal.appointment.event.AppointmentEvent;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
@@ -13,6 +14,7 @@ import com.se2030.vaccinationportal.appointment.persistence.repository.Appointme
 import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.shared.auth.api.EmailVerificationStatusReader;
+import org.springframework.context.ApplicationEventPublisher;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -54,6 +56,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class WaitlistPromotionService {
 
+    private final ApplicationEventPublisher eventPublisher;
+
     private final WaitlistRepository waitlistRepository;
     private final AppointmentRepository appointmentRepository;
     private final CitizenCampaignBookingGuardRepository guardRepository;
@@ -63,6 +67,7 @@ public class WaitlistPromotionService {
 
     @Autowired
     public WaitlistPromotionService(
+            ApplicationEventPublisher eventPublisher,
             WaitlistRepository waitlistRepository,
             AppointmentRepository appointmentRepository,
             CitizenCampaignBookingGuardRepository guardRepository,
@@ -70,6 +75,7 @@ public class WaitlistPromotionService {
             @Autowired(required = false) SlotCapacityPort slotCapacityPort,
             EmailVerificationStatusReader emailVerificationStatusReader
     ) {
+        this.eventPublisher = eventPublisher;
         this.waitlistRepository = waitlistRepository;
         this.appointmentRepository = appointmentRepository;
         this.guardRepository = guardRepository;
@@ -269,6 +275,8 @@ public class WaitlistPromotionService {
             entry.markPromoted();
             waitlistRepository.save(entry);
 
+            eventPublisher.publishEvent(AppointmentEvent.from(
+                    AppointmentEvent.Type.WAITLIST_PROMOTED, savedAppointment));
             return Optional.of(savedAppointment);
         }
 

@@ -10,6 +10,7 @@ import com.se2030.vaccinationportal.appointment.exception.DuplicateWaitlistEntry
 import com.se2030.vaccinationportal.appointment.exception.EmailVerificationRequiredException;
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
+import com.se2030.vaccinationportal.appointment.event.AppointmentEvent;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus;
@@ -17,6 +18,7 @@ import com.se2030.vaccinationportal.appointment.persistence.repository.Appointme
 import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
 import com.se2030.vaccinationportal.shared.auth.api.EmailVerificationStatusReader;
+import org.springframework.context.ApplicationEventPublisher;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class AppointmentBookingService {
 
+    private final ApplicationEventPublisher eventPublisher;
+
     private final AppointmentRepository appointmentRepository;
     private final WaitlistRepository waitlistRepository;
     private final CitizenCampaignBookingGuardRepository guardRepository;
@@ -54,6 +58,7 @@ public class AppointmentBookingService {
 
     @Autowired
     public AppointmentBookingService(
+            ApplicationEventPublisher eventPublisher,
             AppointmentRepository appointmentRepository,
             WaitlistRepository waitlistRepository,
             CitizenCampaignBookingGuardRepository guardRepository,
@@ -61,6 +66,7 @@ public class AppointmentBookingService {
             @Autowired(required = false) SlotCapacityPort slotCapacityPort,
             EmailVerificationStatusReader emailVerificationStatusReader
     ) {
+        this.eventPublisher = eventPublisher;
         this.appointmentRepository = appointmentRepository;
         this.waitlistRepository = waitlistRepository;
         this.guardRepository = guardRepository;
@@ -188,6 +194,8 @@ public class AppointmentBookingService {
 
         // Step 1f: Persist new CONFIRMED appointment entity within the same transaction.
         Appointment appointment = new Appointment(citizenId, campaignId, slotId, AppointmentStatus.CONFIRMED, Instant.now());
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        eventPublisher.publishEvent(AppointmentEvent.from(AppointmentEvent.Type.BOOKED, saved));
+        return saved;
     }
 }
