@@ -14,10 +14,13 @@ import com.se2030.vaccinationportal.inventory.model.VaccineBatch;
 import com.se2030.vaccinationportal.inventory.repository.CenterInventoryRepository;
 import com.se2030.vaccinationportal.inventory.repository.StockTransactionRepository;
 import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,14 +30,24 @@ public class InventoryBatchService implements InventoryBatchPort {
     private final CenterInventoryRepository inventories;
     private final StockTransactionRepository transactions;
     private final Clock clock;
+    private final EntityManager entityManager;
 
     public InventoryBatchService(VaccineBatchRepository batches,
                                  CenterInventoryRepository inventories,
                                  StockTransactionRepository transactions, Clock clock) {
+        this(batches, inventories, transactions, clock, null);
+    }
+
+    @Autowired
+    public InventoryBatchService(VaccineBatchRepository batches,
+                                 CenterInventoryRepository inventories,
+                                 StockTransactionRepository transactions, Clock clock,
+                                 EntityManager entityManager) {
         this.batches = batches;
         this.inventories = inventories;
         this.transactions = transactions;
         this.clock = clock;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -88,6 +101,12 @@ public class InventoryBatchService implements InventoryBatchPort {
 
         // Always lock the batch before the center-batch inventory row. This serializes
         // status changes and competing finalizations in a consistent lock order.
+        if (entityManager != null) {
+            VaccineBatch cached = entityManager.find(VaccineBatch.class, batchId);
+            if (cached != null) {
+                entityManager.detach(cached);
+            }
+        }
         VaccineBatch batch = batches.findByIdForUpdate(batchId)
                 .orElseThrow(() -> new BatchUnavailableException(BatchAvailabilityReason.BATCH_NOT_FOUND));
         CenterInventory inventory = inventories.findByCenterAndBatchForUpdate(centerId, batchId)
