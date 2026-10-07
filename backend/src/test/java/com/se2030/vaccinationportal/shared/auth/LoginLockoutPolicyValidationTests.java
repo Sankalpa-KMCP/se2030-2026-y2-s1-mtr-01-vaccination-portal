@@ -24,7 +24,7 @@ class LoginLockoutPolicyValidationTests {
 
     private AuthService authServiceWithPolicy(int maxFailedLoginAttempts, int lockDurationSeconds) {
         return new AuthService(
-                null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null, null,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
                 24, 30,
                 maxFailedLoginAttempts,
@@ -68,5 +68,16 @@ class LoginLockoutPolicyValidationTests {
     @DisplayName("approved policy defaults (5 attempts, 900 seconds) initialize successfully")
     void approvedDefaults_accepted() {
         assertDoesNotThrow(() -> authServiceWithPolicy(5, 900));
+    }
+
+    @Test
+    @DisplayName("invalid refresh-token lifetime is rejected by the session service")
+    void invalidRefreshLifetime_rejected() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                new com.se2030.vaccinationportal.shared.auth.service.RefreshTokenSessionService(
+                        null, null, null,
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
+                        0));
+        assertTrue(exception.getMessage().contains("app.security.auth.refresh-token-expiration-days"));
     }
 }

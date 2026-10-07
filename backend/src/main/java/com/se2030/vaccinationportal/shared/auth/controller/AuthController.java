@@ -11,12 +11,22 @@ import com.se2030.vaccinationportal.shared.auth.dto.ResetPasswordRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.StaffRegistrationRequest;
 import com.se2030.vaccinationportal.shared.auth.dto.UserProfileResponse;
 import com.se2030.vaccinationportal.shared.auth.dto.VerifyEmailRequest;
+import com.se2030.vaccinationportal.shared.auth.exception.AccountPendingApprovalException;
+import com.se2030.vaccinationportal.shared.auth.exception.AccountRejectedException;
 import com.se2030.vaccinationportal.shared.auth.exception.AuthEmailDeliveryException;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,15 +35,78 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final String refreshCookieName;
+    private final boolean refreshCookieSecure;
+    private final long refreshCookieMaxAgeSeconds;
 
-    public AuthController(AuthService authService) {
+    public AuthController(
+            AuthService authService,
+            @Value("${app.security.auth.refresh-cookie-name:${AUTH_REFRESH_COOKIE_NAME:refresh_token}}") String refreshCookieName,
+            @Value("${app.security.auth.refresh-cookie-secure:${AUTH_REFRESH_COOKIE_SECURE:true}}") boolean refreshCookieSecure,
+            @Value("${app.security.auth.refresh-token-expiration-days:${AUTH_REFRESH_TOKEN_EXPIRATION_DAYS:7}}") int refreshTokenExpirationDays
+    ) {
         this.authService = authService;
+        this.refreshCookieName = refreshCookieName;
+        this.refreshCookieSecure = refreshCookieSecure;
+        this.refreshCookieMaxAgeSeconds = (long) refreshTokenExpirationDays * 24L * 60L * 60L;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        AuthService.LoginResult result = authService.login(request);
+        setRefreshCookie(response, result.refreshToken(), refreshCookieMaxAgeSeconds);
+        return ResponseEntity.ok(result.response());
+    }
+
+    /**
+     * Canonical §17.1 single-use rotation: the presented refresh cookie is consumed
+     * and replaced. Reuse of a rotated/revoked token revokes the whole family.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            AuthService.RefreshSessionResult result = authService.refresh(extractRefreshCookie(request));
+            setRefreshCookie(response, result.refreshToken(), refreshCookieMaxAgeSeconds);
+            return ResponseEntity.ok(result.response());
+        } catch (BadCredentialsException | LockedException | DisabledException
+                | AccountPendingApprovalException | AccountRejectedException ex) {
+            clearRefreshCookie(response);
+            throw ex;
+        }
+    }
+
+    /**
+     * Revokes the presented token family and clears the cookie. Idempotent: missing
+     * or unknown cookies produce the same outward response without disclosure.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        authService.logout(extractRefreshCookie(request));
+        clearRefreshCookie(response);
+        return ResponseEntity.noContent().build();
+    }
+
+    private String extractRefreshCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (refreshCookieName.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
+
+    private void setRefreshCookie(HttpServletResponse response, String rawRefreshToken, long maxAgeSeconds) {
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                RefreshTokenCookieSupport.build(refreshCookieName, rawRefreshToken, maxAgeSeconds, refreshCookieSecure).toString());
+    }
+
+    private void clearRefreshCookie(HttpServletResponse response) {
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                RefreshTokenCookieSupport.clear(refreshCookieName, refreshCookieSecure).toString());
     }
 
     @PostMapping("/register/citizen")

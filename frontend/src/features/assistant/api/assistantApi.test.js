@@ -6,6 +6,7 @@ import {
   sanitizeCurrentPath,
   MAX_MESSAGE_LENGTH,
 } from './assistantApi';
+import { setToken, clearToken } from '../../../shared/auth/authStorage';
 
 function mockResponse(body, status = 200) {
   return {
@@ -24,6 +25,7 @@ describe('assistantApi', () => {
   });
 
   afterEach(() => {
+    clearToken();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -156,8 +158,8 @@ describe('assistantApi', () => {
       expect(parsedBody.history[9].content).toBe('Message 14');
     });
 
-    it('delegates JWT attachment to apiClient when token exists in storage', async () => {
-      window.sessionStorage.setItem('vaccination_portal_token', 'mock-jwt-token-xyz');
+    it('delegates JWT attachment to apiClient when a token is held in memory', async () => {
+      setToken('mock-jwt-token-xyz');
       fetch.mockResolvedValueOnce(mockResponse({ answer: 'Authenticated answer' }));
 
       await sendAssistantMessage({ message: 'Hello' });

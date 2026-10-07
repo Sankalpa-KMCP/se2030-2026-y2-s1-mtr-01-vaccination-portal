@@ -9,12 +9,14 @@ import com.se2030.vaccinationportal.shared.auth.model.PasswordResetToken;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
 import com.se2030.vaccinationportal.shared.auth.repository.PasswordResetTokenRepository;
+import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.security.AuthActionTokenService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -80,18 +82,33 @@ class AuthServiceIntegrationTests {
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @Autowired
+    private RefreshTokenSessionRepository refreshTokenSessionRepository;
+
     private Role centerManagerRole;
     private Role adminRole;
     private Role citizenRole;
 
     @BeforeEach
     void setUp() {
-        userAccountRepository.deleteAll();
-        roleRepository.deleteAll();
+        cleanup();
 
         centerManagerRole = roleRepository.save(new Role("ROLE_CENTER_MANAGER", "Vaccination Center Manager"));
         adminRole = roleRepository.save(new Role("ROLE_ADMIN", "System Administrator"));
         citizenRole = roleRepository.save(new Role("ROLE_CITIZEN", "Citizen"));
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanup();
+    }
+
+    private void cleanup() {
+        passwordResetTokenRepository.deleteAll();
+        refreshTokenSessionRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        roleRepository.deleteAll();
+        roleRepository.flush();
     }
 
     @Test
@@ -101,7 +118,7 @@ class AuthServiceIntegrationTests {
         account.addRole(centerManagerRole);
         userAccountRepository.save(account);
 
-        LoginResponse response = authService.login(new LoginRequest("manager@portal.gov", "Password123!"));
+        LoginResponse response = authService.login(new LoginRequest("manager@portal.gov", "Password123!")).response();
 
         assertNotNull(response);
         assertNotNull(response.token());
@@ -116,7 +133,7 @@ class AuthServiceIntegrationTests {
         UserAccount account = new UserAccount("nurse@portal.gov", passwordEncoder.encode("SecretPass123!"), AccountStatus.ACTIVE);
         userAccountRepository.save(account);
 
-        LoginResponse response = authService.login(new LoginRequest("  NURSE@PORTAL.GOV  ", "SecretPass123!"));
+        LoginResponse response = authService.login(new LoginRequest("  NURSE@PORTAL.GOV  ", "SecretPass123!")).response();
 
         assertNotNull(response);
         assertEquals("nurse@portal.gov", response.user().email());
@@ -148,7 +165,7 @@ class AuthServiceIntegrationTests {
         account.addRole(citizenRole);
         userAccountRepository.save(account);
 
-        LoginResponse response = authService.login(new LoginRequest("unverified@portal.gov", "Password123!"));
+        LoginResponse response = authService.login(new LoginRequest("unverified@portal.gov", "Password123!")).response();
 
         assertNotNull(response.token());
         assertEquals(AccountStatus.PENDING_VERIFICATION, response.user().accountStatus());
@@ -284,7 +301,7 @@ class AuthServiceIntegrationTests {
         userAccountRepository.saveAndFlush(locked);
         entityManager.clear();
 
-        LoginResponse response = authService.login(new LoginRequest("lockout.expired@portal.gov", "Password123!"));
+        LoginResponse response = authService.login(new LoginRequest("lockout.expired@portal.gov", "Password123!")).response();
         assertNotNull(response.token(), "Login after lock expiry must succeed");
 
         UserAccount unlocked = reloadByEmail("lockout.expired@portal.gov");
@@ -298,7 +315,7 @@ class AuthServiceIntegrationTests {
         createAccountWithEmail("lockout.reset@portal.gov");
         failLoginTimes("lockout.reset@portal.gov", 2);
 
-        LoginResponse response = authService.login(new LoginRequest("lockout.reset@portal.gov", "Password123!"));
+        LoginResponse response = authService.login(new LoginRequest("lockout.reset@portal.gov", "Password123!")).response();
         assertNotNull(response.token());
         entityManager.flush();
         entityManager.clear();
@@ -349,7 +366,7 @@ class AuthServiceIntegrationTests {
         assertNull(afterReset.getLockedUntil(), "Password reset must clear the active timed lock");
         assertEquals(0, afterReset.getFailedLoginAttempts(), "Password reset must reset the counter");
 
-        LoginResponse response = authService.login(new LoginRequest(email, "NewPassword123!"));
+        LoginResponse response = authService.login(new LoginRequest(email, "NewPassword123!")).response();
         assertNotNull(response.token(), "Login with the new password must succeed immediately after reset");
     }
 

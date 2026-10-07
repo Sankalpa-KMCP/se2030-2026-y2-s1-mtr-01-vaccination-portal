@@ -83,6 +83,20 @@ export function registerStaff({ fullName, email, phoneNumber, password, requeste
 }
 
 /**
+ * Revokes the current refresh-token family via POST /api/v1/auth/logout.
+ * The refresh token rides in the HttpOnly cookie; the response is idempotent.
+ *
+ * @returns {Promise<null>}
+ */
+export function logoutApi() {
+  return apiRequestData('/v1/auth/logout', {
+    method: 'POST',
+    auth: false,
+    handleUnauthorized: false,
+  });
+}
+
+/**
  * Fetches the authenticated user profile from GET /api/v1/auth/me.
  *
  * @returns {Promise<{ id: number, email: string, roles: string[] }>}

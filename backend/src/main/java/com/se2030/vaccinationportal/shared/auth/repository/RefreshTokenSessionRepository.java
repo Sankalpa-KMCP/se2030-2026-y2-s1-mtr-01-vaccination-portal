@@ -21,4 +21,44 @@ public interface RefreshTokenSessionRepository extends JpaRepository<RefreshToke
     @Modifying(clearAutomatically = true)
     @Query("UPDATE RefreshTokenSession s SET s.revokedAt = :revokedAt WHERE s.user.id = :userId AND s.revokedAt IS NULL")
     int revokeAllActiveSessionsForUser(@Param("userId") Long userId, @Param("revokedAt") Instant revokedAt);
+
+    /**
+     * Atomically claims an active refresh session for rotation. Exactly one
+     * concurrent request wins (1 updated row); every competing request matches no
+     * rows and must treat the presented token as reused.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            UPDATE RefreshTokenSession s
+            SET s.revokedAt = :revokedAt
+            WHERE s.id = :id
+              AND s.revokedAt IS NULL
+              AND s.expiresAt > :now
+            """)
+    int claimForRotation(@Param("id") Long id, @Param("revokedAt") Instant revokedAt, @Param("now") Instant now);
+
+    /**
+     * Revokes every still-active session of a token family (reuse detection and
+     * logout semantics).
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            UPDATE RefreshTokenSession s
+            SET s.revokedAt = :revokedAt
+            WHERE s.tokenFamilyId = :tokenFamilyId
+              AND s.revokedAt IS NULL
+            """)
+    int revokeActiveSessionsByFamily(@Param("tokenFamilyId") String tokenFamilyId, @Param("revokedAt") Instant revokedAt);
+
+    /**
+     * Stamps the first observation of refresh-token reuse on the presented session.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            UPDATE RefreshTokenSession s
+            SET s.reuseDetectedAt = :detectedAt
+            WHERE s.id = :id
+              AND s.reuseDetectedAt IS NULL
+            """)
+    int markReuseDetected(@Param("id") Long id, @Param("detectedAt") Instant detectedAt);
 }

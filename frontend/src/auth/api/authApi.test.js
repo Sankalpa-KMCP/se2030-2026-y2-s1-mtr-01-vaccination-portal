@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   forgotPassword,
   loginApi,
+  logoutApi,
   registerCitizen,
   registerStaff,
   resendVerification,
@@ -137,5 +138,16 @@ describe('auth API', () => {
       }),
     }));
     expect(result).toEqual({ message: 'Password has been reset successfully' });
+  });
+
+  it('submits logout as a cookie-authenticated POST and resolves to null on 204', async () => {
+    fetch.mockResolvedValueOnce(response(null, 204));
+
+    await expect(logoutApi()).resolves.toBeNull();
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/auth/logout', expect.objectContaining({
+      method: 'POST',
+      credentials: 'include',
+    }));
   });
 });

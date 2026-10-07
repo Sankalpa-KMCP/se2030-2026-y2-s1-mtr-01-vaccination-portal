@@ -4,10 +4,12 @@ import com.se2030.vaccinationportal.shared.auth.dto.LoginRequest;
 import com.se2030.vaccinationportal.shared.auth.model.AccountStatus;
 import com.se2030.vaccinationportal.shared.auth.model.Role;
 import com.se2030.vaccinationportal.shared.auth.model.UserAccount;
+import com.se2030.vaccinationportal.shared.auth.repository.RefreshTokenSessionRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.RoleRepository;
 import com.se2030.vaccinationportal.shared.auth.repository.UserAccountRepository;
 import com.se2030.vaccinationportal.shared.auth.service.AuthService;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,12 +57,18 @@ class LoginLockoutConcurrencyIntegrationTests {
     private RoleRepository roleRepository;
 
     @Autowired
+    private RefreshTokenSessionRepository refreshTokenSessionRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @BeforeEach
     @AfterEach
     void cleanUp() {
+        refreshTokenSessionRepository.deleteAll();
         userAccountRepository.deleteAll();
         roleRepository.deleteAll();
+        roleRepository.flush();
     }
 
     @Test
