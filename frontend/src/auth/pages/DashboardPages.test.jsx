@@ -26,6 +26,22 @@ vi.mock('../../features/appointment-management/api/checkInApi', () => ({
   getVaccinatorQueue: vi.fn(async () => []),
 }));
 
+vi.mock('../../features/center-operations/api/centerOperationsApi', () => ({
+  listCenters: vi.fn(async () => []),
+}));
+
+vi.mock('../../features/analytics/api/analyticsApi', () => ({
+  getOperationalAnalytics: vi.fn(async () => ({
+    sessionCountByLifecycleStatus: { SCHEDULED: 0 },
+    totalApprovedCapacity: 0,
+    totalReservedSlots: 0,
+  })),
+}));
+
+vi.mock('../api/adminStaffRequestsApi', () => ({
+  listStaffRequests: vi.fn(async () => []),
+}));
+
 vi.mock('../../features/session-management/api/sessionApi', () => ({
   listTimeSlots: vi.fn(async () => []),
 }));
@@ -196,31 +212,34 @@ describe('role dashboards', () => {
       roles: ['ROLE_ADMIN'],
     } };
     renderPage(<AdminDashboardPage />);
-    expect(screen.getByRole('heading', { name: 'Welcome, Portal Admin' })).toBeTruthy();
-    expect(screen.getAllByText('Administrator', { selector: '.badge' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: /Welcome back,.*Portal Admin/ })).toBeTruthy();
+    expect(screen.getByText('Administrator', { selector: '.admin-role-pill' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Account Profile' })).toBeTruthy();
+    expect(screen.getByText('admin@example.com')).toBeTruthy();
+    expect(screen.getByText('+94 70 100 2000')).toBeTruthy();
 
     const staffRequestsCard = screen.getByRole('heading', { name: 'Staff Account Requests' }).closest('.card');
-    expect(within(staffRequestsCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/admin/staff-requests');
+    expect(staffRequestsCard.getAttribute('href')).toBe('/app/admin/staff-requests');
 
     const campaignCard = screen.getByRole('heading', { name: 'Campaign Management' }).closest('.card');
-    expect(within(campaignCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/campaigns');
+    expect(campaignCard.getAttribute('href')).toBe('/app/campaigns');
 
     const centerCard = screen.getByRole('heading', { name: 'Center Operations' }).closest('.card');
-    expect(within(centerCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/center-operations');
+    expect(centerCard.getAttribute('href')).toBe('/app/center-operations');
 
     const sessionCard = screen.getByRole('heading', { name: 'Session Management' }).closest('.card');
-    expect(within(sessionCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/sessions');
+    expect(sessionCard.getAttribute('href')).toBe('/app/sessions');
 
     const analyticsCard = screen.getByRole('heading', { name: 'Operational Analytics' }).closest('.card');
-    expect(within(analyticsCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/analytics');
+    expect(analyticsCard.getAttribute('href')).toBe('/app/analytics');
 
     const inventoryCard = screen.getByRole('heading', { name: 'Inventory & Batches' }).closest('.card');
-    expect(within(inventoryCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/inventory');
+    expect(inventoryCard.getAttribute('href')).toBe('/app/inventory');
 
     const checkInCard = screen.getByRole('heading', { name: 'Check-In & Queue Management' }).closest('.card');
-    expect(within(checkInCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
+    expect(checkInCard.getAttribute('href')).toBe('/app/checkin/queue');
 
-    const openLinks = screen.getAllByRole('link', { name: 'Open' });
+    const openLinks = screen.getAllByRole('link', { name: /^Open / });
     expect(openLinks).toHaveLength(7);
 
     expect(screen.queryByRole('heading', { name: 'Screening Review Queue' })).toBeNull();
@@ -236,34 +255,34 @@ describe('role dashboards', () => {
       roles: ['ROLE_SUPER_ADMIN'],
     } };
     renderPage(<AdminDashboardPage />);
-    expect(screen.getByRole('heading', { name: 'Welcome, Super Admin User' })).toBeTruthy();
-    expect(screen.getAllByText('Super Administrator', { selector: '.badge' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: /Welcome back,.*Super Admin User/ })).toBeTruthy();
+    expect(screen.getByText('Super Administrator', { selector: '.admin-role-pill' })).toBeTruthy();
 
     const staffRequestsCard = screen.getByRole('heading', { name: 'Staff Account Requests' }).closest('.card');
-    expect(within(staffRequestsCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/admin/staff-requests');
+    expect(staffRequestsCard.getAttribute('href')).toBe('/app/admin/staff-requests');
 
     const campaignCard = screen.getByRole('heading', { name: 'Campaign Management' }).closest('.card');
-    expect(within(campaignCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/campaigns');
+    expect(campaignCard.getAttribute('href')).toBe('/app/campaigns');
 
     const centerCard = screen.getByRole('heading', { name: 'Center Operations' }).closest('.card');
-    expect(within(centerCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/center-operations');
+    expect(centerCard.getAttribute('href')).toBe('/app/center-operations');
 
     const sessionCard = screen.getByRole('heading', { name: 'Session Management' }).closest('.card');
-    expect(within(sessionCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/sessions');
+    expect(sessionCard.getAttribute('href')).toBe('/app/sessions');
 
     const analyticsCard = screen.getByRole('heading', { name: 'Operational Analytics' }).closest('.card');
-    expect(within(analyticsCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/analytics');
+    expect(analyticsCard.getAttribute('href')).toBe('/app/analytics');
 
     const inventoryCard = screen.getByRole('heading', { name: 'Inventory & Batches' }).closest('.card');
-    expect(within(inventoryCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/inventory');
+    expect(inventoryCard.getAttribute('href')).toBe('/app/inventory');
 
     const checkInCard = screen.getByRole('heading', { name: 'Check-In & Queue Management' }).closest('.card');
-    expect(within(checkInCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
+    expect(checkInCard.getAttribute('href')).toBe('/app/checkin/queue');
 
     const screeningCard = screen.getByRole('heading', { name: 'Screening Review Queue' }).closest('.card');
-    expect(within(screeningCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/staff/screening/reviews');
+    expect(screeningCard.getAttribute('href')).toBe('/app/staff/screening/reviews');
 
-    const openLinks = screen.getAllByRole('link', { name: 'Open' });
+    const openLinks = screen.getAllByRole('link', { name: /^Open / });
     expect(openLinks).toHaveLength(8);
 
     expect(screen.queryByRole('heading', { name: 'Screening Questions' })).toBeNull();
