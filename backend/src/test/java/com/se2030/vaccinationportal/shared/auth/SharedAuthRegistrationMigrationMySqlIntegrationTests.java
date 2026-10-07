@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.shared.auth;
 
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.testcontainers.AbstractIsolatedMySqlMigrationIntegrationTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -16,7 +18,12 @@ import java.sql.Statement;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SharedAuthRegistrationMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
+class SharedAuthRegistrationMigrationMySqlIntegrationTests extends AbstractIsolatedMySqlMigrationIntegrationTest {
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        configureIsolatedDatabase(registry, "historical_auth_v12");
+    }
 
     @Test
     @Timeout(30)

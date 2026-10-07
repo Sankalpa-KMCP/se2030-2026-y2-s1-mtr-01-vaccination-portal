@@ -14,6 +14,10 @@ import java.util.Optional;
 
 @Repository
 public interface ScreeningSubmissionRepository extends JpaRepository<ScreeningSubmission, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM ScreeningSubmission s WHERE s.id = :id")
+    Optional<ScreeningSubmission> findByIdForUpdate(@Param("id") Long id);
+
     List<ScreeningSubmission> findByCitizenIdOrderByCreatedAtDesc(Long citizenId);
     List<ScreeningSubmission> findByCampaignIdAndStatus(Long campaignId, ScreeningSubmissionStatus status);
     List<ScreeningSubmission> findByStatus(ScreeningSubmissionStatus status);

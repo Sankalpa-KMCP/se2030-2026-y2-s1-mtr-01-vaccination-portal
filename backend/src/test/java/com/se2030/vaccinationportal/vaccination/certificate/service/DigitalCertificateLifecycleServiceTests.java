@@ -138,7 +138,7 @@ class DigitalCertificateLifecycleServiceTests {
     void reissueSupersedesCurrentCertificateAndCreatesLinkedReplacement() {
         VaccinationRecord record = record();
         DigitalCertificate oldCertificate = certificate(201L, "CERT-OLD", "old-token");
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(certificateRepository.findCurrentByVaccinationRecordIdAndStatusForUpdate(
                 RECORD_ID,
                 CertificateStatus.VALID
@@ -176,7 +176,7 @@ class DigitalCertificateLifecycleServiceTests {
 
     @Test
     void reissueRejectsMissingRecordOrMissingCurrentCertificate() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.empty());
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.empty());
         assertThrows(
                 VaccinationRecordNotFoundException.class,
                 () -> service.reissueCertificate(
@@ -185,7 +185,7 @@ class DigitalCertificateLifecycleServiceTests {
                 )
         );
 
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record()));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record()));
         when(certificateRepository.findCurrentByVaccinationRecordIdAndStatusForUpdate(
                 RECORD_ID,
                 CertificateStatus.VALID
@@ -201,7 +201,7 @@ class DigitalCertificateLifecycleServiceTests {
 
     @Test
     void invalidReissueRequestIsRejectedBeforeCertificateLocking() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record()));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record()));
         assertThrows(
                 InvalidCertificateLifecycleException.class,
                 () -> service.reissueCertificate(

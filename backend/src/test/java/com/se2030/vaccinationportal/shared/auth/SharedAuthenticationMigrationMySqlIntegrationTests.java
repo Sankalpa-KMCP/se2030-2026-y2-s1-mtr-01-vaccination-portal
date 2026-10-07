@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.shared.auth;
 
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.testcontainers.AbstractIsolatedMySqlMigrationIntegrationTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -25,7 +27,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * of Flyway migration script V4 on mysql:8.4.3, including table creation, foreign keys, unique indexes,
  * canonical role catalog seeds, and zero user credential seeds.
  */
-class SharedAuthenticationMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
+class SharedAuthenticationMigrationMySqlIntegrationTests extends AbstractIsolatedMySqlMigrationIntegrationTest {
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        configureIsolatedDatabase(registry, "historical_auth_v4");
+    }
 
     @Test
     @Timeout(30)

@@ -73,7 +73,7 @@ public class VaccinationCorrectionLifecycleService {
             Long actorId,
             ApplyVaccinationCorrectionRequest applyRequest
     ) {
-        VaccinationCorrection correction = correctionService.getCorrectionById(vaccinationRecordId, correctionId);
+        VaccinationCorrection correction = correctionService.getCorrectionForUpdate(vaccinationRecordId, correctionId);
         if (correction.getStatus() != com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.APPROVED) {
             throw new com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationCorrectionException(
                     "Only APPROVED corrections can be applied; current status is: " + correction.getStatus()

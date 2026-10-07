@@ -86,7 +86,7 @@ class EligibilityReviewServiceCorrectionTests {
     @Test
     void requestCorrectionsPersistsTrimmedInstructionsAndTransitionsPendingSubmission() {
         ScreeningSubmission submission = pendingSubmission();
-        when(submissionRepository.findById(30L)).thenReturn(Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(30L)).thenReturn(Optional.of(submission));
         when(submissionRepository.save(same(submission))).thenReturn(submission);
 
         ScreeningSubmission result = service.requestCorrections(
@@ -134,7 +134,7 @@ class EligibilityReviewServiceCorrectionTests {
         answer.setId(70L);
         submission.addAnswer(answer);
 
-        when(submissionRepository.findById(30L)).thenReturn(Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(30L)).thenReturn(Optional.of(submission));
         when(submissionRepository.save(same(submission))).thenReturn(submission);
 
         ScreeningSubmission result = service.requestCorrections(30L, "Correct the allergy answer");
@@ -156,7 +156,7 @@ class EligibilityReviewServiceCorrectionTests {
     void requestCorrectionsRejectsSubmissionNotPendingReview() {
         ScreeningSubmission submission = pendingSubmission();
         submission.setStatus(ScreeningSubmissionStatus.REVIEWED);
-        when(submissionRepository.findById(30L)).thenReturn(Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(30L)).thenReturn(Optional.of(submission));
 
         assertThatThrownBy(() -> service.requestCorrections(30L, "Correct the allergy answer"))
                 .isInstanceOf(IllegalStateException.class)

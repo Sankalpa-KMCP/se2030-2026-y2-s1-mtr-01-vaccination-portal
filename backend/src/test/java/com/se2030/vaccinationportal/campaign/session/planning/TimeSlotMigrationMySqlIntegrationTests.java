@@ -15,7 +15,9 @@ import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaign
 import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.session.planning.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.testcontainers.AbstractIsolatedMySqlMigrationIntegrationTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -46,7 +48,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * of Flyway migration script V3 on mysql:8.4.3, including table creation, foreign key constraints,
  * and index metadata.
  */
-class TimeSlotMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
+class TimeSlotMigrationMySqlIntegrationTests extends AbstractIsolatedMySqlMigrationIntegrationTest {
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        configureIsolatedDatabase(registry, "historical_slots_v3");
+    }
 
     @Autowired private VaccinationSessionRepository sessionRepository;
     @Autowired private VaccinationCampaignRepository campaignRepository;

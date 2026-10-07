@@ -177,11 +177,15 @@ public class EligibilityReviewController {
     @RequireRoles({"HEALTHCARE_OFFICER", "ADMIN", "SYSTEM_ADMINISTRATOR"})
     public ResponseEntity<EligibilityAssessmentResponse> authorizeRescreening(
             @PathVariable("assessmentId") Long assessmentId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody AuthorizeRescreeningRequest request
     ) {
+        if (principal == null) {
+            throw new AccessDeniedException("Authenticated reviewer identity is unavailable");
+        }
         EligibilityAssessment assessment = reviewService.authorizeRescreening(
                 assessmentId,
-                request.authorizedByReviewerId(),
+                principal.getUserId(),
                 request.reason()
         );
         return ResponseEntity.ok(assessmentMapper.toResponse(assessment));

@@ -7,7 +7,6 @@ import com.se2030.vaccinationportal.vaccination.administration.dto.ReviewVaccina
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionDetailResponse;
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionLifecycleResponse;
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionResponse;
-import com.se2030.vaccinationportal.vaccination.administration.exception.DuplicateVaccinationCorrectionException;
 import com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.administration.mapper.VaccinationCorrectionMapper;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrection;
@@ -78,15 +77,12 @@ public class VaccinationCorrectionController {
                     throw new AccessDeniedException("Citizens may only request corrections for their own vaccination records");
                 }
             }
-            if (correctionService.hasActiveCorrection(recordId)) {
-                throw new DuplicateVaccinationCorrectionException(
-                        "An active correction request is already pending for this vaccination record"
-                );
-            }
         }
 
         Long actorId = principal != null ? principal.getUserId() : (request != null ? request.correctedBy() : 1L);
-        VaccinationCorrection created = correctionService.createCorrection(recordId, request, actorId);
+        VaccinationCorrection created = principal != null && isCitizen(principal)
+                ? correctionService.createCitizenCorrection(recordId, request, actorId)
+                : correctionService.createCorrection(recordId, request, actorId);
         VaccinationCorrectionResponse response = VaccinationCorrectionMapper.toResponse(created);
         URI location = URI.create(
                 "/api/v1/vaccination/records/" + recordId + "/corrections/" + response.id()

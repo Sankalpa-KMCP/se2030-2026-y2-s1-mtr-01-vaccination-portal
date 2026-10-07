@@ -104,7 +104,7 @@ class EligibilityReviewServiceLifecycleTests {
     @Test
     void recordDecisionRejectsCorrectionsRequiredSubmission() {
         ScreeningSubmission submission = submissionWithStatus(ScreeningSubmissionStatus.CORRECTIONS_REQUIRED);
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(Optional.of(submission));
 
         assertThatThrownBy(() -> service.recordDecision(
                 SUBMISSION_ID,
@@ -125,7 +125,7 @@ class EligibilityReviewServiceLifecycleTests {
     @Test
     void recordEligibleDecisionRejectsMissingValidUntil() {
         ScreeningSubmission submission = submissionWithStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(Optional.of(submission));
 
         assertThatThrownBy(() -> service.recordDecision(
                 SUBMISSION_ID,
@@ -147,7 +147,7 @@ class EligibilityReviewServiceLifecycleTests {
     void recordEligibleDecisionRejectsValidUntilNotAfterReviewedAt() {
         ScreeningSubmission beforeReview = submissionWithStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
         ScreeningSubmission equalToReview = submissionWithStatus(ScreeningSubmissionStatus.PENDING_REVIEW);
-        when(submissionRepository.findById(SUBMISSION_ID))
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID))
                 .thenReturn(Optional.of(beforeReview))
                 .thenReturn(Optional.of(equalToReview));
 
@@ -242,7 +242,7 @@ class EligibilityReviewServiceLifecycleTests {
                 REVIEWED_AT.plusSeconds(86_400)
         );
         reviewedSubmission.setAssessment(originalAssessment);
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(reviewedSubmission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(Optional.of(reviewedSubmission));
 
         assertThatThrownBy(() -> service.recordDecision(
                 SUBMISSION_ID,
@@ -600,7 +600,7 @@ class EligibilityReviewServiceLifecycleTests {
     }
 
     private void stubSuccessfulDecision(ScreeningSubmission submission) {
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(Optional.of(submission));
         when(submissionRepository.save(same(submission))).thenReturn(submission);
         when(assessmentRepository.save(any(EligibilityAssessment.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
