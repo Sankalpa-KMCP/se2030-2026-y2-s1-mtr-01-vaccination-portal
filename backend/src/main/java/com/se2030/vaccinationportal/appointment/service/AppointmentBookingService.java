@@ -11,6 +11,8 @@ import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.repository.CitizenCampaignBookingGuardRepository;
+import com.se2030.vaccinationportal.appointment.event.AppointmentEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class AppointmentBookingService {
 
+    private final ApplicationEventPublisher eventPublisher;
+
     private final AppointmentRepository appointmentRepository;
     private final CitizenCampaignBookingGuardRepository guardRepository;
     private final EligibilityLookupPort eligibilityLookupPort;
@@ -45,11 +49,13 @@ public class AppointmentBookingService {
 
     @Autowired
     public AppointmentBookingService(
+            ApplicationEventPublisher eventPublisher,
             AppointmentRepository appointmentRepository,
             CitizenCampaignBookingGuardRepository guardRepository,
             @Autowired(required = false) EligibilityLookupPort eligibilityLookupPort,
             @Autowired(required = false) SlotCapacityPort slotCapacityPort
     ) {
+        this.eventPublisher = eventPublisher;
         this.appointmentRepository = appointmentRepository;
         this.guardRepository = guardRepository;
         this.eligibilityLookupPort = eligibilityLookupPort;
@@ -136,6 +142,8 @@ public class AppointmentBookingService {
 
         // Step 1e: Persist new CONFIRMED appointment entity within the same transaction.
         Appointment appointment = new Appointment(citizenId, campaignId, slotId, AppointmentStatus.CONFIRMED, Instant.now());
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        eventPublisher.publishEvent(AppointmentEvent.from(AppointmentEvent.Type.BOOKED, saved));
+        return saved;
     }
 }

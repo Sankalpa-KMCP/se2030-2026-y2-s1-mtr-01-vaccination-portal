@@ -4,6 +4,8 @@ import com.se2030.vaccinationportal.appointment.dependency.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
 import com.se2030.vaccinationportal.appointment.model.Appointment;
 import com.se2030.vaccinationportal.appointment.repository.AppointmentRepository;
+import com.se2030.vaccinationportal.appointment.event.AppointmentEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -33,16 +35,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class AppointmentCancellationService {
 
+    private final ApplicationEventPublisher eventPublisher;
+
     private final AppointmentRepository appointmentRepository;
     private final SlotCapacityPort slotCapacityPort;
     private final WaitlistPromotionService promotionService;
 
     @Autowired
     public AppointmentCancellationService(
+            ApplicationEventPublisher eventPublisher,
             AppointmentRepository appointmentRepository,
             @Autowired(required = false) SlotCapacityPort slotCapacityPort,
             @Autowired(required = false) WaitlistPromotionService promotionService
     ) {
+        this.eventPublisher = eventPublisher;
         this.appointmentRepository = appointmentRepository;
         this.slotCapacityPort = slotCapacityPort;
         this.promotionService = promotionService;
@@ -123,6 +129,7 @@ public class AppointmentCancellationService {
 
         appointment.cancel(effectiveNow);
         Appointment saved = appointmentRepository.save(appointment);
+        eventPublisher.publishEvent(AppointmentEvent.from(AppointmentEvent.Type.CANCELLED, saved));
 
         // Step 2e: Trigger automatic waitlist promotion if a waiter is queued for this freed capacity.
         // Viva / Concurrency Sequencing Probe: Why promote synchronously inside cancellation's own transaction?
