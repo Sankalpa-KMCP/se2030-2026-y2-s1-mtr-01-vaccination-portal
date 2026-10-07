@@ -90,7 +90,7 @@ export default function HcoDashboardMetrics({
       <div className="col-12 col-sm-6 col-xl-3">
         <Link
           to="/app/screening/questionnaires?tab=campaigns"
-          className="hco-metric-card"
+          className="hco-metric-card hco-metric-card--questionnaire"
           aria-label="Campaigns Awaiting Questionnaire metric, navigate to campaign assignments"
         >
           <div className="d-flex align-items-center gap-3 min-w-0">
@@ -98,7 +98,7 @@ export default function HcoDashboardMetrics({
               <i className="bi bi-calendar-check" />
             </div>
             <div className="min-w-0">
-              <div className="hco-metric-label text-truncate">Campaigns Awaiting Questionnaire</div>
+              <div className="hco-metric-label">Campaigns Awaiting Questionnaire</div>
               <div className="hco-metric-value">
                 {loading ? (
                   <span className="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true" />
