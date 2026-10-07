@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.shared.auth.api.AccountDisplayReader;
 import com.se2030.vaccinationportal.vaccination.administration.dto.CreateVaccinationCorrectionRequest;
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionDetailResponse;
 import com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationCorrectionException;
+import com.se2030.vaccinationportal.vaccination.administration.exception.DuplicateVaccinationCorrectionException;
 import com.se2030.vaccinationportal.vaccination.administration.exception.UnsupportedVaccinationCorrectionFieldException;
 import com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.administration.mapper.VaccinationCorrectionMapper;
@@ -70,8 +71,28 @@ public class VaccinationCorrectionService {
             CreateVaccinationCorrectionRequest request,
             Long actorId
     ) {
-        VaccinationRecord record = findRecord(vaccinationRecordId);
+        return createCorrection(vaccinationRecordId, request, actorId, false);
+    }
+
+    /** Citizen requests retain the existing one-active-request policy; admin history is unrestricted. */
+    public VaccinationCorrection createCitizenCorrection(
+            Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long actorId
+    ) {
+        return createCorrection(vaccinationRecordId, request, actorId, true);
+    }
+
+    private VaccinationCorrection createCorrection(
+            Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long actorId,
+            boolean requireSingleActiveRequest
+    ) {
+        VaccinationRecord record = lockRecord(vaccinationRecordId);
         validateRequest(request, actorId);
+        // A parent row exists even when there are no corrections. Lock it before the
+        // current locking read, avoiding both an empty-result race and stale MySQL snapshots.
+        if (requireSingleActiveRequest && !correctionRepository.findActiveByRecordForUpdate(vaccinationRecordId).isEmpty()) {
+            throw new DuplicateVaccinationCorrectionException(
+                    "An active correction request is already pending for this vaccination record");
+        }
 
         String fieldName = request.fieldName() != null && !request.fieldName().trim().isEmpty()
                 ? request.fieldName().trim()
@@ -137,6 +158,14 @@ public class VaccinationCorrectionService {
                 ));
     }
 
+    /** Mutation lock order: vaccination record, correction, then any certificate rows. */
+    public VaccinationCorrection getCorrectionForUpdate(Long vaccinationRecordId, Long correctionId) {
+        lockRecord(vaccinationRecordId);
+        return correctionRepository.findByIdAndRecordForUpdate(correctionId, vaccinationRecordId)
+                .orElseThrow(() -> new InvalidVaccinationCorrectionException(
+                        "Vaccination correction not found with ID: " + correctionId + " for record: " + vaccinationRecordId));
+    }
+
     public VaccinationCorrection approveCorrection(
             Long vaccinationRecordId,
             Long correctionId,
@@ -146,7 +175,7 @@ public class VaccinationCorrectionService {
         if (reviewerId == null || reviewerId <= 0) {
             throw new InvalidVaccinationCorrectionException("Reviewer ID must be positive");
         }
-        VaccinationCorrection correction = getCorrectionById(vaccinationRecordId, correctionId);
+        VaccinationCorrection correction = getCorrectionForUpdate(vaccinationRecordId, correctionId);
         if (Objects.equals(correction.getCorrectedBy(), reviewerId)) {
             throw new InvalidVaccinationCorrectionException("Submitter cannot approve their own correction");
         }
@@ -174,7 +203,7 @@ public class VaccinationCorrectionService {
         if (rejectionReason.trim().length() > 1000) {
             throw new InvalidVaccinationCorrectionException("Rejection reason must not exceed 1000 characters");
         }
-        VaccinationCorrection correction = getCorrectionById(vaccinationRecordId, correctionId);
+        VaccinationCorrection correction = getCorrectionForUpdate(vaccinationRecordId, correctionId);
         if (correction.getStatus() != com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.PENDING
                 && correction.getStatus() != com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.APPROVED) {
             throw new InvalidVaccinationCorrectionException(
@@ -288,6 +317,12 @@ public class VaccinationCorrectionService {
                 .orElseThrow(() -> new VaccinationRecordNotFoundException(
                         "Vaccination record not found with ID: " + vaccinationRecordId
                 ));
+    }
+
+    private VaccinationRecord lockRecord(Long vaccinationRecordId) {
+        return vaccinationRecordRepository.findByIdForUpdate(vaccinationRecordId)
+                .orElseThrow(() -> new VaccinationRecordNotFoundException(
+                        "Vaccination record not found with ID: " + vaccinationRecordId));
     }
 
     private void validateRequest(CreateVaccinationCorrectionRequest request, Long actorId) {

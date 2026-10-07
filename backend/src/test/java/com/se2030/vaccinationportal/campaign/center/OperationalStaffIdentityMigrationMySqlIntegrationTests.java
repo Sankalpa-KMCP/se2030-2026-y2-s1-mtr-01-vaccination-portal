@@ -1,6 +1,8 @@
 package com.se2030.vaccinationportal.campaign.center;
 
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.testcontainers.AbstractIsolatedMySqlMigrationIntegrationTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -24,7 +26,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * of Flyway migration scripts V1 and V2 on mysql:8.4.3, including table creation, UNIQUE constraints,
  * and idempotent duplicate cross-center user backfill.
  */
-class OperationalStaffIdentityMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
+class OperationalStaffIdentityMigrationMySqlIntegrationTests extends AbstractIsolatedMySqlMigrationIntegrationTest {
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        configureIsolatedDatabase(registry, "historical_staff_v2");
+    }
 
     @Test
     @Timeout(30)

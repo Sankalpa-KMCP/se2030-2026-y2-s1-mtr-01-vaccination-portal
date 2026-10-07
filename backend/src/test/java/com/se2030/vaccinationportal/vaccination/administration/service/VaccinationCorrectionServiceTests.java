@@ -78,7 +78,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void correctionCapturesOriginalAndCorrectedValuesActorAndTimestampWithoutEditingRecord() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -101,7 +101,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void vaccineBatchCorrectionIsRejectedWithDescriptiveDomainMessage() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
 
         UnsupportedVaccinationCorrectionFieldException ex = assertThrows(
                 UnsupportedVaccinationCorrectionFieldException.class,
@@ -120,7 +120,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void unknownVaccinationRecordIsRejectedBeforeCorrectionPersistence() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.empty());
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.empty());
 
         assertThrows(
                 VaccinationRecordNotFoundException.class,
@@ -135,7 +135,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void unsupportedFieldIsRejected() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
 
         assertThrows(
                 UnsupportedVaccinationCorrectionFieldException.class,
@@ -150,7 +150,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void blankReasonIsRejected() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
 
         assertThrows(
                 InvalidVaccinationCorrectionException.class,
@@ -165,7 +165,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void valueEqualToOriginalAfterNormalizationIsRejected() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
 
         assertThrows(
                 InvalidVaccinationCorrectionException.class,
@@ -187,7 +187,7 @@ class VaccinationCorrectionServiceTests {
             String expectedOldValue,
             String expectedNewValue
     ) {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -203,7 +203,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void nullableApprovedFieldCanBeClearedAndRetainsOriginalValueInAudit() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -219,7 +219,7 @@ class VaccinationCorrectionServiceTests {
     @Test
     void chainedCorrectionUsesLatestSameFieldValueAsEffectiveOldValue() {
         VaccinationCorrection prior = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
                 .thenReturn(List.of(prior));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
@@ -238,7 +238,7 @@ class VaccinationCorrectionServiceTests {
     @Test
     void duplicateEffectiveValueIsRejected() {
         VaccinationCorrection prior = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
                 .thenReturn(List.of(prior));
 
@@ -256,7 +256,7 @@ class VaccinationCorrectionServiceTests {
     @Test
     void correctionBackToOriginalValueIsAllowedWhenEffectiveValueDiffers() {
         VaccinationCorrection prior = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
                 .thenReturn(List.of(prior));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
@@ -274,7 +274,7 @@ class VaccinationCorrectionServiceTests {
 
     @Test
     void latestCorrectionForAnotherFieldDoesNotAffectEffectiveValue() {
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.save(any(VaccinationCorrection.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -294,7 +294,7 @@ class VaccinationCorrectionServiceTests {
                 "Original note",
                 null
         );
-        when(vaccinationRecordRepository.findById(RECORD_ID)).thenReturn(Optional.of(record));
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
         when(correctionRepository.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID))
                 .thenReturn(List.of(prior));
         when(correctionRepository.save(any(VaccinationCorrection.class)))

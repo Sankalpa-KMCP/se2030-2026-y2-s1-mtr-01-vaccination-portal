@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 /** Persistence operations for append-only vaccination correction history. */
 @Repository
@@ -15,6 +17,14 @@ public interface VaccinationCorrectionRepository extends JpaRepository<Vaccinati
     List<VaccinationCorrection> findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(Long vaccinationRecordId);
 
     Optional<VaccinationCorrection> findByIdAndVaccinationRecordId(Long id, Long vaccinationRecordId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM VaccinationCorrection c WHERE c.id = :id AND c.vaccinationRecordId = :recordId")
+    Optional<VaccinationCorrection> findByIdAndRecordForUpdate(@Param("id") Long id, @Param("recordId") Long recordId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM VaccinationCorrection c WHERE c.vaccinationRecordId = :recordId AND c.status IN (com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.PENDING, com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.APPROVED)")
+    List<VaccinationCorrection> findActiveByRecordForUpdate(@Param("recordId") Long recordId);
 
     List<VaccinationCorrection> findAllByOrderByCorrectedAtDescIdDesc();
 

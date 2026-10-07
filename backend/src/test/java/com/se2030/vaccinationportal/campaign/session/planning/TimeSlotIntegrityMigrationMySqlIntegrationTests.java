@@ -20,7 +20,9 @@ import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaign
 import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
 import com.se2030.vaccinationportal.campaign.session.planning.repository.VaccinationSessionRepository;
 import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
-import com.se2030.vaccinationportal.testcontainers.AbstractMySqlTestContainersIntegrationTest;
+import com.se2030.vaccinationportal.testcontainers.AbstractIsolatedMySqlMigrationIntegrationTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -44,7 +46,12 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-class TimeSlotIntegrityMigrationMySqlIntegrationTests extends AbstractMySqlTestContainersIntegrationTest {
+class TimeSlotIntegrityMigrationMySqlIntegrationTests extends AbstractIsolatedMySqlMigrationIntegrationTest {
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        configureIsolatedDatabase(registry, "historical_slots_v13");
+    }
 
     private static final String MIGRATION = "db/migration/V13__mf02_time_slot_integrity_constraints.sql";
 
