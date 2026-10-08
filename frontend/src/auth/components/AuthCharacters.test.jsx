@@ -55,6 +55,15 @@ describe('Character artwork and gestures', () => {
     expect(container.querySelectorAll('.auth-character__hijab')).toHaveLength(1);
     expect(screen.getByRole('button', { name: /Sage.*girl creature.*hijab/ })).toBeTruthy();
   });
+  it('differentiates hands and mouth artwork per creature', () => {
+    const { container } = renderHarness();
+    expect(container.querySelectorAll('.auth-creature__hands--puff')).toHaveLength(1);
+    expect(container.querySelectorAll('.auth-creature__hands--nub')).toHaveLength(1);
+    expect(container.querySelectorAll('.auth-creature__mouth--o')).toHaveLength(1);
+    expect(container.querySelectorAll('.auth-creature__mouth--shy')).toHaveLength(1);
+    expect(container.querySelectorAll('.auth-creature__mouth--grin')).toHaveLength(1);
+    expect(container.querySelectorAll('.auth-creature__mouth--smile')).toHaveLength(2);
+  });
   it.each([[0, 'stretch'], [1, 'puff'], [2, 'thumb'], [3, 'tilt'], [4, 'scarf']])('character %s greets with %s', (index, gesture) => {
     renderHarness();
     const buttons = [...group().querySelectorAll('button')];
