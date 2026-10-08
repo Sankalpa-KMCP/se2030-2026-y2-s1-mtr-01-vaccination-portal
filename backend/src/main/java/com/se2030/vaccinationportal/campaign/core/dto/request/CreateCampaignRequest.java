@@ -1,5 +1,7 @@
 package com.se2030.vaccinationportal.campaign.core.dto.request;
 
+import com.se2030.vaccinationportal.campaign.core.validation.CampaignDates;
+import com.se2030.vaccinationportal.campaign.core.validation.ValidCampaignDates;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,6 +11,7 @@ import java.time.LocalDate;
 /**
  * Request payload for creating a new Vaccination Campaign.
  */
+@ValidCampaignDates
 public record CreateCampaignRequest(
         @NotBlank(message = "Campaign code is required")
         @Size(max = 64, message = "Campaign code must not exceed 64 characters")
@@ -38,5 +41,5 @@ public record CreateCampaignRequest(
 
         @NotNull(message = "Booking close timestamp is required")
         Instant bookingCloseAt
-) {
+) implements CampaignDates {
 }

@@ -5,11 +5,13 @@ import com.se2030.vaccinationportal.campaign.web.GlobalCampaignExceptionHandler;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,6 +37,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -216,16 +220,13 @@ class CampaignControllerTests {
                 }
                 """;
 
-        when(campaignService.createCampaign(
-                any(), any(), any(), eq(10L), eq(20L), any(), any(), any(), any()
-        )).thenThrow(new IllegalArgumentException("Campaign service end date (2026-09-01) must be after service start date (2026-11-30) [MF02-BR-01]"));
-
         mockMvc.perform(post("/api/v1/campaigns")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonPayload))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.message", containsString("must be after service start date")));
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("serviceEndDate")));
+        verifyNoInteractions(campaignService);
     }
 
     @Test
@@ -274,15 +275,88 @@ class CampaignControllerTests {
                 }
                 """;
 
-        when(campaignService.updateCampaign(eq(100L), any(), any(), any(), any(), any(), any()))
-                .thenThrow(new IllegalArgumentException("Campaign service end date (2026-09-01) must be after service start date (2026-11-30)"));
-
         mockMvc.perform(put("/api/v1/campaigns/100")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.message", containsString("must be after service start date")));
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("serviceEndDate")));
+        verifyNoInteractions(campaignService);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "POST, serviceEndDate, 2026-09-01",
+            "PUT, serviceEndDate, 2026-09-01",
+            "POST, bookingCloseAt, 2026-08-15T08:00:00Z",
+            "PUT, bookingCloseAt, 2026-08-15T08:00:00Z",
+            "POST, bookingCloseAt, 2026-08-14T08:00:00Z",
+            "PUT, bookingCloseAt, 2026-08-14T08:00:00Z",
+            "POST, bookingCloseAt, 2026-12-01T00:00:00Z",
+            "PUT, bookingCloseAt, 2026-12-01T00:00:00Z",
+            "POST, bookingCloseAt, 2026-11-30T23:30:00-02:00",
+            "PUT, bookingCloseAt, 2026-11-30T23:30:00-02:00",
+            "POST, serviceStartDate, NULL",
+            "PUT, serviceStartDate, NULL",
+            "POST, serviceEndDate, NULL",
+            "PUT, serviceEndDate, NULL",
+            "POST, bookingOpenAt, NULL",
+            "PUT, bookingOpenAt, NULL",
+            "POST, bookingCloseAt, NULL",
+            "PUT, bookingCloseAt, NULL"
+    }, nullValues = "NULL")
+    void invalidDatesAreRejectedBeforeCallingService(String method, String field, String value) throws Exception {
+        java.util.Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("name", "Campaign date validation");
+        payload.put("serviceStartDate", "2026-09-01");
+        payload.put("serviceEndDate", "2026-11-30");
+        payload.put("bookingOpenAt", "2026-08-15T08:00:00Z");
+        payload.put("bookingCloseAt", "2026-08-30T18:00:00Z");
+        if (method.equals("POST")) {
+            payload.put("code", "CMP-DATE-VALIDATION");
+            payload.put("vaccineTypeId", 10);
+            payload.put("targetGroupId", 20);
+        }
+        payload.put(field, value);
+
+        mockMvc.perform((method.equals("POST") ? post("/api/v1/campaigns") : put("/api/v1/campaigns/100"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem(field)));
+        verifyNoInteractions(campaignService);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "POST, 2026-11-30T23:59:59Z",
+            "PUT, 2026-11-30T23:59:59Z",
+            "POST, 2026-12-01T01:00:00+02:00",
+            "PUT, 2026-12-01T01:00:00+02:00"
+    })
+    void bookingCanCloseOnServiceEndDateInUtc(String method, String closeAt) throws Exception {
+        String payload = """
+                {
+                    "name": "Valid boundary dates",
+                    "serviceStartDate": "2026-09-01",
+                    "serviceEndDate": "2026-11-30",
+                    "bookingOpenAt": "2026-08-15T08:00:00Z",
+                    "bookingCloseAt": "%s"%s
+                }
+                """.formatted(closeAt, method.equals("POST")
+                        ? ", \"code\": \"CMP-BOUNDARY\", \"vaccineTypeId\": 10, \"targetGroupId\": 20" : "");
+        if (method.equals("POST")) {
+            when(campaignService.createCampaign(any(), any(), any(), eq(10L), eq(20L), any(), any(), any(), any()))
+                    .thenReturn(sampleCampaign);
+        } else {
+            when(campaignService.updateCampaign(eq(100L), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(sampleCampaign);
+        }
+
+        mockMvc.perform((method.equals("POST") ? post("/api/v1/campaigns") : put("/api/v1/campaigns/100"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().is(method.equals("POST") ? 201 : 200));
     }
 
     @Test
