@@ -118,6 +118,7 @@ public class TestSlotCapacityPortDouble implements SlotCapacityPort {
     }
 
     private final ConcurrentMap<Long, Long> slotSessionMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Long> slotCenterMap = new ConcurrentHashMap<>();
     private Long defaultSessionId = null;
 
     public void setSlotSession(Long slotId, Long sessionId) {
@@ -134,6 +135,16 @@ public class TestSlotCapacityPortDouble implements SlotCapacityPort {
         slotSessionMap.clear();
     }
 
+    public void setSlotCenter(Long slotId, Long centerId) {
+        if (slotId != null && centerId != null) {
+            slotCenterMap.put(slotId, centerId);
+        }
+    }
+
+    public void clearSlotCenterMap() {
+        slotCenterMap.clear();
+    }
+
     @Override
     public Optional<Long> getSessionIdForSlot(Long slotId) {
         if (slotId == null) {
@@ -147,6 +158,11 @@ public class TestSlotCapacityPortDouble implements SlotCapacityPort {
             return Optional.of(defaultSessionId);
         }
         return Optional.empty();
+    }
+
+    @Override
+    public Optional<Long> getCenterIdForSlot(Long slotId) {
+        return Optional.ofNullable(slotCenterMap.get(slotId));
     }
 
     private final ConcurrentMap<Long, Long> sessionCampaignMap = new ConcurrentHashMap<>();

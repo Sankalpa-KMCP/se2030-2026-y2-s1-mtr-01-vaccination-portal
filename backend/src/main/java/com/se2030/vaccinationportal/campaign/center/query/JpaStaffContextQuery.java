@@ -55,6 +55,15 @@ public class JpaStaffContextQuery implements StaffContextQuery {
                 }).toList();
     }
 
+    @Override
+    public boolean isActiveAtCenter(UserPrincipal principal, Long centerId) {
+        if (centerId == null) return false;
+        Long userId = requiredUserId(principal);
+        return rosters.findByCenterIdAndUserId(centerId, userId)
+                .map(roster -> roster.isActive())
+                .orElse(false);
+    }
+
     private static boolean active(StaffAssignment a, Instant now, boolean todayOnly) {
         if (a == null || a.getSession() == null || a.getStartAt() == null || a.getEndAt() == null) return false;
         SessionLifecycleStatus status = a.getSession().getLifecycleStatus();

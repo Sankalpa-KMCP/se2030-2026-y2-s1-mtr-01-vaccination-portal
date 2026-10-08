@@ -15,6 +15,7 @@ import com.se2030.vaccinationportal.appointment.booking.service.AppointmentCance
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentRescheduleService;
 import com.se2030.vaccinationportal.appointment.query.service.AppointmentSearchService;
 import com.se2030.vaccinationportal.appointment.checkin.service.CheckInService;
+import com.se2030.vaccinationportal.appointment.checkin.service.CheckInCenterAuthorizationService;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -70,6 +71,7 @@ public class AppointmentController {
     private final CheckInService checkInService;
     private final AppointmentSearchService searchService;
     private final AppointmentRepository appointmentRepository;
+    private final CheckInCenterAuthorizationService checkInAuthorization;
 
     public AppointmentController(
             AppointmentBookingService bookingService,
@@ -77,7 +79,7 @@ public class AppointmentController {
             AppointmentRescheduleService rescheduleService,
             CheckInService checkInService
     ) {
-        this(bookingService, cancellationService, rescheduleService, checkInService, null, null);
+        this(bookingService, cancellationService, rescheduleService, checkInService, null, null, null);
     }
 
     @Autowired
@@ -87,7 +89,8 @@ public class AppointmentController {
             AppointmentRescheduleService rescheduleService,
             CheckInService checkInService,
             @Autowired(required = false) AppointmentSearchService searchService,
-            @Autowired(required = false) AppointmentRepository appointmentRepository
+            @Autowired(required = false) AppointmentRepository appointmentRepository,
+            CheckInCenterAuthorizationService checkInAuthorization
     ) {
         this.bookingService = bookingService;
         this.cancellationService = cancellationService;
@@ -95,6 +98,7 @@ public class AppointmentController {
         this.checkInService = checkInService;
         this.searchService = searchService;
         this.appointmentRepository = appointmentRepository;
+        this.checkInAuthorization = checkInAuthorization;
     }
 
     @GetMapping("/mine")
@@ -255,8 +259,10 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> checkIn(
             @PathVariable("id") Long id,
-            @RequestBody(required = false) CheckInRequest request
+            @RequestBody(required = false) CheckInRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
+        requireCheckInAppointmentAccess(principal, id);
         boolean isStaffOverride = (request != null && Boolean.TRUE.equals(request.isStaffOverride()));
         String staffReason = (request != null) ? request.staffReason() : null;
 
@@ -268,15 +274,21 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
     public ResponseEntity<AppointmentResponse> reverseCheckIn(
             @PathVariable("id") Long id,
-            @Valid @RequestBody CheckInReversalRequest request
+            @Valid @RequestBody CheckInReversalRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
+        requireCheckInAppointmentAccess(principal, id);
         Appointment reversed = checkInService.reverseCheckIn(id, request.reason());
         return ResponseEntity.ok(AppointmentResponse.fromEntity(reversed));
     }
 
     @PostMapping("/{id}/no-show")
     @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
-    public ResponseEntity<AppointmentResponse> markNoShow(@PathVariable("id") Long id) {
+    public ResponseEntity<AppointmentResponse> markNoShow(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        requireCheckInAppointmentAccess(principal, id);
         Appointment noShow = checkInService.markNoShow(id, Instant.now());
         return ResponseEntity.ok(AppointmentResponse.fromEntity(noShow));
     }
@@ -285,8 +297,10 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'VACCINATOR')")
     public ResponseEntity<List<AppointmentResponse>> getVaccinatorQueue(
             @RequestParam("slotId") Long slotId,
-            Authentication authentication
+            Authentication authentication,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
+        requireCheckInSlotAccess(principal, slotId);
         boolean canManageArrivals = authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority())
                         || "ROLE_CENTER_MANAGER".equals(authority.getAuthority())
@@ -298,6 +312,18 @@ public class AppointmentController {
                 .map(AppointmentResponse::fromEntity)
                 .toList();
         return ResponseEntity.ok(responseList);
+    }
+
+    private void requireCheckInAppointmentAccess(UserPrincipal principal, Long appointmentId) {
+        if (checkInAuthorization != null) {
+            checkInAuthorization.requireAppointmentAccess(getAuthenticatedPrincipal(principal), appointmentId);
+        }
+    }
+
+    private void requireCheckInSlotAccess(UserPrincipal principal, Long slotId) {
+        if (checkInAuthorization != null) {
+            checkInAuthorization.requireSlotAccess(getAuthenticatedPrincipal(principal), slotId);
+        }
     }
 
     private UserPrincipal getAuthenticatedPrincipal(UserPrincipal principal) {

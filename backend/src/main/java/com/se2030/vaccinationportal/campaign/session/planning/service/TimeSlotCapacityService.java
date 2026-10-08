@@ -392,6 +392,20 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Long> getCenterIdForSlot(Long slotId) {
+        if (slotId == null) {
+            return Optional.empty();
+        }
+        return timeSlotRepository.findById(slotId)
+                .map(TimeSlot::getSession)
+                .filter(Objects::nonNull)
+                .map(VaccinationSession::getCenter)
+                .filter(Objects::nonNull)
+                .map(center -> center.getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<Long> getCampaignIdForSession(Long sessionId) {
         if (sessionId == null) {
             return Optional.empty();

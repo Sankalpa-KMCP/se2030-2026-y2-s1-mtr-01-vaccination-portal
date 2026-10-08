@@ -18,6 +18,7 @@ import com.se2030.vaccinationportal.appointment.booking.service.AppointmentCance
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentRescheduleService;
 import com.se2030.vaccinationportal.appointment.query.service.AppointmentSearchService;
 import com.se2030.vaccinationportal.appointment.checkin.service.CheckInService;
+import com.se2030.vaccinationportal.appointment.checkin.service.CheckInCenterAuthorizationService;
 import com.se2030.vaccinationportal.appointment.testsupport.TestEligibilityLookupPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotAvailabilityPortDouble;
 import com.se2030.vaccinationportal.appointment.testsupport.TestSlotCapacityPortDouble;
@@ -47,6 +48,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -149,7 +151,8 @@ class AppointmentControllerTests {
         slotCapacityPortDouble.setSimulateReleaseFailure(false);
 
         AppointmentController appointmentController = new AppointmentController(
-                bookingService, cancellationService, rescheduleService, checkInService, searchService, appointmentRepository);
+                bookingService, cancellationService, rescheduleService, checkInService, searchService,
+                appointmentRepository, mock(CheckInCenterAuthorizationService.class));
         this.mockMvc = MockMvcBuilders.standaloneSetup(appointmentController)
                 .setControllerAdvice(new AppointmentExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())

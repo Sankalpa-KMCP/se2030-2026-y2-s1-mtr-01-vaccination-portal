@@ -8,4 +8,5 @@ import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 public interface StaffContextQuery {
     StaffProfileSummary profileForUser(UserPrincipal principal);
     List<StaffScheduleSummary> scheduleForUser(UserPrincipal principal, Instant now, boolean todayOnly);
+    boolean isActiveAtCenter(UserPrincipal principal, Long centerId);
 }

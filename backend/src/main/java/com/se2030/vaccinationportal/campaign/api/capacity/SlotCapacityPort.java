@@ -94,6 +94,12 @@ public interface SlotCapacityPort {
     Optional<Long> getSessionIdForSlot(Long slotId);
 
     /**
+     * Resolves the vaccination center that owns the specified slot.
+     * Used by staff-facing consumers to enforce center-scoped authorization.
+     */
+    Optional<Long> getCenterIdForSlot(Long slotId);
+
+    /**
      * Resolves the authoritative campaign ID for the specified session (R01).
      * Used to validate that a waitlist admission's campaign/session pair is authoritative
      * instead of trusting two independently supplied IDs.

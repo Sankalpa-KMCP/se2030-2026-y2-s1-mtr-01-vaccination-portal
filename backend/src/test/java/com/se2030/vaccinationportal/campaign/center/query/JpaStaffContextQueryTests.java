@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.campaign.center.query;
 import com.se2030.vaccinationportal.campaign.session.planning.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.session.planning.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.center.model.StaffRole;
+import com.se2030.vaccinationportal.campaign.center.model.OperationalStaffRoster;
 import com.se2030.vaccinationportal.campaign.core.model.VaccinationCampaign;
 import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
 import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
@@ -16,6 +17,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +31,19 @@ class JpaStaffContextQueryTests {
     private final StaffAssignmentRepository assignmentRepository = mock(StaffAssignmentRepository.class);
     private final OperationalStaffRosterRepository rosterRepository = mock(OperationalStaffRosterRepository.class);
     private final JpaStaffContextQuery query = new JpaStaffContextQuery(rosterRepository, assignmentRepository);
+
+    @Test
+    void activeCenterAccessUsesAuthenticatedUsersRosterStatus() {
+        UserPrincipal principal = principal(77L, "ROLE_CENTER_MANAGER");
+        OperationalStaffRoster active = mock(OperationalStaffRoster.class);
+        when(active.isActive()).thenReturn(true);
+        when(rosterRepository.findByCenterIdAndUserId(501L, 77L)).thenReturn(Optional.of(active));
+
+        assertThat(query.isActiveAtCenter(principal, 501L)).isTrue();
+        assertThat(query.isActiveAtCenter(principal, 999L)).isFalse();
+        verify(rosterRepository).findByCenterIdAndUserId(501L, 77L);
+        verify(rosterRepository).findByCenterIdAndUserId(999L, 77L);
+    }
     @Test
     @DisplayName("returns current and upcoming assignments for only the verified staff user")
     void returnsVerifiedUsersUpcomingAssignments() {
