@@ -25,3 +25,19 @@ it('reschedules to the selected time-slot ID when two slots belong to the same s
   }));
   expect(onSuccess).toHaveBeenCalledWith({ id: 8, slotId: 502 });
 });
+
+it('offers citizen guidance instead of staff override controls', () => {
+  render(<RescheduleDialog appointment={{ id: 8, slotId: 401, campaignId: 1 }} citizenId={2} onSuccess={() => {}} onClose={() => {}} />);
+  expect(screen.queryByRole('checkbox')).toBeNull();
+  expect(screen.getByText(/contact your vaccination center staff/i)).toBeTruthy();
+});
+
+it('directs a rejected late reschedule to center staff', async () => {
+  const error = new Error('Modifications within 24 hours of session start require staff override');
+  error.status = 403;
+  rescheduleAppointment.mockRejectedValue(error);
+  render(<RescheduleDialog appointment={{ id: 8, slotId: 401, campaignId: 1 }} citizenId={2} onSuccess={() => {}} onClose={() => {}} />);
+  fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '502' } });
+  fireEvent.click(screen.getByRole('button', { name: /Confirm Reschedule/i }));
+  expect(await screen.findByText('To reschedule within 24 hours of your appointment, contact your vaccination center staff.')).toBeTruthy();
+});

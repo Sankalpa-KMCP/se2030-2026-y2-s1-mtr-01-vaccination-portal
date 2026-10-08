@@ -8,6 +8,8 @@ import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentAlreadyCompletedException;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
+import com.se2030.vaccinationportal.appointment.exception.InvalidAppointmentStateException;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.exception.RequiresStaffOverrideException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
@@ -158,6 +160,13 @@ public class AppointmentRescheduleService {
         // Step 1b & 1c: Validate 24-hour notice window (MF03-BR-04) & completion status (MF03-BR-11)
         AppointmentModificationValidator.validateModificationWindow(
                 appointment, requestingCitizenId, isStaffOverride, staffReason, effectiveNow, slotCapacityPort);
+
+        // A check-in belongs to the original slot. Reverse it through the guarded
+        // check-in workflow before moving the appointment to a different slot.
+        if (appointment.getStatus() == AppointmentStatus.CHECKED_IN) {
+            throw new InvalidAppointmentStateException(
+                    "Reverse check-in before rescheduling this appointment");
+        }
 
         // Step 1d: Acquire CitizenCampaignBookingGuard pessimistic write lock for (citizenId, campaignId)
         // Viva note: Locks the citizen mutex row to prevent concurrent actions (like waitlist promotion) during slot migration.

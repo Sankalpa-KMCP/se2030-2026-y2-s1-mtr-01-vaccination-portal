@@ -11,16 +11,13 @@ import AppointmentStatusBadge from './AppointmentStatusBadge';
  *
  * <p><b>Business Rules Enforced in UI:</b>
  * <ul>
- *   <li>MF03-BR-04: Displays cancellation confirmation modal with staff override checkbox and mandatory
- *       audit reason input for late cancellations within 24 hours of session start.</li>
+ *   <li>MF03-BR-04: Explains the 24-hour cancellation policy and directs late changes to authorized staff.</li>
  *   <li>MF03-BR-11: Restricts cancellation and rescheduling controls strictly to CONFIRMED appointments;
  *       COMPLETED appointments cannot be modified.</li>
  * </ul>
  */
 export default function AppointmentCard({ appointment, onCancel, onReschedule }) {
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
-  const [isStaffOverride, setIsStaffOverride] = useState(false);
-  const [staffReason, setStaffReason] = useState('');
 
   if (!appointment) return null;
 
@@ -36,7 +33,7 @@ export default function AppointmentCard({ appointment, onCancel, onReschedule })
 
   const handleConfirmCancelSubmit = (e) => {
     e.preventDefault();
-    onCancel(appointment.id, { isStaffOverride, staffReason: isStaffOverride ? staffReason : null });
+    onCancel(appointment.id, { isStaffOverride: false, staffReason: null });
     setShowConfirmCancel(false);
   };
 
@@ -116,35 +113,10 @@ export default function AppointmentCard({ appointment, onCancel, onReschedule })
                 </p>
 
                 <form onSubmit={handleConfirmCancelSubmit}>
-                  <div className="form-check mb-3">
-                    <input
-                      type="checkbox"
-                      id={`staffOverrideCheck_${appointment.id}`}
-                      className="form-check-input"
-                      checked={isStaffOverride}
-                      onChange={(e) => setIsStaffOverride(e.target.checked)}
-                    />
-                    <label htmlFor={`staffOverrideCheck_${appointment.id}`} className="form-check-label small">
-                      Apply Staff Override (Required if within 24 hours of session start per MF03-BR-04)
-                    </label>
-                  </div>
-
-                  {isStaffOverride && (
-                    <div className="mb-3">
-                      <label htmlFor={`staffReason_${appointment.id}`} className="form-label fw-semibold">
-                        Staff Reason <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id={`staffReason_${appointment.id}`}
-                        className="form-control"
-                        value={staffReason}
-                        onChange={(e) => setStaffReason(e.target.value)}
-                        placeholder="Enter cancellation reason"
-                        required={isStaffOverride}
-                      />
-                    </div>
-                  )}
+                  <p className="small text-muted">
+                    You can cancel until 24 hours before your appointment. For later changes,
+                    contact your vaccination center staff.
+                  </p>
 
                   <div className="modal-footer px-0 pb-0">
                     <button

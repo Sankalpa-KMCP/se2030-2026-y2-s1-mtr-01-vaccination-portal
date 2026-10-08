@@ -69,7 +69,15 @@ function LoginForm() {
       reportResult(result.success);
       if (result.success) {
         setPassword('');
-        navigate(getRoleHomePath(result.user), { replace: true });
+        const homePath = getRoleHomePath(result.user);
+        if (homePath === '/app/citizen') {
+          navigate('/app/citizen/welcome', {
+            replace: true,
+            state: { fromCitizenLogin: true },
+          });
+        } else {
+          navigate(homePath, { replace: true });
+        }
       }
     } catch (error) {
       rejectLogin(error?.message || 'Unable to sign in. Please try again.');

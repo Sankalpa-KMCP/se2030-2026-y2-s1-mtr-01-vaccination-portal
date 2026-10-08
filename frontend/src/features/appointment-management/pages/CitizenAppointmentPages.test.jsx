@@ -99,6 +99,19 @@ describe('citizen appointment pages', () => {
     expect(screen.queryByText(/center|address/i)).toBeNull();
   });
 
+  it('directs a rejected late cancellation to center staff', async () => {
+    mocks.getMyAppointments.mockResolvedValue([{
+      id: 84, citizenId: 71, campaignId: 22, slotId: 902, status: 'CONFIRMED',
+    }]);
+    const error = new Error('Modifications within 24 hours of session start require staff override');
+    error.status = 403;
+    mocks.cancelAppointment.mockRejectedValue(error);
+    show(<MyAppointmentsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel Appointment' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, Cancel Appointment' }));
+    expect(await screen.findByText('To cancel within 24 hours of your appointment, contact your vaccination center staff.')).toBeTruthy();
+  });
+
   it('does not offer a contradictory booking action while appointments load or fail', async () => {
     mocks.getMyAppointments.mockReturnValue(new Promise(() => {}));
     const view = show(<MyAppointmentsPage />);
