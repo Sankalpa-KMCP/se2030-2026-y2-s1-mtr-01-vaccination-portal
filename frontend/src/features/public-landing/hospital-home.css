@@ -14,7 +14,6 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 /* Container override: Center content with consistent responsive side padding */
-.lp-page--home .lp-container,
 .lp-page--home .lp-container:where(:not(.lp-header__inner)) {
   width: 100% !important;
   max-width: 1240px !important;
