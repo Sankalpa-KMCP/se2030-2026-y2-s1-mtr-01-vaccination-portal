@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import RoleDashboardHero from '../../../auth/components/RoleDashboardHero';
 import VaccinationJourneyStepper from '../components/VaccinationJourneyStepper';
@@ -9,6 +9,7 @@ import QuickActions from '../components/QuickActions';
 import AvailableCampaigns from '../components/AvailableCampaigns';
 import RecentActivity from '../components/RecentActivity';
 import BottomHealthBanner from '../components/BottomHealthBanner';
+import CitizenLoginGreeting from '../components/CitizenLoginGreeting';
 import useCitizenDashboardData from '../hooks/useCitizenDashboardData';
 import '../citizen-dashboard.css';
 import '../../../auth/styles/admin-dashboard.css';
@@ -20,10 +21,22 @@ function formatStatus(status) {
 
 export default function CitizenDashboardPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const dashboardData = useCitizenDashboardData(user?.id);
+  const showLoginGreeting = location.state?.showCitizenWelcome === true;
+  const dismissLoginGreeting = useCallback(() => {
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, navigate]);
 
   return (
     <div className="admin-dashboard role-dashboard role-dashboard--citizen citizen-dashboard">
+      {showLoginGreeting && (
+        <CitizenLoginGreeting
+          name={user?.fullName?.trim() || user?.email || 'Citizen'}
+          onComplete={dismissLoginGreeting}
+        />
+      )}
       <RoleDashboardHero
         user={user}
         titleId="citizen-dashboard-title"

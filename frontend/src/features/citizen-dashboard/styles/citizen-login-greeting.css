@@ -1,0 +1,104 @@
+.citizen-login-greeting {
+  position: fixed;
+  inset: 88px 20px auto;
+  z-index: 1100;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.citizen-login-greeting__card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+  width: min(100%, 470px);
+  padding: 16px 16px 18px;
+  border: 1px solid rgba(13, 119, 111, .2);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .97);
+  box-shadow: 0 18px 50px rgba(12, 66, 63, .2);
+  pointer-events: auto;
+  animation: citizen-login-greeting-in .48s cubic-bezier(.2, .85, .25, 1.2) both;
+}
+
+.citizen-login-greeting__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  color: #fff;
+  background: linear-gradient(145deg, #18a68f, #0b6d67);
+  box-shadow: 0 9px 20px rgba(13, 119, 111, .23);
+  font-size: 1.35rem;
+}
+
+.citizen-login-greeting p {
+  margin: 0 0 2px;
+  color: #667988;
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.citizen-login-greeting h2 {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: #173047;
+  font-size: clamp(1.1rem, 4vw, 1.42rem);
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+.citizen-login-greeting button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  color: #657681;
+  background: #f0f6f4;
+}
+
+.citizen-login-greeting button:hover,
+.citizen-login-greeting button:focus-visible {
+  color: #075c57;
+  background: #e1f2ed;
+}
+
+.citizen-login-greeting__timer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #21b794, #0d776f);
+  transform-origin: left;
+  animation: citizen-login-greeting-timer 2.4s linear both;
+}
+
+@keyframes citizen-login-greeting-in {
+  from { opacity: 0; transform: translateY(-22px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes citizen-login-greeting-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@media (max-width: 575.98px) {
+  .citizen-login-greeting { inset: 74px 12px auto; }
+  .citizen-login-greeting__card { padding: 13px 12px 16px; border-radius: 15px; }
+  .citizen-login-greeting__icon { width: 42px; height: 42px; border-radius: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .citizen-login-greeting__card,
+  .citizen-login-greeting__timer { animation: none; }
+}

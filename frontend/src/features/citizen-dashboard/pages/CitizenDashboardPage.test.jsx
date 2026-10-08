@@ -1,6 +1,12 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const mocks = vi.hoisted(() => ({
@@ -20,8 +26,16 @@ const emptyData = () => ({
   screening: { loading: false, submissions: [], assessments: [], campaigns: [], errors: {} },
 });
 
-function renderDashboard() {
-  return render(<MemoryRouter><CitizenDashboardPage /></MemoryRouter>);
+function renderDashboard({ fromLogin = false } = {}) {
+  return render(
+    <MemoryRouter initialEntries={[{
+      pathname: '/app/citizen',
+      state: fromLogin ? { showCitizenWelcome: true } : null,
+    }]}
+    >
+      <CitizenDashboardPage />
+    </MemoryRouter>,
+  );
 }
 
 describe('CitizenDashboardPage', () => {
@@ -55,6 +69,18 @@ describe('CitizenDashboardPage', () => {
     expect(screen.getByText('#71')).toBeTruthy();
     expect(screen.queryByLabelText('Citizen ID')).toBeNull();
     expect(screen.getByRole('link', { name: /view profile/i }).getAttribute('href')).toBe('/app/citizen/profile');
+  });
+
+  it('shows the named greeting only after login and clears it when dismissed', () => {
+    const view = renderDashboard({ fromLogin: true });
+    expect(screen.getByRole('status').textContent).toContain('Welcome, Citizen User');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close welcome message' }));
+    expect(screen.queryByRole('status')).toBeNull();
+
+    view.unmount();
+    renderDashboard();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('reflects profile changes from shared authenticated user state', () => {

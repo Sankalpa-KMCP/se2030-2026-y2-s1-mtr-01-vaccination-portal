@@ -7,7 +7,12 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 import LoginPage from './LoginPage';
 import { resendVerification } from '../api/authApi';
 
@@ -17,6 +22,11 @@ vi.mock('../api/authApi', () => ({ resendVerification: vi.fn() }));
 
 function renderPage(path = '/login') {
   return render(<MemoryRouter initialEntries={[path]}><LoginPage /></MemoryRouter>);
+}
+
+function CitizenDestination() {
+  const location = useLocation();
+  return <h1>{location.state?.showCitizenWelcome ? 'Citizen Welcome Requested' : 'Citizen Dashboard'}</h1>;
 }
 
 describe('LoginPage universal experience', () => {
@@ -102,6 +112,39 @@ describe('LoginPage universal experience', () => {
 
     await waitFor(() => {
       expect(authState.current.login).toHaveBeenCalledWith('person@example.gov', 'Password123!');
+    });
+  });
+
+  it('requests the welcome message only after a successful citizen login', async () => {
+    authState.current.login.mockResolvedValue({
+      success: true,
+      user: {
+        id: 42,
+        fullName: 'Nimali Perera',
+        email: 'nimali@example.gov',
+        roles: ['ROLE_CITIZEN'],
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/app/citizen" element={<CitizenDestination />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByLabelText('Email Address'), {
+      target: { value: 'nimali@example.gov' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'Password123!' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Citizen Welcome Requested' })).toBeTruthy();
     });
   });
 
