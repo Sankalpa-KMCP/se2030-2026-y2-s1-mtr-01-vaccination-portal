@@ -12,6 +12,7 @@ import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRep
 import com.se2030.vaccinationportal.campaign.reference.repository.TargetGroupRepository;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,6 +28,20 @@ class CampaignObserverAtomicityIntegrationTests {
     @Autowired private CampaignLifecycleEventRepository events;
     @Autowired private VaccineTypeRepository vaccines;
     @Autowired private TargetGroupRepository groups;
+    private Long campaignId;
+    private Long vaccineId;
+    private Long groupId;
+
+    @AfterEach
+    void removeCommittedFixtures() {
+        // These tests intentionally commit, so remove only their own rows in FK order.
+        if (campaignId != null) {
+            events.deleteAll(events.findByCampaignIdOrderByCreatedAtAscIdAsc(campaignId));
+            campaigns.deleteById(campaignId);
+        }
+        if (vaccineId != null) vaccines.deleteById(vaccineId);
+        if (groupId != null) groups.deleteById(groupId);
+    }
 
     // No test transaction: assertions read persisted state after the service transaction ends.
     @Test
@@ -63,11 +78,14 @@ class CampaignObserverAtomicityIntegrationTests {
     private Long createCampaign() {
         String suffix = Long.toUnsignedString(System.nanoTime());
         var vaccine = vaccines.saveAndFlush(new VaccineType("VAX-OBS-" + suffix, "Observer Vaccine"));
+        vaccineId = vaccine.getId();
         var group = groups.saveAndFlush(new TargetGroup("TG-OBS-" + suffix, "Observer Group"));
-        return campaigns.saveAndFlush(CampaignTestFixtures.campaign(
+        groupId = group.getId();
+        campaignId = campaigns.saveAndFlush(CampaignTestFixtures.campaign(
                 "CMP-OBS-" + suffix, "Observer Campaign", null, vaccine, group,
                 LocalDate.of(2026, 9, 1), LocalDate.of(2026, 12, 31),
                 Instant.parse("2026-08-01T00:00:00Z"), Instant.parse("2026-12-30T00:00:00Z"),
                 CampaignStatus.PUBLISHED)).getId();
+        return campaignId;
     }
 }
