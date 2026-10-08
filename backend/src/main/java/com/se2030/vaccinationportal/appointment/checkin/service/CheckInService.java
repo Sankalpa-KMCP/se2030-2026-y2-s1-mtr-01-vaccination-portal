@@ -256,6 +256,21 @@ public class CheckInService {
     }
 
     /**
+     * Returns the operational arrival queue used by center managers and administrators.
+     * CONFIRMED appointments must be visible so staff can check citizens in or mark
+     * them as no-shows, while CHECKED_IN appointments remain visible for reversal.
+     */
+    public List<Appointment> getArrivalQueueForSlot(Long slotId) {
+        if (slotId == null) {
+            return List.of();
+        }
+        return appointmentRepository.findBySlotIdAndStatusIn(
+                slotId,
+                List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN)
+        );
+    }
+
+    /**
      * Queries checked-in appointments across a collection of time slots for a session (vaccinator queue, US-26).
      *
      * @param slotIds Collection of slot IDs in the session

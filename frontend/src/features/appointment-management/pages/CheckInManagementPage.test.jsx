@@ -55,6 +55,15 @@ const sampleAppointments = [
   },
 ];
 
+const confirmedAppointment = {
+  id: 103,
+  citizenId: 503,
+  campaignId: 301,
+  slotId: 42,
+  status: 'CONFIRMED',
+  bookedAt: '2026-09-19T09:20:00Z',
+};
+
 describe('CheckInManagementPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -114,7 +123,10 @@ describe('CheckInManagementPage', () => {
       fullName: 'Authorized Operator',
       roles: [role],
     };
-    checkInApiMocks.getVaccinatorQueue.mockResolvedValue(sampleAppointments);
+    checkInApiMocks.getVaccinatorQueue.mockResolvedValue([
+      confirmedAppointment,
+      ...sampleAppointments,
+    ]);
 
     renderPage();
 
@@ -138,11 +150,11 @@ describe('CheckInManagementPage', () => {
       expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith('42');
     });
 
-    // The production queue contains CHECKED_IN rows, so Reverse is the applicable mutation.
+    // Arrival managers receive CONFIRMED rows for check-in/no-show and CHECKED_IN rows for reversal.
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Reverse check-in for appointment 102' })).toBeTruthy();
-      expect(screen.queryByRole('button', { name: /check in appointment/i })).toBeNull();
-      expect(screen.queryByRole('button', { name: /mark appointment .+ as no-show/i })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Check in appointment 103' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Mark appointment 103 as no-show' })).toBeTruthy();
     });
     },
   );

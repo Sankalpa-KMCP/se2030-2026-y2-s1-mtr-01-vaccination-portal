@@ -74,7 +74,7 @@ describe('Header', () => {
     expect(screen.getByText('Campaigns').getAttribute('href')).toBe('/app/campaigns');
     expect(screen.getByText('Center Operations')).toBeTruthy();
     expect(screen.getByText('Sessions')).toBeTruthy();
-    expect(screen.queryByText('Check-In Queue')).toBeNull();
+    expect(screen.getByText('Check-In Queue').getAttribute('href')).toBe('/app/checkin/queue');
     expect(screen.getByText('Analytics')).toBeTruthy();
     expect(screen.getByText('Inventory').getAttribute('href')).toBe('/app/inventory');
     expect(screen.getByText('Staff Requests').getAttribute('href')).toBe('/app/admin/staff-requests');
@@ -86,7 +86,7 @@ describe('Header', () => {
     expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
-  it('shows vaccination links and hides check-in queue for a vaccinator', () => {
+  it('shows vaccination and check-in queue links for a vaccinator', () => {
     mockUser({
       id: 7,
       fullName: 'Vera Vaccinator',
@@ -100,7 +100,7 @@ describe('Header', () => {
     expect(screen.getByText('Vaccination Drafts').getAttribute('href')).toBe('/app/staff/vaccination-drafts');
     expect(screen.getByText('Vaccination Records').getAttribute('href')).toBe('/app/staff/vaccination-records');
     expect(screen.getByText('Correction Requests').getAttribute('href')).toBe('/app/staff/correction-requests');
-    expect(screen.queryByText('Check-In Queue')).toBeNull();
+    expect(screen.getByText('Check-In Queue').getAttribute('href')).toBe('/app/checkin/queue');
   });
 
   it('renders a compact profile dropdown control for a vaccinator without duplicate logout button', () => {
@@ -199,7 +199,7 @@ describe('Header', () => {
     expect(screen.getByText('Inventory').getAttribute('href')).toBe('/app/inventory');
   });
 
-  it('hides check-in queue and inventory navigation in navbar for a center manager', () => {
+  it('shows check-in queue and hides inventory navigation for a center manager', () => {
     mockUser({
       id: 6,
       fullName: 'Center Manager',
@@ -208,7 +208,7 @@ describe('Header', () => {
     });
     renderHeader('/app/staff');
 
-    expect(screen.queryByText('Check-In Queue')).toBeNull();
+    expect(screen.getByText('Check-In Queue').getAttribute('href')).toBe('/app/checkin/queue');
     expect(screen.queryByText('Inventory')).toBeNull();
   });
 

@@ -261,4 +261,26 @@ class CheckInServiceTests {
         assertEquals(appt1.getId(), queue.get(0).getId());
         assertEquals(AppointmentStatus.CHECKED_IN, queue.get(0).getStatus());
     }
+
+    @Test
+    void getArrivalQueueForSlot_returnsConfirmedAndCheckedInAppointments() {
+        Long campaignId = 2001L;
+        Long slotId = 4010L;
+        Instant slotStart = Instant.parse("2026-10-01T10:00:00Z");
+
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        slotCapacityPortDouble.setSlotStartTime(slotId, slotStart);
+
+        Appointment confirmed = bookingService.bookAppointment(1003L, campaignId, slotId);
+        Appointment checkedIn = bookingService.bookAppointment(1004L, campaignId, slotId);
+        checkInService.checkIn(checkedIn.getId(), slotStart);
+
+        List<Appointment> queue = checkInService.getArrivalQueueForSlot(slotId);
+
+        assertEquals(2, queue.size());
+        assertEquals(
+                java.util.Set.of(confirmed.getId(), checkedIn.getId()),
+                queue.stream().map(Appointment::getId).collect(java.util.stream.Collectors.toSet())
+        );
+    }
 }
