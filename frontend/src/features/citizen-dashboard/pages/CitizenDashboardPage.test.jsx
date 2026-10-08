@@ -41,6 +41,8 @@ function renderDashboard({ fromLogin = false } = {}) {
 describe('CitizenDashboardPage', () => {
   beforeEach(() => {
     mocks.auth = {
+      loginWelcome: null,
+      consumeLoginWelcome: vi.fn(),
       user: {
         id: 71,
         fullName: 'Citizen User',
@@ -73,14 +75,24 @@ describe('CitizenDashboardPage', () => {
 
   it('shows the named greeting only after login and clears it when dismissed', () => {
     const view = renderDashboard({ fromLogin: true });
-    expect(screen.getByRole('status').textContent).toContain('Welcome, Citizen User');
+    expect(screen.getByRole('dialog', { name: 'Welcome, Citizen User' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close welcome message' }));
-    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
 
     view.unmount();
     renderDashboard();
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('shows and consumes the authenticated login welcome when routing replaces login first', () => {
+    mocks.auth.loginWelcome = { userId: '71' };
+    renderDashboard();
+
+    expect(screen.getByRole('dialog', { name: 'Welcome, Citizen User' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+
+    expect(mocks.auth.consumeLoginWelcome).toHaveBeenCalledTimes(1);
   });
 
   it('reflects profile changes from shared authenticated user state', () => {

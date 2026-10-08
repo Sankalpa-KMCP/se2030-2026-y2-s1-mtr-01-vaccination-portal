@@ -20,23 +20,29 @@ function formatStatus(status) {
 }
 
 export default function CitizenDashboardPage() {
-  const { user } = useAuth();
+  const { user, loginWelcome, consumeLoginWelcome } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const dashboardData = useCitizenDashboardData(user?.id);
-  const showLoginGreeting = location.state?.showCitizenWelcome === true;
+  const showLoginGreeting = location.state?.showCitizenWelcome === true
+    || (loginWelcome?.userId != null && String(loginWelcome.userId) === String(user?.id));
   const dismissLoginGreeting = useCallback(() => {
+    consumeLoginWelcome?.();
     navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, navigate]);
+  }, [consumeLoginWelcome, location.pathname, navigate]);
 
   return (
-    <div className="admin-dashboard role-dashboard role-dashboard--citizen citizen-dashboard">
+    <>
       {showLoginGreeting && (
         <CitizenLoginGreeting
           name={user?.fullName?.trim() || user?.email || 'Citizen'}
           onComplete={dismissLoginGreeting}
         />
       )}
+      <div
+        className="admin-dashboard role-dashboard role-dashboard--citizen citizen-dashboard"
+        inert={showLoginGreeting ? true : undefined}
+      >
       <RoleDashboardHero
         user={user}
         titleId="citizen-dashboard-title"
@@ -78,6 +84,7 @@ export default function CitizenDashboardPage() {
         <RecentActivity dashboardData={dashboardData} />
         <BottomHealthBanner />
       </section>
-    </div>
+      </div>
+    </>
   );
 }
