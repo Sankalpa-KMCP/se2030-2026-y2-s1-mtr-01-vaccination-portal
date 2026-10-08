@@ -17,6 +17,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.se2030.vaccinationportal.appointment.event.Mf03HistoryRecorder;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentChangeType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +45,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AppointmentRescheduleService {
+    private Mf03HistoryRecorder historyRecorder;
+
+    @Autowired(required = false)
+    void setHistoryRecorder(Mf03HistoryRecorder historyRecorder) { this.historyRecorder = historyRecorder; }
 
     private final AppointmentRepository appointmentRepository;
     private final CitizenCampaignBookingGuardRepository guardRepository;
@@ -201,6 +207,13 @@ public class AppointmentRescheduleService {
         // Update existing Appointment entity (status remains CONFIRMED, JPA @Version increments automatically)
         appointment.reschedule(newSlotId);
         Appointment saved = appointmentRepository.save(appointment);
+        if (historyRecorder != null) {
+            String reason = isStaffOverride ? staffReason : "Citizen rescheduled appointment";
+            historyRecorder.appointment(saved, AppointmentChangeType.RESCHEDULED,
+                    oldSlotId, null, reason, effectiveNow);
+            historyRecorder.notification(saved, AppointmentChangeType.RESCHEDULED,
+                    "Your vaccination appointment has been rescheduled.");
+        }
 
         // Step 1h: Trigger automatic waitlist promotion for the freed old slot synchronously within this transaction.
         // Viva note: Running promotion synchronously within the same transaction ensures that the freshly released

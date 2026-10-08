@@ -226,6 +226,11 @@ public class WaitlistEntry {
         this.status = WaitlistStatus.CANCELLED;
     }
 
+    /** Closes an active queue entry because its vaccination session was cancelled. */
+    public void markSessionCancelled() {
+        this.status = WaitlistStatus.SESSION_CANCELLED;
+    }
+
     @Override
     public String toString() {
         return "WaitlistEntry{" +

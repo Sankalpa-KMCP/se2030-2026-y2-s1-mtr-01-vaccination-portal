@@ -21,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.se2030.vaccinationportal.appointment.event.Mf03HistoryRecorder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +52,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class WaitlistJoinService {
+    private Mf03HistoryRecorder historyRecorder;
+
+    @Autowired(required = false)
+    void setHistoryRecorder(Mf03HistoryRecorder historyRecorder) { this.historyRecorder = historyRecorder; }
 
     private final WaitlistRepository waitlistRepository;
     private final AppointmentRepository appointmentRepository;
@@ -182,7 +187,11 @@ public class WaitlistJoinService {
 
         // Step 2f: Persist new WaitlistEntry in WAITING status with joined timestamp for FIFO ordering.
         WaitlistEntry entry = new WaitlistEntry(citizenId, campaignId, sessionId, WaitlistStatus.WAITING, effectiveNow);
-        return waitlistRepository.save(entry);
+        WaitlistEntry saved = waitlistRepository.save(entry);
+        if (historyRecorder != null) {
+            historyRecorder.waitlist(saved, null, null, "Citizen joined waitlist", effectiveNow);
+        }
+        return saved;
     }
 
     /**

@@ -92,8 +92,8 @@ public class AppointmentModificationValidator {
             throw new IllegalStateException("Slot start time not available for slot ID: " + appointment.getSlotId());
         }
 
-        Duration durationUntilStart = Duration.between(effectiveNow, slotStart);
-        boolean isWithin24Hours = durationUntilStart.toHours() < 24;
+        Instant citizenCutoff = slotStart.minus(Duration.ofHours(24));
+        boolean isWithin24Hours = effectiveNow.isAfter(citizenCutoff);
 
         if (isWithin24Hours) {
             if (!isStaffOverride) {

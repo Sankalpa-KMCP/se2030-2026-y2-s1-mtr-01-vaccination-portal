@@ -6,6 +6,8 @@ import com.se2030.vaccinationportal.campaign.api.capacity.SlotBookability;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotReservationResult;
 import com.se2030.vaccinationportal.appointment.event.AppointmentEvent;
+import com.se2030.vaccinationportal.appointment.event.Mf03HistoryRecorder;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentChangeType;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
@@ -55,6 +57,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class WaitlistPromotionService {
+    private Mf03HistoryRecorder historyRecorder;
+
+    @Autowired(required = false)
+    void setHistoryRecorder(Mf03HistoryRecorder historyRecorder) { this.historyRecorder = historyRecorder; }
 
     private final ApplicationEventPublisher eventPublisher;
 
@@ -214,8 +220,11 @@ public class WaitlistPromotionService {
             if (slotCapacityPort != null) {
                 Optional<Long> authoritativeCampaign = slotCapacityPort.getCampaignIdForSession(entry.getSessionId());
                 if (authoritativeCampaign.isEmpty() || !campaignId.equals(authoritativeCampaign.get())) {
+                    WaitlistStatus oldStatus = entry.getStatus();
                     entry.markSkippedMalformed();
                     waitlistRepository.save(entry);
+                    if (historyRecorder != null) historyRecorder.waitlist(entry, oldStatus, null,
+                            "Malformed campaign/session relationship", effectiveNow);
                     continue;
                 }
             }
@@ -242,8 +251,11 @@ public class WaitlistPromotionService {
             if (eligibilityLookupPort != null) {
                 EligibilityStatus status = eligibilityLookupPort.getCurrentEligibility(citizenId, campaignId);
                 if (status != EligibilityStatus.ELIGIBLE) {
+                    WaitlistStatus oldStatus = entry.getStatus();
                     entry.markSkippedIneligible();
                     waitlistRepository.save(entry);
+                    if (historyRecorder != null) historyRecorder.waitlist(entry, oldStatus, null,
+                            "Eligibility no longer valid", effectiveNow);
                     continue; // Skip ineligible waiter and evaluate next candidate in FIFO order
                 }
             }
@@ -253,8 +265,11 @@ public class WaitlistPromotionService {
             List<Appointment> activeAppts = appointmentRepository.findByCitizenIdAndCampaignIdAndStatusIn(
                     citizenId, campaignId, List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN));
             if (!activeAppts.isEmpty()) {
+                WaitlistStatus oldStatus = entry.getStatus();
                 entry.markSkippedDuplicate();
                 waitlistRepository.save(entry);
+                if (historyRecorder != null) historyRecorder.waitlist(entry, oldStatus, null,
+                        "Active appointment already exists", effectiveNow);
                 continue; // Skip waiter with active appointment and evaluate next candidate
             }
 
@@ -272,8 +287,17 @@ public class WaitlistPromotionService {
             Appointment appointment = new Appointment(citizenId, campaignId, slotId, AppointmentStatus.CONFIRMED, effectiveNow);
             Appointment savedAppointment = appointmentRepository.save(appointment);
 
+            WaitlistStatus oldStatus = entry.getStatus();
             entry.markPromoted();
             waitlistRepository.save(entry);
+
+            if (historyRecorder != null) {
+                historyRecorder.waitlist(entry, oldStatus, null, "Promoted by FIFO", effectiveNow);
+                historyRecorder.appointment(savedAppointment, AppointmentChangeType.WAITLIST_PROMOTED,
+                        null, null, "Promoted from waitlist", effectiveNow);
+                historyRecorder.notification(savedAppointment, AppointmentChangeType.WAITLIST_PROMOTED,
+                        "You have been promoted from the waitlist to a confirmed appointment.");
+            }
 
             eventPublisher.publishEvent(AppointmentEvent.from(
                     AppointmentEvent.Type.WAITLIST_PROMOTED, savedAppointment));

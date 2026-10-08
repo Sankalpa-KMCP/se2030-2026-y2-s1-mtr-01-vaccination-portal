@@ -12,6 +12,9 @@ import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundExc
 import com.se2030.vaccinationportal.appointment.exception.InvalidAppointmentStateException;
 import com.se2030.vaccinationportal.appointment.exception.InvalidCheckInWindowException;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentChangeType;
+import com.se2030.vaccinationportal.appointment.persistence.model.CheckInEventType;
+import com.se2030.vaccinationportal.appointment.event.Mf03HistoryRecorder;
 import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import java.time.Duration;
@@ -44,6 +47,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class CheckInService {
+    private Mf03HistoryRecorder historyRecorder;
+
+    @Autowired(required = false)
+    void setHistoryRecorder(Mf03HistoryRecorder historyRecorder) { this.historyRecorder = historyRecorder; }
 
     private final AppointmentRepository appointmentRepository;
     private final SlotCapacityPort slotCapacityPort;
@@ -138,8 +145,9 @@ public class CheckInService {
         if (slotCapacityPort != null) {
             Instant slotStart = slotCapacityPort.getSlotStartTime(appointment.getSlotId());
             if (slotStart != null) {
-                long minutesFromStart = Duration.between(slotStart, effectiveNow).toMinutes();
-                if (minutesFromStart < -30 || minutesFromStart > 30) {
+                Instant windowOpensAt = slotStart.minus(Duration.ofMinutes(30));
+                Instant windowClosesAt = slotStart.plus(Duration.ofMinutes(30));
+                if (effectiveNow.isBefore(windowOpensAt) || effectiveNow.isAfter(windowClosesAt)) {
                     if (!isStaffOverride) {
                         throw new InvalidCheckInWindowException("Check-in at " + effectiveNow
                                 + " is outside the allowable 30-minute window for slot start " + slotStart);
@@ -152,7 +160,14 @@ public class CheckInService {
         }
 
         appointment.checkIn();
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        if (historyRecorder != null) {
+            String reason = isStaffOverride ? staffReason : "Standard arrival check-in";
+            historyRecorder.appointment(saved, AppointmentChangeType.CHECKED_IN,
+                    saved.getSlotId(), null, reason, effectiveNow);
+            historyRecorder.checkIn(saved, CheckInEventType.CHECKED_IN, reason, effectiveNow);
+        }
+        return saved;
     }
 
     /**
@@ -192,7 +207,13 @@ public class CheckInService {
         }
 
         appointment.reverseCheckIn();
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        if (historyRecorder != null) {
+            historyRecorder.appointment(saved, AppointmentChangeType.CHECK_IN_REVERSED,
+                    saved.getSlotId(), null, reason, Instant.now());
+            historyRecorder.checkIn(saved, CheckInEventType.REVERSED, reason, Instant.now());
+        }
+        return saved;
     }
 
     /**
@@ -225,8 +246,8 @@ public class CheckInService {
         if (slotCapacityPort != null) {
             Instant slotStart = slotCapacityPort.getSlotStartTime(appointment.getSlotId());
             if (slotStart != null) {
-                long minutesFromStart = Duration.between(slotStart, effectiveNow).toMinutes();
-                if (minutesFromStart <= 30) {
+                Instant windowClosesAt = slotStart.plus(Duration.ofMinutes(30));
+                if (!effectiveNow.isAfter(windowClosesAt)) {
                     throw new InvalidCheckInWindowException("Cannot mark NO_SHOW before check-in window closes (slot start: "
                             + slotStart + ", current time: " + effectiveNow + ")");
                 }
@@ -247,6 +268,12 @@ public class CheckInService {
 
         appointment.markNoShow();
         Appointment saved = appointmentRepository.save(appointment);
+        if (historyRecorder != null) {
+            historyRecorder.appointment(saved, AppointmentChangeType.NO_SHOW,
+                    saved.getSlotId(), null, "Arrival window elapsed", effectiveNow);
+            historyRecorder.notification(saved, AppointmentChangeType.NO_SHOW,
+                    "Your appointment was marked as a no-show.");
+        }
 
         if (ownsReservation && promotionService != null) {
             promotionService.promoteNextForSlot(appointment.getCampaignId(), appointment.getSlotId(), effectiveNow);

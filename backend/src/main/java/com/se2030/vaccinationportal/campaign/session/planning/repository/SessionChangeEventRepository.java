@@ -14,6 +14,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SessionChangeEventRepository extends JpaRepository<SessionChangeEvent, Long> {
 
+    /** Returns the durable cross-module event stream in deterministic order. */
+    List<SessionChangeEvent> findAllByOrderByCreatedAtAscIdAsc();
+
     /**
      * Retrieves all change audit events for a session, ordered deterministically by creation time and ID.
      *
