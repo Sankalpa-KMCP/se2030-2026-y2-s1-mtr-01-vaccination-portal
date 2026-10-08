@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigationType, useOutlet } from 'react-router-dom';
 import { ArrowIcon } from './AuthIcons';
+import AuthCharacterGroup from './AuthCharacterGroup';
 import '../pages/LoginPage.css';
 
 const ROUTE_META = {
@@ -145,6 +146,7 @@ export default function AuthExperience() {
                 <ArrowIcon direction="left" />
                 <span>Portal home</span>
               </Link>
+              <AuthCharacterGroup key={pathname} />
             </div>
             <div className="auth-route-meta" aria-label={`Current area: ${meta.branch}`}>
               <span>{meta.branch}</span>

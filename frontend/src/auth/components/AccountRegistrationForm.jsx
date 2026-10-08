@@ -8,6 +8,7 @@ import {
   isValidPhoneNumber,
 } from '../utils/contactValidation';
 import { ArrowIcon, EyeIcon } from './AuthIcons';
+import { usePasswordPrivacy } from './authCharacterContext';
 
 const INITIAL_FORM = {
   fullName: '',
@@ -32,6 +33,7 @@ function validate(form, includeStaffRole) {
 }
 
 function PasswordField({ accountType, confirmation = false, disabled, invalid, onChange, value, visible, onToggle }) {
+  const passwordPrivacy = usePasswordPrivacy(visible);
   const label = confirmation ? 'Confirm Password' : 'Password';
   const name = confirmation ? 'confirmPassword' : 'password';
   const id = `${accountType}-${confirmation ? 'confirm-password' : 'password'}`;
@@ -40,7 +42,7 @@ function PasswordField({ accountType, confirmation = false, disabled, invalid, o
   return (
     <div className="auth-field">
       <label htmlFor={id}>{label}</label>
-      <div className="auth-password">
+      <div className="auth-password" {...passwordPrivacy}>
         <input
           className="auth-input"
           id={id}
