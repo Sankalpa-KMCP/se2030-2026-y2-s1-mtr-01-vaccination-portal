@@ -8,6 +8,7 @@ import * as certificateApi from '../api/certificateApi';
 vi.mock('../api/certificateApi', () => ({
   listVaccinatorRecords: vi.fn(),
   downloadCertificate: vi.fn(),
+  requestVaccinationCorrection: vi.fn(),
 }));
 
 describe('VaccinatorVaccinationRecordsPage', () => {
@@ -217,5 +218,61 @@ describe('VaccinatorVaccinationRecordsPage', () => {
     fireEvent.click(pdfBtn);
 
     expect(certificateApi.downloadCertificate).toHaveBeenCalledWith(201, 'CERT-ALICE-01');
+  });
+
+  it('submits clinical amendment request with correct payload and normalized date', async () => {
+    const mockRecord = {
+      id: 101,
+      appointmentId: 1001,
+      citizenId: 501,
+      citizenName: 'Alice Citizen',
+      doseNumber: 1,
+      nextDoseDate: '2026-10-01',
+      certificateId: 201,
+      certificateReference: 'CERT-ALICE-01',
+      certificateStatus: 'VALID',
+    };
+
+    certificateApi.listVaccinatorRecords.mockResolvedValue([mockRecord]);
+    certificateApi.requestVaccinationCorrection.mockResolvedValue({ id: 99, status: 'PENDING' });
+
+    render(
+      <MemoryRouter>
+        <VaccinatorVaccinationRecordsPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Alice Citizen').length).toBeGreaterThan(0);
+    });
+
+    const amendmentBtn = screen.getByRole('button', { name: /Request amendment for record 101/i });
+    fireEvent.click(amendmentBtn);
+
+    expect(screen.getByRole('heading', { name: /Request Record Amendment #101/i })).toBeTruthy();
+
+    // Select Next Dose Follow-up Date
+    const fieldSelect = screen.getByLabelText(/Select Clinical Field to Amend/i);
+    fireEvent.change(fieldSelect, { target: { value: 'nextDoseDate' } });
+
+    // Set replacement value
+    const valueInput = screen.getByLabelText(/Proposed Replacement Value/i);
+    fireEvent.change(valueInput, { target: { value: '2026-10-13' } });
+
+    // Set justification reason
+    const reasonInput = screen.getByLabelText(/Clinical Justification \/ Reason/i);
+    fireEvent.change(reasonInput, { target: { value: 'change date' } });
+
+    // Submit
+    const submitBtn = screen.getByRole('button', { name: /Submit Amendment Request/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(certificateApi.requestVaccinationCorrection).toHaveBeenCalledWith(101, {
+        fieldName: 'nextDoseDate',
+        newValue: '2026-10-13',
+        reason: 'change date',
+      });
+    });
   });
 });

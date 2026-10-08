@@ -23,6 +23,7 @@ vi.mock('../../features/vaccination-administration/api/vaccinationDraftApi', () 
 }));
 
 vi.mock('../../features/appointment-management/api/checkInApi', () => ({
+  getMyAssignedVaccinationSessions: vi.fn(async () => []),
   getVaccinatorQueue: vi.fn(async () => []),
 }));
 
@@ -159,11 +160,18 @@ describe('role dashboards', () => {
     expect(screen.getByRole('heading', { name: 'Welcome, Vera Vaccinator' })).toBeTruthy();
 
     const workspace = screen.getByRole('region', { name: /vaccinator workspace/i });
-    expect(within(workspace).getByRole('heading', { name: 'Checked-In Queue' })).toBeTruthy();
-    expect(within(workspace).getByRole('heading', { name: 'Active Work' })).toBeTruthy();
+    expect(within(workspace).getByRole('heading', { name: 'Ready for Vaccination' })).toBeTruthy();
+    expect(within(workspace).getByText('Ready Patients')).toBeTruthy();
+    expect(within(workspace).getByText('Corrections Needed')).toBeTruthy();
+    expect(within(workspace).getByText('Finalized Today')).toBeTruthy();
+    expect(within(workspace).getByText('Today’s Session')).toBeTruthy();
+    expect(within(workspace).queryByText('Active Work')).toBeNull();
+    expect(screen.queryByText("Today's Vaccination Work")).toBeNull();
 
     const queueCard = screen.getByRole('link', { name: 'Open Check-In Queue' });
-    expect(queueCard.getAttribute('href')).toBe('/app/checkin/queue');
+    expect(queueCard.getAttribute('href')).toBe('/app/staff/checkin-queue');
+    expect(screen.getByRole('link', { name: 'Open Vaccination Records' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open Correction Requests' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Check-In & Queue Management' })).toBeNull();
   });
 

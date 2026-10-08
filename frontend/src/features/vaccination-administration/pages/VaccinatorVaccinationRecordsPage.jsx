@@ -115,6 +115,11 @@ export default function VaccinatorVaccinationRecordsPage() {
         } catch {
           // keep original
         }
+      } else if (amendmentField === 'nextDoseDate' && formattedValue) {
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(formattedValue)) {
+          const [m, d, y] = formattedValue.split('/');
+          formattedValue = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
       }
 
       await requestVaccinationCorrection(amendmentRecord.id, {

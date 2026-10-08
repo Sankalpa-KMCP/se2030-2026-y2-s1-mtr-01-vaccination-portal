@@ -9,6 +9,8 @@ import com.se2030.vaccinationportal.campaign.api.staff.StaffScheduleSummary;
 import com.se2030.vaccinationportal.campaign.session.planning.model.SessionLifecycleStatus;
 import com.se2030.vaccinationportal.campaign.session.planning.model.StaffAssignment;
 import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.center.model.OperationalStaffStatus;
+import com.se2030.vaccinationportal.campaign.center.model.StaffRole;
 import com.se2030.vaccinationportal.campaign.center.repository.OperationalStaffRosterRepository;
 import com.se2030.vaccinationportal.campaign.session.planning.repository.StaffAssignmentRepository;
 import java.time.Instant;
@@ -18,9 +20,11 @@ import java.util.Comparator;
 import java.util.List;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /** Adapts roster and session assignments into the signed-in staff member's profile and schedule. */
 @Component
+@Transactional(readOnly = true)
 public class JpaStaffContextQuery implements StaffContextQuery {
     private static final int MAX_ROSTER = 10;
     private static final int MAX_SCHEDULE = 10;
@@ -63,6 +67,22 @@ public class JpaStaffContextQuery implements StaffContextQuery {
         return rosters.findByCenterIdAndUserId(centerId, userId)
                 .map(roster -> roster.isActive())
                 .orElse(false);
+    }
+
+    @Override
+    public boolean isAssignedToSession(UserPrincipal principal, Long sessionId, Instant now) {
+        if (sessionId == null || now == null) return false;
+        Long userId = requiredUserId(principal);
+        return assignments.findByUserIdOrderByStartAtAscIdAsc(userId).stream()
+                .anyMatch(a -> a.getSession() != null
+                        && sessionId.equals(a.getSession().getId())
+                        && a.getRole() == StaffRole.VACCINATOR
+                        && a.getStaffRoster() != null
+                        && a.getStaffRoster().getStatus() == OperationalStaffStatus.ACTIVE
+                        && a.getSession().getLifecycleStatus() != SessionLifecycleStatus.CANCELLED
+                        && a.getSession().getLifecycleStatus() != SessionLifecycleStatus.COMPLETED
+                        && a.getEndAt() != null
+                        && a.getEndAt().isAfter(now));
     }
 
     private static boolean active(StaffAssignment a, Instant now, boolean todayOnly) {

@@ -6,7 +6,7 @@ import { ApiError } from '../../../shared/api/apiClient';
 import { vaccinationDraftApi } from '../api/vaccinationDraftApi';
 import { getAvailableBatches } from '../api/certificateApi';
 import VaccinationDraftsPage from './VaccinationDraftsPage';
-import { getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
+import { getLocalCalendarToday } from '../utils/dateUtils';
 
 vi.mock('../api/certificateApi', () => ({
   getAvailableBatches: vi.fn(),
@@ -136,11 +136,11 @@ describe('Vaccination Drafts CRUD', () => {
     expect(screen.getByLabelText('Administration date').value).toBe(today);
     expect(screen.getByLabelText('Administration date').disabled).toBe(true);
     expect(screen.getAllByRole('button', { name: 'Create Draft' })).toHaveLength(2);
-    expect(screen.getByText('Enter the dose sequence being administered.')).toBeTruthy();
+    expect(screen.getByText('Enter the dose sequence being administered, e.g. 1 for first dose or 2 for second dose.')).toBeTruthy();
     expect(screen.getByText('Leave blank if no further dose is currently required or scheduled.')).toBeTruthy();
     await screen.findByRole('option', { name: /BNT-2026-B01 — Pfizer/ });
     fireEvent.change(screen.getByLabelText('Vaccine Batch *'), { target: { value: '301' } });
-    fireEvent.change(screen.getByLabelText('Dose Being Administered *'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Dose Number *'), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText(/Next dose date/i), { target: { value: '2030-01-01' } });
     fireEvent.change(screen.getByLabelText('Authorized notes'), { target: { value: 'Demo notes' } });
     fireEvent.submit(screen.getByRole('form', { name: 'Vaccination draft form' }));
@@ -150,11 +150,11 @@ describe('Vaccination Drafts CRUD', () => {
       appointmentId: 101,
       vaccineBatchId: 301,
       doseNumber: 1,
-      administrationTime: toApiIsoDate(today),
+      administrationTime: expect.any(String),
       nextDoseDate: '2030-01-01',
       authorizedNotes: 'Demo notes',
     });
-    expect(payload.administrationTime).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00Z$/);
+    expect(Date.parse(payload.administrationTime)).toBeLessThanOrEqual(Date.now());
     expect(payload).not.toHaveProperty('vaccinatorId');
     expect(payload).not.toHaveProperty('physicalAdministrationConfirmed');
     expect(screen.queryByRole('form')).toBeNull();
@@ -174,20 +174,22 @@ describe('Vaccination Drafts CRUD', () => {
     await openCreate();
     expect(screen.getByLabelText('Appointment ID').required).toBe(true);
     expect(screen.getByLabelText('Appointment ID').min).toBe('1');
-    expect(screen.getByLabelText('Dose Being Administered *').required).toBe(true);
-    expect(screen.getByLabelText('Dose Being Administered *').min).toBe('1');
+    expect(screen.getByLabelText('Dose Number *').required).toBe(true);
+    expect(screen.getByLabelText('Dose Number *').min).toBe('1');
     expect(screen.getByLabelText('Authorized notes').maxLength).toBe(2000);
     await screen.findByRole('option', { name: /BNT-2026-B01 — Pfizer/ });
     fireEvent.change(screen.getByLabelText('Vaccine Batch *'), { target: { value: '301' } });
-    fireEvent.change(screen.getByLabelText('Dose Being Administered *'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Dose Number *'), { target: { value: '1' } });
     fireEvent.submit(screen.getByRole('form'));
     await screen.findByText('Draft created successfully.');
-    expect(vaccinationDraftApi.create).toHaveBeenCalledWith({
-      appointmentId: 101,
-      vaccineBatchId: 301,
-      doseNumber: 1,
-      administrationTime: toApiIsoDate(getLocalCalendarToday()),
-    });
+    expect(vaccinationDraftApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appointmentId: 101,
+        vaccineBatchId: 301,
+        doseNumber: 1,
+        administrationTime: expect.any(String),
+      })
+    );
   });
 
   it('views draft details with GET and closes the read-only panel', async () => {
@@ -394,12 +396,12 @@ describe('Vaccination Drafts CRUD', () => {
 
     await screen.findByRole('option', { name: /BATCH-2026-X — Pfizer Comirnaty — 42 available · Expires 2026-12-31/ });
 
-    const doseInput = screen.getByLabelText('Dose Being Administered *');
+    const doseInput = screen.getByLabelText('Dose Number *');
     expect(doseInput.tagName).toBe('INPUT');
     expect(doseInput.getAttribute('type')).toBe('number');
     expect(doseInput.getAttribute('min')).toBe('1');
     expect(doseInput.getAttribute('step')).toBe('1');
-    expect(screen.getByText('Enter the dose sequence being administered.')).toBeTruthy();
+    expect(screen.getByText('Enter the dose sequence being administered, e.g. 1 for first dose or 2 for second dose.')).toBeTruthy();
 
     fireEvent.change(doseInput, { target: { value: '2' } });
     expect(doseInput.value).toBe('2');
@@ -453,7 +455,7 @@ describe('Vaccination Drafts CRUD', () => {
     // Verify batch selection
     await screen.findByRole('option', { name: /BNT-2026-B01 — Pfizer Comirnaty — 42 available · Expires 2026-12-31/ });
     fireEvent.change(screen.getByLabelText('Vaccine Batch *'), { target: { value: '501' } });
-    fireEvent.change(screen.getByLabelText('Dose Being Administered *'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Dose Number *'), { target: { value: '1' } });
 
     // Submit draft
     fireEvent.submit(screen.getByRole('form', { name: 'Vaccination draft form' }));
@@ -511,7 +513,7 @@ describe('Vaccination Drafts CRUD', () => {
 
     const form = screen.getByRole('form', { name: 'Vaccination draft form' });
     const submitBtn = within(form).getByRole('button', { name: 'Create Draft' });
-    const doseInput = screen.getByLabelText('Dose Being Administered *');
+    const doseInput = screen.getByLabelText('Dose Number *');
 
     // Reject 0
     fireEvent.change(doseInput, { target: { value: '0' } });

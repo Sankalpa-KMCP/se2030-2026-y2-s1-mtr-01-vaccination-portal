@@ -145,30 +145,34 @@ export default function CitizenVaccinationsPage() {
   const unifiedItems = (() => {
     if (records.length > 0) {
       return records.map((rec, index) => {
-        const cert = certificates.find((c) => c.vaccinationRecordId === rec.id || c.id === rec.certificateId)
-          || (certificates.length === records.length ? certificates[index] : null)
-          || {
-            id: rec.certificateId,
-            certificateReference: rec.certificateReference,
-            status: rec.certificateStatus || 'VALID',
-            doseNumber: rec.doseNumber,
-            vaccineBatchId: rec.vaccineBatchId,
-            administrationTime: rec.administrationTime,
-          };
+        const foundCert = certificates.find((c) => c.vaccinationRecordId === rec.id || (rec.certificateId && c.id === rec.certificateId))
+          || (certificates.length === records.length ? certificates[index] : null);
+        const cert = foundCert || ((rec.certificateId || rec.certificateReference) ? {
+          id: rec.certificateId,
+          certificateReference: rec.certificateReference,
+          status: rec.certificateStatus || 'VALID',
+          doseNumber: rec.doseNumber,
+          vaccineBatchId: rec.vaccineBatchId,
+          administrationTime: rec.administrationTime,
+        } : null);
+
+        const hasCert = Boolean(cert?.certificateReference || rec.certificateReference);
+        const certStatus = cert?.status || rec.certificateStatus || (hasCert ? 'VALID' : 'RECORDED');
+
         return {
           id: rec.id,
           recordId: rec.id,
-          vaccineName: rec.vaccineName || cert.vaccineName || 'Authorized Vaccine',
-          doseNumber: rec.doseNumber || cert.doseNumber || 1,
-          batchNumber: rec.batchNumber || cert.batchNumber || (rec.vaccineBatchId ? `Batch #${rec.vaccineBatchId}` : (cert.vaccineBatchId ? `Batch #${cert.vaccineBatchId}` : 'Authorized Batch')),
-          vaccineBatchId: rec.vaccineBatchId || cert.vaccineBatchId,
-          centerName: rec.centerName || cert.centerName || (rec.centerId ? `Center #${rec.centerId}` : 'Vaccination Center'),
-          administrationTime: rec.administrationTime || cert.administrationTime || cert.issuedAt,
+          vaccineName: rec.vaccineName || cert?.vaccineName || 'Authorized Vaccine',
+          doseNumber: rec.doseNumber || cert?.doseNumber || 1,
+          batchNumber: rec.batchNumber || cert?.batchNumber || (rec.vaccineBatchId ? `Batch #${rec.vaccineBatchId}` : (cert?.vaccineBatchId ? `Batch #${cert.vaccineBatchId}` : 'Authorized Batch')),
+          vaccineBatchId: rec.vaccineBatchId || cert?.vaccineBatchId,
+          centerName: rec.centerName || cert?.centerName || (rec.centerId ? `Center #${rec.centerId}` : 'Vaccination Center'),
+          administrationTime: rec.administrationTime || cert?.administrationTime || cert?.issuedAt,
           nextDoseDate: rec.nextDoseDate,
           certificate: cert,
-          certificateId: cert.id || rec.certificateId,
-          certificateReference: cert.certificateReference || rec.certificateReference,
-          certificateStatus: cert.status || rec.certificateStatus || 'VALID',
+          certificateId: cert?.id || rec.certificateId || null,
+          certificateReference: cert?.certificateReference || rec.certificateReference || null,
+          certificateStatus: certStatus,
         };
       });
     }
@@ -258,15 +262,15 @@ export default function CitizenVaccinationsPage() {
         </div>
       ) : (
         <div className="row g-4">
-          {/* Section A: Digital Vaccination Certificates (Primary) */}
+          {/* Unified Primary Section: Vaccination Records & Digital Certificates */}
           <div className="col-12">
             <div className="card shadow-sm border-0 overflow-hidden">
               <div className="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                 <h2 className="h6 mb-0 fw-bold text-dark">
-                  <i className="bi bi-patch-check-fill text-primary me-2"></i>Digital Vaccination Certificates
+                  <i className="bi bi-shield-check text-primary me-2"></i>Vaccination Records &amp; Certificates
                 </h2>
                 <span className="badge bg-primary-subtle text-primary fw-semibold">
-                  {unifiedItems.length} {unifiedItems.length === 1 ? 'Certificate' : 'Certificates'}
+                  {unifiedItems.length} {unifiedItems.length === 1 ? 'Record' : 'Records'}
                 </span>
               </div>
               <div className="card-body p-0">
@@ -276,6 +280,8 @@ export default function CitizenVaccinationsPage() {
                       <tr>
                         <th className="ps-4">Certificate Ref</th>
                         <th>Vaccine &amp; Dose</th>
+                        <th>Batch Code</th>
+                        <th>Center</th>
                         <th>Date Administered</th>
                         <th>Status</th>
                         <th className="text-end pe-4">Actions</th>
@@ -284,7 +290,7 @@ export default function CitizenVaccinationsPage() {
                     <tbody className="small">
                       {unifiedItems.map((item) => {
                         const existingCorrection = findActiveCorrection(item.recordId);
-                        const hasCert = Boolean(item.certificateId || item.certificateReference);
+                        const hasCert = Boolean(item.certificateId && item.certificateReference);
                         return (
                           <tr key={item.recordId}>
                             <td className="ps-4 font-monospace fw-semibold text-dark">
@@ -300,10 +306,23 @@ export default function CitizenVaccinationsPage() {
                                 Dose {item.doseNumber}
                               </span>
                             </td>
+                            <td className="font-monospace text-secondary">
+                              {item.batchNumber}
+                            </td>
                             <td className="text-secondary">
-                              {item.administrationTime
-                                ? new Date(item.administrationTime).toLocaleDateString(undefined, { dateStyle: 'medium' })
-                                : 'N/A'}
+                              {item.centerName}
+                            </td>
+                            <td className="text-secondary">
+                              <div>
+                                {item.administrationTime
+                                  ? new Date(item.administrationTime).toLocaleDateString(undefined, { dateStyle: 'medium' })
+                                  : 'N/A'}
+                              </div>
+                              {item.nextDoseDate && (
+                                <div className="text-xs text-muted">
+                                  Next: {new Date(item.nextDoseDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                                </div>
+                              )}
                             </td>
                             <td>
                               <div className="d-flex align-items-center flex-wrap gap-1">
@@ -358,69 +377,6 @@ export default function CitizenVaccinationsPage() {
                           </tr>
                         );
                       })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section B: Clinical Vaccination History (Secondary / Informational / Read-Only) */}
-          <div className="col-12">
-            <div className="card shadow-sm border-0 overflow-hidden">
-              <div className="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                <h2 className="h6 mb-0 fw-bold text-dark">
-                  <i className="bi bi-journal-medical text-secondary me-2"></i>Vaccination History
-                </h2>
-                <span className="badge bg-secondary-subtle text-secondary fw-semibold">
-                  Read-Only Record
-                </span>
-              </div>
-              <div className="card-body p-0">
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light small text-uppercase text-secondary">
-                      <tr>
-                        <th className="ps-4">Vaccine &amp; Dose</th>
-                        <th>Administration Date</th>
-                        <th>Healthcare Center</th>
-                        <th>Batch Code</th>
-                        <th>Next Dose Date</th>
-                        <th className="text-end pe-4">Record Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="small">
-                      {unifiedItems.map((item) => (
-                        <tr key={`history-${item.recordId}`}>
-                          <td className="ps-4">
-                            <div className="fw-semibold text-dark">{item.vaccineName}</div>
-                            <span className="text-secondary small">Dose {item.doseNumber}</span>
-                          </td>
-                          <td className="text-secondary">
-                            {item.administrationTime
-                              ? new Date(item.administrationTime).toLocaleDateString(undefined, { dateStyle: 'medium' })
-                              : 'N/A'}
-                          </td>
-                          <td className="text-secondary">
-                            {item.centerName}
-                          </td>
-                          <td className="font-monospace text-secondary">
-                            {item.batchNumber}
-                          </td>
-                          <td className="text-secondary">
-                            {item.nextDoseDate ? (
-                              new Date(item.nextDoseDate).toLocaleDateString(undefined, { dateStyle: 'medium' })
-                            ) : (
-                              <span className="text-muted fst-italic">None scheduled</span>
-                            )}
-                          </td>
-                          <td className="text-end pe-4">
-                            <span className="badge bg-secondary-subtle text-secondary border border-secondary fw-semibold">
-                              Administered
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
                     </tbody>
                   </table>
                 </div>

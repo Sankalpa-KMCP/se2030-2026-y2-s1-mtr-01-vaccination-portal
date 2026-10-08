@@ -24,6 +24,8 @@ import com.se2030.vaccinationportal.vaccination.administration.model.Vaccination
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.vaccination.administration.strategy.CitizenCertificateIssueStrategy;
+import com.se2030.vaccinationportal.vaccination.administration.strategy.VaccinatorRecordAmendmentStrategy;
 import com.se2030.vaccinationportal.vaccination.validation.VaccinationCorrectionValueCodec;
 import java.time.Clock;
 import java.time.Instant;
@@ -72,7 +74,10 @@ class VaccinationCorrectionServiceTests {
                 correctionRepository,
                 effectiveRecordService,
                 valueCodec,
-                clock
+                clock,
+                null,
+                null,
+                List.of(new CitizenCertificateIssueStrategy(), new VaccinatorRecordAmendmentStrategy())
         );
         record = record();
     }
@@ -385,12 +390,13 @@ class VaccinationCorrectionServiceTests {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         CreateVaccinationCorrectionRequest req = new CreateVaccinationCorrectionRequest(
-                "doseNumber", "2", "Incorrect dose displayed", 55L, "DISCREPANCY", null
+                null, null, "Certificate information is incorrect", 2001L, "DISCREPANCY", null
         );
 
-        VaccinationCorrection correction = service.createCitizenCorrection(RECORD_ID, req, 55L);
+        VaccinationCorrection correction = service.createCitizenCorrection(RECORD_ID, req, 2001L);
 
         assertEquals(VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE, correction.getRequestType());
+        assertEquals(VaccinationCorrectionField.AUTHORIZED_NOTES, correction.getFieldName());
         assertEquals(VaccinationCorrectionStatus.PENDING, correction.getStatus());
     }
 

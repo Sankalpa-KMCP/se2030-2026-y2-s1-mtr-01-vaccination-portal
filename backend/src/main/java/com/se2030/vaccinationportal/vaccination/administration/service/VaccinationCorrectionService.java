@@ -14,6 +14,7 @@ import com.se2030.vaccinationportal.vaccination.administration.model.Vaccination
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.vaccination.administration.strategy.CorrectionRequestStrategy;
 import com.se2030.vaccinationportal.vaccination.certificate.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
 import com.se2030.vaccinationportal.vaccination.query.service.EffectiveVaccinationRecordService;
@@ -37,16 +38,7 @@ public class VaccinationCorrectionService {
     private final Clock clock;
     private final DigitalCertificateRepository digitalCertificateRepository;
     private final AccountDisplayReader accountDisplayReader;
-
-    public VaccinationCorrectionService(
-            VaccinationRecordRepository vaccinationRecordRepository,
-            VaccinationCorrectionRepository correctionRepository,
-            EffectiveVaccinationRecordService effectiveRecordService,
-            VaccinationCorrectionValueCodec valueCodec,
-            Clock clock
-    ) {
-        this(vaccinationRecordRepository, correctionRepository, effectiveRecordService, valueCodec, clock, null, null);
-    }
+    private final List<CorrectionRequestStrategy> correctionRequestStrategies;
 
     @Autowired
     public VaccinationCorrectionService(
@@ -56,7 +48,8 @@ public class VaccinationCorrectionService {
             VaccinationCorrectionValueCodec valueCodec,
             Clock clock,
             DigitalCertificateRepository digitalCertificateRepository,
-            AccountDisplayReader accountDisplayReader
+            AccountDisplayReader accountDisplayReader,
+            List<CorrectionRequestStrategy> correctionRequestStrategies
     ) {
         this.vaccinationRecordRepository = vaccinationRecordRepository;
         this.correctionRepository = correctionRepository;
@@ -65,6 +58,7 @@ public class VaccinationCorrectionService {
         this.clock = clock != null ? clock : Clock.systemUTC();
         this.digitalCertificateRepository = digitalCertificateRepository;
         this.accountDisplayReader = accountDisplayReader;
+        this.correctionRequestStrategies = List.copyOf(correctionRequestStrategies);
     }
 
     public VaccinationCorrection createCorrection(
@@ -79,51 +73,35 @@ public class VaccinationCorrectionService {
     public VaccinationCorrection createCitizenCorrection(
             Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long actorId
     ) {
-        String reason = request != null ? request.reason() : null;
-        if (request != null && request.category() != null && !request.category().isBlank() && reason != null && !reason.startsWith("[")) {
-            reason = "[" + request.category().trim() + "] " + reason;
-        }
-        String fieldName = (request != null && request.fieldName() != null && !request.fieldName().trim().isEmpty())
-                ? request.fieldName().trim()
-                : VaccinationCorrectionField.AUTHORIZED_NOTES.getApiName();
-        String newValue = request != null ? request.newValue() : null;
-
-        CreateVaccinationCorrectionRequest citizenRequest = new CreateVaccinationCorrectionRequest(
-                fieldName,
-                newValue,
-                reason,
+        return createUsingStrategy(
+                vaccinationRecordId,
+                request,
                 actorId,
-                request != null ? request.category() : null,
-                VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE.name()
+                VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
         );
-        return createCorrection(vaccinationRecordId, citizenRequest, actorId, true, VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE);
     }
 
     public VaccinationCorrection createVaccinatorAmendment(
             Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long vaccinatorId
     ) {
+        return createUsingStrategy(
+                vaccinationRecordId,
+                request,
+                vaccinatorId,
+                VaccinationCorrectionType.VACCINATOR_RECORD_AMENDMENT
+        );
+    }
+
+    private VaccinationCorrection createUsingStrategy(
+            Long vaccinationRecordId,
+            CreateVaccinationCorrectionRequest request,
+            Long actorId,
+            VaccinationCorrectionType requestType
+    ) {
         VaccinationRecord record = lockRecord(vaccinationRecordId);
-        if (record.getVaccinatorId() == null || !record.getVaccinatorId().equals(vaccinatorId)) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                    "Vaccinators may only request amendments for vaccinations they administered"
-            );
-        }
-        if (request == null || request.fieldName() == null || request.fieldName().trim().isEmpty()) {
-            throw new InvalidVaccinationCorrectionException("Proposed amendment field name is required");
-        }
-        String fieldName = request.fieldName().trim();
-        if ("vaccineBatchId".equalsIgnoreCase(fieldName) || "VACCINE_BATCH_ID".equalsIgnoreCase(fieldName)) {
-            throw new UnsupportedVaccinationCorrectionFieldException(
-                    "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation."
-            );
-        }
-        VaccinationCorrectionField field = VaccinationCorrectionField.fromApiName(fieldName);
-        if (field == null || !field.isSupportedForCorrection()) {
-            throw new UnsupportedVaccinationCorrectionFieldException(
-                    "Unsupported vaccination correction field: " + request.fieldName()
-            );
-        }
-        return createCorrection(vaccinationRecordId, request, vaccinatorId, true, VaccinationCorrectionType.VACCINATOR_RECORD_AMENDMENT);
+        CorrectionRequestStrategy strategy = strategyFor(requestType);
+        CreateVaccinationCorrectionRequest preparedRequest = strategy.prepareCreate(record, request, actorId);
+        return createCorrection(record, preparedRequest, actorId, true, requestType);
     }
 
     private VaccinationCorrection createCorrection(
@@ -132,10 +110,20 @@ public class VaccinationCorrectionService {
             VaccinationCorrectionType requestType
     ) {
         VaccinationRecord record = lockRecord(vaccinationRecordId);
+        return createCorrection(record, request, actorId, requireSingleActiveRequest, requestType);
+    }
+
+    private VaccinationCorrection createCorrection(
+            VaccinationRecord record,
+            CreateVaccinationCorrectionRequest request,
+            Long actorId,
+            boolean requireSingleActiveRequest,
+            VaccinationCorrectionType requestType
+    ) {
         validateRequest(request, actorId);
         // A parent row exists even when there are no corrections. Lock it before the
         // current locking read, avoiding both an empty-result race and stale MySQL snapshots.
-        if (requireSingleActiveRequest && !correctionRepository.findActiveByRecordForUpdate(vaccinationRecordId).isEmpty()) {
+        if (requireSingleActiveRequest && !correctionRepository.findActiveByRecordForUpdate(record.getId()).isEmpty()) {
             throw new DuplicateVaccinationCorrectionException(
                     "An active correction request is already pending for this vaccination record");
         }
@@ -181,6 +169,23 @@ public class VaccinationCorrectionService {
                 requestType != null ? requestType : VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
         );
         return correctionRepository.save(correction);
+    }
+
+    private CorrectionRequestStrategy strategyFor(VaccinationCorrectionType requestType) {
+        List<CorrectionRequestStrategy> matching = correctionRequestStrategies.stream()
+                .filter(strategy -> strategy.supports(requestType))
+                .toList();
+        if (matching.isEmpty()) {
+            throw new InvalidVaccinationCorrectionException(
+                    "No correction request strategy configured for type: " + requestType
+            );
+        }
+        if (matching.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple correction request strategies configured for type: " + requestType
+            );
+        }
+        return matching.get(0);
     }
 
     public VaccinationCorrection createCorrection(

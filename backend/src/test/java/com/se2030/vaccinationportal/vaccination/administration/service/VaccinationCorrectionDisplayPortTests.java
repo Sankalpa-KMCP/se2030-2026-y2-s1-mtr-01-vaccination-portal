@@ -5,6 +5,7 @@ import com.se2030.vaccinationportal.vaccination.administration.model.Vaccination
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.vaccination.administration.strategy.CorrectionRequestStrategy;
 import com.se2030.vaccinationportal.vaccination.certificate.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.query.service.EffectiveVaccinationRecordService;
 import com.se2030.vaccinationportal.vaccination.validation.VaccinationCorrectionValueCodec;
@@ -24,7 +25,7 @@ class VaccinationCorrectionDisplayPortTests {
     private final AccountDisplayReader accounts = mock(AccountDisplayReader.class);
     private final VaccinationCorrectionService service = new VaccinationCorrectionService(records, corrections,
             mock(EffectiveVaccinationRecordService.class), mock(VaccinationCorrectionValueCodec.class),
-            Clock.systemUTC(), certificates, accounts);
+            Clock.systemUTC(), certificates, accounts, List.of(mock(CorrectionRequestStrategy.class)));
 
     @Test
     void correctionDetailRetainsCitizenNameAndVaccinatorEmailFallback() {

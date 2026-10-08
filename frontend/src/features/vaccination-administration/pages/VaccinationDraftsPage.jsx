@@ -406,11 +406,11 @@ export default function VaccinationDraftsPage() {
 
                 <div className="col-12 col-md-6">
                   <label className="form-label fw-medium" htmlFor="draft-doseNumber">
-                    Dose Being Administered *
+                    Dose Number *
                   </label>
                   <input
                     id="draft-doseNumber"
-                    aria-label="Dose Being Administered"
+                    aria-label="Dose Number"
                     className="form-control"
                     type="number"
                     min="1"
@@ -421,7 +421,7 @@ export default function VaccinationDraftsPage() {
                     onChange={(event) => setForm((current) => ({ ...current, doseNumber: event.target.value }))}
                   />
                   <div className="form-text text-muted small">
-                    Enter the dose sequence being administered.
+                    Enter the dose sequence being administered, e.g. 1 for first dose or 2 for second dose.
                   </div>
                 </div>
 

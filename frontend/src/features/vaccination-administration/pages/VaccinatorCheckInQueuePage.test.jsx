@@ -14,6 +14,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 const checkInApiMocks = vi.hoisted(() => ({
+  getMyAssignedVaccinationSessions: vi.fn(),
   getVaccinatorQueue: vi.fn(),
 }));
 
@@ -69,6 +70,7 @@ describe('VaccinatorCheckInQueuePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     navigateMock.mockReset();
+    checkInApiMocks.getMyAssignedVaccinationSessions.mockResolvedValue(mockSessions);
     checkInApiMocks.getVaccinatorQueue.mockResolvedValue([]);
     vaccinationDraftApiMocks.listMyVaccinationDrafts.mockResolvedValue([]);
     vaccinationDraftApiMocks.createVaccinationDraft.mockResolvedValue({ id: 1 });
@@ -83,6 +85,15 @@ describe('VaccinatorCheckInQueuePage', () => {
 
     expect(screen.getByRole('heading', { name: 'Check-In Queue' })).toBeTruthy();
     expect(screen.getByText('Citizens checked in and ready for vaccination.')).toBeTruthy();
+  });
+
+  it('loads the signed-in vaccinator assigned sessions when none are provided', async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(checkInApiMocks.getMyAssignedVaccinationSessions).toHaveBeenCalledTimes(1);
+      expect(checkInApiMocks.getVaccinatorQueue).toHaveBeenCalledWith(10);
+    });
   });
 
   it('does NOT contain raw manual Time Slot ID input', async () => {
@@ -128,7 +139,7 @@ describe('VaccinatorCheckInQueuePage', () => {
     });
   });
 
-  it('calls createVaccinationDraft and navigates to drafts when "Start Vaccination" is clicked', async () => {
+  it('navigates to drafts without calling createVaccinationDraft when "Start Vaccination" is clicked', async () => {
     checkInApiMocks.getVaccinatorQueue.mockResolvedValue([sampleAppointment]);
     renderPage({ sessions: mockSessions });
 
@@ -140,16 +151,7 @@ describe('VaccinatorCheckInQueuePage', () => {
       fireEvent.click(screen.getByRole('button', { name: /Start vaccination for appointment 112/i }));
     });
 
-    expect(vaccinationDraftApiMocks.createVaccinationDraft).toHaveBeenCalledWith(
-      expect.objectContaining({
-        appointmentId: 112,
-      })
-    );
-    expect(vaccinationDraftApiMocks.createVaccinationDraft).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        appointmentId: 14,
-      })
-    );
+    expect(vaccinationDraftApiMocks.createVaccinationDraft).not.toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith(
       '/app/staff/vaccination-drafts',
       expect.objectContaining({

@@ -7,9 +7,11 @@ import jakarta.validation.constraints.Size;
 /** Request payload for appending a correction or citizen correction request to finalized vaccination history. */
 public record CreateVaccinationCorrectionRequest(
         @Size(max = 64, message = "Correction field must not exceed 64 characters")
+        @JsonAlias({"field", "field_name"})
         String fieldName,
 
         @Size(max = 2000, message = "New value must not exceed 2000 characters")
+        @JsonAlias({"value", "new_value", "proposedValue"})
         String newValue,
 
         @NotBlank(message = "Correction reason is required")

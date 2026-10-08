@@ -9,4 +9,5 @@ public interface StaffContextQuery {
     StaffProfileSummary profileForUser(UserPrincipal principal);
     List<StaffScheduleSummary> scheduleForUser(UserPrincipal principal, Instant now, boolean todayOnly);
     boolean isActiveAtCenter(UserPrincipal principal, Long centerId);
+    boolean isAssignedToSession(UserPrincipal principal, Long sessionId, Instant now);
 }

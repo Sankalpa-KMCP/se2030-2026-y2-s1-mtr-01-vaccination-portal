@@ -40,6 +40,27 @@ export async function getVaccinatorQueue(slotId) {
 }
 
 /**
+ * Fetches today's vaccination sessions assigned to the signed-in Vaccinator.
+ * Each session includes its operational time slots, so the UI never asks staff
+ * to type internal slot identifiers.
+ *
+ * @returns {Promise<Array>} Assigned session summaries with nested slots
+ */
+export async function getMyAssignedVaccinationSessions() {
+  const response = await apiRequest('/v1/staff/vaccination-sessions');
+  const data = await response.json();
+
+  if (!response.ok) {
+    const error = new Error(data.message || 'Failed to fetch assigned vaccination sessions');
+    error.status = response.status;
+    error.error = data.error || 'ASSIGNED_SESSIONS_FETCH_FAILED';
+    throw error;
+  }
+
+  return data;
+}
+
+/**
  * Checks in a citizen for their appointment upon arrival at the vaccination center.
  *
  * @param {number|string} appointmentId - Appointment identifier

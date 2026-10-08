@@ -50,12 +50,33 @@ export default function StaffDashboardPage() {
   const roleLabel = (user?.roles || []).map(getRoleLabel).join(' · ') || 'Staff Member';
 
   const services = [
+    (!canManageCheckIn && hasRole(user, 'ROLE_VACCINATOR')) && {
+      title: 'Check-In Queue',
+      description: 'View checked-in citizens assigned to your vaccination session.',
+      to: '/app/staff/checkin-queue',
+      icon: 'bi-person-lines-fill',
+      decoration: 'bi-list-check',
+    },
     hasRole(user, 'ROLE_VACCINATOR') && {
       title: 'Vaccination Drafts',
       description: 'Create, review, edit, and delete unfinalized vaccination drafts.',
       to: '/app/staff/vaccination-drafts',
       icon: 'bi-clipboard2-pulse',
       decoration: 'bi-file-earmark-medical',
+    },
+    hasRole(user, 'ROLE_VACCINATOR') && {
+      title: 'Vaccination Records',
+      description: 'Review vaccination records you have finalized.',
+      to: '/app/staff/vaccination-records',
+      icon: 'bi-shield-check',
+      decoration: 'bi-file-earmark-check',
+    },
+    hasRole(user, 'ROLE_VACCINATOR') && {
+      title: 'Correction Requests',
+      description: 'Review approved record amendments that require your action.',
+      to: '/app/staff/correction-requests',
+      icon: 'bi-pencil-square',
+      decoration: 'bi-exclamation-circle',
     },
     hasRole(user, 'ROLE_HEALTHCARE_OFFICER') && {
       title: 'Screening Review',
@@ -120,13 +141,6 @@ export default function StaffDashboardPage() {
       icon: 'bi-people',
       decoration: 'bi-person-check',
     },
-    (!canManageCheckIn && isVaccinator) && {
-      title: 'Check-In Queue',
-      description: 'Load the checked-in queue for your active session slot.',
-      to: '/app/checkin/queue',
-      icon: 'bi-person-lines-fill',
-      decoration: 'bi-list-check',
-    },
   ].filter(Boolean);
 
   return (
@@ -156,11 +170,7 @@ export default function StaffDashboardPage() {
       ) : (
         <>
           {isVaccinator && (
-            <section className="admin-dashboard__section" aria-labelledby="staff-vaccination-work-title">
-              <div className="admin-section-heading">
-                <h2 id="staff-vaccination-work-title">Today&apos;s Vaccination Work</h2>
-                <p>Manage checked-in citizens, active drafts, and approved correction requests.</p>
-              </div>
+            <section className="admin-dashboard__section" aria-label="Vaccinator dashboard area">
               <VaccinatorDashboardSection showHeader={false} />
             </section>
           )}
