@@ -1,5 +1,7 @@
 package com.se2030.vaccinationportal.campaign.core.service;
 
+import com.se2030.vaccinationportal.campaign.core.observer.CampaignLifecycleSubject;
+
 import com.se2030.vaccinationportal.campaign.api.questionnaire.QuestionnaireVersionPublicationPort;
 
 
@@ -58,6 +60,7 @@ public class VaccinationCampaignService {
 
     private final VaccinationCampaignRepository campaignRepository;
     private final CampaignLifecycleEventRepository campaignLifecycleEventRepository;
+    private final CampaignLifecycleSubject lifecycleSubject;
     private final VaccinationSessionRepository sessionRepository;
     private final CampaignDoseProgrammeRepository doseProgrammeRepository;
     private final CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository;
@@ -71,6 +74,7 @@ public class VaccinationCampaignService {
     public VaccinationCampaignService(
             VaccinationCampaignRepository campaignRepository,
             CampaignLifecycleEventRepository campaignLifecycleEventRepository,
+            CampaignLifecycleSubject lifecycleSubject,
             VaccinationSessionRepository sessionRepository,
             CampaignDoseProgrammeRepository doseProgrammeRepository,
             CampaignQuestionnaireAssignmentRepository questionnaireAssignmentRepository,
@@ -82,6 +86,7 @@ public class VaccinationCampaignService {
     ) {
         this.campaignRepository = campaignRepository;
         this.campaignLifecycleEventRepository = campaignLifecycleEventRepository;
+        this.lifecycleSubject = lifecycleSubject;
         this.sessionRepository = sessionRepository;
         this.doseProgrammeRepository = doseProgrammeRepository;
         this.questionnaireAssignmentRepository = questionnaireAssignmentRepository;
@@ -404,7 +409,7 @@ public class VaccinationCampaignService {
                 validatedActorId,
                 clock.instant()
         );
-        campaignLifecycleEventRepository.save(event);
+        lifecycleSubject.notifyObservers(event);
 
         return campaign;
     }
@@ -480,7 +485,7 @@ public class VaccinationCampaignService {
                 validatedActorId,
                 clock.instant()
         );
-        campaignLifecycleEventRepository.save(event);
+        lifecycleSubject.notifyObservers(event);
 
         return savedCampaign;
     }
@@ -535,7 +540,7 @@ public class VaccinationCampaignService {
                 validatedActorId,
                 clock.instant()
         );
-        campaignLifecycleEventRepository.save(event);
+        lifecycleSubject.notifyObservers(event);
 
         return savedCampaign;
     }
@@ -578,7 +583,7 @@ public class VaccinationCampaignService {
                 validatedActorId,
                 clock.instant()
         );
-        campaignLifecycleEventRepository.save(event);
+        lifecycleSubject.notifyObservers(event);
 
         return savedCampaign;
     }
@@ -620,7 +625,7 @@ public class VaccinationCampaignService {
                 validatedActorId,
                 clock.instant()
         );
-        campaignLifecycleEventRepository.save(event);
+        lifecycleSubject.notifyObservers(event);
 
         return savedCampaign;
     }

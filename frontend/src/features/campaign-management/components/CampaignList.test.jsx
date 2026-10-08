@@ -1,236 +1,92 @@
-import React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import React, { useState } from 'react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import CampaignList from './CampaignList';
-
-const authMocks = vi.hoisted(() => ({
-  currentUser: null,
-}));
-
-vi.mock('../../../auth/context/AuthContext', () => ({
-  useAuth: () => ({ user: authMocks.currentUser }),
-}));
-
-describe('CampaignList — Archive Authorization and Action Visibility', () => {
-  const defaultProps = {
-    campaigns: [],
-    selectedStatus: '',
-    onStatusFilterChange: vi.fn(),
-    onSelectCampaign: vi.fn(),
-    onInitiateAction: vi.fn(),
-    onCreateNew: vi.fn(),
-  };
-
-  const sampleCompletedCampaign = {
-    id: 1,
-    code: 'CMP-001',
-    name: 'Completed Flu Drive',
-    status: 'COMPLETED',
-    vaccineTypeCode: 'FLU',
-    targetGroupCode: 'ADULT',
-    serviceStartDate: '2026-01-01',
-    serviceEndDate: '2026-01-31',
-  };
-
-  const sampleCancelledCampaign = {
-    id: 2,
-    code: 'CMP-002',
-    name: 'Cancelled Polio Drive',
-    status: 'CANCELLED',
-    vaccineTypeCode: 'POLIO',
-    targetGroupCode: 'CHILDREN',
-    serviceStartDate: '2026-02-01',
-    serviceEndDate: '2026-02-28',
-  };
-
-  const sampleActiveCampaign = {
-    id: 3,
-    code: 'CMP-003',
-    name: 'Active Covid Drive',
-    status: 'ACTIVE',
-    vaccineTypeCode: 'COVID',
-    targetGroupCode: 'ALL',
-    serviceStartDate: '2026-03-01',
-    serviceEndDate: '2026-03-31',
-  };
-
-  const sampleDraftCampaign = {
-    id: 4,
-    code: 'CMP-004',
-    name: 'Draft Booster Drive',
-    status: 'DRAFT',
-    vaccineTypeCode: 'BOOST',
-    targetGroupCode: 'ELDERLY',
-    serviceStartDate: '2026-04-01',
-    serviceEndDate: '2026-04-30',
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
+const auth = vi.hoisted(() => ({ user: null }));
+vi.mock('../../../auth/context/AuthContext', () => ({ useAuth: () => ({ user: auth.user }) }));
+afterEach(cleanup);
+const campaign = { id: 1, name: 'Flu campaign', code: 'CMP-FLU', status: 'ACTIVE', vaccineTypeCode: 'FLU', targetGroupCode: 'ADULT', serviceStartDate: '2026-09-01', serviceEndDate: '2026-10-31' };
+const props = { campaigns: [campaign], selectedStatus: '', onStatusFilterChange: vi.fn(), onSelectCampaign: vi.fn(), onInitiateAction: vi.fn(), onCreateNew: vi.fn(), onEditCampaign: vi.fn() };
+function openActions() { fireEvent.click(screen.getByRole('button', { name: /Actions for/ })); }
+describe('Campaign list navigation', () => {
+  it.each([
+    ['DRAFT', ['Edit', 'Schedule', 'Cancel campaign']],
+    ['SCHEDULED', ['Edit', 'Publish', 'Cancel campaign']],
+    ['PUBLISHED', ['Edit', 'Activate', 'Complete', 'Cancel campaign']],
+    ['ACTIVE', ['Edit', 'Suspend', 'Complete', 'Cancel campaign']],
+    ['SUSPENDED', ['Edit', 'Resume', 'Complete', 'Cancel campaign']],
+    ['COMPLETED', ['Archive']], ['CANCELLED', ['Archive']], ['ARCHIVED', []],
+  ])('keeps administrator actions correct for %s', (status, expected) => {
+    auth.user = { roles: ['ROLE_ADMIN'] };
+    render(<CampaignList {...props} campaigns={[{ ...campaign, status }]} />);
+    expect(screen.getByRole('button', { name: 'View details' })).toBeTruthy();
+    if (expected.length) {
+      openActions();
+      const group = screen.getByRole('group', { name: /Available actions/ });
+      expect(Array.from(group.querySelectorAll('button')).map((button) => button.textContent)).toEqual(expected);
+    } else expect(screen.queryByRole('button', { name: /Actions for/ })).toBeNull();
   });
-
-  afterEach(() => {
-    cleanup();
+  it.each(['ROLE_CENTER_MANAGER', 'ROLE_MANAGEMENT_USER', 'ROLE_CITIZEN'])('hides mutations for %s', (role) => {
+    auth.user = { roles: [role] };
+    render(<CampaignList {...props} />);
+    expect(screen.queryByRole('button', { name: /Actions for/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'View details' }));
+    expect(props.onSelectCampaign).toHaveBeenCalledWith(1);
   });
-
-  it('renders Archive button for ROLE_ADMIN on COMPLETED campaign and invokes onInitiateAction', async () => {
-    authMocks.currentUser = { id: 1, roles: ['ROLE_ADMIN'] };
-    const onInitiateAction = vi.fn();
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleCompletedCampaign]}
-        onInitiateAction={onInitiateAction}
-      />
-    );
-
-    const archiveBtn = screen.getByRole('button', { name: 'Archive' });
-    expect(archiveBtn).toBeTruthy();
-
-    fireEvent.click(archiveBtn);
-    expect(onInitiateAction).toHaveBeenCalledWith('ARCHIVE', sampleCompletedCampaign);
-  });
-
-  it('renders Archive button for ROLE_ADMIN on CANCELLED campaign', () => {
-    authMocks.currentUser = { id: 1, roles: ['ROLE_ADMIN'] };
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleCancelledCampaign]}
-      />
-    );
-
-    expect(screen.getByRole('button', { name: 'Archive' })).toBeTruthy();
-  });
-
-  it('does NOT render Archive button for ROLE_CAMPAIGN_OFFICER on COMPLETED campaign', () => {
-    authMocks.currentUser = { id: 2, roles: ['ROLE_CAMPAIGN_OFFICER'] };
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleCompletedCampaign]}
-      />
-    );
-
-    expect(screen.queryByRole('button', { name: 'Archive' })).toBeNull();
-    // Details button is still visible
-    expect(screen.getByRole('button', { name: 'Details' })).toBeTruthy();
-  });
-
-  it('does NOT render Archive button for ROLE_CAMPAIGN_OFFICER on CANCELLED campaign', () => {
-    authMocks.currentUser = { id: 2, roles: ['ROLE_CAMPAIGN_OFFICER'] };
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleCancelledCampaign]}
-      />
-    );
-
-    expect(screen.queryByRole('button', { name: 'Archive' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Details' })).toBeTruthy();
-  });
-
-  it('preserves other legitimate campaign management actions for ROLE_CAMPAIGN_OFFICER', () => {
-    authMocks.currentUser = { id: 2, roles: ['ROLE_CAMPAIGN_OFFICER'] };
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleActiveCampaign, sampleDraftCampaign]}
-      />
-    );
-
-    // Header New Campaign button is present
-    expect(screen.getByRole('button', { name: /\+ New Campaign/i })).toBeTruthy();
-
-    // Active campaign actions: Suspend, Complete, Cancel
+  it('allows campaign officer actions but restricts archiving', () => {
+    auth.user = { roles: ['ROLE_CAMPAIGN_OFFICER'] };
+    const view = render(<CampaignList {...props} />);
+    openActions();
     expect(screen.getByRole('button', { name: 'Suspend' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Complete' })).toBeTruthy();
-
-    // Draft campaign actions: Schedule, Cancel
-    expect(screen.getByRole('button', { name: 'Schedule' })).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: 'Cancel' }).length).toBeGreaterThanOrEqual(1);
+    view.rerender(<CampaignList {...props} campaigns={[{ ...campaign, status: 'COMPLETED' }]} />);
+    expect(screen.queryByRole('button', { name: /Actions for/ })).toBeNull();
   });
-
-  it('does NOT render Archive button for non-terminal campaign states (ACTIVE, DRAFT) even for ROLE_ADMIN', () => {
-    authMocks.currentUser = { id: 1, roles: ['ROLE_ADMIN'] };
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleActiveCampaign, sampleDraftCampaign]}
-      />
-    );
-
-    expect(screen.queryByRole('button', { name: 'Archive' })).toBeNull();
-  });
-
-  it('renders Edit button for ROLE_ADMIN on allowed states and invokes onEditCampaign', () => {
-    authMocks.currentUser = { id: 1, roles: ['ROLE_ADMIN'] };
-    const onEditCampaign = vi.fn();
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleDraftCampaign, sampleActiveCampaign]}
-        onEditCampaign={onEditCampaign}
-      />
-    );
-
-    const editButtons = screen.getAllByRole('button', { name: 'Edit' });
-    expect(editButtons.length).toBe(2);
-
-    fireEvent.click(editButtons[0]);
-    expect(onEditCampaign).toHaveBeenCalledWith(sampleDraftCampaign);
-  });
-
-  it('renders Edit button for ROLE_CAMPAIGN_OFFICER on allowed states', () => {
-    authMocks.currentUser = { id: 2, roles: ['ROLE_CAMPAIGN_OFFICER'] };
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleDraftCampaign, sampleActiveCampaign]}
-      />
-    );
-
-    const editButtons = screen.getAllByRole('button', { name: 'Edit' });
-    expect(editButtons.length).toBe(2);
-  });
-
-  it('does NOT render Edit button for non-manager roles (e.g. ROLE_CITIZEN, ROLE_CENTER_MANAGER)', () => {
-    authMocks.currentUser = { id: 3, roles: ['ROLE_CENTER_MANAGER'] };
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleDraftCampaign, sampleActiveCampaign]}
-      />
-    );
-
+  it('returns focus on Escape and calls existing lifecycle and edit callbacks', () => {
+    auth.user = { roles: ['ROLE_ADMIN'] };
+    render(<CampaignList {...props} />);
+    openActions();
+    const edit = screen.getByRole('button', { name: 'Edit' });
+    edit.focus(); fireEvent.keyDown(edit, { key: 'Escape' });
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Actions for/ }));
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+    openActions(); fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(props.onEditCampaign).toHaveBeenCalledWith(campaign);
+    openActions(); fireEvent.click(screen.getByRole('button', { name: 'Cancel campaign' }));
+    expect(props.onInitiateAction).toHaveBeenCalledWith('CANCEL', campaign);
   });
-
-  it('does NOT render Edit button for closed states (COMPLETED, CANCELLED, ARCHIVED) even for ROLE_ADMIN', () => {
-    authMocks.currentUser = { id: 1, roles: ['ROLE_ADMIN'] };
-    const sampleArchivedCampaign = {
-      id: 5,
-      code: 'CMP-005',
-      name: 'Archived Drive',
-      status: 'ARCHIVED',
-    };
-
-    render(
-      <CampaignList
-        {...defaultProps}
-        campaigns={[sampleCompletedCampaign, sampleCancelledCampaign, sampleArchivedCampaign]}
-      />
-    );
-
-    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  it('searches names and codes without case or surrounding spaces and clears both filters', () => {
+    auth.user = { roles: ['ROLE_ADMIN'] };
+    function Harness() {
+      const [query, setQuery] = useState(''); const [status, setStatus] = useState('ACTIVE');
+      return <CampaignList {...props} searchQuery={query} onSearchChange={setQuery} selectedStatus={status}
+        onStatusFilterChange={setStatus} onClearFilters={() => { setQuery(''); setStatus(''); }} />;
+    }
+    render(<Harness />);
+    fireEvent.change(screen.getByLabelText('Search campaigns'), { target: { value: '  cmp-FLU  ' } });
+    expect(screen.getByText('1 campaign matching your filters')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Search campaigns'), { target: { value: ' flu CAMPAIGN ' } });
+    expect(screen.getByText('Flu campaign')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Search campaigns'), { target: { value: 'missing' } });
+    expect(screen.getByText('No matching campaigns')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]);
+    expect(screen.getByLabelText('Status').value).toBe('');
+    expect(screen.getByLabelText('Search campaigns').value).toBe('');
+    expect(screen.getByText('1 campaign')).toBeTruthy();
+  });
+  it('keeps controls visible during loading and does not show an empty state', () => {
+    render(<CampaignList {...props} campaigns={[]} loading />);
+    expect(screen.getByLabelText('Search campaigns')).toBeTruthy();
+    expect(screen.getByLabelText('Status')).toBeTruthy();
+    expect(screen.queryByText('No campaigns yet')).toBeNull();
+  });
+  it('distinguishes empty data, load errors, and readable dates', () => {
+    const view = render(<CampaignList {...props} campaigns={[]} />);
+    expect(screen.getByText('No campaigns yet')).toBeTruthy();
+    view.rerender(<CampaignList {...props} campaigns={[]} error={new Error('failed')} />);
+    expect(screen.queryByText('No campaigns yet')).toBeNull();
+    expect(screen.getByText('Results unavailable')).toBeTruthy();
+    view.rerender(<CampaignList {...props} />);
+    expect(screen.getByText('01 Sep 2026')).toBeTruthy();
+    expect(screen.queryByText('Booking Window')).toBeNull();
   });
 });
