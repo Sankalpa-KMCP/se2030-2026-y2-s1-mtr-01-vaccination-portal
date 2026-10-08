@@ -1,0 +1,151 @@
+package com.se2030.vaccinationportal.inventory.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.se2030.vaccinationportal.campaign.api.reference.CampaignReferenceDataReader;
+import com.se2030.vaccinationportal.campaign.center.model.CenterStatus;
+import com.se2030.vaccinationportal.campaign.center.model.VaccinationCenter;
+import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
+import com.se2030.vaccinationportal.campaign.center.repository.VaccinationCenterRepository;
+import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.inventory.dto.request.CenterInventoryRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.ManufacturerRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.VaccineBatchRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.StockAdjustmentRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.StockReceiptRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.StockTransferRequest;
+import com.se2030.vaccinationportal.inventory.exception.InventoryConflictException;
+import com.se2030.vaccinationportal.inventory.model.BatchStatus;
+import java.time.LocalDate;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
+
+@SpringBootTest
+@ActiveProfiles("test")
+class InventoryManagementServiceIntegrationTests {
+    @Autowired InventoryManagementService service;
+    @Autowired VaccineTypeRepository vaccineTypes;
+    @Autowired VaccinationCenterRepository centers;
+    @Autowired CampaignReferenceDataReader campaignReferences;
+    @Autowired ApplicationContext applicationContext;
+
+    @Test
+    void performsManufacturerBatchAndCenterStockCrud() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var manufacturer = service.createManufacturer(new ManufacturerRequest("CRUD-" + suffix, "CRUD Maker"));
+        manufacturer = service.updateManufacturer(manufacturer.id(),
+                new ManufacturerRequest("CRUD-" + suffix, "Updated Maker"));
+        assertThat(service.listManufacturers()).contains(manufacturer);
+
+        VaccineType type = vaccineTypes.save(new VaccineType("CRUD-VT-" + suffix, "CRUD Vaccine"));
+        VaccinationCenter center = centers.save(new VaccinationCenter("CRUD-C-" + suffix, "CRUD Center",
+                "1 Test Road", "test@example.test", CenterStatus.ACTIVE, 10, 20, "UTC"));
+        assertThat(applicationContext.getBeansOfType(CampaignReferenceDataReader.class)).hasSize(1);
+        assertThat(campaignReferences.centerExists(center.getId())).isTrue();
+        assertThat(campaignReferences.vaccineTypeExists(type.getId())).isTrue();
+        assertThat(campaignReferences.centerExists(Long.MAX_VALUE)).isFalse();
+        assertThat(campaignReferences.vaccineTypeExists(Long.MAX_VALUE)).isFalse();
+        assertThat(service.referenceData().centers()).anySatisfy(item -> {
+            assertThat(item.id()).isEqualTo(center.getId());
+            assertThat(item.code()).isEqualTo(center.getCode());
+            assertThat(item.name()).isEqualTo(center.getName());
+        });
+        assertThat(service.referenceData().vaccineTypes()).anySatisfy(item -> {
+            assertThat(item.id()).isEqualTo(type.getId());
+            assertThat(item.code()).isEqualTo(type.getCode());
+            assertThat(item.name()).isEqualTo(type.getName());
+        });
+        var batch = service.createBatch(new VaccineBatchRequest(manufacturer.id(), type.getId(),
+                "CRUD-LOT-" + suffix, LocalDate.now().minusDays(2), LocalDate.now().plusYears(1), BatchStatus.ACTIVE));
+        batch = service.updateBatch(batch.id(), new VaccineBatchRequest(manufacturer.id(), type.getId(),
+                batch.batchNumber(), batch.manufactureDate(), batch.expiryDate(), BatchStatus.QUARANTINED));
+        assertThat(batch.batchStatus()).isEqualTo(BatchStatus.QUARANTINED);
+
+        var stock = service.createInventory(new CenterInventoryRequest(center.getId(), batch.id(), 0), 999L);
+        assertThat(stock.quantity()).isZero();
+
+        Long stockId = stock.id();
+        Long batchId = batch.id();
+        Long manufacturerId = manufacturer.id();
+        service.deleteInventory(stock.id());
+        service.deleteBatch(batch.id());
+        service.deleteManufacturer(manufacturer.id());
+        assertThat(service.listInventories()).noneMatch(item -> item.id().equals(stockId));
+        assertThat(service.listBatches()).noneMatch(item -> item.id().equals(batchId));
+        assertThat(service.listManufacturers()).noneMatch(item -> item.id().equals(manufacturerId));
+    }
+
+    @Test
+    void invalidCampaignReferenceIdsKeepInventoryValidationMessages() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var manufacturer = service.createManufacturer(new ManufacturerRequest("BAD-" + suffix, "Bad Reference Maker"));
+        assertThatThrownBy(() -> service.createBatch(new VaccineBatchRequest(manufacturer.id(), Long.MAX_VALUE,
+                "BAD-LOT-" + suffix, LocalDate.now().minusDays(2), LocalDate.now().plusYears(1), BatchStatus.ACTIVE)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Vaccine type not found: " + Long.MAX_VALUE);
+        assertThatThrownBy(() -> service.createInventory(new CenterInventoryRequest(Long.MAX_VALUE, Long.MAX_VALUE, 0)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Center not found");
+    }
+
+    @Test
+    void receiptsAndAdjustmentsAreAuditedAndCannotMakeStockNegative() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var manufacturer = service.createManufacturer(new ManufacturerRequest("OPS-" + suffix, "Ops Maker " + suffix));
+        VaccineType type = vaccineTypes.save(new VaccineType("OPS-VT-" + suffix, "Ops Vaccine"));
+        VaccinationCenter center = centers.save(new VaccinationCenter("OPS-C-" + suffix, "Ops Center",
+                "2 Test Road", "ops@example.test", CenterStatus.ACTIVE, 10, 20, "UTC"));
+        var batch = service.createBatch(new VaccineBatchRequest(manufacturer.id(), type.getId(), "OPS-LOT-" + suffix,
+                LocalDate.now().minusDays(1), LocalDate.now().plusDays(60), BatchStatus.ACTIVE));
+        var stock = service.createInventory(new CenterInventoryRequest(center.getId(), batch.id(), 0), 999L);
+
+        assertThat(service.receiveStock(new StockReceiptRequest(stock.id(), 20, "Delivery"), 999L).quantity()).isEqualTo(20);
+        assertThat(service.adjustStock(new StockAdjustmentRequest(stock.id(), -3, "Damaged vials"), 999L).quantity()).isEqualTo(17);
+        assertThat(service.recentTransactions()).filteredOn(item -> item.inventoryId().equals(stock.id()))
+                .extracting(item -> item.quantityChange()).containsExactly(-3, 20);
+        assertThatThrownBy(() -> service.adjustStock(
+                new StockAdjustmentRequest(stock.id(), -18, "Invalid"), 999L))
+                .isInstanceOf(InventoryConflictException.class)
+                .hasMessageContaining("negative");
+        assertThatThrownBy(() -> service.updateBatch(batch.id(), new VaccineBatchRequest(manufacturer.id(), type.getId(),
+                "CHANGED-LOT", batch.manufactureDate(), batch.expiryDate(), BatchStatus.ACTIVE)))
+                .isInstanceOf(InventoryConflictException.class)
+                .hasMessageContaining("transactions");
+    }
+
+    @Test
+    void transferMovesStockAndWritesOnePairedAudit() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var maker = service.createManufacturer(new ManufacturerRequest("TR-" + suffix, "Transfer Maker " + suffix));
+        VaccineType type = vaccineTypes.save(new VaccineType("TR-VT-" + suffix, "Transfer Vaccine"));
+        VaccinationCenter source = centers.save(new VaccinationCenter("TR-S-" + suffix, "Source Center",
+                "1 Test Road", "source@example.test", CenterStatus.ACTIVE, 10, 20, "UTC"));
+        VaccinationCenter destination = centers.save(new VaccinationCenter("TR-D-" + suffix, "Destination Center",
+                "2 Test Road", "destination@example.test", CenterStatus.ACTIVE, 10, 20, "UTC"));
+        var batch = service.createBatch(new VaccineBatchRequest(maker.id(), type.getId(), "TR-LOT-" + suffix,
+                LocalDate.now().minusDays(1), LocalDate.now().plusDays(60), BatchStatus.ACTIVE));
+        var stock = service.createInventory(new CenterInventoryRequest(source.getId(), batch.id(), 12), 999L);
+
+        var transfer = service.transferStock(new StockTransferRequest(stock.id(), destination.getId(), 4, "Rebalance"), 999L);
+
+        assertThat(transfer.status()).isEqualTo("COMPLETED");
+        assertThat(transfer.correlationId()).isNotBlank();
+        assertThat(service.listInventories()).filteredOn(item -> item.batchId().equals(batch.id()))
+                .extracting(item -> item.quantity()).containsExactlyInAnyOrder(8, 4);
+        assertThat(service.recentTransactions()).filteredOn(item -> transfer.id().equals(item.stockTransferId()))
+                .extracting(item -> item.quantityChange()).containsExactlyInAnyOrder(-4, 4);
+        assertThat(service.recentTransfers()).extracting(item -> item.id()).contains(transfer.id());
+
+        assertThatThrownBy(() -> service.transferStock(
+                new StockTransferRequest(stock.id(), destination.getId(), 9, "Too many"), 999L))
+                .isInstanceOf(InventoryConflictException.class)
+                .hasMessageContaining("Insufficient");
+        assertThat(service.listInventories()).filteredOn(item -> item.batchId().equals(batch.id()))
+                .extracting(item -> item.quantity()).containsExactlyInAnyOrder(8, 4);
+    }
+}

@@ -1,0 +1,213 @@
+/**
+ * Role-based authorization utility functions.
+ * Aligns frontend UI visibility and actions strictly with backend @PreAuthorize policies.
+ */
+
+const SUPER_ADMIN_ROLE = 'ROLE_SUPER_ADMIN';
+const SUPER_ADMIN_IMPLIED_ROLES = new Set([
+  'ROLE_ADMIN',
+  'ROLE_CAMPAIGN_OFFICER',
+  'ROLE_CENTER_MANAGER',
+  'ROLE_HEALTHCARE_OFFICER',
+  'ROLE_INVENTORY_OFFICER',
+  'ROLE_MANAGEMENT_USER',
+  'ROLE_VACCINATOR',
+]);
+
+/**
+ * Checks if the user has any of the specified roles (with or without 'ROLE_' prefix).
+ * Super Admin implicitly inherits all staff and management roles, but never citizen self-identity (ROLE_CITIZEN).
+ *
+ * @param {Object|null} user - User object containing `roles` array
+ * @param {...string} roles - Role names to check against (e.g. 'ROLE_ADMIN' or 'ADMIN')
+ * @returns {boolean} True if user possesses at least one matching role
+ */
+export function hasRole(user, ...roles) {
+  if (!user || !Array.isArray(user.roles)) {
+    return false;
+  }
+
+  const normalizedUserRoles = new Set(
+    user.roles.map((r) => (r.startsWith('ROLE_') ? r : `ROLE_${r}`))
+  );
+
+  const isSuperAdmin = normalizedUserRoles.has(SUPER_ADMIN_ROLE);
+
+  return roles.some((role) => {
+    const normalizedTarget = role.startsWith('ROLE_') ? role : `ROLE_${role}`;
+    if (normalizedUserRoles.has(normalizedTarget)) {
+      return true;
+    }
+    if (isSuperAdmin && SUPER_ADMIN_IMPLIED_ROLES.has(normalizedTarget)) {
+      return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Whether user can view Campaign Management navigation and read-only views.
+ * Authorized: ADMIN, CAMPAIGN_OFFICER, CENTER_MANAGER, HEALTHCARE_OFFICER, MANAGEMENT_USER
+ */
+export function canViewCampaigns(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CAMPAIGN_OFFICER',
+    'ROLE_CENTER_MANAGER',
+    'ROLE_MANAGEMENT_USER'
+  );
+}
+
+/**
+ * Whether user can create, configure, or transition campaign lifecycle statuses.
+ * Authorized: ADMIN, CAMPAIGN_OFFICER
+ */
+export function canManageCampaigns(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER');
+}
+
+/**
+ * Whether user can view campaign questionnaire assignment history.
+ * Authorized by the assignment history endpoint: ADMIN, CAMPAIGN_OFFICER, HEALTHCARE_OFFICER, MANAGEMENT_USER.
+ */
+export function canViewQuestionnaireAssignments(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CAMPAIGN_OFFICER',
+    'ROLE_HEALTHCARE_OFFICER',
+    'ROLE_MANAGEMENT_USER'
+  );
+}
+
+/**
+ * Whether user can assign or replace a campaign questionnaire version.
+ * Authorized strictly for HEALTHCARE_OFFICER only.
+ * ADMIN, SUPER_ADMIN, and CAMPAIGN_OFFICER are strictly read-only.
+ */
+export function canManageQuestionnaireAssignments(user) {
+  if (!user || !Array.isArray(user.roles)) {
+    return false;
+  }
+  const normalizedUserRoles = new Set(
+    user.roles.map((r) => (r.startsWith('ROLE_') ? r : `ROLE_${r}`))
+  );
+  return (
+    normalizedUserRoles.has('ROLE_HEALTHCARE_OFFICER') &&
+    !normalizedUserRoles.has(SUPER_ADMIN_ROLE)
+  );
+}
+
+/**
+ * Whether user can view Center Operations navigation and center details.
+ * Authorized: ADMIN, CAMPAIGN_OFFICER, CENTER_MANAGER, HEALTHCARE_OFFICER, MANAGEMENT_USER
+ */
+export function canViewCenters(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CAMPAIGN_OFFICER',
+    'ROLE_CENTER_MANAGER',
+    'ROLE_MANAGEMENT_USER'
+  );
+}
+
+/**
+ * Whether user can create/update centers, operating hours, closures, rosters, and resources.
+ * Authorized: ADMIN, CENTER_MANAGER
+ */
+export function canManageCenters(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
+}
+
+/**
+ * Whether user can view Session Management navigation and list sessions.
+ * Authorized: ADMIN, CENTER_MANAGER, CAMPAIGN_OFFICER, HEALTHCARE_OFFICER
+ * Note: MANAGEMENT_USER is excluded as GET /api/v1/sessions rejects this role.
+ */
+export function canViewSessions(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CENTER_MANAGER',
+    'ROLE_CAMPAIGN_OFFICER'
+  );
+}
+
+/**
+ * Whether user can plan, create individual/series sessions, update sessions, schedule/cancel/complete sessions, and manage recurrence rules.
+ * Authorized: ADMIN, CENTER_MANAGER, CAMPAIGN_OFFICER
+ */
+export function canPlanSessions(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CENTER_MANAGER',
+    'ROLE_CAMPAIGN_OFFICER'
+  );
+}
+
+/**
+ * Whether user can view session operational assignments and capacity plan history.
+ * Authorized: ADMIN, CENTER_MANAGER, HEALTHCARE_OFFICER
+ */
+export function canViewSessionOperations(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CENTER_MANAGER'
+  );
+}
+
+/**
+ * Whether user can manage day-of-operations (capacity plans, operational assignments).
+ * Authorized: ADMIN, CENTER_MANAGER
+ */
+export function canManageSessionOperations(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
+}
+
+/**
+ * Whether user can approve capacity above the server-recommended throughput.
+ * Authorized: CENTER_MANAGER, SUPER_ADMIN
+ */
+export function canOverrideSessionCapacity(user) {
+  return hasRole(user, 'ROLE_CENTER_MANAGER', 'ROLE_SUPER_ADMIN');
+}
+
+/**
+ * Whether user can list time slots for a session.
+ * Authorized: ADMIN, CENTER_MANAGER, HEALTHCARE_OFFICER
+ */
+export function canViewTimeSlots(user) {
+  return hasRole(
+    user,
+    'ROLE_ADMIN',
+    'ROLE_CENTER_MANAGER'
+  );
+}
+
+/**
+ * Whether user can create time slots or modify time slot capacities.
+ * Authorized: ADMIN, CENTER_MANAGER
+ */
+export function canManageTimeSlots(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
+}
+
+/**
+ * Whether user can suspend or resume booking intake for a session.
+ * Authorized: ADMIN, CENTER_MANAGER (CAMPAIGN_OFFICER is strictly excluded).
+ */
+export function canManageSessionBooking(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CENTER_MANAGER');
+}
+
+/**
+ * Whether user can view MF-02 Operational Analytics.
+ * Authorized: ADMIN, CAMPAIGN_OFFICER, CENTER_MANAGER
+ */
+export function canViewAnalytics(user) {
+  return hasRole(user, 'ROLE_ADMIN', 'ROLE_CAMPAIGN_OFFICER', 'ROLE_CENTER_MANAGER');
+}

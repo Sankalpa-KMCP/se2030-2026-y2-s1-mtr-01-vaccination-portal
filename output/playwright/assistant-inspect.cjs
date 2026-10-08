@@ -1,0 +1,1 @@
+async(page)=>{await page.getByRole('dialog').screenshot({path:'output/playwright/assistant-premium-staff-panel.png'}); await page.evaluate(()=>{document.querySelector('.assistant-disclaimer-banner').style.transform='translateZ(0)';});await page.screenshot({path:'output/playwright/assistant-premium-staff-paint.png'});}

@@ -1,0 +1,159 @@
+package com.se2030.vaccinationportal.campaign.session.planning.mapper;
+
+import com.se2030.vaccinationportal.campaign.session.planning.dto.response.SessionChangeEventResponse;
+import com.se2030.vaccinationportal.campaign.session.planning.dto.response.SessionChangePreviewResponse;
+import com.se2030.vaccinationportal.campaign.session.planning.dto.response.SessionOperationalReadinessResponse;
+import com.se2030.vaccinationportal.campaign.session.planning.dto.response.SessionResponse;
+import com.se2030.vaccinationportal.campaign.session.planning.dto.response.SessionScheduleSnapshotResponse;
+import com.se2030.vaccinationportal.campaign.session.planning.dto.response.SessionSummaryResponse;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionBookingStatus;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionChangeEvent;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionLifecycleStatus;
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionScheduleSnapshot;
+import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.session.planning.service.SessionChangePreview;
+import com.se2030.vaccinationportal.campaign.session.planning.service.SessionOperationalReadinessService;
+
+/**
+ * Pure transformation utility mapping VaccinationSession domain models to REST response DTOs.
+ */
+public final class SessionDtoMapper {
+
+    private SessionDtoMapper() {
+    }
+
+    public static SessionOperationalReadinessResponse toReadinessResponse(
+            SessionOperationalReadinessService.OperationalReadinessResult result
+    ) {
+        if (result == null) {
+            return null;
+        }
+        return new SessionOperationalReadinessResponse(
+                result.sessionId(),
+                result.ready(),
+                result.violations(),
+                result.assignedVaccinators(),
+                result.availableStations(),
+                result.effectiveStations(),
+                result.recommendedThroughput(),
+                result.approvedCapacity(),
+                result.revision()
+        );
+    }
+
+    public static SessionResponse toResponse(VaccinationSession session, SessionBookingStatus bookingStatus) {
+        if (session == null) {
+            return null;
+        }
+        Long campaignId = session.getCampaign() != null ? session.getCampaign().getId() : null;
+        Long centerId = session.getCenter() != null ? session.getCenter().getId() : null;
+        Long recurrenceRuleId = session.getRecurrenceRule() != null ? session.getRecurrenceRule().getId() : null;
+        SessionBookingStatus resolvedBookingStatus = bookingStatus != null
+                ? bookingStatus
+                : (session.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED
+                ? (session.isBookingSuspended() ? SessionBookingStatus.SUSPENDED : SessionBookingStatus.OPEN)
+                : SessionBookingStatus.CLOSED);
+
+        return new SessionResponse(
+                session.getId(),
+                campaignId,
+                centerId,
+                recurrenceRuleId,
+                session.getOccurrenceKey(),
+                session.getOriginOccurrenceDate(),
+                session.getStartAt(),
+                session.getEndAt(),
+                session.getBookingCloseAt(),
+                session.getScheduleTimezone(),
+                session.getLifecycleStatus(),
+                session.isGenerated(),
+                resolvedBookingStatus,
+                session.isBookingSuspended(),
+                session.getCreatedAt(),
+                session.getUpdatedAt()
+        );
+    }
+
+    public static SessionResponse toResponse(VaccinationSession session) {
+        return toResponse(session, null);
+    }
+
+    public static SessionSummaryResponse toSummaryResponse(VaccinationSession session, SessionBookingStatus bookingStatus) {
+        if (session == null) {
+            return null;
+        }
+        Long campaignId = session.getCampaign() != null ? session.getCampaign().getId() : null;
+        Long centerId = session.getCenter() != null ? session.getCenter().getId() : null;
+        SessionBookingStatus resolvedBookingStatus = bookingStatus != null
+                ? bookingStatus
+                : (session.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED
+                ? (session.isBookingSuspended() ? SessionBookingStatus.SUSPENDED : SessionBookingStatus.OPEN)
+                : SessionBookingStatus.CLOSED);
+
+        return new SessionSummaryResponse(
+                session.getId(),
+                campaignId,
+                centerId,
+                session.getStartAt(),
+                session.getEndAt(),
+                session.getBookingCloseAt(),
+                session.getScheduleTimezone(),
+                session.getLifecycleStatus(),
+                session.isGenerated(),
+                resolvedBookingStatus,
+                session.isBookingSuspended()
+        );
+    }
+
+    public static SessionSummaryResponse toSummaryResponse(VaccinationSession session) {
+        return toSummaryResponse(session, null);
+    }
+
+    public static SessionScheduleSnapshotResponse toSnapshotResponse(SessionScheduleSnapshot snapshot) {
+        if (snapshot == null) {
+            return null;
+        }
+        return new SessionScheduleSnapshotResponse(
+                snapshot.getCenterId(),
+                snapshot.getScheduleTimezone(),
+                snapshot.getStartAt(),
+                snapshot.getEndAt(),
+                snapshot.getBookingCloseAt(),
+                snapshot.getLifecycleStatus()
+        );
+    }
+
+    public static SessionChangePreviewResponse toPreviewResponse(SessionChangePreview preview) {
+        if (preview == null) {
+            return null;
+        }
+        return new SessionChangePreviewResponse(
+                preview.sessionId(),
+                preview.changeType(),
+                toSnapshotResponse(preview.oldSnapshot()),
+                toSnapshotResponse(preview.newSnapshot()),
+                preview.affectedAppointmentCount(),
+                preview.affectedWaitlistCount(),
+                preview.previewToken()
+        );
+    }
+
+    public static SessionChangeEventResponse toChangeEventResponse(SessionChangeEvent event) {
+        if (event == null) {
+            return null;
+        }
+        Long sessionId = event.getSession() != null ? event.getSession().getId() : null;
+        return new SessionChangeEventResponse(
+                event.getId(),
+                sessionId,
+                event.getChangeType(),
+                toSnapshotResponse(event.getOldSnapshot()),
+                toSnapshotResponse(event.getNewSnapshot()),
+                event.getReason(),
+                event.getAffectedAppointmentCount(),
+                event.getAffectedWaitlistCount(),
+                event.getActorId(),
+                event.getCreatedAt()
+        );
+    }
+}

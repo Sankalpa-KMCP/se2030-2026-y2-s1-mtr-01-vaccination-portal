@@ -1,0 +1,702 @@
+/* ==========================================================================
+   Global Application Styles -- Shared Visual Foundation
+   Deep Teal (#0F6E5B), Warm Amber (#F59E0B), Soft Off-White (#F8FAFC),
+   Charcoal (#1E293B), Inter font, rounded 0.75rem, soft layered shadows.
+   Visual-only: no behavior, API, or logic changes live in this file.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* --------------------------------------------------------------------------
+   1. Design tokens
+   -------------------------------------------------------------------------- */
+:root {
+  /* Backwards compatibility with previous baseline */
+  --portal-primary: #0F6E5B;
+  --portal-bg-subtle: #F8FAFC;
+
+  /* Typography -- Inter font family */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Application surfaces */
+  --app-bg: #F8FAFC;
+  --surface: #ffffff;
+  --surface-muted: #F8FAFC;
+
+  /* Text */
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+
+  /* Borders */
+  --border-subtle: #E2E8F0;
+  --border-input: #CBD5E1;
+
+  /* Brand -- deep teal #0F6E5B */
+  --primary: #0F6E5B;
+  --primary-hover: #0c5a4a;
+  --primary-active: #09473b;
+  --primary-soft-bg: #e8f5f1;
+  --primary-soft-border: #bfe5db;
+
+  /* Accent -- warm amber #F59E0B */
+  --accent: #F59E0B;
+  --accent-hover: #d97706;
+  --accent-active: #b45309;
+  --accent-soft-bg: #fef3c7;
+  --accent-soft-border: #fde68a;
+
+  /* Semantic soft tints */
+  --success-soft: #e6f4ea;
+  --warning-soft: #fef3c7;
+  --danger-soft: #fbeaea;
+  --info-soft: #e8f5f1;
+
+  /* Radii -- 0.75rem rounded aesthetic */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  /* Shadows -- soft, layered */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08), 0 20px 48px rgba(0, 0, 0, 0.06);
+
+  /* Layout */
+  --content-max-width: 1320px;
+}
+
+/* --------------------------------------------------------------------------
+   2. Bootstrap variable remapping
+   -------------------------------------------------------------------------- */
+:root {
+  --bs-primary: #0F6E5B;
+  --bs-primary-rgb: 15, 110, 91;
+  --bs-primary-text-emphasis: #09473b;
+  --bs-primary-bg-subtle: var(--primary-soft-bg);
+  --bs-primary-border-subtle: var(--primary-soft-border);
+  --bs-secondary: #64748B;
+  --bs-secondary-rgb: 100, 116, 139;
+  --bs-body-bg: #F8FAFC;
+  --bs-body-color: #1E293B;
+  --bs-font-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bs-link-color-rgb: 15, 110, 91;
+  --bs-link-hover-color-rgb: 12, 90, 74;
+
+  /* 0.75rem rounder scale across Bootstrap components */
+  --bs-border-radius: 0.75rem;
+  --bs-border-radius-sm: 0.5rem;
+  --bs-border-radius-lg: 1rem;
+  --bs-border-radius-xl: 1.25rem;
+  --bs-border-radius-2xl: 1.5rem;
+
+  --bs-secondary-color: #64748B;
+  --bs-tertiary-color: #94A3B8;
+}
+
+/* --------------------------------------------------------------------------
+   Soft Shadow Utilities
+   -------------------------------------------------------------------------- */
+.shadow-soft {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+}
+
+.shadow-soft-lg {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+.shadow-soft-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.shadow-soft-hover:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 24px rgba(0, 0, 0, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   3. Base / application shell
+   -------------------------------------------------------------------------- */
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--app-bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.02em;
+}
+
+hr {
+  border-color: var(--border-subtle);
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   3b. Application navigation bar -- refined healthcare header & navigation
+   -------------------------------------------------------------------------- */
+.app-header {
+  position: relative;
+  z-index: 1020;
+  --header-ink: #f7fdff;
+  --header-muted: rgba(231, 250, 252, 0.8);
+  --header-line: rgba(255, 255, 255, 0.12);
+  --header-glass: rgba(255, 255, 255, 0.09);
+}
+
+.app-navbar {
+  position: relative;
+  overflow: visible;
+  background:
+    radial-gradient(circle at 18% -80%, rgba(245, 158, 11, 0.15), transparent 42%),
+    linear-gradient(118deg, #09473b 0%, #0F6E5B 55%, #137965 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 20px rgba(15, 110, 91, 0.18);
+  padding-block: 0.75rem 0.6rem;
+}
+
+.app-navbar::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 5%, rgba(245, 158, 11, 0.8) 50%, transparent 95%);
+  opacity: 0.65;
+}
+
+.app-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ffffff !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-right: 0;
+  padding: 0;
+  text-decoration: none;
+}
+
+.app-header__brand-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(9, 71, 59, 0.2);
+}
+
+.app-header__brand-title {
+  color: #ffffff;
+  font-size: 1.04rem;
+  font-weight: 750;
+  letter-spacing: -0.022em;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.app-nav .nav-link {
+  position: relative;
+  color: var(--header-muted);
+  font-weight: 650;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  padding: 0.56rem 0.72rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.app-nav .nav-link:hover,
+.app-nav .nav-link:focus {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.app-nav .nav-link.active {
+  color: #ffffff;
+  font-weight: 700;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.1));
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 3px 10px rgba(9, 71, 59, 0.15);
+}
+
+.app-nav .nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: 0.24rem;
+  left: 28%;
+  right: 28%;
+  height: 2px;
+  border-radius: 999px;
+  background-color: var(--accent);
+  opacity: 0;
+  transform: scaleX(0.4);
+  transform-origin: center;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-nav .nav-link.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.app-header__user-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.app-header__user-name {
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.app-header__role-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #0F6E5B;
+  background: #e8f5f1;
+  border: 1px solid rgba(15, 110, 91, 0.25);
+  border-radius: 999px;
+  line-height: 1.2;
+}
+
+.app-header__logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.35;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.app-header__logout-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.app-nav .nav-link:focus-visible,
+.navbar .navbar-toggler:focus-visible,
+.app-header__logout-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+@media (min-width: 992px) {
+  .app-navbar > .container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand account"
+      "nav nav";
+    column-gap: 1.5rem;
+    row-gap: 0.68rem;
+  }
+
+  .app-header__brand {
+    grid-area: brand;
+    justify-self: start;
+  }
+
+  .app-navbar .navbar-collapse {
+    display: contents !important;
+  }
+
+  .app-nav {
+    grid-area: nav;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0.5rem 0 0 !important;
+    border-top: 1px solid var(--header-line);
+  }
+
+  .app-header__account {
+    grid-area: account;
+    justify-self: end;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .app-navbar {
+    padding-block: 0.68rem;
+  }
+
+  .app-header__brand-title {
+    font-size: 0.96rem;
+  }
+
+  .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.24);
+    border-radius: 0.5rem;
+  }
+
+  .app-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.5rem;
+  }
+  .app-nav .nav-link {
+    padding: 0.55rem 0.95rem;
+    border-radius: 0.5rem;
+    white-space: normal;
+  }
+  .app-nav .nav-link::after {
+    left: 0.5rem;
+    right: auto;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    width: 3px;
+    height: auto;
+    border-radius: 3px;
+    transform: scaleY(0.4);
+  }
+  .app-nav .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding-left: 1.25rem;
+  }
+  .app-nav .nav-link.active::after {
+    transform: scaleY(1);
+  }
+  .app-header__account {
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin-top: 0.5rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-header__brand-title {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-nav .nav-link,
+  .app-header__logout-btn {
+    transition: none;
+  }
+}
+
+/* Application footer band */
+.app-footer {
+  background-color: #0f172a;
+  color: #94a3b8;
+  border-top: 1px solid #1e293b;
+}
+
+/* --------------------------------------------------------------------------
+   4. Cards -- soft, layered elevation and 0.75rem radius
+   -------------------------------------------------------------------------- */
+.card {
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  background-color: #ffffff;
+}
+
+.card.border-0 {
+  border: 0 !important;
+}
+
+.card-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+  font-weight: 650;
+}
+
+.card-footer {
+  background-color: #F8FAFC;
+  border-top: 1px solid #f1f5f9;
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+}
+
+/* --------------------------------------------------------------------------
+   5. Button hierarchy & focus
+   -------------------------------------------------------------------------- */
+.btn {
+  border-radius: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* PRIMARY -- deep teal #0F6E5B */
+.btn-primary {
+  --bs-btn-bg: #0F6E5B;
+  --bs-btn-border-color: #0F6E5B;
+  --bs-btn-hover-bg: #0c5a4a;
+  --bs-btn-hover-border-color: #0c5a4a;
+  --bs-btn-active-bg: #09473b;
+  --bs-btn-active-border-color: #09473b;
+  --bs-btn-disabled-bg: #0F6E5B;
+  --bs-btn-disabled-border-color: #0F6E5B;
+  --bs-btn-focus-shadow-rgb: 15, 110, 91;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: #0F6E5B;
+  --bs-btn-border-color: #bfe5db;
+  --bs-btn-hover-bg: #0F6E5B;
+  --bs-btn-hover-border-color: #0F6E5B;
+  --bs-btn-active-bg: #09473b;
+  --bs-btn-active-border-color: #09473b;
+  --bs-btn-disabled-color: #0F6E5B;
+  --bs-btn-disabled-border-color: #bfe5db;
+  --bs-btn-focus-shadow-rgb: 15, 110, 91;
+}
+
+/* ACCENT / WARNING -- warm amber #F59E0B */
+.btn-warning,
+.btn-accent {
+  --bs-btn-bg: #F59E0B;
+  --bs-btn-border-color: #F59E0B;
+  --bs-btn-color: #1E293B;
+  --bs-btn-hover-bg: #d97706;
+  --bs-btn-hover-border-color: #d97706;
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-active-bg: #b45309;
+  --bs-btn-active-border-color: #b45309;
+  --bs-btn-focus-shadow-rgb: 245, 158, 11;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   6. Badges / pills & alerts -- 0.75rem rounded
+   -------------------------------------------------------------------------- */
+.badge {
+  --bs-badge-font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 0.75rem;
+}
+
+.alert {
+  border-radius: 0.75rem;
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* --------------------------------------------------------------------------
+   6b. Typography utilities
+   -------------------------------------------------------------------------- */
+.fs-7 {
+  font-size: 0.75rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Table foundation
+   -------------------------------------------------------------------------- */
+.table {
+  --bs-table-border-color: var(--border-subtle);
+  margin-bottom: 0;
+}
+
+.table > thead > tr > th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  background-color: var(--surface-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-accent-bg: var(--surface-muted);
+}
+
+/* --------------------------------------------------------------------------
+   8. Form foundation -- rounded 0.75rem, themed focus ring
+   -------------------------------------------------------------------------- */
+.form-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.form-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.75rem;
+  border-color: var(--border-input);
+}
+
+.form-control::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #0F6E5B;
+  box-shadow: 0 0 0 0.22rem rgba(15, 110, 91, 0.2);
+}
+
+.form-check-input:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.form-check-input:focus {
+  border-color: #0F6E5B;
+  box-shadow: 0 0 0 0.22rem rgba(15, 110, 91, 0.2);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.invalid-feedback,
+.valid-feedback {
+  font-size: 0.82rem;
+}
+
+.input-group-text {
+  border-radius: 0.75rem;
+  background-color: var(--surface-muted);
+  border-color: var(--border-input);
+  color: var(--text-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   9. Modal foundation -- viewport-safe scrolling, stable chrome, 1rem radius
+   -------------------------------------------------------------------------- */
+.modal-content {
+  border: 0;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 20px 48px rgba(0, 0, 0, 0.08);
+}
+
+.modal-header {
+  padding: 1rem 1.25rem;
+  border-bottom-color: var(--border-subtle);
+}
+
+.modal-title {
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+/* Safety net: long bodies scroll internally so headers/footers stay visible,
+   even when dialogs do not opt into modal-dialog-scrollable. The scrollable
+   variant remains fully functional alongside this rule. */
+.modal:not(.modal-static) .modal-body {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-height: 700px) {
+  .modal:not(.modal-static) .modal-body {
+    max-height: calc(100vh - 180px);
+  }
+}
+
+.modal-footer {
+  padding: 0.85rem 1.25rem;
+  background-color: var(--surface-muted);
+  border-top-color: var(--border-subtle);
+  border-bottom-right-radius: calc(var(--radius-lg) - 1px);
+  border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+}
+
+/* --------------------------------------------------------------------------
+   10. Interactive elements focus indicators
+   -------------------------------------------------------------------------- */
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --------------------------------------------------------------------------
+   11. Accessibility -- reduced motion compatibility
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

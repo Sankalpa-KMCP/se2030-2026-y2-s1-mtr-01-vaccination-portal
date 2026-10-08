@@ -1,15 +1,311 @@
-# Backend
+# Backend Application
 
-The backend application, REST APIs, authentication, authorization, business rules, and integrations will be maintained in this directory.
+The backend application for the Web-Based Vaccination Portal (WBVP-SE2030) is a modular monolith built with Java 21 and Spring Boot. It uses Maven for build automation, MySQL for persistent relational storage with Flyway database migrations, and an in-memory H2 database alongside MySQL Testcontainers for multi-tier verification.
 
-## Declared Technology Baseline
+## Architecture ownership (current)
 
-The canonical v3.3 project specification defines the backend baseline as:
+See the [current architecture and file tree](../docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md) for capability packages, provider-owned APIs, transaction invariants and enforced import boundaries. Historical handoffs do not define the current package tree.
 
-- Java 21
-- Spring Boot
-- Maven
+## Declared Technology Stack
 
-The application structure, dependencies, environment configuration, database connectivity, and development commands will be added when the backend foundation is initialized through an approved project issue and pull request.
+- **Language**: Java 21
+- **Framework**: Spring Boot (v4.1.0) with Spring Web MVC
+- **Persistence**: Spring Data JPA / Hibernate ORM
+- **Database Migrations**: Flyway (`spring-boot-starter-flyway`, `flyway-mysql`)
+- **Security**: Spring Security with stateless access JWT validation (`jjwt` v0.12.6), persisted refresh sessions and RBAC
+- **Validation**: Jakarta Bean Validation (`spring-boot-starter-validation`)
+- **Database Engine (Runtime)**: MySQL 8.4 LTS (via `mysql-connector-j`)
+- **Database Engine (Testing)**: In-memory H2 database (MySQL mode) & Testcontainers MySQL 8.4
+- **Testing & Verification**: JUnit 5, Spring Boot Test, Spring WebMvc Test, Spring Security Test, Testcontainers
+- **Monitoring & Metrics**: Spring Boot Actuator
+- **Build Tool**: Maven (with embedded Maven Wrapper)
 
-Do not add generated dependencies, compiled output, environment secrets, real personal or medical data, real vaccination records, or unrelated files to this directory.
+## Architecture & Module Organization
+
+The backend follows an explicit hexagonal / ports-and-adapters architecture under package `com.se2030.vaccinationportal`:
+
+- **Shared Authentication & Access Control (`shared/auth`)**:
+  - Stateless access JWT validation and persisted rotating refresh-session lifecycle (`JwtTokenService`, `JwtAuthenticationFilter`, `SecurityConfig`).
+  - User identity models (`UserAccount`, `Role`, `Permission`, `StaffRegistrationRequest`).
+  - Endpoints for login (`/api/v1/auth/login`), citizen self-registration (`/api/v1/auth/register/citizen`), staff registration requests (`/api/v1/auth/register/staff`), authenticated user inspection (`/api/v1/auth/me`), and administrator request review (`/api/v1/admin/staff-requests`).
+- **MF-01: Screening & Medical Eligibility (`screening`)**:
+  - Questionnaire versioning, dynamic rule evaluation, answer option definitions, and submission processing.
+  - Endpoints for screening configuration, questionnaire definitions, submissions, and healthcare officer eligibility reviews.
+- **MF-02: Campaign, Center & Session Management (`campaign`)**:
+  - Campaign lifecycle management (`VaccinationCampaign`, `CampaignStatus`), dose programme versioning, target group models, and geographic location targeting.
+  - Vaccination centers (`VaccinationCenter`), operating hours, center closure tracking, and occupancy ceilings.
+  - Vaccination sessions (`VaccinationSession`), recurrence rule series generation, time slot capacity models, staff rostering, and operational readiness diagnostics.
+  - Operational analytics reporting (`OperationalAnalyticsController`).
+- **MF-03: Appointment, Waitlist & Check-In (`appointment`)**:
+  - Concurrency-safe slot reservations with citizen booking guard (`AppointmentBookingService`).
+  - Rescheduling, cancellations, check-in processing, check-in reversal, and waitlist queue management (`AppointmentController`, `WaitlistController`).
+  - Inter-module decoupling via explicit ports (`EligibilityLookupPort`, `SlotCapacityPort`).
+- **MF-04: Vaccine Inventory & Batch Management (`inventory`)**:
+  - Implemented manufacturer, batch, stock adjustment and auditing services; Campaign reference reads use immutable Campaign-owned APIs. Inventory owns its batch availability/deduction port.
+- **MF-05: Vaccination Administration & Records (`vaccination`)**:
+  - Vaccination draft records with full CRUD (`VaccinationDraftController`).
+  - Finalized vaccination records and verifiable digital certificates (`DigitalCertificateController`, `DigitalCertificateService`).
+
+## Database & Flyway Migrations
+
+Database schema versioning is managed strictly through Flyway migrations located in `src/main/resources/db/migration/`.
+
+- **Active Migration Range**: Current migrations span `V0` through `V24` (25 active migrations).
+- **Migration Execution**: Flyway migrations run automatically upon application startup when connected to a configured MySQL database.
+- **DDL Validation**: Production safety is enforced via `spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:validate}`, verifying that Hibernate entities match the Flyway-applied schema without runtime auto-modification.
+- **Testing Profile (`application-test.properties`)**: Standard unit and integration tests run against an in-memory H2 database (`MODE=MySQL`) with `create-drop` lifecycle for fast, isolated execution.
+
+## Environment & Security Configuration
+
+Environment variables and defaults are declared in `src/main/resources/application.properties`. Refer to `.env.example` for recommended local development settings:
+
+```env
+SERVER_PORT=8080
+SERVER_FORWARD_HEADERS_STRATEGY=none
+DB_URL=jdbc:mysql://localhost:3306/vaccination_portal
+DB_USERNAME=vaccination_app
+DB_PASSWORD=replace_with_local_password
+JPA_DDL_AUTO=validate
+JWT_SECRET=replace_with_base64_or_hex_jwt_secret_min_256_bits
+JWT_EXPIRATION_MINUTES=15
+AUTH_REFRESH_COOKIE_SECURE=true
+AUTH_REFRESH_TOKEN_EXPIRATION_DAYS=7
+```
+
+### Authentication & Token Session Policy
+- **Access Tokens**: Short-lived JWTs with a canonical 15-minute expiration (`JWT_EXPIRATION_MINUTES=15`).
+- **Refresh Tokens**: Cryptographically random 256-bit opaque tokens with a 7-day expiration (`AUTH_REFRESH_TOKEN_EXPIRATION_DAYS=7`). Stored server-side solely as SHA-256 hashes.
+- **Refresh Cookie**: Delivered in an `HttpOnly`, `SameSite=Lax` cookie scoped to `/api/v1/auth`. Configured with `Secure=true` by default (`AUTH_REFRESH_COOKIE_SECURE=true`); local HTTP development environments may opt out by setting `AUTH_REFRESH_COOKIE_SECURE=false`.
+- **Rotation & Reuse Detection**: Tokens rotate on every refresh. Reuse of a previously rotated token immediately revokes the entire token family.
+
+
+### Optional First Administrator Bootstrap
+The backend supports automatic creation of an initial administrative account on startup if all four bootstrap environment variables are provided:
+- `BOOTSTRAP_ADMIN_EMAIL`
+- `BOOTSTRAP_ADMIN_PASSWORD`
+- `BOOTSTRAP_ADMIN_FULL_NAME`
+- `BOOTSTRAP_ADMIN_PHONE`
+
+### Setting Environment Variables
+
+**Windows PowerShell:**
+```powershell
+$env:SERVER_PORT="8080"
+$env:DB_URL="jdbc:mysql://localhost:3306/vaccination_portal"
+$env:DB_USERNAME="vaccination_app"
+$env:DB_PASSWORD="your_mysql_password"
+$env:JWT_SECRET="your_secure_random_jwt_secret_key"
+```
+
+**Unix / macOS / Linux:**
+```bash
+export SERVER_PORT=8080
+export DB_URL=jdbc:mysql://localhost:3306/vaccination_portal
+export DB_USERNAME=vaccination_app
+export DB_PASSWORD=your_mysql_password
+export JWT_SECRET=your_secure_random_jwt_secret_key
+```
+
+*Note: Never commit `.env` or configuration files containing real passwords or keys to version control.*
+
+### Project-Wide AI Assistant
+
+The backend provides a secure, rate-limited, read-only conversational assistant integrated with a floating React widget across both public and authenticated pages.
+
+#### Assistant Endpoints
+
+- **`GET /api/v1/assistant/status`**: Public status endpoint returning provider availability, personalized capability flags, and clinical disclaimer.
+- **`POST /api/v1/assistant/messages`**: Conversational guidance endpoint returning structured answers, allowlisted role-filtered route actions, and request correlation IDs.
+
+```json
+// Status Response (GET /api/v1/assistant/status)
+{
+  "available": true,
+  "personalizedFeaturesAvailable": false,
+  "disclaimer": "This assistant explains portal services. It does not provide medical advice or emergency care."
+}
+
+// Message Request (POST /api/v1/assistant/messages)
+{
+  "message": "How do I book an appointment?",
+  "history": [],
+  "currentPath": "/"
+}
+
+// Message Response (POST /api/v1/assistant/messages)
+{
+  "answer": "Plain text answer",
+  "suggestedActions": [
+    {
+      "label": "Book Appointment",
+      "path": "/app/appointments/book"
+    }
+  ],
+  "requestId": "generated-request-id"
+}
+```
+
+#### Core Capabilities & Boundaries
+
+- **Disabled by default**: `AI_ASSISTANT_ENABLED` defaults to `false`. The portal starts and operates completely normally when the AI assistant is disabled.
+- **Selectable provider**: Use Google Gemini (official Google Gen AI Java SDK), OpenAI Responses API, or a free local Ollama model without changing the frontend or assistant security pipeline.
+- **Backend-only secret**: When OpenAI or Gemini is selected, `OPENAI_API_KEY` or `GOOGLE_API_KEY` is strictly server-side. It is never exposed to the frontend or committed to version control. Ollama mode requires no API key.
+- **Test isolation**: Automated test suites use deterministic fake/mock providers (`DeterministicFakeAiResponseProvider`, mock `GeminiContentGenerator`) and **never make live requests to external AI APIs**.
+- **Deterministic safety policy**: Pre-evaluates clinical, emergency (multilingual Sinhala, Tamil, English), and mutation boundaries, immediately refusing medical diagnosis, prescription advice, and database modification requests.
+- **Authorized read-only citizen tools**:
+  1. `MyAppointmentsAssistantTool`: Returns only the appointment category requested (upcoming, past, check-in, waitlist, or combined status), with campaign/center details and authoritative MF-02 times formatted for Sri Lanka. Queue position uses a database count query and never loads another citizen's queue record into assistant context.
+  2. `MyEligibilityAssistantTool`: Retrieves recorded eligibility assessments (campaign ID, status (`ELIGIBLE`, `INELIGIBLE`, `EXPIRED`, `REVOKED`), reviewed time, validity time, and lifecycle state; up to 5 campaigns) for the authenticated citizen without making clinical determinations.
+  3. `MyProfileCompletionAssistantTool`: Reports account status and missing profile field names without exposing the profile's raw personal values.
+  4. `MyVaccinationSummaryAssistantTool`: Retrieves finalized vaccination record count, recent administered doses (dose number and date/time), and digital certificate status/issue date for the authenticated citizen without exposing verification tokens, clinical notes, or batch numbers.
+  *(All tools are strictly scoped to the verified `principal.getUserId()`; arbitrary citizen IDs in user prompts are ignored).*
+- **Deterministic navigation actions**: Personalized tool routes are converted to authorized action buttons on the server instead of relying on the model to generate them.
+- **English-only responses**: The assistant consistently answers in clear English while preserving all safety and privacy rules.
+- **Setup & Evaluation Guide**: See [docs/AI_ASSISTANT_SETUP_AND_DEMO.md](../docs/AI_ASSISTANT_SETUP_AND_DEMO.md) for full architecture, macOS setup, cURL examples, and evaluation walkthroughs.
+
+#### Reverse Proxy & Forwarded Headers Security
+
+By default, `server.forward-headers-strategy` is configured to `none` (`SERVER_FORWARD_HEADERS_STRATEGY=none`) so that direct deployments never blindly trust incoming `X-Forwarded-For` or `Forwarded` headers.
+
+When deploying behind a trusted reverse proxy (e.g., NGINX, Cloudflare, AWS Application Load Balancer):
+1. Configure `SERVER_FORWARD_HEADERS_STRATEGY=framework`.
+2. The reverse proxy **MUST** sanitize and overwrite incoming `X-Forwarded-For` headers with the real client IP.
+3. This ensures that the anonymous rate limiter (5 requests/minute) accurately identifies client IPs without permitting header spoofing rate-limit bypasses.
+#### Environment Variables
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `AI_ASSISTANT_ENABLED` | `false` | Enables the AI assistant (`true` or `false`). |
+| `AI_ASSISTANT_PROVIDER` | `openai` | Provider implementation: `openai`, `ollama`, or `gemini`. |
+| `AI_ASSISTANT_MODEL` | *(empty)* | Model used by the selected provider (for Gemini, defaults to `gemini-flash-latest`). Takes precedence over legacy `OPENAI_MODEL`. |
+| `GOOGLE_API_KEY` | *(empty)* | Canonical Google Gemini Developer / AI Studio API key (server-side only). |
+| `GEMINI_API_KEY` | *(empty)* | Fallback environment variable for Google Gemini API key. |
+| `OPENAI_API_KEY` | *(empty)* | Official OpenAI API secret key. Must remain server-side. |
+| `OPENAI_MODEL` | *(empty)* | Legacy OpenAI-only model setting. |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama endpoint. Non-loopback URLs are rejected to protect authorized context. |
+| `AI_ASSISTANT_TIMEOUT` | `15s` | Provider HTTP request timeout. |
+| `AI_ASSISTANT_MAX_INPUT_CHARACTERS` | `1500` | Maximum allowed character length for incoming chat messages. |
+| `AI_ASSISTANT_MAX_HISTORY_MESSAGES` | `10` | Maximum conversation history turns processed. |
+| `AI_ASSISTANT_MAX_OUTPUT_TOKENS` | `500` | Maximum response token limit for model completions. |
+| `AI_ASSISTANT_ANONYMOUS_RPM` | `5` | Rate limit requests per minute for unauthenticated clients. |
+| `AI_ASSISTANT_AUTHENTICATED_RPM` | `15` | Rate limit requests per minute for authenticated callers. |
+
+
+
+## Available Commands
+
+Execute commands from the `backend/` directory using the embedded Maven Wrapper:
+
+#### Local Development Configuration
+
+1. Copy the configuration template:
+   - PowerShell: `Copy-Item src/main/resources/application-local.properties.example src/main/resources/application-local.properties`
+   - Unix/macOS: `cp src/main/resources/application-local.properties.example src/main/resources/application-local.properties`
+2. Update your local database password in `src/main/resources/application-local.properties` if needed.
+3. Starting with the `local` profile automatically loads local properties and bootstraps the default local administrator (`admin@local.test` / `Admin123!`).
+
+### Windows (PowerShell)
+
+```powershell
+# Run standard unit & integration test suites (in-memory H2)
+.\mvnw.cmd test
+
+# Run full verification build (H2 test suite + package compilation)
+.\mvnw.cmd verify
+
+# Run full verification with real MySQL Testcontainers concurrency assurance
+.\mvnw.cmd verify -Pmysql-concurrency
+
+# Run Spring Boot application locally with local profile
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+```
+
+### Unix-like Systems (macOS / Linux)
+
+```bash
+# Run standard unit & integration test suites (in-memory H2)
+./mvnw test
+
+# Run full verification build (H2 test suite + package compilation)
+./mvnw verify
+
+# Run full verification with real MySQL Testcontainers concurrency assurance
+./mvnw verify -Pmysql-concurrency
+
+# Run Spring Boot application locally with local profile
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+## Digital Certificate API
+
+The backend provides independent digital certificate management and public verification via `DigitalCertificateController` under `/api/v1/vaccination/certificates`:
+
+| Method | Endpoint | Access Control | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/vaccination/certificates/{id}` | Authenticated | Retrieve complete digital certificate record by database ID. |
+| `GET` | `/api/v1/vaccination/certificates/reference/{certificateReference}` | Authenticated | Retrieve digital certificate record by unique certificate reference (e.g. `CERT-...`). |
+| `GET` | `/api/v1/vaccination/certificates/verify/{token}` | Public (`permitAll`) | Verify a digital certificate by its unique verification token. Returns a privacy-preserving masked response (`CertificateVerificationResponse`) confirming issuance without exposing sensitive citizen data. |
+
+- **Issuance**: Digital certificates are issued via `DigitalCertificateService.issueCertificateForVaccinationRecord()` upon vaccination finalization, automatically generating a collision-resistant certificate reference and a secure verification token.
+
+## Actuator Health Endpoint
+
+When the backend application is running, the Spring Boot Actuator health endpoint is available at:
+
+```text
+GET http://localhost:8080/actuator/health
+```
+
+Expected response:
+```json
+{
+  "status": "UP"
+}
+```
+
+## Directory Structure
+
+```text
+backend/
+|-- README.md
+|-- pom.xml
+|-- mvnw
+|-- mvnw.cmd
+|-- .env.example
+|-- .mvn/
+|   \-- wrapper/
+|       \-- maven-wrapper.properties
+\-- src/
+    |-- main/
+    |   |-- java/
+    |   |   \-- com/
+    |   |       \-- se2030/
+    |   |           \-- vaccinationportal/
+    |   |               |-- VaccinationPortalApplication.java
+    |   |               |-- appointment/
+    |   |               |-- assistant/
+    |   |               |-- campaign/
+    |   |               |-- inventory/
+    |   |               |-- screening/
+    |   |               |-- shared/
+    |   |               |   \-- auth/
+    |   |               \-- vaccination/
+    |   \-- resources/
+    |       |-- application.properties
+    |       \-- db/
+    |           \-- migration/
+    |               |-- V0__core_campaign_center_session_foundation.sql
+    |               \-- ... (V1 through V24)
+    \-- test/
+        |-- java/
+        |   \-- com/
+        |       \-- se2030/
+        |           \-- vaccinationportal/
+        \-- resources/
+            \-- application-test.properties
+```
+
+## Current authentication endpoint inventory
+
+AuthController exposes POST `/api/v1/auth/login`, `/refresh`, `/logout`, `/register/citizen`, `/register/staff`, `/verify-email`, `/resend-verification`, `/forgot-password`, `/reset-password` and GET `/api/v1/auth/me` (all abbreviated paths share `/api/v1/auth`). Citizen OTP status/verify/resend are under `/api/v1/auth/email-verification`. See [current endpoint inventory](../docs/api/current-endpoints.md) and [scoped OpenAPI](../docs/api/openapi.yaml) for signatures/policies.
+
+Login/refresh set the HttpOnly cookie; logout clears matching attributes and revokes the presented family. Password reset revokes all account refresh sessions. Frontend principal/generation checks preserve identity across refresh; refresh JWT/profile is not permission to silently switch an established user. [Shared authentication evidence](../docs/evidence/current/shared-authentication.md) links decisive tests and merged CI.

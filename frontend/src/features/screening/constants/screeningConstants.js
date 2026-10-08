@@ -1,0 +1,87 @@
+export const QUESTION_TYPE = Object.freeze({
+  BOOLEAN: 'BOOLEAN',
+  SINGLE_CHOICE: 'SINGLE_CHOICE',
+  MULTI_CHOICE: 'MULTI_CHOICE',
+  NUMERIC: 'NUMERIC',
+  DATE: 'DATE',
+  TEXT: 'TEXT',
+});
+
+export const QUESTION_TYPES = Object.freeze(Object.values(QUESTION_TYPE));
+
+export const QUESTION_TYPE_LABELS = Object.freeze({
+  [QUESTION_TYPE.BOOLEAN]: 'Yes / No',
+  [QUESTION_TYPE.SINGLE_CHOICE]: 'Single Choice',
+  [QUESTION_TYPE.MULTI_CHOICE]: 'Multiple Choice',
+  [QUESTION_TYPE.NUMERIC]: 'Numeric',
+  [QUESTION_TYPE.DATE]: 'Date',
+  [QUESTION_TYPE.TEXT]: 'Text',
+});
+
+const CHOICE_QUESTION_TYPES = Object.freeze([
+  QUESTION_TYPE.SINGLE_CHOICE,
+  QUESTION_TYPE.MULTI_CHOICE,
+]);
+
+export function isChoiceQuestionType(questionType) {
+  return CHOICE_QUESTION_TYPES.includes(questionType);
+}
+
+export const QUESTIONNAIRE_VERSION_STATUS = Object.freeze({
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  RETIRED: 'RETIRED',
+});
+
+export const QUESTIONNAIRE_VERSION_STATUS_LABELS = Object.freeze({
+  [QUESTIONNAIRE_VERSION_STATUS.DRAFT]: 'Draft',
+  [QUESTIONNAIRE_VERSION_STATUS.PUBLISHED]: 'Published',
+  [QUESTIONNAIRE_VERSION_STATUS.RETIRED]: 'Retired',
+});
+
+export const PRELIMINARY_SCREENING_RESULT = Object.freeze({
+  PASS: 'PRELIMINARY_PASS',
+  REVIEW_REQUIRED: 'PRELIMINARY_REVIEW_REQUIRED',
+});
+
+export const PRELIMINARY_SCREENING_RESULTS = Object.freeze(
+  Object.values(PRELIMINARY_SCREENING_RESULT),
+);
+
+export const PRELIMINARY_SCREENING_RESULT_LABELS = Object.freeze({
+  [PRELIMINARY_SCREENING_RESULT.PASS]: 'Preliminary Pass',
+  [PRELIMINARY_SCREENING_RESULT.REVIEW_REQUIRED]: 'Review Required',
+});
+
+export const CITIZEN_PRELIMINARY_RESULT_LABELS = Object.freeze({
+  [PRELIMINARY_SCREENING_RESULT.PASS]: 'Preliminary screening passed',
+  [PRELIMINARY_SCREENING_RESULT.REVIEW_REQUIRED]: 'Healthcare review required',
+});
+
+export const SCREENING_SUBMISSION_STATUS = Object.freeze({
+  DRAFT: 'DRAFT',
+  PENDING_REVIEW: 'PENDING_REVIEW',
+  CORRECTIONS_REQUIRED: 'CORRECTIONS_REQUIRED',
+  REVIEWED: 'REVIEWED',
+});
+
+export const SCREENING_SUBMISSION_STATUS_LABELS = Object.freeze({
+  [SCREENING_SUBMISSION_STATUS.DRAFT]: 'Draft',
+  [SCREENING_SUBMISSION_STATUS.PENDING_REVIEW]: 'Pending review',
+  [SCREENING_SUBMISSION_STATUS.CORRECTIONS_REQUIRED]: 'Corrections required',
+  [SCREENING_SUBMISSION_STATUS.REVIEWED]: 'Reviewed',
+});
+
+export const ELIGIBILITY_ASSESSMENT_STATUS = Object.freeze({
+  ELIGIBLE: 'ELIGIBLE',
+  INELIGIBLE: 'INELIGIBLE',
+  EXPIRED: 'EXPIRED',
+  REVOKED: 'REVOKED',
+});
+
+export const ELIGIBILITY_ASSESSMENT_STATUS_LABELS = Object.freeze({
+  ELIGIBLE: 'Eligible',
+  INELIGIBLE: 'Ineligible',
+  EXPIRED: 'Expired',
+  REVOKED: 'Revoked',
+});

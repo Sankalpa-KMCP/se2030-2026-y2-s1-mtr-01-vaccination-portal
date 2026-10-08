@@ -1,0 +1,76 @@
+package com.se2030.vaccinationportal.campaign.session.planning.adapter;
+
+import com.se2030.vaccinationportal.campaign.api.availability.SlotAvailabilityPort;
+import com.se2030.vaccinationportal.campaign.api.availability.AvailableSessionSummary;
+import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
+
+import com.se2030.vaccinationportal.campaign.session.planning.model.SessionLifecycleStatus;
+import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationSession;
+import com.se2030.vaccinationportal.campaign.session.planning.service.TimeSlotService;
+import com.se2030.vaccinationportal.campaign.session.planning.service.VaccinationSessionService;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Comparator;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+/** Adapts session and slot services to the availability port without reserving places. */
+@Component
+@Transactional(readOnly = true)
+public class SessionAvailabilityAdapter implements SlotAvailabilityPort {
+    private final VaccinationSessionService sessions;
+    private final TimeSlotService slots;
+    private final Clock clock;
+
+    @Autowired
+    public SessionAvailabilityAdapter(VaccinationSessionService sessions, TimeSlotService slots) {
+        this(sessions, slots, Clock.systemUTC());
+    }
+
+    SessionAvailabilityAdapter(VaccinationSessionService sessions, TimeSlotService slots, Clock clock) {
+        this.sessions = sessions;
+        this.slots = slots;
+        this.clock = clock;
+    }
+
+    @Override
+    public List<AvailableSessionSummary> findAvailableSessions(
+            Long campaignId, Long centerId, LocalDate fromDate, LocalDate toDate) {
+        if (campaignId == null || fromDate == null || toDate == null || fromDate.isAfter(toDate)) {
+            throw new IllegalArgumentException("Campaign and a valid inclusive date range are required");
+        }
+        // Availability is a snapshot; booking must recheck it before reserving capacity.
+        Instant now = clock.instant();
+        return sessions.getSessions(campaignId, centerId, SessionLifecycleStatus.SCHEDULED).stream()
+                .filter(session -> acceptsBooking(session, now))
+                .filter(session -> isWithinDateRange(session, fromDate, toDate))
+                .flatMap(session -> slots.getSlotsForSession(session.getId()).stream()
+                        .filter(slot -> slot.hasAvailableCapacity() && slot.getStartTime().isAfter(now))
+                        .map(slot -> new AvailableSessionSummary(
+                                session.getId(), slot.getId(), session.getCampaign().getId(),
+                                session.getCenter().getId(), session.getCenter().getName(),
+                                session.getCenter().getAddress(), slot.getStartTime(), slot.getEndTime(),
+                                session.getBookingCloseAt(), slot.getAvailableCapacity())))
+                .sorted(Comparator.comparing(AvailableSessionSummary::startAt)
+                        .thenComparing(AvailableSessionSummary::sessionId)
+                        .thenComparing(AvailableSessionSummary::slotId))
+                .toList();
+    }
+
+    private boolean isWithinDateRange(VaccinationSession session, LocalDate fromDate, LocalDate toDate) {
+        // Match dates in the session's scheduling timezone, including both range endpoints.
+        LocalDate date = session.getStartAt().atZone(ZoneId.of(session.getScheduleTimezone())).toLocalDate();
+        return !date.isBefore(fromDate) && !date.isAfter(toDate);
+    }
+
+    private boolean acceptsBooking(VaccinationSession session, Instant now) {
+        return session.getLifecycleStatus() == SessionLifecycleStatus.SCHEDULED
+                && session.getCampaign().isBookingWindowOpenAt(now)
+                && !session.isBookingSuspended()
+                && now.isBefore(session.getBookingCloseAt());
+    }
+}

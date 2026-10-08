@@ -1,0 +1,223 @@
+.citizen-appointment-flow .form-control:focus,
+.citizen-waitlist-filter .form-control:focus {
+  border-color: var(--citizen-green);
+  box-shadow: 0 0 0 0.2rem rgba(32, 98, 69, 0.13);
+}
+
+/* Appointment and waitlist wrappers: presentation only around existing workflow components. */
+.citizen-appointment-flow .availability-search-container,
+.citizen-appointment-flow .results-section,
+.citizen-appointments-list,
+.citizen-waitlist-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.citizen-appointment-flow .availability-search-container > .card,
+.citizen-appointments-list > .card,
+.citizen-waitlist-content > .card,
+.citizen-waitlist-filter {
+  overflow: hidden;
+  margin: 0 !important;
+  border: 1px solid var(--citizen-border) !important;
+  border-radius: var(--citizen-radius-lg) !important;
+  background: var(--citizen-surface);
+  box-shadow: var(--citizen-shadow-sm) !important;
+}
+
+.citizen-appointment-flow .card-header {
+  color: var(--citizen-ink) !important;
+  border-bottom: 1px solid var(--citizen-border);
+  background: linear-gradient(110deg, #f7faf7, #edf5ef) !important;
+}
+
+.citizen-appointment-flow .form-label,
+.citizen-waitlist-filter label {
+  color: var(--citizen-ink);
+  font-size: 0.75rem;
+}
+
+.citizen-appointment-flow .form-control,
+.citizen-waitlist-filter .form-control {
+  min-height: 44px;
+  border-color: var(--citizen-border);
+  border-radius: var(--citizen-radius-sm);
+}
+
+.citizen-appointment-flow .btn-primary,
+.citizen-waitlist-filter .btn-primary {
+  min-height: 44px;
+  border-color: var(--citizen-green);
+  border-radius: var(--citizen-radius-sm);
+  background: var(--citizen-green);
+  box-shadow: none !important;
+}
+
+.citizen-appointment-flow .session-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.citizen-appointment-flow .session-list > .card {
+  height: 100%;
+  margin: 0 !important;
+  border: 1px solid var(--citizen-border) !important;
+  border-radius: var(--citizen-radius-md);
+  box-shadow: var(--citizen-shadow-sm) !important;
+}
+
+.citizen-appointment-flow .session-list .card-title,
+.citizen-appointments-list .card-title,
+.citizen-waitlist-content .card-title {
+  color: var(--citizen-ink) !important;
+}
+
+.citizen-appointment-flow .session-list .bg-light,
+.citizen-appointments-list .bg-light,
+.citizen-waitlist-content .bg-light {
+  background: #f4f7f5 !important;
+}
+
+.citizen-appointments-list > .card {
+  position: relative;
+}
+
+.citizen-appointments-list > .card::before,
+.citizen-waitlist-content > .card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--citizen-teal);
+  content: "";
+}
+
+.citizen-appointments-list .badge,
+.citizen-waitlist-content .badge,
+.citizen-appointment-flow .session-list .badge {
+  border-radius: 999px;
+  box-shadow: none !important;
+  font-size: 0.68rem !important;
+}
+
+.citizen-appointment-flow .text-center.py-5,
+.citizen-appointments-page .text-center.py-5 {
+  padding: 1.5rem !important;
+  border: 1px solid var(--citizen-border);
+  border-radius: var(--citizen-radius-md);
+  background: var(--citizen-paper);
+}
+
+.citizen-appointment-flow .text-center.py-5 .spinner-border,
+.citizen-appointments-page .text-center.py-5 .spinner-border {
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  color: var(--citizen-green) !important;
+  border-width: 0.16em;
+}
+
+.citizen-appointment-flow .btn,
+.citizen-appointments-page .btn,
+.waitlist-page .btn {
+  min-height: 40px;
+  border-radius: var(--citizen-radius-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.citizen-appointment-flow .btn-primary,
+.citizen-appointments-page .btn-primary,
+.waitlist-page .btn-primary {
+  border-color: var(--citizen-green);
+  background: var(--citizen-green);
+}
+
+.citizen-appointment-flow .btn-outline-danger,
+.citizen-appointments-page .btn-outline-danger,
+.waitlist-page .btn-outline-danger {
+  color: var(--citizen-danger);
+  border-color: #dcaeb1;
+}
+
+.citizen-appointment-flow .badge.bg-success,
+.citizen-appointments-page .badge.bg-success,
+.waitlist-page .badge.bg-success {
+  color: #174d36 !important;
+  border: 1px solid var(--citizen-border-strong);
+  background: var(--citizen-green-soft) !important;
+}
+
+.citizen-appointment-flow .badge.bg-secondary,
+.citizen-appointments-page .badge.bg-secondary,
+.waitlist-page .badge.bg-secondary {
+  color: var(--citizen-ink) !important;
+  border: 1px solid var(--citizen-border);
+  background: #edf1ef !important;
+}
+
+.citizen-appointment-flow .badge.bg-danger,
+.citizen-appointments-page .badge.bg-danger,
+.waitlist-page .badge.bg-danger {
+  color: var(--citizen-danger) !important;
+  border: 1px solid #e4bfc1;
+  background: var(--citizen-danger-soft) !important;
+}
+
+.waitlist-page .badge.bg-warning {
+  color: var(--citizen-warning) !important;
+  border: 1px solid #e3c881;
+  background: var(--citizen-warning-soft) !important;
+}
+
+.citizen-appointment-flow .alert,
+.citizen-page__notice .alert,
+.citizen-page__notice.alert {
+  margin: 0;
+  border: 1px solid var(--citizen-border) !important;
+  border-radius: var(--citizen-radius-md);
+  box-shadow: none !important;
+}
+
+.citizen-waitlist-filter .card-body {
+  padding: 1rem 1.15rem !important;
+}
+
+.citizen-waitlist-lookup {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 620px;
+}
+
+.citizen-waitlist-lookup__label {
+  margin: 0;
+  font-weight: 700;
+}
+
+.citizen-waitlist-lookup__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: stretch;
+}
+
+.citizen-waitlist-lookup__controls .form-control {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+
+  .citizen-appointment-flow .session-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+
+  .citizen-waitlist-lookup__controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .citizen-waitlist-lookup__controls .btn {
+    width: 100%;
+  }
+}
