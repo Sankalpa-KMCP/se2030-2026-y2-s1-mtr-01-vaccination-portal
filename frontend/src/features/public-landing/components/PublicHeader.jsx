@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import portalCareMark from '../assets/portal-care-mark.svg';
 
 function BrandGlyph() {
   return (
     <span className="lp-header__glyph" aria-hidden="true">
-      <img src={portalCareMark} alt="" width="50" height="50" />
+      <img src="/brand/vaccination-portal-icon.svg" alt="" width="50" height="50" />
     </span>
   );
 }

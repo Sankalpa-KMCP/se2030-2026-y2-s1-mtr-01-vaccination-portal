@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigationType, useOutlet } from 'react-router-dom';
-import { ArrowIcon, ShieldMark } from './AuthIcons';
+import { ArrowIcon } from './AuthIcons';
 import '../pages/LoginPage.css';
 
 const ROUTE_META = {
@@ -105,7 +105,7 @@ function AuthBrandPanel() {
   return (
     <aside className="auth-brand" aria-label="Vaccination Portal">
       <Link to="/" className="auth-brand__identity" aria-label="Vaccination Portal home">
-        <span className="auth-brand__glyph"><ShieldMark size={24} /></span>
+        <span className="auth-brand__glyph" aria-hidden="true"><img src="/brand/vaccination-portal-icon.svg" alt="" width="40" height="40" /></span>
         <span>Vaccination Portal</span>
       </Link>
 
