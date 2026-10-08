@@ -143,6 +143,17 @@ export default function PortalRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
   const hadSessionRef = useRef(false);
+  const initialPathRef = useRef(location.pathname);
+  const homeIntroAttemptedRef = useRef(false);
+  const markHomeIntroAttempted = useCallback(() => {
+    homeIntroAttemptedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname !== '/' || isAuthenticated) {
+      homeIntroAttemptedRef.current = true;
+    }
+  }, [isAuthenticated, location.pathname]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -183,7 +194,13 @@ export default function PortalRoutes() {
     <Routes>
       <Route
         path="/"
-        element={<LandingPage onLoginClick={() => navigate('/login')} />}
+        element={(
+          <LandingPage
+            onLoginClick={() => navigate('/login')}
+            isInitialHomeLoad={initialPathRef.current === '/' && !homeIntroAttemptedRef.current && !isAuthenticated}
+            onIntroAttempted={markHomeIntroAttempted}
+          />
+        )}
       />
       <Route
         path="/how-it-works"

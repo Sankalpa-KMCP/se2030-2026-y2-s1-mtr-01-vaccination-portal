@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { INTRO_SESSION_KEY } from './connectedCommunityIntroSession';
 import '../connected-community-intro.css';
 
 const INTRO_DURATION_MS = 3600;
@@ -86,12 +85,6 @@ export default function ConnectedCommunityIntro({ onComplete }) {
   const skipRef = useRef(null);
 
   useEffect(() => {
-    try {
-      window.sessionStorage.setItem(INTRO_SESSION_KEY, '1');
-    } catch {
-      // A storage-restricted browser can still play and dismiss the intro.
-    }
-
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     skipRef.current?.focus({ preventScroll: true });

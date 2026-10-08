@@ -100,6 +100,7 @@ describe('shared routing and role guards', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('routes a Vaccinator to staff and shows draft navigation', () => {
@@ -523,6 +524,76 @@ describe('shared routing and role guards', () => {
 
     view.rerender(<MemoryRouter initialEntries={['/app/appointments/book']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+  });
+
+  it('replays the intro on each full Home load, regardless of old session storage', () => {
+    window.sessionStorage.setItem('vaccination-portal-connected-community-intro-seen', '1');
+    const firstLoad = render(<MemoryRouter initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('dialog', { name: 'Vaccination Portal' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.body.style.overflow).toBe('');
+
+    firstLoad.unmount();
+    render(<MemoryRouter initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('dialog', { name: 'Vaccination Portal' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it.each([
+    ['/about', /a system built on responsibility/i],
+    ['/how-it-works', /one system, two journeys/i],
+  ])('does not replay the intro on Home to %s to Home navigation', (path, heading) => {
+    render(<MemoryRouter initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('dialog', { name: 'Vaccination Portal' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+
+    fireEvent.click(screen.getByRole('navigation', { name: 'Main navigation' }).querySelector(`a[href="${path}"]`));
+    expect(screen.getByRole('heading', { level: 1, name: heading })).toBeTruthy();
+    fireEvent.click(screen.getByRole('navigation', { name: 'Main navigation' }).querySelector('a[href="/"]'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('does not show the intro when About is the initial loaded route', () => {
+    render(<MemoryRouter initialEntries={['/about']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('navigation', { name: 'Main navigation' }).querySelector('a[href="/"]'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('keeps the intro off login and authenticated dashboards', () => {
+    const loginLoad = render(<MemoryRouter initialEntries={['/login']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    loginLoad.unmount();
+
+    setAuth({ roles: ['ROLE_CITIZEN'] });
+    render(<MemoryRouter initialEntries={['/app/citizen']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('bypasses the intro on Home reloads with reduced motion enabled', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
+    const firstLoad = render(<MemoryRouter initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    firstLoad.unmount();
+
+    render(<MemoryRouter initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('keeps a single intro in React StrictMode and does not replay after navigation', () => {
+    render(
+      <React.StrictMode>
+        <MemoryRouter initialEntries={['/']}><PortalRoutes /></MemoryRouter>
+      </React.StrictMode>,
+    );
+    expect(screen.getAllByRole('dialog', { name: 'Vaccination Portal' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+    fireEvent.click(screen.getByRole('navigation', { name: 'Main navigation' }).querySelector('a[href="/about"]'));
+    fireEvent.click(screen.getByRole('navigation', { name: 'Main navigation' }).querySelector('a[href="/"]'));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('keeps all three public pages accessible without authentication', () => {

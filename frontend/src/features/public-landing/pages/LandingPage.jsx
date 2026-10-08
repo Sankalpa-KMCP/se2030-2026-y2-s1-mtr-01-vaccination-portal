@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
 import HeroSection from '../components/HeroSection';
@@ -60,10 +60,13 @@ function ContinueBand() {
   );
 }
 
-export default function LandingPage({ onLoginClick }) {
+export default function LandingPage({ onLoginClick, isInitialHomeLoad = false, onIntroAttempted }) {
   const rootRef = useRef(null);
-  const [showIntro, setShowIntro] = useState(shouldShowConnectedCommunityIntro);
+  const [showIntro, setShowIntro] = useState(() => shouldShowConnectedCommunityIntro(isInitialHomeLoad));
   const finishIntro = useCallback(() => setShowIntro(false), []);
+  useEffect(() => {
+    if (isInitialHomeLoad) onIntroAttempted?.();
+  }, [isInitialHomeLoad, onIntroAttempted]);
   useLandingReveal(rootRef);
   usePublicPageTop();
 
