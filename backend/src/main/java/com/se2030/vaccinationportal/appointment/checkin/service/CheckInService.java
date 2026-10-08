@@ -2,6 +2,8 @@ package com.se2030.vaccinationportal.appointment.checkin.service;
 
 import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistPromotionService;
 import com.se2030.vaccinationportal.appointment.api.vaccination.VaccinationStateQuery;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityLookupPort;
+import com.se2030.vaccinationportal.screening.api.eligibility.EligibilityStatus;
 
 
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
@@ -47,18 +49,21 @@ public class CheckInService {
     private final SlotCapacityPort slotCapacityPort;
     private final WaitlistPromotionService promotionService;
     private final VaccinationStateQuery vaccinationStateQuery;
+    private final EligibilityLookupPort eligibilityLookupPort;
 
     @Autowired
     public CheckInService(
             AppointmentRepository appointmentRepository,
             @Autowired(required = false) SlotCapacityPort slotCapacityPort,
             @Autowired(required = false) WaitlistPromotionService promotionService,
-            VaccinationStateQuery vaccinationStateQuery
+            VaccinationStateQuery vaccinationStateQuery,
+            @Autowired(required = false) EligibilityLookupPort eligibilityLookupPort
     ) {
         this.appointmentRepository = appointmentRepository;
         this.slotCapacityPort = slotCapacityPort;
         this.promotionService = promotionService;
         this.vaccinationStateQuery = vaccinationStateQuery;
+        this.eligibilityLookupPort = eligibilityLookupPort;
     }
 
     /**
@@ -268,7 +273,8 @@ public class CheckInService {
         if (slotId == null) {
             return List.of();
         }
-        return appointmentRepository.findBySlotIdAndStatusIn(slotId, List.of(AppointmentStatus.CHECKED_IN));
+        return retainCurrentlyEligible(appointmentRepository.findBySlotIdAndStatusIn(
+                slotId, List.of(AppointmentStatus.CHECKED_IN)));
     }
 
     /**
@@ -296,7 +302,18 @@ public class CheckInService {
         if (slotIds == null || slotIds.isEmpty()) {
             return List.of();
         }
-        return appointmentRepository.findBySlotIdInAndStatusIn(slotIds, List.of(AppointmentStatus.CHECKED_IN));
+        return retainCurrentlyEligible(appointmentRepository.findBySlotIdInAndStatusIn(
+                slotIds, List.of(AppointmentStatus.CHECKED_IN)));
+    }
+
+    private List<Appointment> retainCurrentlyEligible(List<Appointment> appointments) {
+        if (eligibilityLookupPort == null) {
+            throw new IllegalStateException("EligibilityLookupPort implementation (MF-01) is unavailable");
+        }
+        return appointments.stream()
+                .filter(appointment -> eligibilityLookupPort.getCurrentEligibility(
+                        appointment.getCitizenId(), appointment.getCampaignId()) == EligibilityStatus.ELIGIBLE)
+                .toList();
     }
 
     /**

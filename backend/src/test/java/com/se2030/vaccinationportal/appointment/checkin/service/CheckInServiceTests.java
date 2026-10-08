@@ -329,6 +329,25 @@ class CheckInServiceTests {
     }
 
     @Test
+    void getVaccinatorQueueForSlot_revalidatesEligibilityAndExcludesIneligibleCitizen() {
+        Long campaignId = 2001L;
+        Long slotId = 4013L;
+        Instant slotStart = Instant.parse("2026-10-01T10:00:00Z");
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        slotCapacityPortDouble.setSlotStartTime(slotId, slotStart);
+
+        Appointment eligible = bookingService.bookAppointment(1001L, campaignId, slotId);
+        Appointment noLongerEligible = bookingService.bookAppointment(1002L, campaignId, slotId);
+        checkInService.checkIn(eligible.getId(), slotStart);
+        checkInService.checkIn(noLongerEligible.getId(), slotStart);
+        eligibilityPortDouble.setEligibility(1002L, campaignId, EligibilityStatus.NOT_ELIGIBLE);
+
+        List<Appointment> queue = checkInService.getVaccinatorQueueForSlot(slotId);
+
+        assertEquals(List.of(eligible.getId()), queue.stream().map(Appointment::getId).toList());
+    }
+
+    @Test
     void getArrivalQueueForSlot_returnsConfirmedAndCheckedInAppointments() {
         Long campaignId = 2001L;
         Long slotId = 4010L;
