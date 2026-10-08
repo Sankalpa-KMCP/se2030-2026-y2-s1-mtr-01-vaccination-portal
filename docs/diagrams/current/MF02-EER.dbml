@@ -1,0 +1,822 @@
+// MF-02 repository schema at dec3d2c43d1ec8dac4c781634604f28e059fba53
+// Source: all runtime Flyway migrations V0-V26. Local MySQL V0-V24 corroborates all MF-02 tables.
+// Only actual SQL FKs are executable Ref declarations. Logical associations are explicitly documented below.
+Project MF02_EER {
+  database_type: 'MySQL'
+  Note: '22 MF-02-owned tables and 17 scoped external dependencies. V26 history tables and enforced appointment/waitlist/guard FKs are represented; local MySQL has V0-V24.'
+}
+
+Table vaccination_campaigns {
+  id bigint [pk, not null, increment]
+  code varchar(64) [not null]
+  name varchar(128) [not null]
+  description varchar(1000) [null]
+  vaccine_type_id bigint [not null]
+  target_group_id bigint [not null]
+  service_start_date date [not null]
+  service_end_date date [not null]
+  booking_open_at datetime(6) [not null]
+  booking_close_at datetime(6) [not null]
+  status varchar(32) [not null, default: 'DRAFT']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (code) [name: 'uk_vaccination_campaign_code', unique]
+    (status) [name: 'idx_campaign_status']
+    (service_start_date, service_end_date) [name: 'idx_campaign_service_window']
+    (target_group_id) [name: 'fk_campaign_target_group', note: 'Observed InnoDB FK supporting index, automatically created from the declared FK']
+    (vaccine_type_id) [name: 'fk_campaign_vaccine_type', note: 'Observed InnoDB FK supporting index, automatically created from the declared FK']
+  }
+  Note: 'MF-02 | Campaign\nMigration: backend/src/main/resources/db/migration/V0__core_campaign_center_session_foundation.sql'
+}
+
+Table campaign_location_targets {
+  id bigint [pk, not null, increment]
+  campaign_id bigint [not null]
+  target_type varchar(32) [not null]
+  target_code varchar(64) [not null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (campaign_id, target_type, target_code) [name: 'uk_campaign_location_target', unique]
+  }
+  Note: 'MF-02 | Campaign\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql'
+}
+
+Table campaign_dose_programmes {
+  id bigint [pk, not null, increment]
+  campaign_id bigint [not null]
+  version_number int [not null, default: 1]
+  dose_category varchar(32) [not null]
+  permitted_dose_numbers varchar(64) [not null]
+  minimum_interval_days int [not null, default: 0]
+  previous_evidence_required boolean [not null, default: false]
+  expected_service_minutes int [not null, default: 10]
+  active_from date [not null]
+  active_to date [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (campaign_id, version_number) [name: 'uk_campaign_dose_programme_version', unique]
+  }
+  Note: 'MF-02 | Campaign\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql'
+}
+
+Table campaign_lifecycle_events {
+  id bigint [pk, not null, increment]
+  campaign_id bigint [not null]
+  change_type varchar(32) [not null]
+  previous_status varchar(32) [not null]
+  new_status varchar(32) [not null]
+  reason varchar(500) [not null]
+  actor_id varchar(64) [not null]
+  created_at datetime(6) [not null]
+  indexes {
+    (campaign_id, created_at, id) [name: 'idx_campaign_lifecycle_campaign_created']
+  }
+  Note: 'MF-02 | Campaign\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql\nLogical L09: actor_id -> user_accounts.id (NO DB FK). Opaque VARCHAR(64) actor; authenticated user IDs are encoded as strings, but system/fallback actors also exist. Conditional account match only.'
+}
+
+Table campaign_center_assignments {
+  id bigint [pk, not null, increment]
+  campaign_id bigint [not null]
+  center_id bigint [not null]
+  active_from date [not null]
+  active_to date [null]
+  assignment_status varchar(16) [not null, default: 'ACTIVE']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (campaign_id, active_from, id) [name: 'idx_campaign_center_assignment_campaign_history']
+    (center_id, active_from, id) [name: 'idx_campaign_center_assignment_center_history']
+    (campaign_id, center_id, assignment_status, active_from, active_to) [name: 'idx_campaign_center_assignment_overlap']
+  }
+  Note: 'MF-02 | Campaign\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql'
+}
+
+Table campaign_questionnaire_assignments {
+  id bigint [pk, not null, increment]
+  campaign_id bigint [not null]
+  questionnaire_version_id bigint [not null]
+  active_from date [not null]
+  active_to date [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (campaign_id, active_from, active_to) [name: 'idx_cqa_campaign_active']
+    (questionnaire_version_id) [name: 'idx_cqa_qversion']
+  }
+  Note: 'MF-02 | Campaign\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql\nLogical L01: questionnaire_version_id -> questionnaire_version.id (NO DB FK). Publication port checks that the selected version exists and is published. No SQL FK.'
+}
+
+Table vaccination_centers {
+  id bigint [pk, not null, increment]
+  code varchar(32) [not null]
+  name varchar(128) [not null]
+  address varchar(255) [not null]
+  contact varchar(128) [not null]
+  timezone varchar(64) [not null, default: 'UTC']
+  center_status varchar(16) [not null, default: 'ACTIVE']
+  safe_concurrent_occupancy int [not null]
+  session_service_ceiling int [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (code) [name: 'uk_vaccination_center_code', unique]
+    (center_status) [name: 'idx_center_status']
+  }
+  Note: 'MF-02 | Center\nMigration: backend/src/main/resources/db/migration/V0__core_campaign_center_session_foundation.sql'
+}
+
+Table operating_hours {
+  id bigint [pk, not null, increment]
+  center_id bigint [not null]
+  day_of_week varchar(16) [not null]
+  opening_time time [not null]
+  closing_time time [not null]
+  effective_from date [not null]
+  effective_to date [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (center_id, day_of_week) [name: 'idx_operating_hours_center_day']
+  }
+  Note: 'MF-02 | Center\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql'
+}
+
+Table center_closures {
+  id bigint [pk, not null, increment]
+  center_id bigint [not null]
+  start_at datetime(6) [not null]
+  end_at datetime(6) [not null]
+  reason varchar(255) [not null]
+  status varchar(16) [not null, default: 'ACTIVE']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (center_id, start_at, id) [name: 'idx_center_closure_center_start']
+    (center_id, status, start_at, end_at) [name: 'idx_center_closure_active_overlap']
+  }
+  Note: 'MF-02 | Center\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql'
+}
+
+Table operational_resources {
+  id bigint [pk, not null, increment]
+  center_id bigint [not null]
+  code varchar(64) [not null]
+  resource_type varchar(32) [not null]
+  name varchar(128) [not null]
+  status varchar(16) [not null, default: 'ACTIVE']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (center_id, code) [name: 'uk_center_resource_code', unique]
+    (center_id, resource_type, status) [name: 'idx_operational_resource_center_type']
+  }
+  Note: 'MF-02 | Center\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql'
+}
+
+Table operational_staff_rosters {
+  id bigint [pk, not null, increment]
+  center_id bigint [not null]
+  user_id bigint [not null]
+  role varchar(32) [not null]
+  status varchar(16) [not null, default: 'ACTIVE']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (center_id, user_id) [name: 'uk_center_staff_user', unique]
+    (user_id) [name: 'idx_operational_staff_user']
+    (center_id, role, status) [name: 'idx_operational_staff_center_role']
+  }
+  Note: 'MF-02 | Center\nMigration: backend/src/main/resources/db/migration/V0__core_campaign_center_session_foundation.sql\nLogical L02: user_id -> user_accounts.id (NO DB FK). Scalar authenticated staff identity; roster registration does not enforce an account FK or account existence.\nLogical L05: user_id -> operational_staff_identities.user_id (NO DB FK). Registering or modifying a roster ensures and locks the unique user anchor. An application concurrency association, not a database FK.'
+}
+
+Table operational_staff_identities {
+  id bigint [pk, not null, increment]
+  user_id bigint [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  indexes {
+    (user_id) [name: 'uk_operational_staff_identity_user', unique]
+  }
+  Note: 'MF-02 | Center\nMigration: backend/src/main/resources/db/migration/V2__mf02_operational_staff_identity.sql\nLogical L03: user_id -> user_accounts.id (NO DB FK). Unique per-user locking anchor; scalar ID, no account existence constraint. At most one anchor per account.'
+}
+
+Table vaccination_sessions {
+  id bigint [pk, not null, increment]
+  campaign_id bigint [not null]
+  center_id bigint [not null]
+  recurrence_rule_id bigint [null]
+  occurrence_key varchar(64) [null]
+  origin_occurrence_date date [null]
+  start_at datetime(6) [not null]
+  end_at datetime(6) [not null]
+  booking_close_at datetime(6) [not null]
+  schedule_timezone varchar(64) [not null, default: 'UTC']
+  lifecycle_status varchar(16) [not null, default: 'DRAFT']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  booking_suspended boolean [not null, default: false]
+  indexes {
+    (occurrence_key) [name: 'uk_session_occurrence_key', unique]
+    (campaign_id, start_at, end_at, lifecycle_status) [name: 'idx_session_campaign_schedule']
+    (center_id, start_at, end_at, lifecycle_status) [name: 'idx_session_center_schedule']
+    (recurrence_rule_id, origin_occurrence_date) [name: 'idx_session_recurrence_origin']
+  }
+  Note: 'MF-02 | Session\nMigration: backend/src/main/resources/db/migration/V0__core_campaign_center_session_foundation.sql'
+}
+
+Table session_recurrence_rules {
+  id bigint [pk, not null, increment]
+  campaign_id bigint [not null]
+  center_id bigint [not null]
+  start_date date [not null]
+  end_date date [not null]
+  start_time time [not null]
+  end_time time [not null]
+  timezone varchar(64) [not null, default: 'UTC']
+  recurrence_status varchar(16) [not null, default: 'ACTIVE']
+  generation_key varchar(36) [not null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (generation_key) [name: 'uk_recurrence_rule_generation_key', unique]
+    (campaign_id, start_date, end_date, recurrence_status) [name: 'idx_recurrence_rule_campaign_range']
+    (center_id, start_date, end_date, recurrence_status) [name: 'idx_recurrence_rule_center_range']
+  }
+  Note: 'MF-02 | Session\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql'
+}
+
+Table session_recurrence_rule_weekdays {
+  recurrence_rule_id bigint [not null]
+  day_of_week varchar(16) [not null]
+  indexes {
+    (recurrence_rule_id, day_of_week) [name: 'uk_recurrence_rule_weekday', unique]
+  }
+  Note: 'MF-02 | Session\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql\nNO declared PRIMARY KEY. Composite UNIQUE (recurrence_rule_id, day_of_week); do not relabel it as a PK.'
+}
+
+Table session_capacity_plans {
+  id bigint [pk, not null, increment]
+  session_id bigint [not null]
+  revision int [not null, default: 1]
+  duration_minutes int [not null]
+  expected_service_minutes int [not null, default: 10]
+  assigned_vaccinator_count int [not null, default: 0]
+  available_station_count int [not null, default: 0]
+  fully_equipped_station_count int [not null, default: 0]
+  effective_station_count int [not null, default: 0]
+  recommended_throughput int [not null, default: 0]
+  approved_capacity int [not null, default: 0]
+  safe_concurrent_occupancy int [not null]
+  expected_dwell_minutes int [not null, default: 15]
+  expected_accompanying_persons_per_booking double [not null, default: 0.0]
+  session_service_ceiling int [null]
+  override_reason varchar(255) [null]
+  approved_by varchar(64) [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (session_id, revision) [name: 'uk_session_capacity_plan_revision', unique]
+    (session_id, revision) [name: 'idx_capacity_plan_session_rev']
+  }
+  Note: 'MF-02 | Session\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql\nLogical L11: approved_by -> user_accounts.id (NO DB FK). Nullable VARCHAR(64) approval identity derived from AuthenticatedActor.userId(). Encoded string, not a database FK.'
+}
+
+Table session_change_events {
+  id bigint [pk, not null, increment]
+  session_id bigint [not null]
+  change_type varchar(32) [not null]
+  old_center_id bigint [not null]
+  old_schedule_timezone varchar(64) [not null]
+  old_start_at datetime(6) [not null]
+  old_end_at datetime(6) [not null]
+  old_booking_close_at datetime(6) [not null]
+  old_lifecycle_status varchar(16) [not null]
+  new_center_id bigint [not null]
+  new_schedule_timezone varchar(64) [not null]
+  new_start_at datetime(6) [not null]
+  new_end_at datetime(6) [not null]
+  new_booking_close_at datetime(6) [not null]
+  new_lifecycle_status varchar(16) [not null]
+  reason varchar(500) [not null]
+  affected_appointment_count int [not null, default: 0]
+  affected_waitlist_count int [not null, default: 0]
+  actor_id varchar(64) [not null]
+  created_at datetime(6) [not null]
+  indexes {
+    (session_id, created_at, id) [name: 'idx_session_change_session_created']
+  }
+  Note: 'MF-02 | Session\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql\nLogical L07: old_center_id -> vaccination_centers.id (NO DB FK). Embedded schedule snapshot copies a center ID. Historical snapshot, not a FK or a separate entity/table.\nLogical L08: new_center_id -> vaccination_centers.id (NO DB FK). Embedded schedule snapshot copies a center ID. Historical snapshot, not a FK or a separate entity/table.\nLogical L10: actor_id -> user_accounts.id (NO DB FK). Opaque VARCHAR(64) actor; controllers encode the trusted principal ID. Service-level actor values are opaque and not account FK constraints.'
+}
+
+Table session_resource_assignments {
+  id bigint [pk, not null, increment]
+  session_id bigint [not null]
+  resource_id bigint [not null]
+  start_at datetime(6) [not null]
+  end_at datetime(6) [not null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (resource_id, start_at, end_at) [name: 'idx_resource_assignment_resource_window']
+    (session_id) [name: 'idx_resource_assignment_session']
+  }
+  Note: 'MF-02 | Session\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql'
+}
+
+Table session_staff_assignments {
+  id bigint [pk, not null, increment]
+  session_id bigint [not null]
+  staff_roster_id bigint [not null]
+  user_id bigint [not null]
+  role varchar(32) [not null]
+  start_at datetime(6) [not null]
+  end_at datetime(6) [not null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (staff_roster_id, start_at, end_at) [name: 'idx_staff_assignment_roster_window']
+    (user_id, start_at, end_at) [name: 'idx_staff_assignment_user_window']
+    (session_id) [name: 'idx_staff_assignment_session']
+  }
+  Note: 'MF-02 | Session\nMigration: backend/src/main/resources/db/migration/V10__mf02_campaign_session_supporting_tables.sql\nLogical L04: user_id -> user_accounts.id (NO DB FK). Copied staff user identity, resolved against the authenticated principal. No SQL FK.\nLogical L06: user_id -> operational_staff_identities.user_id (NO DB FK). Assignment services ensure and lock the unique user anchor. Not a database FK.'
+}
+
+Table time_slots {
+  id bigint [pk, not null, increment]
+  session_id bigint [not null]
+  start_time timestamp [not null]
+  end_time timestamp [not null]
+  capacity int [not null]
+  reserved_count int [not null, default: 0]
+  lock_version bigint [not null, default: 0]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  indexes {
+    (session_id) [name: 'idx_time_slot_session']
+    (start_time) [name: 'idx_time_slot_start_time']
+  }
+  Note: 'MF-02 | Session\nMigration: backend/src/main/resources/db/migration/V3__mf02_time_slot.sql\nCHECK chk_time_slots_capacity_positive: capacity > 0\nCHECK chk_time_slots_reserved_nonnegative: reserved_count >= 0\nCHECK chk_time_slots_reserved_within_capacity: reserved_count <= capacity\nCHECK chk_time_slots_time_order: start_time < end_time'
+}
+
+Table vaccine_types {
+  id bigint [pk, not null, increment]
+  code varchar(64) [not null]
+  name varchar(128) [not null]
+  dose_unit varchar(32) [not null, default: 'dose']
+  active boolean [not null, default: true]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (code) [name: 'uk_vaccine_type_code', unique]
+  }
+  Note: 'MF-02 | Shared/reference\nMigration: backend/src/main/resources/db/migration/V0__core_campaign_center_session_foundation.sql'
+}
+
+Table target_groups {
+  id bigint [pk, not null, increment]
+  code varchar(64) [not null]
+  description varchar(255) [not null]
+  active boolean [not null, default: true]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (code) [name: 'uk_target_group_code', unique]
+  }
+  Note: 'MF-02 | Shared/reference\nMigration: backend/src/main/resources/db/migration/V0__core_campaign_center_session_foundation.sql'
+}
+
+Table user_accounts {
+  id bigint [pk, not null, increment]
+  full_name varchar(255) [null]
+  email varchar(255) [not null]
+  phone_number varchar(32) [null]
+  password_hash varchar(255) [not null]
+  account_status varchar(32) [not null, default: 'ACTIVE']
+  requested_role_id bigint [null]
+  reviewed_by_user_id bigint [null]
+  reviewed_at timestamp [null]
+  rejection_reason varchar(500) [null]
+  email_verified_at timestamp [null]
+  locked_until timestamp [null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  failed_login_attempts int [not null, default: 0]
+  indexes {
+    (email) [name: 'uk_user_accounts_email', unique]
+    (account_status, created_at) [name: 'idx_user_accounts_status_created']
+    (requested_role_id) [name: 'idx_user_accounts_requested_role']
+    (reviewed_by_user_id) [name: 'fk_user_accounts_reviewer', note: 'Observed InnoDB FK supporting index, automatically created from the declared FK']
+  }
+  Note: 'Shared authentication | External dependencies\nMigration: backend/src/main/resources/db/migration/V4__shared_authentication_foundation.sql'
+}
+
+Table roles {
+  id bigint [pk, not null, increment]
+  code varchar(64) [not null]
+  name varchar(128) [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  indexes {
+    (code) [name: 'uk_roles_code', unique]
+  }
+  Note: 'Shared authentication | External dependencies\nMigration: backend/src/main/resources/db/migration/V4__shared_authentication_foundation.sql'
+}
+
+Table questionnaire {
+  id bigint [pk, not null, increment]
+  code varchar(64) [not null]
+  name varchar(255) [not null]
+  description text [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (code) [name: 'code', unique]
+  }
+  Note: 'MF-01 | External dependencies\nMigration: backend/src/main/resources/db/migration/V5__mf01_screening_foundation.sql'
+}
+
+Table questionnaire_version {
+  id bigint [pk, not null, increment]
+  questionnaire_id bigint [not null]
+  version_number int [not null]
+  status varchar(32) [not null, default: 'DRAFT']
+  published_at datetime(6) [null]
+  retired_at datetime(6) [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (questionnaire_id, version_number) [name: 'uq_questionnaire_version', unique]
+  }
+  Note: 'MF-01 | External dependencies\nMigration: backend/src/main/resources/db/migration/V5__mf01_screening_foundation.sql'
+}
+
+Table consent_notice_version {
+  id bigint [pk, not null, increment]
+  notice_code varchar(64) [not null]
+  version_number int [not null]
+  title varchar(255) [not null]
+  content text [not null]
+  content_hash varchar(128) [not null]
+  published_at datetime(6) [not null]
+  retired_at datetime(6) [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (notice_code, version_number) [name: 'uq_consent_notice_version', unique]
+  }
+  Note: 'MF-01 | External dependencies\nMigration: backend/src/main/resources/db/migration/V5__mf01_screening_foundation.sql'
+}
+
+Table screening_submission {
+  id bigint [pk, not null, increment]
+  citizen_id bigint [not null]
+  campaign_id bigint [not null]
+  version_id bigint [not null]
+  consent_notice_version_id bigint [not null]
+  status varchar(32) [not null, default: 'DRAFT']
+  preliminary_result varchar(64) [null]
+  consent_at datetime(6) [not null]
+  submitted_at datetime(6) [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  correction_instructions text [null]
+  correction_requested_at datetime(6) [null]
+  active_campaign_id bigint [null, note: 'GENERATED ALWAYS AS (CASE WHEN status IN (\'DRAFT\', \'PENDING_REVIEW\', \'CORRECTIONS_REQUIRED\') THEN campaign_id ELSE NULL END) STORED']
+  indexes {
+    (citizen_id, campaign_id) [name: 'idx_sub_citizen_campaign']
+    (status) [name: 'idx_sub_status']
+    (citizen_id, active_campaign_id) [name: 'uk_screening_submission_active_citizen_campaign', unique]
+    (consent_notice_version_id) [name: 'fk_screening_sub_consent', note: 'Observed InnoDB FK supporting index, automatically created from the declared FK']
+    (version_id) [name: 'fk_screening_sub_version', note: 'Observed InnoDB FK supporting index, automatically created from the declared FK']
+  }
+  Note: 'MF-01 | External dependencies\nMigration: backend/src/main/resources/db/migration/V5__mf01_screening_foundation.sql\nLogical L12: campaign_id -> vaccination_campaigns.id (NO DB FK). MF-01 scalar campaign identity; submission service uses CampaignScreeningReader and the effective questionnaire assignment.'
+}
+
+Table eligibility_assessment {
+  id bigint [pk, not null, increment]
+  submission_id bigint [not null]
+  citizen_id bigint [not null]
+  campaign_id bigint [not null]
+  reviewer_id bigint [not null]
+  status varchar(32) [not null]
+  preliminary_result varchar(64) [not null]
+  reason text [not null]
+  clinical_notes text [null]
+  reviewed_at datetime(6) [not null]
+  valid_until datetime(6) [null]
+  revoked_at datetime(6) [null]
+  revocation_reason text [null]
+  rescreening_authorized_at datetime(6) [null]
+  rescreening_authorized_by bigint [null]
+  rescreening_reason text [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (submission_id) [name: 'submission_id', unique]
+    (citizen_id, campaign_id, status) [name: 'idx_assess_citizen_campaign']
+  }
+  Note: 'MF-01 | External dependencies\nMigration: backend/src/main/resources/db/migration/V5__mf01_screening_foundation.sql\nLogical L13: campaign_id -> vaccination_campaigns.id (NO DB FK). MF-01 assessment retains scalar campaign ID associated with screening. No campaign FK.'
+}
+
+Table appointment {
+  id bigint [pk, not null, increment]
+  citizen_id bigint [not null]
+  campaign_id bigint [not null]
+  slot_id bigint [not null]
+  status varchar(32) [not null]
+  booked_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  cancelled_at timestamp [null]
+  lock_version bigint [not null, default: 0]
+  active_campaign_id bigint [null, note: 'GENERATED ALWAYS AS (CASE WHEN status IN (\'CONFIRMED\', \'CHECKED_IN\') THEN campaign_id ELSE NULL END) STORED']
+  indexes {
+    (citizen_id, active_campaign_id) [name: 'uk_appointment_active_citizen_campaign', unique]
+    (citizen_id) [name: 'idx_appointment_citizen']
+    (campaign_id) [name: 'idx_appointment_campaign']
+    (slot_id) [name: 'idx_appointment_slot']
+    (status) [name: 'idx_appointment_status']
+  }
+  Note: 'MF-03 | External dependencies\nMigration: backend/src/main/resources/db/migration/V1__mf03_appointment_foundation.sql'
+}
+
+Table citizen_campaign_booking_guard {
+  id bigint [pk, not null, increment]
+  citizen_id bigint [not null]
+  campaign_id bigint [not null]
+  lock_version bigint [not null, default: 0]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  indexes {
+    (citizen_id, campaign_id) [name: 'uk_booking_guard_citizen_campaign', unique]
+    (citizen_id) [name: 'idx_booking_guard_citizen']
+    (campaign_id) [name: 'idx_booking_guard_campaign']
+  }
+  Note: 'MF-03 | External dependencies\nMigration: backend/src/main/resources/db/migration/V1__mf03_appointment_foundation.sql'
+}
+
+Table waitlist_entry {
+  id bigint [pk, not null, increment]
+  citizen_id bigint [not null]
+  campaign_id bigint [not null]
+  session_id bigint [not null]
+  status varchar(32) [not null]
+  joined_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  lock_version bigint [not null, default: 0]
+  active_session_id bigint [null, note: 'GENERATED ALWAYS AS (CASE WHEN status = \'WAITING\' THEN session_id ELSE NULL END) STORED']
+  indexes {
+    (citizen_id) [name: 'idx_waitlist_citizen']
+    (campaign_id) [name: 'idx_waitlist_campaign']
+    (session_id, status, joined_at) [name: 'idx_waitlist_session_status_joined']
+    (citizen_id, active_session_id) [name: 'uk_waitlist_active_citizen_session', unique]
+  }
+  Note: 'MF-03 | External dependencies\nMigration: backend/src/main/resources/db/migration/V7__mf03_waitlist_foundation.sql'
+}
+
+Table vaccination_records {
+  id bigint [pk, not null, increment]
+  appointment_id bigint [not null]
+  citizen_id bigint [not null]
+  campaign_id bigint [not null]
+  center_id bigint [not null]
+  vaccinator_id bigint [not null]
+  vaccine_batch_id bigint [not null]
+  dose_number int [not null]
+  administration_time datetime(6) [not null]
+  next_dose_date date [null]
+  authorized_notes varchar(2000) [null]
+  finalized_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes {
+    (appointment_id) [name: 'uk_vaccination_record_appointment', unique]
+    (citizen_id, administration_time) [name: 'idx_vaccination_record_citizen_administered']
+    (vaccine_batch_id) [name: 'idx_vaccination_record_batch']
+    (campaign_id) [name: 'fk_vaccination_record_campaign', note: 'Observed InnoDB FK supporting index, automatically created from the declared FK']
+    (center_id) [name: 'fk_vaccination_record_center', note: 'Observed InnoDB FK supporting index, automatically created from the declared FK']
+  }
+  Note: 'MF-05 | External dependencies\nMigration: backend/src/main/resources/db/migration/V11__mf05_vaccination_foundation.sql'
+}
+
+Table manufacturers {
+  id bigint [pk, not null, increment]
+  code varchar(64) [not null]
+  name varchar(128) [not null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (code) [name: 'uk_manufacturer_code', unique]
+    (name) [name: 'uk_manufacturer_name', unique]
+  }
+  Note: 'MF-04 | External dependencies\nMigration: backend/src/main/resources/db/migration/V15__mf04_inventory_foundation.sql\nCHECK chk_manufacturer_code_not_blank: TRIM(code) <> \'\'\nCHECK chk_manufacturer_name_not_blank: TRIM(name) <> \'\''
+}
+
+Table vaccine_batches {
+  id bigint [pk, not null, increment]
+  manufacturer_id bigint [not null]
+  vaccine_type_id bigint [not null]
+  batch_number varchar(128) [not null]
+  manufacture_date date [not null]
+  expiry_date date [not null]
+  batch_status varchar(32) [not null, default: 'ACTIVE']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (manufacturer_id, vaccine_type_id, batch_number) [name: 'uk_vaccine_batch_identity', unique]
+    (vaccine_type_id) [name: 'idx_vaccine_batch_vaccine_type']
+    (batch_status) [name: 'idx_vaccine_batch_status']
+    (expiry_date) [name: 'idx_vaccine_batch_expiry_date']
+  }
+  Note: 'MF-04 | External dependencies\nMigration: backend/src/main/resources/db/migration/V15__mf04_inventory_foundation.sql\nCHECK chk_vaccine_batch_number_not_blank: TRIM(batch_number) <> \'\'\nCHECK chk_vaccine_batch_dates: manufacture_date < expiry_date\nCHECK chk_vaccine_batch_status:  batch_status IN (\'ACTIVE\', \'QUARANTINED\', \'RECALLED\', \'EXPIRED\', \'INACTIVE\') '
+}
+
+Table center_inventories {
+  id bigint [pk, not null, increment]
+  center_id bigint [not null]
+  batch_id bigint [not null]
+  quantity int [not null, default: 0]
+  lock_version bigint [not null, default: 0]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`, note: 'ON UPDATE CURRENT_TIMESTAMP(6)']
+  indexes {
+    (center_id, batch_id) [name: 'uk_center_inventory_center_batch', unique]
+    (batch_id) [name: 'idx_center_inventory_batch']
+    (center_id, quantity) [name: 'idx_center_inventory_center_quantity']
+  }
+  Note: 'MF-04 | External dependencies\nMigration: backend/src/main/resources/db/migration/V15__mf04_inventory_foundation.sql\nCHECK chk_center_inventory_quantity: quantity >= 0'
+}
+
+Table stock_transfers {
+  id bigint [pk, not null, increment]
+  correlation_id varchar(64) [not null]
+  batch_id bigint [not null]
+  source_center_id bigint [not null]
+  destination_center_id bigint [not null]
+  quantity int [not null]
+  status varchar(32) [not null]
+  requested_by bigint [not null]
+  completed_at datetime(6) [null]
+  reason varchar(500) [null]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes {
+    (correlation_id) [name: 'uk_stock_transfer_correlation', unique]
+    (batch_id) [name: 'idx_stock_transfer_batch']
+    (source_center_id) [name: 'idx_stock_transfer_source_center']
+    (destination_center_id) [name: 'idx_stock_transfer_destination_center']
+    (requested_by) [name: 'idx_stock_transfer_requested_by']
+    (status, created_at) [name: 'idx_stock_transfer_status_created']
+  }
+  Note: 'MF-04 | External dependencies\nMigration: backend/src/main/resources/db/migration/V15__mf04_inventory_foundation.sql\nCHECK chk_stock_transfer_correlation_not_blank: TRIM(correlation_id) <> \'\'\nCHECK chk_stock_transfer_quantity: quantity > 0\nCHECK chk_stock_transfer_distinct_centers: source_center_id <> destination_center_id'
+}
+
+Table appointment_change_event {
+  id bigint [pk, not null, increment]
+  appointment_id bigint [not null]
+  source_session_change_event_id bigint [null]
+  change_type varchar(40) [not null]
+  old_slot_id bigint [null]
+  new_slot_id bigint [null]
+  reason varchar(500) [null]
+  actor_id varchar(64) [null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  indexes {
+    (appointment_id, source_session_change_event_id, change_type) [name: 'uk_appointment_change_session_event', unique]
+    (appointment_id, created_at, id) [name: 'idx_appointment_change_history']
+  }
+  Note: 'MF-03 | External dependencies\nMigration: backend/src/main/resources/db/migration/V26__mf03_history_and_event_consumption.sql'
+}
+
+Table waitlist_change_event {
+  id bigint [pk, not null, increment]
+  waitlist_entry_id bigint [not null]
+  source_session_change_event_id bigint [null]
+  old_status varchar(40) [null]
+  new_status varchar(40) [not null]
+  reason varchar(500) [null]
+  actor_id varchar(64) [null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  indexes {
+    (waitlist_entry_id, source_session_change_event_id) [name: 'uk_waitlist_change_session_event', unique]
+    (waitlist_entry_id, created_at, id) [name: 'idx_waitlist_change_history']
+  }
+  Note: 'MF-03 | External dependencies\nMigration: backend/src/main/resources/db/migration/V26__mf03_history_and_event_consumption.sql'
+}
+
+Ref fk_campaign_vaccine_type: vaccination_campaigns.vaccine_type_id > vaccine_types.id [delete: restrict, update: no action]
+Ref fk_campaign_target_group: vaccination_campaigns.target_group_id > target_groups.id [delete: restrict, update: no action]
+Ref fk_clt_campaign: campaign_location_targets.campaign_id > vaccination_campaigns.id [delete: cascade, update: no action]
+Ref fk_cdp_campaign: campaign_dose_programmes.campaign_id > vaccination_campaigns.id [delete: cascade, update: no action]
+Ref fk_cle_campaign: campaign_lifecycle_events.campaign_id > vaccination_campaigns.id [delete: cascade, update: no action]
+Ref fk_cca_campaign: campaign_center_assignments.campaign_id > vaccination_campaigns.id [delete: cascade, update: no action]
+Ref fk_cca_center: campaign_center_assignments.center_id > vaccination_centers.id [delete: restrict, update: no action]
+Ref fk_cqa_campaign: campaign_questionnaire_assignments.campaign_id > vaccination_campaigns.id [delete: cascade, update: no action]
+Ref fk_operating_hours_center: operating_hours.center_id > vaccination_centers.id [delete: cascade, update: no action]
+Ref fk_center_closure_center: center_closures.center_id > vaccination_centers.id [delete: cascade, update: no action]
+Ref fk_resource_center: operational_resources.center_id > vaccination_centers.id [delete: cascade, update: no action]
+Ref fk_staff_roster_center: operational_staff_rosters.center_id > vaccination_centers.id [delete: cascade, update: no action]
+Ref fk_session_campaign: vaccination_sessions.campaign_id > vaccination_campaigns.id [delete: cascade, update: no action]
+Ref fk_session_center: vaccination_sessions.center_id > vaccination_centers.id [delete: restrict, update: no action]
+Ref fk_session_recurrence_rule: vaccination_sessions.recurrence_rule_id > session_recurrence_rules.id [delete: set null, update: no action]
+Ref fk_srr_campaign: session_recurrence_rules.campaign_id > vaccination_campaigns.id [delete: cascade, update: no action]
+Ref fk_srr_center: session_recurrence_rules.center_id > vaccination_centers.id [delete: restrict, update: no action]
+Ref fk_srrw_recurrence_rule: session_recurrence_rule_weekdays.recurrence_rule_id > session_recurrence_rules.id [delete: cascade, update: no action]
+Ref fk_scp_session: session_capacity_plans.session_id > vaccination_sessions.id [delete: cascade, update: no action]
+Ref fk_sce_session: session_change_events.session_id > vaccination_sessions.id [delete: cascade, update: no action]
+Ref fk_sra_session: session_resource_assignments.session_id > vaccination_sessions.id [delete: cascade, update: no action]
+Ref fk_sra_resource: session_resource_assignments.resource_id > operational_resources.id [delete: restrict, update: no action]
+Ref fk_ssa_session: session_staff_assignments.session_id > vaccination_sessions.id [delete: cascade, update: no action]
+Ref fk_ssa_roster: session_staff_assignments.staff_roster_id > operational_staff_rosters.id [delete: restrict, update: no action]
+Ref fk_time_slot_session: time_slots.session_id > vaccination_sessions.id [delete: cascade, update: no action]
+Ref fk_user_accounts_requested_role: user_accounts.requested_role_id > roles.id [delete: set null, update: no action]
+Ref fk_user_accounts_reviewer: user_accounts.reviewed_by_user_id > user_accounts.id [delete: set null, update: no action]
+Ref fk_questionnaire_version_questionnaire: questionnaire_version.questionnaire_id > questionnaire.id [delete: restrict, update: no action]
+Ref fk_screening_sub_version: screening_submission.version_id > questionnaire_version.id [delete: restrict, update: no action]
+Ref fk_screening_sub_consent: screening_submission.consent_notice_version_id > consent_notice_version.id [delete: restrict, update: no action]
+Ref fk_eligibility_assessment_sub: eligibility_assessment.submission_id - screening_submission.id [delete: restrict, update: no action]
+Ref fk_appointment_citizen: appointment.citizen_id > user_accounts.id [delete: no action, update: no action]
+Ref fk_appointment_campaign: appointment.campaign_id > vaccination_campaigns.id [delete: no action, update: no action]
+Ref fk_appointment_slot: appointment.slot_id > time_slots.id [delete: no action, update: no action]
+Ref fk_booking_guard_citizen: citizen_campaign_booking_guard.citizen_id > user_accounts.id [delete: no action, update: no action]
+Ref fk_booking_guard_campaign: citizen_campaign_booking_guard.campaign_id > vaccination_campaigns.id [delete: no action, update: no action]
+Ref fk_waitlist_citizen: waitlist_entry.citizen_id > user_accounts.id [delete: no action, update: no action]
+Ref fk_waitlist_campaign: waitlist_entry.campaign_id > vaccination_campaigns.id [delete: no action, update: no action]
+Ref fk_waitlist_session: waitlist_entry.session_id > vaccination_sessions.id [delete: no action, update: no action]
+Ref fk_vaccination_record_appointment: vaccination_records.appointment_id - appointment.id [delete: restrict, update: no action]
+Ref fk_vaccination_record_campaign: vaccination_records.campaign_id > vaccination_campaigns.id [delete: restrict, update: no action]
+Ref fk_vaccination_record_center: vaccination_records.center_id > vaccination_centers.id [delete: restrict, update: no action]
+Ref fk_vaccine_batch_manufacturer: vaccine_batches.manufacturer_id > manufacturers.id [delete: restrict, update: no action]
+Ref fk_vaccine_batch_vaccine_type: vaccine_batches.vaccine_type_id > vaccine_types.id [delete: restrict, update: no action]
+Ref fk_center_inventory_center: center_inventories.center_id > vaccination_centers.id [delete: restrict, update: no action]
+Ref fk_center_inventory_batch: center_inventories.batch_id > vaccine_batches.id [delete: restrict, update: no action]
+Ref fk_stock_transfer_batch: stock_transfers.batch_id > vaccine_batches.id [delete: restrict, update: no action]
+Ref fk_stock_transfer_source_center: stock_transfers.source_center_id > vaccination_centers.id [delete: restrict, update: no action]
+Ref fk_stock_transfer_destination_center: stock_transfers.destination_center_id > vaccination_centers.id [delete: restrict, update: no action]
+Ref fk_appointment_change_appointment: appointment_change_event.appointment_id > appointment.id [delete: no action, update: no action]
+Ref fk_appointment_change_session_event: appointment_change_event.source_session_change_event_id > session_change_events.id [delete: no action, update: no action]
+Ref fk_waitlist_change_entry: waitlist_change_event.waitlist_entry_id > waitlist_entry.id [delete: no action, update: no action]
+Ref fk_waitlist_change_session_event: waitlist_change_event.source_session_change_event_id > session_change_events.id [delete: no action, update: no action]
+
+// Application-only relationships. NOT SQL constraints. Parent existence is not guaranteed by this schema.
+// L01 campaign_questionnaire_assignments.questionnaire_version_id -> questionnaire_version.id: Publication port checks that the selected version exists and is published. No SQL FK.
+// L02 operational_staff_rosters.user_id -> user_accounts.id: Scalar authenticated staff identity; roster registration does not enforce an account FK or account existence.
+// L03 operational_staff_identities.user_id -> user_accounts.id: Unique per-user locking anchor; scalar ID, no account existence constraint. At most one anchor per account.
+// L04 session_staff_assignments.user_id -> user_accounts.id: Copied staff user identity, resolved against the authenticated principal. No SQL FK.
+// L05 operational_staff_rosters.user_id -> operational_staff_identities.user_id: Registering or modifying a roster ensures and locks the unique user anchor. An application concurrency association, not a database FK.
+// L06 session_staff_assignments.user_id -> operational_staff_identities.user_id: Assignment services ensure and lock the unique user anchor. Not a database FK.
+// L07 session_change_events.old_center_id -> vaccination_centers.id: Embedded schedule snapshot copies a center ID. Historical snapshot, not a FK or a separate entity/table.
+// L08 session_change_events.new_center_id -> vaccination_centers.id: Embedded schedule snapshot copies a center ID. Historical snapshot, not a FK or a separate entity/table.
+// L09 campaign_lifecycle_events.actor_id -> user_accounts.id: Opaque VARCHAR(64) actor; authenticated user IDs are encoded as strings, but system/fallback actors also exist. Conditional account match only.
+// L10 session_change_events.actor_id -> user_accounts.id: Opaque VARCHAR(64) actor; controllers encode the trusted principal ID. Service-level actor values are opaque and not account FK constraints.
+// L11 session_capacity_plans.approved_by -> user_accounts.id: Nullable VARCHAR(64) approval identity derived from AuthenticatedActor.userId(). Encoded string, not a database FK.
+// L12 screening_submission.campaign_id -> vaccination_campaigns.id: MF-01 scalar campaign identity; submission service uses CampaignScreeningReader and the effective questionnaire assignment.
+// L13 eligibility_assessment.campaign_id -> vaccination_campaigns.id: MF-01 assessment retains scalar campaign ID associated with screening. No campaign FK.
+
+TableGroup Campaign {
+  vaccination_campaigns
+  campaign_location_targets
+  campaign_dose_programmes
+  campaign_lifecycle_events
+  campaign_center_assignments
+  campaign_questionnaire_assignments
+}
+
+TableGroup Center {
+  vaccination_centers
+  operating_hours
+  center_closures
+  operational_resources
+  operational_staff_rosters
+  operational_staff_identities
+}
+
+TableGroup Session {
+  vaccination_sessions
+  session_recurrence_rules
+  session_recurrence_rule_weekdays
+  session_capacity_plans
+  session_change_events
+  session_resource_assignments
+  session_staff_assignments
+  time_slots
+}
+
+TableGroup Shared_reference {
+  vaccine_types
+  target_groups
+}
+
+TableGroup External_dependencies {
+  user_accounts
+  roles
+  questionnaire
+  questionnaire_version
+  consent_notice_version
+  screening_submission
+  eligibility_assessment
+  appointment
+  citizen_campaign_booking_guard
+  waitlist_entry
+  vaccination_records
+  manufacturers
+  vaccine_batches
+  center_inventories
+  stock_transfers
+  appointment_change_event
+  waitlist_change_event
+}
