@@ -51,6 +51,8 @@ class TimeSlotIntegrityMigrationMySqlIntegrationTests extends AbstractIsolatedMy
     @DynamicPropertySource
     static void isolatedDatabase(DynamicPropertyRegistry registry) {
         configureIsolatedDatabase(registry, "historical_slots_v13");
+        // Apply V13 explicitly below, rather than applying it once during startup as well.
+        registry.add("spring.flyway.enabled", () -> "false");
     }
 
     private static final String MIGRATION = "db/migration/V13__mf02_time_slot_integrity_constraints.sql";
