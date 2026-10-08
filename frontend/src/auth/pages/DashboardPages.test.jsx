@@ -160,7 +160,7 @@ describe('role dashboards', () => {
     expect(screen.getByRole('heading', { name: 'Welcome, Vera Vaccinator' })).toBeTruthy();
 
     const workspace = screen.getByRole('region', { name: /vaccinator workspace/i });
-    expect(within(workspace).getByRole('heading', { name: 'Ready for Vaccination' })).toBeTruthy();
+    expect(within(workspace).getByRole('heading', { name: "Today's Checked-In Patients" })).toBeTruthy();
     expect(within(workspace).getByText('Ready Patients')).toBeTruthy();
     expect(within(workspace).getByText('Corrections Needed')).toBeTruthy();
     expect(within(workspace).getByText('Finalized Today')).toBeTruthy();
