@@ -38,4 +38,3 @@ async (page) => {
   mode = 'error'; await page.reload(); await page.getByText('Results unavailable', {exact:true}).waitFor();
   return report;
 }
-

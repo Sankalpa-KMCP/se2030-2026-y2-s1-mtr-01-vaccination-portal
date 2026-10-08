@@ -18,4 +18,3 @@ async (page) => {
   const overflow = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
   console.log(JSON.stringify(overflow));
 }
-

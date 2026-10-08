@@ -44,4 +44,3 @@ export default function CreatureArtwork({ creature, mode, covered }) {
     </svg>
   );
 }
-

@@ -22,5 +22,3 @@ async (page) => {
   await page.getByRole('button',{name:'Explore appointments',exact:true}).waitFor();
   await page.screenshot({path:'output/playwright/assistant-premium-mobile-conversation.png'});
 }
-
-

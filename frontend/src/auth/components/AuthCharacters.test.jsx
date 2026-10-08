@@ -249,7 +249,7 @@ describe('Privacy and login state', () => {
     useAuth.mockReturnValue({ login, loginError: '', clearLoginError: vi.fn() });
     render(<MemoryRouter initialEntries={['/login']}><AuthCharacterProvider><Routes>
       <Route path="/login" element={<main className="auth-workspace"><AuthCharacterGroup /><LoginPage /></main>} />
-      <Route path="/app/citizen" element={<h1>Citizen dashboard</h1>} />
+      <Route path="/app/citizen/welcome" element={<h1>Citizen welcome</h1>} />
     </Routes></AuthCharacterProvider></MemoryRouter>);
     fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'citizen@example.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'test-password' } });
@@ -257,9 +257,8 @@ describe('Privacy and login state', () => {
     expect(group().dataset.mode).toBe('submitting');
     await act(async () => complete({ success, user: { roles: ['ROLE_CITIZEN'] } }));
     if (success) {
-      expect(screen.getByRole('heading', { name: 'Citizen dashboard' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Citizen welcome' })).toBeTruthy();
       expect(screen.getByTestId('character-celebration')).toBeTruthy();
     } else expect(group().dataset.mode).toBe('failure');
   });
 });
-
