@@ -1,9 +1,30 @@
-.inventory-dashboard .summary-card { border: 0; border-left: .3rem solid var(--bs-primary); min-height: 8.5rem; }
-.inventory-dashboard .summary-icon { width: 2.6rem; height: 2.6rem; display: grid; place-items: center; border-radius: .75rem; }
-.inventory-dashboard .inventory-alert { border-left-width: .3rem; }
-.inventory-dashboard .table thead th { white-space: nowrap; font-size: .78rem; text-transform: uppercase; letter-spacing: .035em; }
-.inventory-dashboard .sortable { border: 0; background: transparent; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; }
-.inventory-dashboard .quick-action { min-height: 5rem; text-align: left; }
-.inventory-dashboard .filter-panel { background: var(--bs-tertiary-bg); }
-.inventory-modal { background: rgba(10, 25, 35, .55); }
-@media (max-width: 767.98px) { .inventory-dashboard .table { font-size: .88rem; } }
+.inventory-dashboard { padding-bottom: 2rem; }
+.inventory-dashboard .inventory-panel,
+.inventory-dashboard .inventory-metric { border: 1px solid var(--bs-border-color); border-radius: 1rem; box-shadow: 0 .35rem 1.25rem rgba(24, 51, 67, .055); overflow: hidden; }
+.inventory-dashboard .inventory-metric { border-top: .25rem solid var(--bs-primary); }
+.inventory-dashboard .inventory-metric--success { border-top-color: var(--bs-success); }
+.inventory-dashboard .inventory-metric--warning { border-top-color: var(--bs-warning); }
+.inventory-metric__label { color: var(--bs-secondary-color); font-size: .76rem; font-weight: 700; letter-spacing: .055em; text-transform: uppercase; margin-bottom: .6rem; }
+.inventory-metric__value { display: block; color: var(--bs-emphasis-color); font-size: clamp(1.8rem, 3vw, 2.4rem); line-height: 1.1; margin-bottom: .4rem; }
+.inventory-metric__icon { width: 2.9rem; height: 2.9rem; flex: 0 0 2.9rem; display: grid; place-items: center; border-radius: .9rem; background: var(--bs-tertiary-bg); font-size: 1.35rem; }
+.inventory-nav { display: flex; gap: .35rem; overflow-x: auto; padding: .35rem; border: 1px solid var(--bs-border-color); border-radius: .85rem; background: var(--bs-tertiary-bg); scrollbar-width: thin; }
+.inventory-nav__item { flex: 0 0 auto; border: 0; border-radius: .6rem; padding: .7rem .95rem; background: transparent; color: var(--bs-secondary-color); font-size: .9rem; font-weight: 600; white-space: nowrap; }
+.inventory-nav__item:hover { color: var(--bs-primary); background: var(--bs-body-bg); }
+.inventory-nav__item.is-active { color: var(--bs-primary); background: var(--bs-body-bg); box-shadow: 0 .1rem .5rem rgba(24, 51, 67, .09); }
+.inventory-nav__item:focus-visible,
+.inventory-sort:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+.inventory-panel__header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; padding: 1.2rem 1.35rem; background: var(--bs-body-bg); border-bottom: 1px solid var(--bs-border-color); }
+.inventory-filters { padding: 1rem 1.35rem; background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); }
+.inventory-dashboard .table { --bs-table-bg: transparent; }
+.inventory-dashboard .table thead th { color: var(--bs-secondary-color); background: var(--bs-tertiary-bg); white-space: nowrap; font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; border-bottom-width: 1px; }
+.inventory-dashboard .table td,
+.inventory-dashboard .table th { padding: .85rem 1rem; vertical-align: middle; }
+.inventory-dashboard .table td { font-size: .88rem; }
+.inventory-sort { border: 0; background: transparent; color: inherit; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; }
+.inventory-row-actions { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 11rem; }
+.inventory-row-actions .btn { white-space: nowrap; }
+.inventory-alert { border-left-width: .28rem; border-radius: .55rem; }
+.inventory-modal { background: rgba(13, 30, 43, .62); overflow-y: auto; }
+.inventory-operation-context { display: grid; gap: .2rem; padding: .85rem 1rem; border-radius: .65rem; background: var(--bs-tertiary-bg); }
+.inventory-operation-context span { color: var(--bs-secondary-color); font-size: .88rem; }
+@media (max-width: 767.98px) { .inventory-dashboard .table { min-width: 670px; } .inventory-dashboard .table td, .inventory-dashboard .table th { padding: .7rem .75rem; } }

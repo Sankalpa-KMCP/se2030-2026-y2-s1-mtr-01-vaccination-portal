@@ -78,8 +78,16 @@ public class StockTransaction {
         return transaction;
     }
 
+    public static StockTransaction transferChange(Long inventoryId, Long transferId,
+            StockTransactionType type, int delta, int beforeQty, Long actorId, String reason) {
+        StockTransaction transaction = stockChange(inventoryId, type, delta, beforeQty, actorId, reason);
+        transaction.stockTransferId = transferId;
+        return transaction;
+    }
+
     public Long getId() { return id; }
     public Long getInventoryId() { return inventoryId; }
+    public Long getStockTransferId() { return stockTransferId; }
     public Long getVaccinationRecordId() { return vaccinationRecordId; }
     public StockTransactionType getType() { return type; }
     public int getDelta() { return delta; }

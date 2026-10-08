@@ -5,11 +5,13 @@ import com.se2030.vaccinationportal.inventory.dto.request.ManufacturerRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.VaccineBatchRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.StockAdjustmentRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.StockReceiptRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.StockTransferRequest;
 import com.se2030.vaccinationportal.inventory.dto.response.CenterInventoryResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.InventoryReferenceDataResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.ManufacturerResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.VaccineBatchResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.StockTransactionResponse;
+import com.se2030.vaccinationportal.inventory.dto.response.StockTransferResponse;
 import com.se2030.vaccinationportal.inventory.service.InventoryManagementService;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import jakarta.validation.Valid;
@@ -89,6 +91,15 @@ public class InventoryManagementController {
 
     @GetMapping("/transactions")
     public List<StockTransactionResponse> transactions() { return service.recentTransactions(); }
+
+    @GetMapping("/transfers")
+    public List<StockTransferResponse> transfers() { return service.recentTransfers(); }
+
+    @PostMapping("/operations/transfers") @ResponseStatus(HttpStatus.CREATED)
+    public StockTransferResponse transferStock(@Valid @RequestBody StockTransferRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return service.transferStock(request, principal.getUserId());
+    }
 
     @GetMapping("/reference-data")
     public InventoryReferenceDataResponse referenceData() { return service.referenceData(); }

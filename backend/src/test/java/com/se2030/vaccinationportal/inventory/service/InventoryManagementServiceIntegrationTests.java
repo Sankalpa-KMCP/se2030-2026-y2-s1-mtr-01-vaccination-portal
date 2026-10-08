@@ -14,6 +14,7 @@ import com.se2030.vaccinationportal.inventory.dto.request.ManufacturerRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.VaccineBatchRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.StockAdjustmentRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.StockReceiptRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.StockTransferRequest;
 import com.se2030.vaccinationportal.inventory.exception.InventoryConflictException;
 import com.se2030.vaccinationportal.inventory.model.BatchStatus;
 import java.time.LocalDate;
@@ -115,5 +116,36 @@ class InventoryManagementServiceIntegrationTests {
                 "CHANGED-LOT", batch.manufactureDate(), batch.expiryDate(), BatchStatus.ACTIVE)))
                 .isInstanceOf(InventoryConflictException.class)
                 .hasMessageContaining("transactions");
+    }
+
+    @Test
+    void transferMovesStockAndWritesOnePairedAudit() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        var maker = service.createManufacturer(new ManufacturerRequest("TR-" + suffix, "Transfer Maker " + suffix));
+        VaccineType type = vaccineTypes.save(new VaccineType("TR-VT-" + suffix, "Transfer Vaccine"));
+        VaccinationCenter source = centers.save(new VaccinationCenter("TR-S-" + suffix, "Source Center",
+                "1 Test Road", "source@example.test", CenterStatus.ACTIVE, 10, 20, "UTC"));
+        VaccinationCenter destination = centers.save(new VaccinationCenter("TR-D-" + suffix, "Destination Center",
+                "2 Test Road", "destination@example.test", CenterStatus.ACTIVE, 10, 20, "UTC"));
+        var batch = service.createBatch(new VaccineBatchRequest(maker.id(), type.getId(), "TR-LOT-" + suffix,
+                LocalDate.now().minusDays(1), LocalDate.now().plusDays(60), BatchStatus.ACTIVE));
+        var stock = service.createInventory(new CenterInventoryRequest(source.getId(), batch.id(), 12), 999L);
+
+        var transfer = service.transferStock(new StockTransferRequest(stock.id(), destination.getId(), 4, "Rebalance"), 999L);
+
+        assertThat(transfer.status()).isEqualTo("COMPLETED");
+        assertThat(transfer.correlationId()).isNotBlank();
+        assertThat(service.listInventories()).filteredOn(item -> item.batchId().equals(batch.id()))
+                .extracting(item -> item.quantity()).containsExactlyInAnyOrder(8, 4);
+        assertThat(service.recentTransactions()).filteredOn(item -> transfer.id().equals(item.stockTransferId()))
+                .extracting(item -> item.quantityChange()).containsExactlyInAnyOrder(-4, 4);
+        assertThat(service.recentTransfers()).extracting(item -> item.id()).contains(transfer.id());
+
+        assertThatThrownBy(() -> service.transferStock(
+                new StockTransferRequest(stock.id(), destination.getId(), 9, "Too many"), 999L))
+                .isInstanceOf(InventoryConflictException.class)
+                .hasMessageContaining("Insufficient");
+        assertThat(service.listInventories()).filteredOn(item -> item.batchId().equals(batch.id()))
+                .extracting(item -> item.quantity()).containsExactlyInAnyOrder(8, 4);
     }
 }

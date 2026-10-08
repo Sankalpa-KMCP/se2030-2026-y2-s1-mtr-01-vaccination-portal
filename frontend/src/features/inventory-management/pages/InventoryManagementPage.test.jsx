@@ -7,7 +7,7 @@ import { inventoryApi } from '../api/inventoryApi';
 vi.mock('../api/inventoryApi', () => ({
   inventoryApi: {
     loadAll: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(),
-    receiveStock: vi.fn(), adjustStock: vi.fn(),
+    receiveStock: vi.fn(), adjustStock: vi.fn(), transferStock: vi.fn(),
   },
 }));
 
@@ -65,5 +65,27 @@ describe('InventoryManagementPage', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: 'Confirm operation' }));
     await waitFor(() => expect(inventoryApi.adjustStock).toHaveBeenCalledWith({ inventoryId: 4, quantityChange: -2, reason: 'Damaged vial' }));
+  });
+
+  it('transfers an available batch to a different center', async () => {
+    const transferPayload = [...payload];
+    transferPayload[3] = {
+      ...payload[3],
+      centers: [...payload[3].centers, { id: 9, code: 'CTR-2', name: 'East Clinic' }],
+    };
+    inventoryApi.loadAll.mockResolvedValue(transferPayload);
+    inventoryApi.transferStock.mockResolvedValue({});
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(<InventoryManagementPage />);
+    await screen.findByText('LOT-42');
+    fireEvent.click(screen.getByRole('button', { name: 'Transfer' }));
+    fireEvent.change(screen.getByLabelText('Destination center'), { target: { value: '9' } });
+    fireEvent.change(screen.getByLabelText('Quantity to transfer'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm operation' }));
+
+    await waitFor(() => expect(inventoryApi.transferStock).toHaveBeenCalledWith({
+      inventoryId: 4, destinationCenterId: 9, quantity: 3, reason: null,
+    }));
   });
 });

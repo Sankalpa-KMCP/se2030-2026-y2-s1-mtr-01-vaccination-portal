@@ -10,10 +10,12 @@ export const inventoryApi = {
     apiRequestData(resource('stocks')),
     apiRequestData(resource('reference-data')),
     apiRequestData(resource('transactions')),
+    apiRequestData(resource('transfers')),
   ]),
   create: (name, body) => apiRequestData(resource(name), json('POST', body)),
   update: (name, id, body) => apiRequestData(`${resource(name)}/${id}`, json('PUT', body)),
   remove: (name, id) => apiRequestData(`${resource(name)}/${id}`, { method: 'DELETE' }),
   receiveStock: (body) => apiRequestData(resource('operations/receipts'), json('POST', body)),
   adjustStock: (body) => apiRequestData(resource('operations/adjustments'), json('POST', body)),
+  transferStock: (body) => apiRequestData(resource('operations/transfers'), json('POST', body)),
 };

@@ -6,25 +6,30 @@ import com.se2030.vaccinationportal.inventory.dto.request.ManufacturerRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.VaccineBatchRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.StockAdjustmentRequest;
 import com.se2030.vaccinationportal.inventory.dto.request.StockReceiptRequest;
+import com.se2030.vaccinationportal.inventory.dto.request.StockTransferRequest;
 import com.se2030.vaccinationportal.inventory.dto.response.CenterInventoryResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.InventoryReferenceDataResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.InventoryReferenceDataResponse.ReferenceItem;
 import com.se2030.vaccinationportal.inventory.dto.response.ManufacturerResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.VaccineBatchResponse;
 import com.se2030.vaccinationportal.inventory.dto.response.StockTransactionResponse;
+import com.se2030.vaccinationportal.inventory.dto.response.StockTransferResponse;
 import com.se2030.vaccinationportal.inventory.exception.InventoryConflictException;
 import com.se2030.vaccinationportal.inventory.model.CenterInventory;
 import com.se2030.vaccinationportal.inventory.model.Manufacturer;
 import com.se2030.vaccinationportal.inventory.model.VaccineBatch;
 import com.se2030.vaccinationportal.inventory.model.StockTransaction;
 import com.se2030.vaccinationportal.inventory.model.StockTransactionType;
+import com.se2030.vaccinationportal.inventory.model.StockTransfer;
 import com.se2030.vaccinationportal.inventory.model.BatchStatus;
 import java.time.LocalDate;
 import com.se2030.vaccinationportal.inventory.repository.CenterInventoryRepository;
 import com.se2030.vaccinationportal.inventory.repository.ManufacturerRepository;
 import com.se2030.vaccinationportal.inventory.repository.StockTransactionRepository;
+import com.se2030.vaccinationportal.inventory.repository.StockTransferRepository;
 import com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository;
 import java.util.List;
+import java.util.UUID;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,23 +43,25 @@ public class InventoryManagementService {
     private final VaccineBatchRepository batches;
     private final CenterInventoryRepository inventories;
     private final StockTransactionRepository transactions;
+    private final StockTransferRepository transfers;
     private final CampaignReferenceDataReader campaignReferences;
     private final EntityManager entityManager;
 
     public InventoryManagementService(ManufacturerRepository manufacturers, VaccineBatchRepository batches,
             CenterInventoryRepository inventories, StockTransactionRepository transactions,
             CampaignReferenceDataReader campaignReferences) {
-        this(manufacturers, batches, inventories, transactions, campaignReferences, null);
+        this(manufacturers, batches, inventories, transactions, null, campaignReferences, null);
     }
 
     @Autowired
     public InventoryManagementService(ManufacturerRepository manufacturers, VaccineBatchRepository batches,
             CenterInventoryRepository inventories, StockTransactionRepository transactions,
-            CampaignReferenceDataReader campaignReferences, EntityManager entityManager) {
+            StockTransferRepository transfers, CampaignReferenceDataReader campaignReferences, EntityManager entityManager) {
         this.manufacturers = manufacturers;
         this.batches = batches;
         this.inventories = inventories;
         this.transactions = transactions;
+        this.transfers = transfers;
         this.campaignReferences = campaignReferences;
         this.entityManager = entityManager;
     }
@@ -218,6 +225,48 @@ public class InventoryManagementService {
         return toResponse(inventory);
     }
 
+    @Transactional
+    public StockTransferResponse transferStock(StockTransferRequest request, Long actorId) {
+        requireActor(actorId);
+        if (!campaignReferences.centerExists(request.destinationCenterId())) {
+            throw new IllegalArgumentException("Destination center not found");
+        }
+        Long batchId = inventoryBatchId(request.inventoryId());
+        VaccineBatch batch = lockedBatch(batchId);
+        validateUsableBatch(batch);
+        CenterInventory source = lockedInventory(request.inventoryId());
+        if (source.getCenterId().equals(request.destinationCenterId())) {
+            throw new InventoryConflictException("Source and destination centers must differ");
+        }
+        if (source.getQuantity() < request.quantity()) {
+            throw new InventoryConflictException("Insufficient source stock for transfer");
+        }
+
+        CenterInventory destination = inventories.findByCenterAndBatchForUpdate(
+                request.destinationCenterId(), batchId).orElseGet(() -> inventories.saveAndFlush(
+                        new CenterInventory(request.destinationCenterId(), batchId, 0)));
+        int sourceBefore = source.getQuantity();
+        int destinationBefore = destination.getQuantity();
+        source.applyChange(-request.quantity());
+        destination.applyChange(request.quantity());
+        inventories.saveAndFlush(source);
+        inventories.saveAndFlush(destination);
+
+        StockTransfer transfer = transfers.saveAndFlush(new StockTransfer(
+                UUID.randomUUID().toString(), batchId, source.getCenterId(),
+                destination.getCenterId(), request.quantity(), actorId, cleanNullable(request.reason())));
+        transactions.saveAndFlush(StockTransaction.transferChange(source.getId(), transfer.getId(),
+                StockTransactionType.TRANSFER_OUT, -request.quantity(), sourceBefore, actorId, transfer.getReason()));
+        transactions.saveAndFlush(StockTransaction.transferChange(destination.getId(), transfer.getId(),
+                StockTransactionType.TRANSFER_IN, request.quantity(), destinationBefore, actorId, transfer.getReason()));
+        return toResponse(transfer);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockTransferResponse> recentTransfers() {
+        return transfers.findTop100ByOrderByIdDesc().stream().map(this::toResponse).toList();
+    }
+
     @Transactional(readOnly = true)
     public List<StockTransactionResponse> recentTransactions() {
         return transactions.findTop100ByOrderByCreatedAtDescIdDesc().stream().map(this::toResponse).toList();
@@ -317,7 +366,12 @@ public class InventoryManagementService {
                 item.getQuantity(), item.getLockVersion());
     }
     private StockTransactionResponse toResponse(StockTransaction item) {
-        return new StockTransactionResponse(item.getId(), item.getInventoryId(), item.getType(), item.getDelta(),
+        return new StockTransactionResponse(item.getId(), item.getInventoryId(), item.getStockTransferId(), item.getType(), item.getDelta(),
                 item.getBeforeQty(), item.getAfterQty(), item.getActorId(), item.getReason(), item.getCreatedAt());
+    }
+    private StockTransferResponse toResponse(StockTransfer item) {
+        return new StockTransferResponse(item.getId(), item.getCorrelationId(), item.getBatchId(),
+                item.getSourceCenterId(), item.getDestinationCenterId(), item.getQuantity(),
+                item.getStatus(), item.getRequestedBy(), item.getReason(), item.getCompletedAt());
     }
 }

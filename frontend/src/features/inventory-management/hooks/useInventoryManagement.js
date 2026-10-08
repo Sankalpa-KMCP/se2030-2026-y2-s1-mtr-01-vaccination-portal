@@ -6,7 +6,7 @@ const LOW_STOCK = 10;
 
 const NEAR_EXPIRY = 30;
 
-const EMPTY = { manufacturers: [], batches: [], stocks: [], transactions: [], references: { vaccineTypes: [], centers: [] } };
+const EMPTY = { manufacturers: [], batches: [], stocks: [], transactions: [], transfers: [], references: { vaccineTypes: [], centers: [] } };
 
 const blankManufacturer = { code: '', name: '' };
 
@@ -34,8 +34,8 @@ export default function useInventoryManagement() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [manufacturers, batches, stocks, references, transactions] = await inventoryApi.loadAll();
-      setData({ manufacturers, batches, stocks, references, transactions });
+      const [manufacturers, batches, stocks, references, transactions, transfers = []] = await inventoryApi.loadAll();
+      setData({ manufacturers, batches, stocks, references, transactions, transfers });
       setRefreshedAt(new Date()); setError(null);
     } catch (caught) { setError(caught); }
     finally { setLoading(false); }
@@ -53,9 +53,9 @@ export default function useInventoryManagement() {
   const inventory = useMemo(() => data.stocks.map((stock) => {
     const batchItem = lookups.batches[stock.batchId] || {};
     const remaining = batchItem.expiryDate ? daysUntil(batchItem.expiryDate) : null;
-    const effectiveStatus = remaining < 0 ? 'EXPIRED' : batchItem.batchStatus;
+    const effectiveStatus = remaining !== null && remaining < 0 ? 'EXPIRED' : batchItem.batchStatus;
     return { ...stock, batch: batchItem, manufacturer: lookups.manufacturers[batchItem.manufacturerId] || {}, type: lookups.types[batchItem.vaccineTypeId] || {}, center: lookups.centers[stock.centerId] || {}, remaining, effectiveStatus,
-      nearExpiry: batchItem.batchStatus === 'ACTIVE' && stock.quantity > 0 && remaining >= 0 && remaining <= NEAR_EXPIRY,
+      nearExpiry: batchItem.batchStatus === 'ACTIVE' && stock.quantity > 0 && remaining !== null && remaining >= 0 && remaining <= NEAR_EXPIRY,
       available: effectiveStatus === 'ACTIVE' && stock.quantity > 0 };
   }), [data.stocks, lookups]);
 
@@ -87,11 +87,14 @@ export default function useInventoryManagement() {
   }), [rows, filters, sort]);
 
   const perform = async (action, message) => { setBusy(true); try { await action(); setSuccess(message); setError(null); await load(); return true; } catch (caught) { setError(caught); return false; } finally { setBusy(false); } };
-  const submitManufacturer = async (event) => { event.preventDefault(); const ok = await perform(() => editingManufacturer ? inventoryApi.update('manufacturers', editingManufacturer, manufacturerForm) : inventoryApi.create('manufacturers', manufacturerForm), `Manufacturer ${editingManufacturer ? 'updated' : 'registered'}.`); if (ok) { setManufacturerForm(blankManufacturer); setEditingManufacturer(null); } };
-  const submitBatch = async (event) => { event.preventDefault(); if (batchForm.manufactureDate >= batchForm.expiryDate) { setError('Manufacture date must be before expiry date.'); return; } const body = { ...batchForm, manufacturerId: Number(batchForm.manufacturerId), vaccineTypeId: Number(batchForm.vaccineTypeId) }; const ok = await perform(() => editingBatch ? inventoryApi.update('batches', editingBatch, body) : inventoryApi.create('batches', body), `Batch ${editingBatch ? 'updated' : 'registered'}.`); if (ok) { setBatchForm(blankBatch); setEditingBatch(null); } };
-  const submitStock = async (event) => { event.preventDefault(); const body = { centerId: Number(stockForm.centerId), batchId: Number(stockForm.batchId), quantity: Number(stockForm.quantity) }; const ok = await perform(() => inventoryApi.create('stocks', body), 'Center stock created and initial receipt audited.'); if (ok) setStockForm(blankStock); };
-  const remove = (resource, item) => { if (window.confirm(`Delete ${item.name || item.batchNumber}? This cannot be undone.`)) perform(() => inventoryApi.remove(resource, item.id), 'Record deleted.'); };
+  const submitManufacturer = async (event) => { event.preventDefault(); const body = { code: manufacturerForm.code.trim(), name: manufacturerForm.name.trim() }; if (!body.code || !body.name) { setError('Manufacturer code and name are required.'); return; } const ok = await perform(() => editingManufacturer ? inventoryApi.update('manufacturers', editingManufacturer, body) : inventoryApi.create('manufacturers', body), `Manufacturer ${editingManufacturer ? 'updated' : 'registered'}.`); if (ok) { setManufacturerForm(blankManufacturer); setEditingManufacturer(null); } };
+  const submitBatch = async (event) => { event.preventDefault(); if (batchForm.manufactureDate >= batchForm.expiryDate) { setError('Manufacture date must be before expiry date.'); return; } const body = { ...batchForm, batchNumber: batchForm.batchNumber.trim(), manufacturerId: Number(batchForm.manufacturerId), vaccineTypeId: Number(batchForm.vaccineTypeId) }; if (!body.batchNumber || !body.manufacturerId || !body.vaccineTypeId) { setError('Manufacturer, vaccine type, and batch number are required.'); return; } const ok = await perform(() => editingBatch ? inventoryApi.update('batches', editingBatch, body) : inventoryApi.create('batches', body), `Batch ${editingBatch ? 'updated' : 'registered'}.`); if (ok) { setBatchForm(blankBatch); setEditingBatch(null); } };
+  const submitStock = async (event) => { event.preventDefault(); const body = { centerId: Number(stockForm.centerId), batchId: Number(stockForm.batchId), quantity: Number(stockForm.quantity) }; if (data.stocks.some((row) => row.centerId === body.centerId && row.batchId === body.batchId)) { setError('This center already holds that batch. Use Receipt on its inventory row.'); return; } const ok = await perform(() => inventoryApi.create('stocks', body), 'Center stock created and initial receipt audited.'); if (ok) setStockForm(blankStock); };
+  const remove = (resource, item) => { if (window.confirm(`Delete ${item.displayName || item.name || item.batchNumber}? This cannot be undone.`)) perform(() => inventoryApi.remove(resource, item.id), 'Record deleted.'); };
   const changeSort = (field) => setSort((current) => ({ field, direction: current.field === field && current.direction === 'asc' ? 'desc' : 'asc' }));
+
+  const cancelManufacturerEdit = () => { setEditingManufacturer(null); setManufacturerForm(blankManufacturer); };
+  const cancelBatchEdit = () => { setEditingBatch(null); setBatchForm(blankBatch); };
 
 
   return {
@@ -129,6 +132,8 @@ export default function useInventoryManagement() {
     submitBatch,
     submitStock,
     remove,
-    changeSort
+    changeSort,
+    cancelManufacturerEdit,
+    cancelBatchEdit
   };
 }
