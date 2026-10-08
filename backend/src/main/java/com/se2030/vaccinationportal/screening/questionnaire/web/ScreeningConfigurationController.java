@@ -179,4 +179,11 @@ public class ScreeningConfigurationController {
                 request.description());
         return ResponseEntity.status(HttpStatus.CREATED).body(questionnaireMapper.toResponse(questionnaire));
     }
+
+    @DeleteMapping("/questionnaires/{id}")
+    @RequireRoles({ "HEALTHCARE_OFFICER" })
+    public ResponseEntity<Void> deleteQuestionnaire(@PathVariable("id") Long id) {
+        configurationService.deleteQuestionnaire(id);
+        return ResponseEntity.noContent().build();
+    }
 }

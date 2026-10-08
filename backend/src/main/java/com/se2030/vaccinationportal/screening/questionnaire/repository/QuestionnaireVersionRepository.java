@@ -15,6 +15,7 @@ public interface QuestionnaireVersionRepository extends JpaRepository<Questionna
     List<QuestionnaireVersion> findByQuestionnaireIdOrderByVersionNumberDesc(Long questionnaireId);
     Optional<QuestionnaireVersion> findByQuestionnaireIdAndVersionNumber(Long questionnaireId, Integer versionNumber);
     Optional<QuestionnaireVersion> findFirstByQuestionnaireIdOrderByVersionNumberDesc(Long questionnaireId);
+    boolean existsByQuestionnaireId(Long questionnaireId);
 
     @Query("SELECT qv FROM QuestionnaireVersion qv WHERE qv.id = :id AND qv.status = :status")
     Optional<QuestionnaireVersion> findByIdAndStatus(@Param("id") Long id, @Param("status") QuestionnaireVersionStatus status);

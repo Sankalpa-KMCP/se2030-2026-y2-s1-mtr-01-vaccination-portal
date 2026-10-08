@@ -15,6 +15,7 @@ const apiMocks = vi.hoisted(() => ({
   listQuestionnaires: vi.fn(),
   getQuestionnaire: vi.fn(),
   createQuestionnaire: vi.fn(),
+  deleteQuestionnaire: vi.fn(),
   listQuestionnaireVersions: vi.fn(),
   getQuestionnaireVersion: vi.fn(),
   createQuestionnaireVersion: vi.fn(),
@@ -264,6 +265,80 @@ describe('ScreeningQuestionnairesPage', () => {
       description: null,
     }));
     expect(await screen.findByText('Questionnaire created. Create its first draft version to begin building.')).toBeTruthy();
+  });
+
+  it('enables delete only after an empty questionnaire version list loads, and cancel preserves it', async () => {
+    apiMocks.listQuestionnaireVersions.mockResolvedValue([]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Open ADULT_SCREENING' }));
+    await screen.findByText('No versions exist for this questionnaire yet.');
+
+    const deleteButton = screen.getByRole('button', { name: 'Delete Questionnaire' });
+    expect(deleteButton.disabled).toBe(false);
+    fireEvent.click(deleteButton);
+    const dialog = screen.getByRole('dialog', { name: 'Delete Questionnaire?' });
+    expect(within(dialog).getByText(/This action cannot be undone/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    expect(apiMocks.deleteQuestionnaire).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Open ADULT_SCREENING' })).toBeTruthy();
+  });
+
+  it('disables delete and explains why when any version exists', async () => {
+    await openDraft();
+    expect(screen.getByRole('button', { name: 'Delete Questionnaire' }).disabled).toBe(true);
+    expect(screen.getByText('Questionnaires with existing versions cannot be deleted.')).toBeTruthy();
+    expect(apiMocks.deleteQuestionnaire).not.toHaveBeenCalled();
+  });
+
+  it('deletes a confirmed empty questionnaire, refreshes the list, and shows success', async () => {
+    apiMocks.listQuestionnaireVersions.mockResolvedValue([]);
+    apiMocks.deleteQuestionnaire.mockResolvedValue(null);
+    apiMocks.listQuestionnaires.mockResolvedValueOnce([questionnaire]).mockResolvedValueOnce([]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Open ADULT_SCREENING' }));
+    await screen.findByText('No versions exist for this questionnaire yet.');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Questionnaire' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete Questionnaire?' }))
+      .getByRole('button', { name: 'Delete Questionnaire' }));
+
+    await waitFor(() => expect(apiMocks.deleteQuestionnaire).toHaveBeenCalledWith(7));
+    expect(await screen.findByText('Questionnaire deleted successfully.')).toBeTruthy();
+    expect(await screen.findByText('No screening questionnaires have been configured yet.')).toBeTruthy();
+    expect(apiMocks.listQuestionnaires).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the questionnaire and refreshes version state after a concurrent-version conflict', async () => {
+    apiMocks.listQuestionnaireVersions.mockResolvedValueOnce([]).mockResolvedValueOnce([draftVersion]);
+    apiMocks.deleteQuestionnaire.mockRejectedValue(new ApiError('Questionnaire cannot be deleted because it contains versions', 409));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Open ADULT_SCREENING' }));
+    await screen.findByText('No versions exist for this questionnaire yet.');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Questionnaire' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete Questionnaire?' }))
+      .getByRole('button', { name: 'Delete Questionnaire' }));
+
+    expect(await screen.findByText(/Questionnaire cannot be deleted because it contains versions/)).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Delete Questionnaire?' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open ADULT_SCREENING' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Delete Questionnaire' }).disabled).toBe(true));
+    expect(screen.queryByText('Questionnaire deleted successfully.')).toBeNull();
+  });
+
+  it('does not remove a questionnaire or claim success when delete fails', async () => {
+    apiMocks.listQuestionnaireVersions.mockResolvedValue([]);
+    apiMocks.deleteQuestionnaire.mockRejectedValue(new ApiError('Service unavailable', 500));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Open ADULT_SCREENING' }));
+    await screen.findByText('No versions exist for this questionnaire yet.');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Questionnaire' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete Questionnaire?' }))
+      .getByRole('button', { name: 'Delete Questionnaire' }));
+
+    expect(await within(screen.getByRole('dialog', { name: 'Delete Questionnaire?' }))
+      .findByText('Service unavailable')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open ADULT_SCREENING' })).toBeTruthy();
+    expect(screen.queryByText('Questionnaire deleted successfully.')).toBeNull();
   });
 
   it('selects the latest version and renders attached items in persisted order', async () => {
