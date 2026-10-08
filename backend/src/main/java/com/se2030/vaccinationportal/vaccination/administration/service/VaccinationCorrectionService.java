@@ -80,12 +80,17 @@ public class VaccinationCorrectionService {
             Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long actorId
     ) {
         String reason = request != null ? request.reason() : null;
-        if (request != null && request.category() != null && !request.category().isBlank() && reason != null) {
+        if (request != null && request.category() != null && !request.category().isBlank() && reason != null && !reason.startsWith("[")) {
             reason = "[" + request.category().trim() + "] " + reason;
         }
+        String fieldName = (request != null && request.fieldName() != null && !request.fieldName().trim().isEmpty())
+                ? request.fieldName().trim()
+                : VaccinationCorrectionField.AUTHORIZED_NOTES.getApiName();
+        String newValue = request != null ? request.newValue() : null;
+
         CreateVaccinationCorrectionRequest citizenRequest = new CreateVaccinationCorrectionRequest(
-                VaccinationCorrectionField.AUTHORIZED_NOTES.getApiName(),
-                null,
+                fieldName,
+                newValue,
                 reason,
                 actorId,
                 request != null ? request.category() : null,
