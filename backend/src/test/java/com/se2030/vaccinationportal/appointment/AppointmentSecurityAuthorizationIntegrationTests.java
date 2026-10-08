@@ -10,6 +10,7 @@ import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistEntry;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.appointment.checkin.service.CheckInCenterAuthorizationService;
 import com.se2030.vaccinationportal.shared.auth.security.JwtTokenService;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -47,6 +49,14 @@ public class AppointmentSecurityAuthorizationIntegrationTests {
 
     @Autowired
     private WaitlistRepository waitlistRepository;
+
+    /**
+     * This suite verifies endpoint role rules. Center/roster ownership is covered by
+     * {@code CheckInCenterAuthorizationServiceTests}; mocking it keeps these tests focused
+     * and avoids requiring a complete MF-02 center/session fixture for every role case.
+     */
+    @MockitoBean
+    private CheckInCenterAuthorizationService checkInCenterAuthorizationService;
 
     private String token(Long userId, String email, List<String> roles) {
         return "Bearer " + jwtTokenService.generateToken(userId, email, roles);
@@ -135,7 +145,9 @@ public class AppointmentSecurityAuthorizationIntegrationTests {
         @DisplayName("INVENTORY_OFFICER role is denied with 403 Forbidden on reverse-check-in")
         void inventoryOfficerReverseCheckInDenied() throws Exception {
             mockMvc.perform(post("/api/v1/appointments/1/reverse-check-in")
-                            .header(HttpHeaders.AUTHORIZATION, token(6L, "inv@test.gov", List.of("ROLE_INVENTORY_OFFICER"))))
+                            .header(HttpHeaders.AUTHORIZATION, token(6L, "inv@test.gov", List.of("ROLE_INVENTORY_OFFICER")))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"reason\":\"Incorrect arrival check-in\"}"))
                     .andExpect(status().isForbidden());
         }
 
