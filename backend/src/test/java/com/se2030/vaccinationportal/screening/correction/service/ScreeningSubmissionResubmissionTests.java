@@ -132,7 +132,7 @@ class ScreeningSubmissionResubmissionTests {
         ScreeningAnswer originalAnswer = new ScreeningAnswer(submission, requiredQuestion, "original details");
         submission.addAnswer(originalAnswer);
 
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
         when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
                 .thenReturn(List.of(item(requiredQuestion, 1)));
         when(answerRepository.save(any(ScreeningAnswer.class)))
@@ -173,7 +173,7 @@ class ScreeningSubmissionResubmissionTests {
         ScreeningAnswer originalAnswer = new ScreeningAnswer(submission, requiredQuestion, "original details");
         submission.addAnswer(originalAnswer);
 
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
         when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
                 .thenReturn(List.of(item(requiredQuestion, 1)));
 
@@ -202,7 +202,7 @@ class ScreeningSubmissionResubmissionTests {
         ScreeningAnswer originalAnswer = new ScreeningAnswer(submission, requiredQuestion, "original details");
         submission.addAnswer(originalAnswer);
 
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
@@ -231,7 +231,7 @@ class ScreeningSubmissionResubmissionTests {
         submission.addAnswer(new ScreeningAnswer(submission, requiredQuestion, "original details"));
         submission.addAnswer(new ScreeningAnswer(submission, optionalQuestion, "old optional answer"));
 
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
         when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
                 .thenReturn(List.of(item(requiredQuestion, 1), item(optionalQuestion, 2)));
         when(answerRepository.save(any(ScreeningAnswer.class)))
@@ -256,7 +256,7 @@ class ScreeningSubmissionResubmissionTests {
         ScreeningSubmission submission = correctionsRequiredSubmission();
         submission.addAnswer(new ScreeningAnswer(submission, requiredQuestion, "original details"));
 
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
         when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
                 .thenReturn(List.of(item(requiredQuestion, 1)));
         when(answerRepository.save(any(ScreeningAnswer.class)))
@@ -299,7 +299,7 @@ class ScreeningSubmissionResubmissionTests {
         ScreeningSubmission submission = correctionsRequiredSubmission();
         submission.addAnswer(new ScreeningAnswer(submission, requiredQuestion, "original details"));
 
-        when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
+        when(submissionRepository.findByIdForUpdate(SUBMISSION_ID)).thenReturn(java.util.Optional.of(submission));
         when(itemRepository.findByQuestionnaireVersionIdOrderByDisplayOrderAsc(VERSION_ID))
                 .thenReturn(List.of(item(requiredQuestion, 1)));
         when(answerRepository.save(any(ScreeningAnswer.class)))

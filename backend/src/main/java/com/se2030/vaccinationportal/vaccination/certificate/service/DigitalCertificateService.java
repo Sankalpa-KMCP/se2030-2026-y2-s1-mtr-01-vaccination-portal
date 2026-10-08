@@ -169,7 +169,7 @@ public class DigitalCertificateService {
             String reason,
             Long actorId
     ) {
-        VaccinationRecord record = vaccinationRecordRepository.findById(vaccinationRecordId)
+        VaccinationRecord record = vaccinationRecordRepository.findByIdForUpdate(vaccinationRecordId)
                 .orElseThrow(() -> new VaccinationRecordNotFoundException(
                         "Vaccination record not found with ID: " + vaccinationRecordId
                 ));

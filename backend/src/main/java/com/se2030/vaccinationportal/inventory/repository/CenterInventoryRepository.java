@@ -15,6 +15,13 @@ public interface CenterInventoryRepository extends JpaRepository<CenterInventory
     List<CenterInventory> findAllByBatchId(Long batchId);
     List<CenterInventory> findByCenterId(Long centerId);
 
+    @Query("select i.batchId from CenterInventory i where i.id = :id")
+    Optional<Long> findBatchIdById(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select i.id from CenterInventory i where i.batchId = :batchId")
+    List<Long> findIdsByBatchIdForUpdate(@Param("batchId") Long batchId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from CenterInventory i where i.id = :id")
     Optional<CenterInventory> findByIdForUpdate(@Param("id") Long id);

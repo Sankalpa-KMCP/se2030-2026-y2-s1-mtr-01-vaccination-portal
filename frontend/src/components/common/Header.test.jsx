@@ -86,7 +86,7 @@ describe('Header', () => {
     expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
-  it('shows vaccination and check-in queue links for a vaccinator', () => {
+  it('shows vaccination and read-only check-in queue links for a vaccinator', () => {
     mockUser({
       id: 7,
       fullName: 'Vera Vaccinator',

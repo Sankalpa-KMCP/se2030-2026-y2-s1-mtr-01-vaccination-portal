@@ -19,7 +19,7 @@ describe('LandingPage', () => {
     renderLanding();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /your next step to a healthier tomorrow/i }),
+      screen.getByRole('heading', { level: 1, name: /manage your vaccination journey in one place/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole('heading', { level: 2, name: /one service. two ways in/i }),
@@ -49,7 +49,6 @@ describe('LandingPage', () => {
     registrationLinks.forEach((link) => expect(link.getAttribute('href')).toBe('/register/citizen'));
     expect(screen.getByRole('link', { name: /^sign in$/i }).getAttribute('href')).toBe('/login');
     expect(screen.getByRole('link', { name: /request staff account/i }).getAttribute('href')).toBe('/register/staff');
-    expect(screen.getByRole('link', { name: /enter staff portal/i }).getAttribute('href')).toBe('/login');
     expect(screen.getByRole('link', { name: /manage your appointments/i }).getAttribute('href')).toBe('/login');
   });
 
@@ -83,19 +82,15 @@ describe('LandingPage', () => {
     expect(screen.getByRole('link', { name: /already registered\? access the portal/i }).getAttribute('href')).toBe('/login');
   });
 
-  it('renders an animation-ready care path with readiness before appointments', () => {
-    const { container } = renderLanding();
-    const artwork = container.querySelector('.home-pathway');
+  it('renders one concise hero image with a supporting caption', () => {
+    renderLanding();
 
-    expect(artwork).toBeTruthy();
-    expect(artwork.querySelectorAll('.home-pathway__node-core')).toHaveLength(5);
-    expect(artwork.querySelector('.home-pathway__route').getAttribute('pathLength')).toBe('1');
-    expect(artwork.querySelector('.home-pathway__route-progress')).toBeTruthy();
-    expect(artwork.querySelectorAll('.home-pathway__support-progress')).toHaveLength(2);
-    expect(artwork.querySelector('.home-pathway__staff-connector--ready')).toBeTruthy();
-    expect(artwork.textContent).toContain('Session readiness');
-    expect(artwork.textContent).toContain('Center, capacity and staff confirmed');
-    expect(container.querySelector('.home-pathway--mobile .home-pathway__route-progress')).toBeTruthy();
+    expect(
+      screen.getByRole('img', {
+        name: /healthcare worker assisting a citizen during a vaccination appointment/i,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText(/screening, appointments, and records through one portal/i)).toBeTruthy();
   });
 
   it('fires onLoginClick from the login call-to-action', () => {
@@ -133,24 +128,12 @@ describe('LandingPage', () => {
     expect(document.getElementById('get-started')).toBeTruthy();
   });
 
-  it('exposes hero showcase controls without aria-hidden on interactive ancestors', () => {
+  it('keeps the hero focused without gallery controls or promotional claims', () => {
     renderLanding();
 
-    const showcase = screen.getByRole('tablist', { name: /visual showcase/i });
-    expect(showcase).toBeTruthy();
-    expect(showcase.closest('[aria-hidden="true"]')).toBeNull();
-
-    const tabs = within(showcase).getAllByRole('tab');
-    expect(tabs).toHaveLength(4);
-    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
-    expect(tabs[0].getAttribute('aria-label')).toBe('Senior Care');
-
-    tabs.forEach((tab) => {
-      expect(tab.closest('[aria-hidden="true"]')).toBeNull();
-    });
-
-    fireEvent.click(tabs[1]);
-    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
-    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
+    expect(screen.queryByRole('tablist', { name: /visual showcase/i })).toBeNull();
+    expect(screen.queryByText(/live portal service/i)).toBeNull();
+    expect(screen.queryByText(/compassionate senior care/i)).toBeNull();
+    expect(screen.queryByText(/priority assisted clinic bay/i)).toBeNull();
   });
 });

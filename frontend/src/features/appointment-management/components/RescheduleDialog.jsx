@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getSearchDate } from '../utils/searchDates';
 import { rescheduleAppointment } from '../api/appointmentApi';
 import { searchAvailableAppointments } from '../api/availabilityApi';
 
@@ -17,16 +18,9 @@ import { searchAvailableAppointments } from '../api/availabilityApi';
  * </ul>
  */
 export default function RescheduleDialog({ appointment, citizenId, onClose, onSuccess }) {
-  const getTodayStr = () => new Date().toISOString().split('T')[0];
-  const getNextWeekStr = () => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d.toISOString().split('T')[0];
-  };
-
   const [newSlotId, setNewSlotId] = useState('');
-  const [fromDate, setFromDate] = useState(getTodayStr());
-  const [toDate, setToDate] = useState(getNextWeekStr());
+  const [fromDate, setFromDate] = useState(() => getSearchDate());
+  const [toDate, setToDate] = useState(() => getSearchDate(7));
   const [isStaffOverride, setIsStaffOverride] = useState(false);
   const [staffReason, setStaffReason] = useState('');
 

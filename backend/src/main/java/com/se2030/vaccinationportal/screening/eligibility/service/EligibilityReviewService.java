@@ -249,7 +249,8 @@ public class EligibilityReviewService {
             throw new IllegalArgumentException("Decision reason is mandatory");
         }
 
-        ScreeningSubmission submission = submissionRepository.findById(submissionId)
+        // All review transitions serialize on the submission before checking its current state.
+        ScreeningSubmission submission = submissionRepository.findByIdForUpdate(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found with ID: " + submissionId));
 
         if (submission.getStatus() != ScreeningSubmissionStatus.PENDING_REVIEW) {
@@ -299,7 +300,7 @@ public class EligibilityReviewService {
             throw new IllegalArgumentException("Correction instructions are required");
         }
 
-        ScreeningSubmission submission = submissionRepository.findById(submissionId)
+        ScreeningSubmission submission = submissionRepository.findByIdForUpdate(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found with ID: " + submissionId));
 
         if (submission.getStatus() != ScreeningSubmissionStatus.PENDING_REVIEW) {

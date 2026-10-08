@@ -121,8 +121,8 @@ public class AppointmentBookingService {
             throw new IllegalArgumentException("Slot ID is required");
         }
 
-        // Step 1a: Acquire pessimistic write lock on citizen-campaign booking guard row.
-        // Viva note: Must be acquired first to serialize concurrent booking/promotion attempts for this citizen.
+        // Serialize booking, waitlist join, and promotion for the same citizen and campaign.
+        // Lock before checking duplicates so concurrent requests cannot both pass the check.
         guardRepository.insertGuardIfAbsent(citizenId, campaignId);
         guardRepository.findByCitizenIdAndCampaignIdForUpdate(citizenId, campaignId)
                 .orElseThrow(() -> new IllegalStateException("Failed to acquire booking guard lock for citizen " + citizenId + " and campaign " + campaignId));

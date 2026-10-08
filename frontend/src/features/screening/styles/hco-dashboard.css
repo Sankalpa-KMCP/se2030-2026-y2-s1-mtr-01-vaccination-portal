@@ -170,6 +170,19 @@
   margin-bottom: 0.15rem;
 }
 
+.hco-metric-card--questionnaire > .d-flex {
+  flex: 1;
+  min-width: 0;
+}
+
+.hco-metric-card--questionnaire > .d-flex > .min-w-0 {
+  min-width: 0;
+}
+
+.hco-metric-card--questionnaire .hco-metric-label {
+  overflow-wrap: break-word;
+}
+
 .hco-metric-value {
   font-size: 1.35rem;
   font-weight: 700;
@@ -355,6 +368,19 @@
   font-size: 0.75rem;
   color: #64748b;
   line-height: 1.25;
+}
+
+.hco-focus-row--questionnaires > .d-flex {
+  flex: 1;
+  min-width: 0;
+}
+
+.hco-focus-row--questionnaires > .d-flex > .min-w-0 {
+  min-width: 0;
+}
+
+.hco-focus-row--questionnaires .hco-focus-desc {
+  overflow-wrap: break-word;
 }
 
 .hco-focus-chevron {

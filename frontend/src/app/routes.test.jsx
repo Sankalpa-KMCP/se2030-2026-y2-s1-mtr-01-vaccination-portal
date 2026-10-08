@@ -256,7 +256,7 @@ describe('shared routing and role guards', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Welcome back,\s*user@example\.gov/i })).toBeTruthy();
 
     setAuth({ isAuthenticated: false });
     view.rerender(
@@ -405,9 +405,8 @@ describe('shared routing and role guards', () => {
     const registrationLinks = screen.getAllByRole('link', { name: /create citizen account/i });
     expect(registrationLinks.length).toBeGreaterThan(0);
     registrationLinks.forEach((link) => expect(link.getAttribute('href')).toBe('/register/citizen'));
-    expect(screen.getByRole('link', { name: /^sign in$/i })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /request staff account/i })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /enter staff portal/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /^sign in$/i }).getAttribute('href')).toBe('/login');
+    expect(screen.getByRole('link', { name: /request staff account/i }).getAttribute('href')).toBe('/register/staff');
     expect(screen.getByRole('link', { name: /manage your appointments/i }).getAttribute('href')).toBe('/login');
   });
 
@@ -497,14 +496,14 @@ describe('shared routing and role guards', () => {
   it('allows ADMIN and SUPER_ADMIN to open admin dashboard and staff requests', () => {
     setAuth({ roles: ['ROLE_ADMIN'] });
     const view = render(<MemoryRouter key="admin" initialEntries={['/app/admin']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Welcome back,\s*user@example\.gov/i })).toBeTruthy();
 
     view.rerender(<MemoryRouter key="requests" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByText('Pending Staff Requests Test Page')).toBeTruthy();
 
     setAuth({ roles: ['ROLE_SUPER_ADMIN'] });
     view.rerender(<MemoryRouter key="super-admin" initialEntries={['/app/admin']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Welcome back,\s*user@example\.gov/i })).toBeTruthy();
 
     view.rerender(<MemoryRouter key="super-requests" initialEntries={['/app/admin/staff-requests']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByText('Pending Staff Requests Test Page')).toBeTruthy();
@@ -530,7 +529,7 @@ describe('shared routing and role guards', () => {
     setAuth({ isAuthenticated: false });
 
     render(<MemoryRouter key="home" initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { level: 1, name: /your next step to a healthier tomorrow/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: /manage your vaccination journey in one place/i })).toBeTruthy();
     cleanup();
 
     render(<MemoryRouter key="how" initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);

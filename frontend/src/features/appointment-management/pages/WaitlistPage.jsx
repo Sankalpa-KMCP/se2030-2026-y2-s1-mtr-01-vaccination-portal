@@ -1,3 +1,4 @@
+import AppointmentNotice from '../components/AppointmentNotice';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import WaitlistCard from '../components/WaitlistCard';
@@ -187,21 +188,7 @@ export default function WaitlistPage() {
           )}
         />
       ) : feedback ? (
-        <div className="citizen-page__notice">
-          <div
-            className={`alert alert-${feedback.type} alert-dismissible fade show border-0 shadow-sm`}
-            role="alert"
-          >
-          <h4 className="h6 alert-heading fw-bold mb-1">{feedback.title}</h4>
-          <p className="mb-0">{feedback.message}</p>
-          <button
-            type="button"
-            className="btn-close"
-            aria-label="Close"
-            onClick={() => setFeedback(null)}
-          ></button>
-          </div>
-        </div>
+        <AppointmentNotice feedback={feedback} onDismiss={() => setFeedback(null)} />
       ) : null}
 
       {loading && (

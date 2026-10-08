@@ -52,7 +52,7 @@ Database schema versioning is managed via Flyway migrations located in [`../back
 
 - `migrations/` - Historical reference scripts only: `V1__mf03_appointment_foundation.sql`, `V2__mf03_waitlist_foundation.sql`, `V002__mf01_screening_foundation.sql`. These versions overlap the active history and are not runtime inputs. Do not add this directory to Flyway locations or run it alongside the active scripts.
 - `seeds/` - Synthetic development, testing, and benchmark seed data
-- `diagrams/` - Entity-Relationship (ER) diagrams and database design materials
+- Database design diagrams are maintained under `../docs/diagrams/current/` (including `physical-er-model.md`).
 
 ## Local Database Setup
 

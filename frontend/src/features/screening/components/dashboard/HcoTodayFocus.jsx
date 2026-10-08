@@ -21,6 +21,7 @@ const FOCUS_TASKS = [
   {
     title: 'Manage Questionnaires',
     description: 'Author and maintain screening questionnaire versions',
+    wrapDescription: true,
     to: '/app/screening/questionnaires',
     iconClass: 'bi bi-card-checklist',
     bg: '#134e4a',
@@ -54,7 +55,7 @@ export default function HcoTodayFocus() {
           <Link
             key={task.title}
             to={task.to}
-            className="hco-focus-row"
+            className={`hco-focus-row${task.wrapDescription ? ' hco-focus-row--questionnaires' : ''}`}
             aria-label={`${task.title}: ${task.description}`}
           >
             <div className="d-flex align-items-center min-w-0">
@@ -67,7 +68,7 @@ export default function HcoTodayFocus() {
               </div>
               <div className="min-w-0">
                 <div className="hco-focus-title text-truncate">{task.title}</div>
-                <div className="hco-focus-desc text-truncate">{task.description}</div>
+                <div className={`hco-focus-desc${task.wrapDescription ? '' : ' text-truncate'}`}>{task.description}</div>
               </div>
             </div>
             <i className="bi bi-chevron-right hco-focus-chevron" aria-hidden="true" />

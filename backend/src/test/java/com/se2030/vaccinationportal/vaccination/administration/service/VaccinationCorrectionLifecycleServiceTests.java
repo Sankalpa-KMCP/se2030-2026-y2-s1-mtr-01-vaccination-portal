@@ -66,7 +66,7 @@ class VaccinationCorrectionLifecycleServiceTests {
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Updated note"));
-        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+        when(correctionService.getCorrectionForUpdate(101L, 1L)).thenReturn(correction);
 
         VaccinationCorrectionLifecycleResponse result = lifecycleService.applyApprovedCorrection(101L, 1L, 92L);
 
@@ -85,7 +85,7 @@ class VaccinationCorrectionLifecycleServiceTests {
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
                 .thenReturn(snapshot(2, ADMINISTERED_AT, 56L, "Original"));
-        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+        when(correctionService.getCorrectionForUpdate(101L, 1L)).thenReturn(correction);
         when(certificateService.hasCurrentValidCertificate(101L)).thenReturn(true);
         when(certificateService.reissueCertificate(eq(101L), any(ReissueDigitalCertificateRequest.class)))
                 .thenReturn(reissue);
@@ -108,7 +108,7 @@ class VaccinationCorrectionLifecycleServiceTests {
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
                 .thenReturn(snapshot(2, ADMINISTERED_AT, 56L, "Original"));
-        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+        when(correctionService.getCorrectionForUpdate(101L, 1L)).thenReturn(correction);
         when(certificateService.hasCurrentValidCertificate(101L)).thenReturn(false);
 
         VaccinationCorrectionLifecycleResponse result = lifecycleService.applyApprovedCorrection(101L, 1L, 92L);
@@ -124,7 +124,7 @@ class VaccinationCorrectionLifecycleServiceTests {
     void applyApprovedCorrection_rejectsVaccineBatchIdInApplyRequest() {
         VaccinationCorrection correction = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
         correction.approve(92L, Instant.now(), "Approved");
-        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+        when(correctionService.getCorrectionForUpdate(101L, 1L)).thenReturn(correction);
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"));
 
@@ -147,7 +147,7 @@ class VaccinationCorrectionLifecycleServiceTests {
     void applyApprovedCorrection_rejectsApprovedCorrectionWhenUnderlyingFieldIsVaccineBatchId() {
         VaccinationCorrection correction = correction(VaccinationCorrectionField.VACCINE_BATCH_ID, "56", "78");
         correction.approve(92L, Instant.now(), "Approved");
-        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+        when(correctionService.getCorrectionForUpdate(101L, 1L)).thenReturn(correction);
 
         UnsupportedVaccinationCorrectionFieldException ex = assertThrows(
                 UnsupportedVaccinationCorrectionFieldException.class,
@@ -173,7 +173,7 @@ class VaccinationCorrectionLifecycleServiceTests {
         when(effectiveRecordService.getEffectiveRecord(101L))
                 .thenReturn(snapshot(1, ADMINISTERED_AT, 56L, "Original"))
                 .thenReturn(snapshot(1, Instant.parse("2026-09-01T09:00:00Z"), 56L, "Original"));
-        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+        when(correctionService.getCorrectionForUpdate(101L, 1L)).thenReturn(correction);
         when(certificateService.hasCurrentValidCertificate(101L)).thenReturn(true);
         when(certificateService.reissueCertificate(eq(101L), any())).thenThrow(failure);
 
@@ -186,7 +186,7 @@ class VaccinationCorrectionLifecycleServiceTests {
     @Test
     void unapprovedCorrectionCannotBeApplied() {
         VaccinationCorrection correction = correction(VaccinationCorrectionField.DOSE_NUMBER, "1", "2");
-        when(correctionService.getCorrectionById(101L, 1L)).thenReturn(correction);
+        when(correctionService.getCorrectionForUpdate(101L, 1L)).thenReturn(correction);
 
         com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationCorrectionException ex = assertThrows(
                 com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationCorrectionException.class,

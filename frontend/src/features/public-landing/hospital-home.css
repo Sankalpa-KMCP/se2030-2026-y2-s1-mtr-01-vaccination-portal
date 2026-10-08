@@ -1327,3 +1327,230 @@ html.vax-text-xl .lp-page--home .hospital-shortcuts__grid {
 .hero-inclusive-badge--eligibility i {
   color: #526772;
 }
+
+/* --------------------------------------------------------------------------
+   Simplified landing hero and compact public header
+   -------------------------------------------------------------------------- */
+@media (min-width: 1180px) {
+  .lp-page .lp-header,
+  .lp-page--home .lp-header {
+    min-height: 72px !important;
+    padding-block: 0 !important;
+  }
+
+  .lp-page .lp-header__inner,
+  .lp-page--home .lp-header__inner,
+  .lp-page.is-public-header-scrolled .lp-header__inner {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    grid-template-areas: "brand nav utility" !important;
+    align-items: center !important;
+    column-gap: clamp(1rem, 2vw, 2rem) !important;
+    width: min(calc(100% - 32px), 1440px) !important;
+    min-height: 72px !important;
+    padding-block: 0.35rem !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .lp-page .lp-header__brand-group,
+  .lp-page--home .lp-header__brand-group {
+    grid-area: brand;
+  }
+
+  .lp-page .lp-header__nav {
+    grid-area: nav;
+    width: auto !important;
+    justify-content: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0.1rem !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .lp-page .lp-header__link {
+    min-height: 40px;
+    padding-inline: clamp(0.45rem, 0.7vw, 0.72rem);
+    font-size: 0.8rem;
+  }
+
+  .lp-page .lp-btn--header {
+    min-height: 40px;
+    margin-left: 0.35rem !important;
+    padding-inline: 1rem !important;
+  }
+
+  .lp-header__utility {
+    grid-area: utility;
+    margin: 0 !important;
+    gap: 0.5rem !important;
+  }
+
+  .lp-header__access-ctrl,
+  .lp-header__helpline {
+    min-height: 36px;
+  }
+
+  .lp-header__helpline-copy small {
+    display: none;
+  }
+}
+
+.lp-page--home .home-hero--simplified {
+  min-height: auto;
+  padding: clamp(3rem, 6vw, 5.5rem) 0;
+  background: linear-gradient(135deg, #f7fbfa 0%, #ffffff 50%, #f7faf9 100%);
+}
+
+.lp-page--home .home-hero--simplified::before {
+  opacity: 0.3;
+}
+
+.lp-page--home .home-hero--simplified .home-hero__frame {
+  grid-template-columns: minmax(0, 0.88fr) minmax(420px, 1.12fr);
+  gap: clamp(2.5rem, 6vw, 5rem);
+  align-items: center;
+}
+
+.lp-page--home .home-hero--simplified .home-hero__copy {
+  max-width: 560px;
+}
+
+.lp-page--home .home-hero--simplified .hospital-eyebrow {
+  margin-bottom: 1rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #0d776f;
+  font-size: 0.7rem;
+  letter-spacing: 0.13em;
+}
+
+.lp-page--home .home-hero--simplified h1 {
+  max-width: 12ch;
+  margin-bottom: 1.15rem;
+  font-size: clamp(2.65rem, 4.2vw, 4.5rem);
+  line-height: 1.03;
+}
+
+.lp-page--home .home-hero--simplified .home-hero__lead {
+  max-width: 46ch;
+  margin-bottom: 1.65rem;
+  color: #526772;
+  font-size: clamp(1rem, 1.3vw, 1.12rem);
+  line-height: 1.65;
+}
+
+.lp-page--home .home-hero--simplified .home-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.lp-page--home .home-action--secondary-simple {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.35rem;
+  border: 1px solid #b9cbc8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #173d42;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.lp-page--home .home-action--secondary-simple:hover {
+  border-color: #0d776f;
+  background: #edf7f5;
+  color: #075f58;
+}
+
+.lp-page--home .home-hero--simplified .home-hero__photo {
+  grid-column: 2;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #d5e1df;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(30, 65, 76, 0.12);
+}
+
+.home-hero__photo-image {
+  display: block;
+  width: 100%;
+  height: clamp(310px, 31vw, 430px);
+  object-fit: cover;
+}
+
+.home-hero__photo-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 1.15rem;
+  border-top: 1px solid #dfe8e6;
+  background: #ffffff;
+  color: #607078;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.home-hero__photo-caption > i {
+  display: grid;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e7f4f1;
+  color: #0d776f;
+  font-size: 1rem;
+}
+
+.home-hero__photo-caption strong {
+  display: block;
+  margin-bottom: 0.08rem;
+  color: #24434a;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 1024px) {
+  .lp-page--home .home-hero--simplified .home-hero__frame {
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+  }
+
+  .lp-page--home .home-hero--simplified .home-hero__copy,
+  .lp-page--home .home-hero--simplified .home-hero__photo {
+    grid-column: 1;
+    max-width: 680px;
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .lp-page--home .home-hero--simplified {
+    padding: 2.5rem 0;
+  }
+
+  .lp-page--home .home-hero--simplified h1 {
+    max-width: 14ch;
+    font-size: clamp(2rem, 10vw, 2.75rem);
+  }
+
+  .lp-page--home .home-hero--simplified .home-hero__actions,
+  .lp-page--home .home-hero--simplified .home-action {
+    width: 100%;
+  }
+
+  .home-hero__photo-image {
+    height: 260px;
+  }
+}

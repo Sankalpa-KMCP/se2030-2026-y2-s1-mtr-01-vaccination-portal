@@ -243,7 +243,7 @@ public class ScreeningSubmissionService {
             throw new IllegalArgumentException("Corrected screening answers are required");
         }
 
-        ScreeningSubmission submission = submissionRepository.findById(submissionId)
+        ScreeningSubmission submission = submissionRepository.findByIdForUpdate(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Screening submission not found with ID: " + submissionId
                 ));
