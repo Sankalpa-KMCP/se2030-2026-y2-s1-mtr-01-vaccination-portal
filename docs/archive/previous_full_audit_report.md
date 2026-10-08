@@ -1,6 +1,6 @@
-﻿# LITERAL REPOSITORY FACT PACK
+# LITERAL REPOSITORY FACT PACK
 
-> Historical specification/evidence: package trees, implementation status and migration counts below describe their original revision. Current ownership and setup are recorded in the [current architecture](docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md). Applied runtime Flyway history is V0–V21 under `backend/src/main/resources/db/migration`; reference scripts are not runtime migrations. Business requirements remain reference material.
+> Historical specification/evidence: package trees, implementation status and migration counts below describe their original revision. Current ownership and setup are recorded in the [current architecture](../Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md). Applied runtime Flyway history is V0–V21 under `backend/src/main/resources/db/migration`; reference scripts are not runtime migrations. Business requirements remain reference material.
 
 **Repository Target:** `develop` @ `227d42d08f51194d2004cc651e419273f30db194`  
 **Working Tree Status:** Clean (HEAD verified unaltered)  

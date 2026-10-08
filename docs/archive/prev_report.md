@@ -1,6 +1,6 @@
-﻿## Fresh Boundary
+## Fresh Boundary
 
-> Historical specification/evidence: package trees, implementation status and migration counts below describe their original revision. Current ownership and setup are recorded in the [current architecture](docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md). Applied runtime Flyway history is V0–V21 under `backend/src/main/resources/db/migration`; reference scripts are not runtime migrations. Business requirements remain reference material.
+> Historical specification/evidence: package trees, implementation status and migration counts below describe their original revision. Current ownership and setup are recorded in the [current architecture](../Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md). Applied runtime Flyway history is V0–V21 under `backend/src/main/resources/db/migration`; reference scripts are not runtime migrations. Business requirements remain reference material.
 
 - **Local `develop` HEAD**: `ef0b3fd625b89b4eb4d7f13eeffbe4cc1e7fa6de`
 - **Local Tree SHA**: `5967c347d49433d9dbe167c0b09df9d4dc72f8bd`
