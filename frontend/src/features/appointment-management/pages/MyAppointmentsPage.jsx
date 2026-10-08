@@ -79,7 +79,7 @@ export default function MyAppointmentsPage() {
       let userMessage = err.message || 'Failed to cancel appointment.';
 
       if (err.status === 403 || err.error === 'FORBIDDEN') {
-        userMessage = '24-Hour Notice Rule (MF03-BR-04): Cancellations within 24 hours of session start require staff override with reason.';
+        userMessage = 'To cancel within 24 hours of your appointment, contact your vaccination center staff.';
       }
 
       setFeedback({
