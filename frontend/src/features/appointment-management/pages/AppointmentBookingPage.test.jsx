@@ -137,7 +137,7 @@ describe('AppointmentBookingPage email verification handling', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Verify Email' }));
 
-    expect(await screen.findByRole('dialog', { name: 'Verify your email' })).toBeTruthy();
+    expect(await screen.findByRole('dialog', { name: 'Verify Your Email' })).toBeTruthy();
     expect(getEmailVerificationStatus).toHaveBeenCalledTimes(1);
   });
 
@@ -161,7 +161,7 @@ describe('AppointmentBookingPage email verification handling', () => {
     expect(await screen.findByText('Verify your email before joining the appointment waitlist.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Verify Email' }));
 
-    expect(await screen.findByRole('dialog', { name: 'Verify your email' })).toBeTruthy();
+    expect(await screen.findByRole('dialog', { name: 'Verify Your Email' })).toBeTruthy();
   });
 
   it('keys the verification UX on the machine code, not the backend message text', async () => {
@@ -211,12 +211,12 @@ describe('AppointmentBookingPage email verification handling', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Book Test Slot' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Verify Email' }));
 
-    const dialog = await screen.findByRole('dialog', { name: 'Verify your email' });
+    const dialog = await screen.findByRole('dialog', { name: 'Verify Your Email' });
     expect(dialog).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
-    expect(screen.queryByRole('dialog', { name: 'Verify your email' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Verify Your Email' })).toBeNull();
     expect(screen.getByTestId('mock-availability-search')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Book Test Slot' })).toBeTruthy();
   });
@@ -234,6 +234,6 @@ describe('AppointmentBookingPage email verification handling', () => {
 
     expect(await screen.findByText('Booking Confirmed!')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Verify Email' })).toBeNull();
-    expect(screen.queryByRole('dialog', { name: 'Verify your email' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Verify Your Email' })).toBeNull();
   });
 });

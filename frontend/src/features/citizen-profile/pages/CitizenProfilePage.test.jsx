@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
   getProfile: vi.fn(),
   updateProfile: vi.fn(),
   updateCurrentUserProfile: vi.fn(),
+  getVerificationStatus: vi.fn(),
+  resendCode: vi.fn(),
+  verifyCode: vi.fn(),
 }));
 
 vi.mock('../api/citizenProfileApi', () => ({
@@ -16,6 +19,12 @@ vi.mock('../api/citizenProfileApi', () => ({
 
 vi.mock('../../../auth/context/AuthContext', () => ({
   useAuth: () => ({ updateCurrentUserProfile: mocks.updateCurrentUserProfile }),
+}));
+
+vi.mock('../../appointment-management/api/emailVerificationApi', () => ({
+  getEmailVerificationStatus: mocks.getVerificationStatus,
+  resendEmailOtp: mocks.resendCode,
+  verifyEmailOtp: mocks.verifyCode,
 }));
 
 import CitizenProfilePage from './CitizenProfilePage';
@@ -47,9 +56,14 @@ async function openEditor() {
 
 describe('CitizenProfilePage', () => {
   beforeEach(() => {
+    mocks.getProfile.mockReset();
     mocks.getProfile.mockResolvedValue({ ...completeProfile });
+    mocks.getVerificationStatus.mockReset();
+    mocks.getVerificationStatus.mockResolvedValue({ emailVerified: true, emailVerifiedAt: '2026-09-01T10:00:00Z' });
     mocks.updateProfile.mockReset();
     mocks.updateCurrentUserProfile.mockReset();
+    mocks.resendCode.mockReset();
+    mocks.verifyCode.mockReset();
   });
 
   afterEach(() => {
@@ -73,7 +87,86 @@ describe('CitizenProfilePage', () => {
     expect(screen.getByText(/Jun 15, 1994/)).toBeTruthy();
     expect(screen.getByText('Female')).toBeTruthy();
     expect(screen.getByText('10 Green Road, Colombo')).toBeTruthy();
+    expect(screen.getByText('Email Verified')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Verify Email' })).toBeNull();
     expect(screen.getByRole('link', { name: /back to citizen dashboard/i }).getAttribute('href')).toBe('/app/citizen');
+  });
+
+  it('offers verification and resend actions for a pending citizen', async () => {
+    mocks.getProfile.mockResolvedValueOnce({ ...completeProfile, accountStatus: 'PENDING_VERIFICATION' });
+    mocks.getVerificationStatus.mockResolvedValue({ emailVerified: false, emailVerifiedAt: null });
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Email verification required' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verify Email' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Resend Verification Code' })).toBeTruthy();
+    expect(screen.queryByText('Email Verified')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Email' }));
+    expect(await screen.findByRole('dialog', { name: 'Verify Your Email' })).toBeTruthy();
+    expect(screen.getByLabelText('Six-digit verification code')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verify Code' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Resend code' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+  });
+
+  it('requests a resend for the authenticated citizen and opens code entry without claiming delivery', async () => {
+    mocks.getProfile.mockResolvedValueOnce({ ...completeProfile, accountStatus: 'PENDING_VERIFICATION' });
+    mocks.getVerificationStatus.mockResolvedValue({ emailVerified: false, emailVerifiedAt: null });
+    mocks.resendCode.mockResolvedValueOnce({ emailVerified: false, emailVerifiedAt: null });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Resend Verification Code' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Verify Your Email' })).toBeTruthy();
+    expect(mocks.resendCode).toHaveBeenCalledTimes(1);
+    expect(mocks.resendCode.mock.calls[0]).toEqual([]);
+    expect(screen.getByText('A new code was requested. Enter the latest code when available.')).toBeTruthy();
+  });
+
+  it('respects the server resend cooldown and shows safe retry feedback', async () => {
+    mocks.getProfile.mockResolvedValueOnce({ ...completeProfile, accountStatus: 'PENDING_VERIFICATION' });
+    mocks.getVerificationStatus.mockResolvedValue({ emailVerified: false, emailVerifiedAt: null });
+    mocks.resendCode.mockRejectedValueOnce(Object.assign(new Error('server detail'), { status: 429, retryAfterSeconds: 45 }));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Resend Verification Code' }));
+
+    expect(await screen.findByRole('button', { name: 'Resend Code in 45s' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Resend Code in 45s' }).disabled).toBe(true);
+    expect(screen.queryByText('server detail')).toBeNull();
+    expect(mocks.resendCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a safe retry message when profile resend fails without exposing provider details', async () => {
+    mocks.getProfile.mockResolvedValueOnce({ ...completeProfile, accountStatus: 'PENDING_VERIFICATION' });
+    mocks.getVerificationStatus.mockResolvedValue({ emailVerified: false, emailVerifiedAt: null });
+    mocks.resendCode.mockRejectedValueOnce(new Error('SMTP authentication details'));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Resend Verification Code' }));
+
+    expect(await screen.findByText('We could not request a new code right now. Please try again shortly.')).toBeTruthy();
+    expect(screen.queryByText('SMTP authentication details')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Resend Verification Code' }).disabled).toBe(false);
+  });
+
+  it('refreshes profile and shared auth status from the server after successful verification', async () => {
+    const pending = { ...completeProfile, accountStatus: 'PENDING_VERIFICATION' };
+    mocks.getProfile.mockResolvedValueOnce(pending).mockResolvedValueOnce({ ...completeProfile });
+    mocks.getVerificationStatus
+      .mockResolvedValueOnce({ emailVerified: false, emailVerifiedAt: null })
+      .mockResolvedValueOnce({ emailVerified: false, emailVerifiedAt: null })
+      .mockResolvedValueOnce({ emailVerified: true, emailVerifiedAt: '2026-10-08T10:00:00Z' });
+    mocks.verifyCode.mockResolvedValueOnce({ emailVerified: true, emailVerifiedAt: '2026-10-08T10:00:00Z' });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Verify Email' }));
+    fireEvent.change(await screen.findByLabelText('Six-digit verification code'), { target: { value: '004281' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }));
+    expect(await screen.findByText('Email verified successfully.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+    expect(await screen.findByText('Email Verified')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Verify Email' })).toBeNull();
+    expect(mocks.verifyCode).toHaveBeenCalledWith('004281');
+    expect(mocks.updateCurrentUserProfile).toHaveBeenCalledWith(expect.objectContaining({ accountStatus: 'ACTIVE' }));
   });
 
   it('renders legacy nullable values as Not provided', async () => {

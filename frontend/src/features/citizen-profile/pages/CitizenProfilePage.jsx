@@ -5,6 +5,8 @@ import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import CitizenPageHeader from '../../../shared/ui/citizen/CitizenPageHeader';
 import CitizenStatusBadge from '../../../shared/ui/citizen/CitizenStatusBadge';
+import EmailVerificationDialog from '../../appointment-management/components/EmailVerificationDialog';
+import { getEmailVerificationStatus, resendEmailOtp } from '../../appointment-management/api/emailVerificationApi';
 import { getCitizenProfile, updateCitizenProfile } from '../api/citizenProfileApi';
 import '../citizen-profile.css';
 
@@ -154,6 +156,12 @@ function FieldError({ id, message }) {
 export default function CitizenProfilePage() {
   const { updateCurrentUserProfile } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
+  const [resendNotice, setResendNotice] = useState('');
+  const [resendError, setResendError] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -168,20 +176,64 @@ export default function CitizenProfilePage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const loadedProfile = await getCitizenProfile();
+      const [loadedProfile, statusResult] = await Promise.all([
+        getCitizenProfile(),
+        getEmailVerificationStatus().then((status) => ({ status })).catch(() => ({ status: null })),
+      ]);
       if (!loadedProfile) throw new Error('Profile information is unavailable.');
       setProfile(loadedProfile);
       setForm(profileToForm(loadedProfile));
+      setVerificationStatus(statusResult.status);
+      updateCurrentUserProfile(loadedProfile);
     } catch (error) {
       setLoadError(error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [updateCurrentUserProfile]);
 
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    if (resendCooldownSeconds <= 0) return undefined;
+    const timer = setTimeout(() => setResendCooldownSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldownSeconds]);
+
+  async function handleResendCode() {
+    if (resending || resendCooldownSeconds > 0) return;
+    setResending(true);
+    setResendNotice('');
+    setResendError('');
+    try {
+      const status = await resendEmailOtp();
+      if (status?.emailVerified) {
+        await loadProfile();
+      } else {
+        setResendNotice('A new code was requested. Enter the latest code when available.');
+        setVerificationOpen(true);
+      }
+    } catch (error) {
+      if (error?.code === 'EMAIL_ALREADY_VERIFIED') {
+        await loadProfile();
+      } else if (error?.status === 429 && error?.retryAfterSeconds > 0) {
+        setResendCooldownSeconds(error.retryAfterSeconds);
+        setResendNotice(`Please wait ${error.retryAfterSeconds} seconds before requesting another code.`);
+      } else {
+        setResendError('We could not request a new code right now. Please try again shortly.');
+      }
+    } finally {
+      setResending(false);
+    }
+  }
+
+  function closeVerification() {
+    setVerificationOpen(false);
+    setResendNotice('');
+    loadProfile();
+  }
 
   function startEditing() {
     setForm(profileToForm(profile));
@@ -234,6 +286,8 @@ export default function CitizenProfilePage() {
   }
 
   const accountStatus = formatEnum(profile?.accountStatus);
+  const verificationPending = profile?.accountStatus === 'PENDING_VERIFICATION' && !verificationStatus?.emailVerified;
+  const emailVerified = profile?.accountStatus === 'ACTIVE' && verificationStatus?.emailVerified === true;
 
   return (
     <section className="citizen-page citizen-profile" aria-labelledby="citizen-profile-title">
@@ -260,6 +314,23 @@ export default function CitizenProfilePage() {
       {!loading && profile && (
         <>
           {successMessage && <div className="alert alert-success" role="status">{successMessage}</div>}
+          {verificationPending && (
+            <section className="citizen-profile__verification" aria-labelledby="profile-verification-title">
+              <div>
+                <h2 id="profile-verification-title">Email verification required</h2>
+                <p>Your email address has not been verified yet. Enter your verification code to complete account activation.</p>
+                {resendError && <p className="citizen-profile__verification-error" role="alert">{resendError}</p>}
+                {resendNotice && !verificationOpen && <p className="citizen-profile__verification-notice" role="status">{resendNotice}</p>}
+              </div>
+              <div className="citizen-profile__verification-actions">
+                <button className="btn btn-primary" type="button" onClick={() => { setResendNotice(''); setVerificationOpen(true); }}>Verify Email</button>
+                <button className="btn btn-outline-primary" type="button" onClick={handleResendCode} disabled={resending || resendCooldownSeconds > 0}>
+                  {resending ? 'Requesting…' : resendCooldownSeconds > 0 ? `Resend Code in ${resendCooldownSeconds}s` : 'Resend Verification Code'}
+                </button>
+              </div>
+            </section>
+          )}
+          {emailVerified && <div className="citizen-profile__verified" role="status">Email Verified</div>}
           {!editing && <ProfileDetails profile={profile} />}
 
           {editing && (
@@ -359,6 +430,7 @@ export default function CitizenProfilePage() {
               </section>
             </div>
           )}
+          {verificationOpen && <EmailVerificationDialog onClose={closeVerification} initialResendNotice={resendNotice} context="profile" />}
         </>
       )}
     </section>

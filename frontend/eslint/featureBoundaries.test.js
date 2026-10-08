@@ -17,6 +17,7 @@ tester.run('feature ownership', rule, {
     { filename: file('shared/api/client.js'), code: "import { token } from '../auth/storage';" },
     { filename: file('features/screening/pages/Page.jsx'), code: "import { list } from '../../campaign-management/api/campaignApi';" },
     { filename: file('features/screening/pages/Page.jsx'), code: "import Modal from '../../campaign-management/components/QuestionnaireAssignmentFormModal';" },
+    { filename: file('features/citizen-profile/pages/Page.jsx'), code: "import EmailVerificationDialog from '../../appointment-management/components/EmailVerificationDialog';" },
     { filename: file('features/vaccination-administration/pages/Page.jsx'), code: "import Header from '../../public-landing/components/PublicHeader';" },
     { filename: file('features/screening/pages/Page.jsx'), code: "import Builder from '../hooks/useQuestionnaireBuilder';" },
     { filename: file('auth/context/AuthContext.jsx'), code: "import { token } from '../../shared/auth/storage';" },

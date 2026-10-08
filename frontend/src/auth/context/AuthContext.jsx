@@ -194,6 +194,7 @@ export function AuthProvider({ children }) {
         ...currentUser,
         fullName: profile.fullName,
         phoneNumber: profile.phoneNumber,
+        ...(profile.accountStatus ? { accountStatus: profile.accountStatus } : {}),
       };
     });
   }, []);

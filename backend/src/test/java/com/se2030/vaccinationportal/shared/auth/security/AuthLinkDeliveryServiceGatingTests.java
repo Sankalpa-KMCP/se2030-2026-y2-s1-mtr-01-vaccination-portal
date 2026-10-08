@@ -2,8 +2,11 @@ package com.se2030.vaccinationportal.shared.auth.security;
 
 import com.se2030.vaccinationportal.shared.auth.service.AuthLinkDeliveryService;
 import com.se2030.vaccinationportal.shared.auth.service.ConsoleAuthLinkDeliveryService;
+import com.se2030.vaccinationportal.shared.auth.service.ConsoleEmailOtpDeliveryService;
+import com.se2030.vaccinationportal.shared.auth.service.EmailOtpDeliveryService;
 import com.se2030.vaccinationportal.shared.auth.service.NoOpAuthLinkDeliveryService;
 import com.se2030.vaccinationportal.shared.auth.service.SmtpAuthLinkDeliveryService;
+import com.se2030.vaccinationportal.shared.auth.service.SmtpEmailOtpDeliveryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.Duration;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -79,7 +83,7 @@ class AuthLinkDeliveryServiceGatingTests {
 
     @Nested
     @SpringBootTest
-    @ActiveProfiles("test")
+    @ActiveProfiles({"test", "local"})
     @TestPropertySource(properties = "app.security.auth.delivery-mode=console")
     @DisplayName("Console delivery mode: ConsoleAuthLinkDeliveryService active, others absent")
     class ConsoleDeliveryModeTests {
@@ -89,6 +93,9 @@ class AuthLinkDeliveryServiceGatingTests {
 
         @Autowired
         private AuthLinkDeliveryService authLinkDeliveryService;
+
+        @Autowired
+        private EmailOtpDeliveryService emailOtpDeliveryService;
 
         @Test
         @DisplayName("Resolves exactly one bean of type ConsoleAuthLinkDeliveryService")
@@ -103,6 +110,22 @@ class AuthLinkDeliveryServiceGatingTests {
                     "SmtpAuthLinkDeliveryService must be absent when console delivery is enabled");
             assertTrue(applicationContext.getBeansOfType(NoOpAuthLinkDeliveryService.class).isEmpty(),
                     "NoOpAuthLinkDeliveryService must be absent when console delivery is enabled");
+            assertEquals(1, applicationContext.getBeansOfType(EmailOtpDeliveryService.class).size());
+            assertInstanceOf(ConsoleEmailOtpDeliveryService.class, emailOtpDeliveryService);
+            assertTrue(applicationContext.getBeansOfType(SmtpEmailOtpDeliveryService.class).isEmpty());
+        }
+
+        @Test
+        @DisplayName("Local console delivery displays the verification code and expiry without SMTP")
+        void consoleOtpDelivery_logsCodeForLocalDemo(CapturedOutput output) {
+            String syntheticCode = "0".repeat(6);
+
+            emailOtpDeliveryService.sendVerificationOtp("dev.user@example.com", syntheticCode, Duration.ofMinutes(5));
+
+            String logs = output.getAll();
+            assertTrue(logs.contains("[AUTH OTP DELIVERY][LOCAL ONLY]"));
+            assertTrue(logs.contains(syntheticCode));
+            assertTrue(logs.contains("expires in 300 seconds"));
         }
 
         @Test

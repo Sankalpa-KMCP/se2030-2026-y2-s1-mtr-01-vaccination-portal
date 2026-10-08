@@ -31,11 +31,11 @@ export function AuthSuccessState({ audience }) {
     <section className="auth-success" role="status">
       <div className="auth-success__seal"><SuccessSealIcon /></div>
       <p>{isStaff ? 'Request received' : 'Account created'}</p>
-      <h2>{isStaff ? 'Your request is awaiting approval.' : 'A verification code has been sent to your email.'}</h2>
+      <h2>{isStaff ? 'Your request is awaiting approval.' : 'Verify your email to activate your account.'}</h2>
       <span>
         {isStaff
           ? 'An administrator must activate your requested role before you can sign in.'
-          : 'Sign in, then verify your email with the code before booking an appointment.'}
+          : 'Sign in, then open your profile to enter a verification code or request a new one.'}
       </span>
       <Link className="auth-primary-action" to="/login">
         <span>{isStaff ? 'Go to Staff Login' : 'Go to Citizen Login'}</span>

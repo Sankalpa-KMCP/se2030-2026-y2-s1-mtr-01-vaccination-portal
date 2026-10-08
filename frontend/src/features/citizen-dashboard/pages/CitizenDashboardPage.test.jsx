@@ -72,6 +72,17 @@ describe('CitizenDashboardPage', () => {
     expect(screen.getByText('+94 11 222 3333')).toBeTruthy();
   });
 
+  it('guides a pending citizen to profile verification without showing the prompt to active citizens', () => {
+    mocks.auth.user.accountStatus = 'PENDING_VERIFICATION';
+    const view = renderDashboard();
+    expect(screen.getByRole('heading', { name: 'Verify your email to activate your account' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Verify Email' }).getAttribute('href')).toBe('/app/citizen/profile');
+
+    mocks.auth = { user: { ...mocks.auth.user, accountStatus: 'ACTIVE' } };
+    view.rerender(<MemoryRouter><CitizenDashboardPage /></MemoryRouter>);
+    expect(screen.queryByRole('heading', { name: 'Verify your email to activate your account' })).toBeNull();
+  });
+
   it('links every supported quick action and exposes no dead or unsupported service', () => {
     renderDashboard();
     const shortcuts = screen.getByRole('navigation', { name: 'Citizen service shortcuts' });
