@@ -39,7 +39,9 @@ function renderWidget(path = '/') {
 
 async function openPanel(path = '/') {
   const rendered = renderWidget(path);
-  fireEvent.click(screen.getByRole('button', { name: /open portal assistant/i }));
+  fireEvent.click(
+    screen.getByRole('button', { name: /open portal assistant/i })
+  );
   await screen.findByPlaceholderText('Ask about portal workflows...');
   return rendered;
 }
@@ -74,7 +76,9 @@ describe('AssistantWidget component', () => {
 
   it('renders launcher button on public route', () => {
     renderWidget('/how-it-works');
-    const launcher = screen.getByRole('button', { name: /open portal assistant/i });
+    const launcher = screen.getByRole('button', {
+      name: /open portal assistant/i,
+    });
     expect(launcher).toBeTruthy();
     expect(launcher.getAttribute('aria-expanded')).toBe('false');
   });
@@ -85,7 +89,9 @@ describe('AssistantWidget component', () => {
       user: { id: 10, role: 'ROLE_CITIZEN' },
     };
     renderWidget('/app/citizen');
-    expect(screen.getByRole('button', { name: /open portal assistant/i })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: /open portal assistant/i })
+    ).toBeTruthy();
   });
 
   it('shows the signed-in account privacy notice when personalized features are available', async () => {
@@ -101,27 +107,40 @@ describe('AssistantWidget component', () => {
 
     await openPanel('/app/citizen');
 
-    expect(await screen.findByText(/personal information is shown only for your verified signed-in account/i))
-      .toBeTruthy();
+    expect(
+      await screen.findByText(
+        /personal information is shown only for your verified signed-in account/i
+      )
+    ).toBeTruthy();
   });
 
   it('opens and closes the dialog panel via launcher button and close button', async () => {
     await openPanel();
-    expect(screen.getByRole('dialog', { name: /portal assistant/i })).toBeTruthy();
-    expect(screen.getByText('System disclaimer: Not medical advice.')).toBeTruthy();
+    expect(
+      screen.getByRole('dialog', { name: /portal assistant/i })
+    ).toBeTruthy();
+    expect(
+      screen.getByText('System disclaimer: Not medical advice.')
+    ).toBeTruthy();
 
     // Close panel using close button
     const closeBtn = screen.getByRole('button', { name: /close assistant/i });
     fireEvent.click(closeBtn);
-    expect(screen.queryByRole('dialog', { name: /portal assistant/i })).toBeNull();
+    expect(
+      screen.queryByRole('dialog', { name: /portal assistant/i })
+    ).toBeNull();
   });
 
   it('closes dialog panel on Escape key', async () => {
     await openPanel();
-    expect(screen.getByRole('dialog', { name: /portal assistant/i })).toBeTruthy();
+    expect(
+      screen.getByRole('dialog', { name: /portal assistant/i })
+    ).toBeTruthy();
 
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: /portal assistant/i })).toBeNull();
+    expect(
+      screen.queryByRole('dialog', { name: /portal assistant/i })
+    ).toBeNull();
   });
 
   it('disables input, shows alert, and allows Retry when assistant is unavailable', async () => {
@@ -131,11 +150,17 @@ describe('AssistantWidget component', () => {
     });
 
     renderWidget();
-    fireEvent.click(screen.getByRole('button', { name: /open portal assistant/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /open portal assistant/i })
+    );
 
     const unavailableAlert = await screen.findByRole('alert');
-    expect(unavailableAlert.textContent).toContain('The portal assistant is currently unavailable.');
-    const textarea = screen.getByRole('textbox', { name: /ask the portal assistant/i });
+    expect(unavailableAlert.textContent).toContain(
+      'The portal assistant is currently unavailable.'
+    );
+    const textarea = screen.getByRole('textbox', {
+      name: /ask the portal assistant/i,
+    });
     expect(textarea.hasAttribute('disabled')).toBe(true);
 
     const retryBtn = screen.getByRole('button', { name: /retry/i });
@@ -149,7 +174,9 @@ describe('AssistantWidget component', () => {
     fireEvent.click(retryBtn);
 
     await waitFor(() => {
-      expect(screen.queryByText('The portal assistant is currently unavailable.')).toBeNull();
+      expect(
+        screen.queryByText('The portal assistant is currently unavailable.')
+      ).toBeNull();
     });
     expect(textarea.hasAttribute('disabled')).toBe(false);
   });
@@ -157,7 +184,9 @@ describe('AssistantWidget component', () => {
   it('submits valid message, displays user and assistant responses, and prevents blank submission', async () => {
     await openPanel();
 
-    const textarea = screen.getByRole('textbox', { name: /ask the portal assistant/i });
+    const textarea = screen.getByRole('textbox', {
+      name: /ask the portal assistant/i,
+    });
     const sendBtn = screen.getByRole('button', { name: /send message/i });
 
     // Initially blank, send button is disabled
@@ -172,14 +201,18 @@ describe('AssistantWidget component', () => {
     // User message rendered
     expect(await screen.findByText('How do I schedule?')).toBeTruthy();
     // Assistant message rendered
-    const assistantMatches = await screen.findAllByText('This is the verified assistant response.');
+    const assistantMatches = await screen.findAllByText(
+      'This is the verified assistant response.'
+    );
     expect(assistantMatches.length).toBeGreaterThan(0);
   });
 
   it('submits message using suggested question chip', async () => {
     await openPanel();
 
-    const questionChip = await screen.findByRole('button', { name: /how do i register\?/i });
+    const questionChip = await screen.findByRole('button', {
+      name: /how do i register\?/i,
+    });
     fireEvent.click(questionChip);
 
     const matches = await screen.findAllByText('How do I register?');
@@ -194,12 +227,16 @@ describe('AssistantWidget component', () => {
   it('renders safe suggested actions and navigates via React Router on click', async () => {
     await openPanel();
 
-    const textarea = screen.getByRole('textbox', { name: /ask the portal assistant/i });
+    const textarea = screen.getByRole('textbox', {
+      name: /ask the portal assistant/i,
+    });
     fireEvent.change(textarea, { target: { value: 'Appointment info' } });
     fireEvent.click(screen.getByRole('button', { name: /send message/i }));
 
     // Book Appointment is safe
-    const actionBtn = await screen.findByRole('button', { name: /book appointment/i });
+    const actionBtn = await screen.findByRole('button', {
+      name: /book appointment/i,
+    });
     expect(actionBtn).toBeTruthy();
 
     // Evil Path was filtered out
@@ -209,20 +246,90 @@ describe('AssistantWidget component', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/app/appointments/book');
   });
 
+  it('hides welcome cards after a message and restores them when cleared', async () => {
+    await openPanel();
+    expect(
+      screen.getByRole('heading', { name: 'How can I help?' })
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'How do I register?' }));
+    await screen.findAllByText('This is the verified assistant response.');
+    expect(
+      screen.queryByRole('button', { name: 'How do I register?' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'How can I help?' })
+    ).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear conversation' }));
+    expect(
+      screen.getByRole('button', { name: 'How do I register?' })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: 'How can I help?' })
+    ).toBeTruthy();
+  });
+
+  it('focuses the input on opening and restores launcher focus on Escape', async () => {
+    await openPanel();
+    expect(document.activeElement).toBe(screen.getByRole('textbox'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Open portal assistant' })
+    );
+  });
+
+  it('blocks Enter submission over the message limit and preserves Shift+Enter', async () => {
+    await openPanel();
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, {
+      target: { value: 'x'.repeat(assistantApi.MAX_MESSAGE_LENGTH + 1) },
+    });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(assistantApi.sendAssistantMessage).not.toHaveBeenCalled();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    fireEvent.change(input, { target: { value: 'A multiline question' } });
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true });
+    expect(assistantApi.sendAssistantMessage).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() =>
+      expect(assistantApi.sendAssistantMessage).toHaveBeenCalledTimes(1)
+    );
+  });
+
+  it('grows the input to 120px and shrinks it after clearing the draft', async () => {
+    await openPanel();
+    const input = screen.getByRole('textbox');
+    const scrollHeight = vi
+      .spyOn(input, 'scrollHeight', 'get')
+      .mockReturnValue(180);
+    fireEvent.change(input, {
+      target: { value: 'A long\nmultiline\nquestion' },
+    });
+    expect(input.style.height).toBe('120px');
+    scrollHeight.mockReturnValue(42);
+    fireEvent.change(input, { target: { value: '' } });
+    expect(input.style.height).toBe('42px');
+  });
+
   it('clears conversation turns when Clear conversation button is clicked', async () => {
     await openPanel();
 
-    const textarea = screen.getByRole('textbox', { name: /ask the portal assistant/i });
+    const textarea = screen.getByRole('textbox', {
+      name: /ask the portal assistant/i,
+    });
     fireEvent.change(textarea, { target: { value: 'First question' } });
     fireEvent.click(screen.getByRole('button', { name: /send message/i }));
 
     expect(await screen.findByText('First question')).toBeTruthy();
 
-    const clearButtons = screen.getAllByRole('button', { name: /clear conversation/i });
+    const clearButtons = screen.getAllByRole('button', {
+      name: /clear conversation/i,
+    });
     fireEvent.click(clearButtons[0]);
 
     expect(screen.queryByText('First question')).toBeNull();
-    const initialGreetings = screen.getAllByText(/hello\. i can help you understand portal services/i);
+    const initialGreetings = screen.getAllByText(
+      /hello\. i can help you understand portal services/i
+    );
     expect(initialGreetings.length).toBeGreaterThan(0);
   });
 
@@ -234,11 +341,15 @@ describe('AssistantWidget component', () => {
 
     await openPanel();
 
-    const textarea = screen.getByRole('textbox', { name: /ask the portal assistant/i });
+    const textarea = screen.getByRole('textbox', {
+      name: /ask the portal assistant/i,
+    });
     fireEvent.change(textarea, { target: { value: 'XSS check' } });
     fireEvent.click(screen.getByRole('button', { name: /send message/i }));
 
-    const answerMatches = await screen.findAllByText(/<img src=x onerror=alert\(1\)> <b>Bold text test<\/b>/);
+    const answerMatches = await screen.findAllByText(
+      /<img src=x onerror=alert\(1\)> <b>Bold text test<\/b>/
+    );
     expect(answerMatches.length).toBeGreaterThan(0);
     const bubble = answerMatches[0];
     expect(bubble.innerHTML).not.toContain('<img');
@@ -253,11 +364,15 @@ describe('AssistantWidget component', () => {
 
     await openPanel();
 
-    const textarea = screen.getByRole('textbox', { name: /ask the portal assistant/i });
+    const textarea = screen.getByRole('textbox', {
+      name: /ask the portal assistant/i,
+    });
     fireEvent.change(textarea, { target: { value: 'Rate limited request' } });
     fireEvent.click(screen.getByRole('button', { name: /send message/i }));
 
     const alertBanner = await screen.findByRole('alert');
-    expect(alertBanner.textContent).toContain('You have sent several requests. Please wait and try again.');
+    expect(alertBanner.textContent).toContain(
+      'You have sent several requests. Please wait and try again.'
+    );
   });
 });

@@ -6,9 +6,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  useAssistantConversation,
-} from '../hooks/useAssistantConversation';
+import { useAssistantConversation } from '../hooks/useAssistantConversation';
 import { isSafeInternalPath, MAX_MESSAGE_LENGTH } from '../api/assistantApi';
 import '../styles/assistant.css';
 
@@ -37,20 +35,64 @@ export default function AssistantWidget() {
   const panelRef = useRef(null);
   const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const widgetRef = useRef(null);
+  const wasOpenRef = useRef(false);
+  const hasConversation = messages.some((message) => message.role === 'user');
 
   // Auto-scroll messages list when new messages arrive
   useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isOpen && hasConversation) {
+      const reduceMotion = window.matchMedia?.(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+      messagesEndRef.current?.scrollIntoView({
+        behavior: reduceMotion ? 'instant' : 'smooth',
+        block: 'end',
+      });
     }
-  }, [messages, isSending, isOpen]);
+  }, [messages, isSending, isOpen, hasConversation]);
+
+  // Grow the composer with its content, then scroll within it for longer messages.
+  useEffect(() => {
+    const input = inputRef.current;
+    if (input) {
+      input.style.height = 'auto';
+      input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+    }
+  }, [inputVal, isOpen]);
+
+  // Keep the sheet above the on-screen keyboard on mobile browsers.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport || !isOpen) return undefined;
+    const updateViewport = () => {
+      widgetRef.current?.style.setProperty(
+        '--assistant-viewport-height',
+        `${viewport.height}px`
+      );
+      widgetRef.current?.style.setProperty(
+        '--assistant-viewport-bottom',
+        `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`
+      );
+    };
+    updateViewport();
+    viewport.addEventListener('resize', updateViewport);
+    viewport.addEventListener('scroll', updateViewport);
+    return () => {
+      viewport.removeEventListener('resize', updateViewport);
+      viewport.removeEventListener('scroll', updateViewport);
+    };
+  }, [isOpen]);
 
   // Handle focus when panel opens / closes
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isAvailable) {
       inputRef.current?.focus();
+    } else if (!isOpen && wasOpenRef.current) {
+      launcherRef.current?.focus();
     }
-  }, [isOpen]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, isAvailable]);
 
   // Support Escape key to close the assistant dialog
   const handleKeyDown = useCallback(
@@ -85,7 +127,12 @@ export default function AssistantWidget() {
 
   const handleSubmit = (e) => {
     e?.preventDefault();
-    if (!inputVal.trim() || isSending || !isAvailable) {
+    if (
+      !inputVal.trim() ||
+      inputVal.length > MAX_MESSAGE_LENGTH ||
+      isSending ||
+      !isAvailable
+    ) {
       return;
     }
     const textToSend = inputVal;
@@ -116,10 +163,11 @@ export default function AssistantWidget() {
   };
 
   const isOverLimit = inputVal.length > MAX_MESSAGE_LENGTH;
-  const canSend = inputVal.trim().length > 0 && !isOverLimit && !isSending && isAvailable;
+  const canSend =
+    inputVal.trim().length > 0 && !isOverLimit && !isSending && isAvailable;
 
   return (
-    <div className="assistant-widget">
+    <div className="assistant-widget" ref={widgetRef}>
       {/* Floating Launcher Button */}
       <button
         ref={launcherRef}
@@ -134,6 +182,9 @@ export default function AssistantWidget() {
           className={isOpen ? 'bi bi-x-lg' : 'bi bi-chat-dots-fill'}
           aria-hidden="true"
         />
+        <span className="assistant-launcher-label">
+          {isOpen ? 'Close assistant' : 'Ask assistant'}
+        </span>
       </button>
 
       {/* Floating Dialog Panel */}
@@ -147,13 +198,28 @@ export default function AssistantWidget() {
         >
           {/* Header */}
           <header className="assistant-header">
-            <h2 className="assistant-header-title">
-              <span
-                className={`assistant-status-dot ${isAvailable ? '' : 'unavailable'}`}
-                aria-hidden="true"
-              />
-              Portal Assistant
-            </h2>
+            <div className="assistant-header-identity">
+              <span className="assistant-emblem" aria-hidden="true">
+                <i className="bi bi-chat-heart" />
+              </span>
+              <div>
+                <span className="assistant-eyebrow">
+                  A little guidance, a little easier
+                </span>
+                <h2 className="assistant-header-title">Portal Assistant</h2>
+                <span className="assistant-availability">
+                  <span
+                    className={`assistant-status-dot ${isStatusLoading ? 'loading' : isAvailable ? '' : 'unavailable'}`}
+                    aria-hidden="true"
+                  />
+                  {isStatusLoading
+                    ? 'Connecting…'
+                    : isAvailable
+                      ? 'Ready to help'
+                      : 'Currently unavailable'}
+                </span>
+              </div>
+            </div>
             <div className="assistant-header-actions">
               <button
                 type="button"
@@ -162,7 +228,10 @@ export default function AssistantWidget() {
                 title="Clear conversation"
                 onClick={clearConversation}
               >
-                <i className="bi bi-trash3" aria-hidden="true" />
+                <i
+                  className="bi bi-arrow-counterclockwise"
+                  aria-hidden="true"
+                />
               </button>
               <button
                 type="button"
@@ -185,7 +254,10 @@ export default function AssistantWidget() {
           {personalizedFeaturesAvailable && (
             <div className="assistant-privacy-banner" role="note">
               <i className="bi bi-shield-lock-fill" aria-hidden="true" />
-              <span>Personal information is shown only for your verified signed-in account.</span>
+              <span>
+                Personal information is shown only for your verified signed-in
+                account.
+              </span>
             </div>
           )}
 
@@ -211,36 +283,72 @@ export default function AssistantWidget() {
           )}
 
           {/* Messages Area */}
-          <div className="assistant-messages-container" tabIndex={0} role="region" aria-label="Conversation messages">
+          <div
+            className="assistant-messages-container"
+            tabIndex={0}
+            role="region"
+            aria-label="Conversation messages"
+          >
             {messages.map((msg, index) => (
               <div
                 key={msg.id || index}
                 className={`assistant-message-row ${msg.role}`}
               >
-                <div className="assistant-message-bubble">
-                  {msg.content}
-                </div>
-
-                {/* Suggested Navigation Actions */}
-                {Array.isArray(msg.suggestedActions) && msg.suggestedActions.length > 0 && (
-                  <div className="assistant-actions-container" aria-label="Suggested navigation">
-                    {msg.suggestedActions.map((action, actIdx) => (
-                      <button
-                        key={`${msg.id}-action-${actIdx}`}
-                        type="button"
-                        className="assistant-action-chip"
-                        onClick={() => handleActionClick(action.path)}
-                      >
-                        <i className="bi bi-arrow-right-short" aria-hidden="true" />
-                        {action.label}
-                      </button>
-                    ))}
+                {msg.isGreeting ? (
+                  <div
+                    className={`assistant-welcome ${hasConversation ? 'compact' : ''}`}
+                  >
+                    {!hasConversation && (
+                      <>
+                        <span className="assistant-welcome-kicker">
+                          YOUR PORTAL COMPANION
+                        </span>
+                        <h3>How can I help?</h3>
+                      </>
+                    )}
+                    <p>{msg.content}</p>
                   </div>
+                ) : (
+                  <>
+                    <span className="assistant-speaker">
+                      {msg.role === 'user' ? 'You' : 'Portal Assistant'}
+                    </span>
+                    <div className="assistant-message-bubble">
+                      {msg.content}
+                    </div>
+                  </>
                 )}
 
+                {/* Suggested Navigation Actions */}
+                {Array.isArray(msg.suggestedActions) &&
+                  msg.suggestedActions.length > 0 && (
+                    <div
+                      className="assistant-actions-container"
+                      aria-label="Suggested navigation"
+                    >
+                      {msg.suggestedActions.map((action, actIdx) => (
+                        <button
+                          key={`${msg.id}-action-${actIdx}`}
+                          type="button"
+                          className="assistant-action-chip"
+                          onClick={() => handleActionClick(action.path)}
+                        >
+                          <i
+                            className="bi bi-arrow-right-short"
+                            aria-hidden="true"
+                          />
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                 {/* Initial suggested questions chips under initial greeting */}
-                {msg.isGreeting && (
-                  <div className="assistant-suggested-questions">
+                {msg.isGreeting && !hasConversation && (
+                  <div
+                    className="assistant-suggested-questions"
+                    aria-label="Suggested questions"
+                  >
                     {suggestedQuestions.map((q, qIdx) => (
                       <button
                         key={`sq-${qIdx}`}
@@ -249,8 +357,19 @@ export default function AssistantWidget() {
                         disabled={!isAvailable || isSending}
                         onClick={() => handleQuestionClick(q)}
                       >
-                        <i className="bi bi-question-circle me-1" aria-hidden="true" />
-                        {q}
+                        <span
+                          className="assistant-question-icon"
+                          aria-hidden="true"
+                        >
+                          <i
+                            className={`bi ${['bi-person-plus', 'bi-clipboard2-check', 'bi-calendar2-heart', 'bi-patch-check'][qIdx % 4]}`}
+                          />
+                        </span>
+                        <span>{q}</span>
+                        <i
+                          className="bi bi-arrow-up-right assistant-question-arrow"
+                          aria-hidden="true"
+                        />
                       </button>
                     ))}
                   </div>
@@ -260,10 +379,17 @@ export default function AssistantWidget() {
 
             {/* Sending indicator */}
             {isSending && (
-              <div className="assistant-typing-indicator" aria-label="Assistant is thinking">
-                <span className="assistant-typing-dot" />
-                <span className="assistant-typing-dot" />
-                <span className="assistant-typing-dot" />
+              <div
+                className="assistant-typing-indicator"
+                role="status"
+                aria-label="Assistant is thinking"
+              >
+                <span className="assistant-typing-dots" aria-hidden="true">
+                  <span className="assistant-typing-dot" />
+                  <span className="assistant-typing-dot" />
+                  <span className="assistant-typing-dot" />
+                </span>
+                Finding your next step…
               </div>
             )}
 
@@ -271,7 +397,11 @@ export default function AssistantWidget() {
           </div>
 
           {/* Dynamic polite live region for accessibility */}
-          <div className="visually-hidden" aria-live="polite" aria-atomic="true">
+          <div
+            className="visually-hidden"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             {turnError && `Error: ${turnError}`}
             {statusError && `Status error: ${statusError}`}
             {messages[messages.length - 1]?.role === 'assistant' &&
@@ -281,7 +411,10 @@ export default function AssistantWidget() {
           {/* Turn Error Banner */}
           {turnError && (
             <div className="assistant-error-banner" role="alert">
-              <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+              <i
+                className="bi bi-exclamation-triangle-fill"
+                aria-hidden="true"
+              />
               <span>{turnError}</span>
             </div>
           )}
@@ -295,12 +428,18 @@ export default function AssistantWidget() {
                   id="assistant-user-input"
                   className="assistant-input-textarea"
                   rows={1}
-                  placeholder={isAvailable ? 'Ask about portal workflows...' : 'Assistant is currently unavailable'}
+                  placeholder={
+                    isAvailable
+                      ? 'Ask about portal workflows...'
+                      : 'Assistant is currently unavailable'
+                  }
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
                   onKeyDown={handleTextareaKeyDown}
                   disabled={!isAvailable || isSending}
                   aria-label="Ask the portal assistant"
+                  aria-describedby="assistant-input-meta"
+                  aria-invalid={isOverLimit}
                   maxLength={MAX_MESSAGE_LENGTH + 50}
                 />
                 <button
@@ -310,19 +449,16 @@ export default function AssistantWidget() {
                   aria-label="Send message"
                   title="Send message"
                 >
-                  <i className="bi bi-send-fill" aria-hidden="true" />
+                  <i className="bi bi-arrow-up" aria-hidden="true" />
                 </button>
               </div>
 
-              <div className="assistant-input-meta">
-                <button
-                  type="button"
-                  className="assistant-clear-btn"
-                  onClick={clearConversation}
-                >
-                  Clear conversation
-                </button>
-                <span className={isOverLimit ? 'text-danger fw-semibold' : ''}>
+              <div className="assistant-input-meta" id="assistant-input-meta">
+                <span className="assistant-keyboard-hint">
+                  Enter to send <span aria-hidden="true">·</span> Shift + Enter
+                  for a new line
+                </span>
+                <span className={isOverLimit ? 'assistant-limit-error' : ''}>
                   {inputVal.length}/{MAX_MESSAGE_LENGTH}
                 </span>
               </div>
