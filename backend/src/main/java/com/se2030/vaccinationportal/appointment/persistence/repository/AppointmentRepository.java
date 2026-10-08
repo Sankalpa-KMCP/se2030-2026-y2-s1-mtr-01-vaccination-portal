@@ -85,4 +85,5 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("sessionId") Long sessionId,
             @Param("statuses") Collection<AppointmentStatus> statuses
     );
+
 }

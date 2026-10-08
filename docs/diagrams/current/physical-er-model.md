@@ -40,4 +40,4 @@ erDiagram
   }
 ```
 
-rotated_from_id is a stored predecessor identifier; V4 does not declare a self-FK. [V24](../../../backend/src/main/resources/db/migration/V24__add_refresh_token_sessions_family_revocation_index.sql) adds the (token_family_id, revoked_at) family-revocation index. Raw refresh tokens and OTPs are absent from persisted fields. The full runtime schema is V0–V24, 25 migrations.
+rotated_from_id is a stored predecessor identifier; V4 does not declare a self-FK. [V24](../../../backend/src/main/resources/db/migration/V24__add_refresh_token_sessions_family_revocation_index.sql) adds the (token_family_id, revoked_at) family-revocation index. Raw refresh tokens and OTPs are absent from persisted fields. The full runtime schema is V0–V26, 27 migrations.

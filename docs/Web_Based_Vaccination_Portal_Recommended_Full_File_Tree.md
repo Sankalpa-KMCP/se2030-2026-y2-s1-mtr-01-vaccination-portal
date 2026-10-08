@@ -172,7 +172,7 @@ are outside static resolution; none are needed by the current production graph.
 ## Migrations and validation
 
 Active Flyway location: `backend/src/main/resources/db/migration` (`classpath:db/migration`).
-There are 25 applied-history scripts, V0 through V24. V22 adds citizen OTP challenge state, V23 login lockout state and V24 the refresh-family revocation index. Historical migration contents remain immutable.
+There are 27 applied-history scripts, V0 through V26. V22 adds citizen OTP challenge state, V23 login lockout state, V24 the refresh-family revocation index, V25 AI assistant rate-limit state and V26 MF-03 history/event-consumption state. Historical migration contents remain immutable.
 `database/migrations` contains historical reference scripts, not an additional Flyway location;
 see [database guide](../database/README.md). Do not apply them in addition to runtime migrations.
 

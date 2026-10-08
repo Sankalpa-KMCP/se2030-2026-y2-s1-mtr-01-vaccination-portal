@@ -6,7 +6,7 @@ Baseline: develop `444364d4b742fa08455c4acf0538baa836e9529a`. This is preparatio
 
 Use Java 21, a supported Node toolchain per frontend README, npm and Maven wrappers. Use an existing safe local MySQL or repository Compose MySQL setup. Compose supplies MySQL, not a verified deployed frontend/backend topology. Configure local database connectivity and JWT/email settings using documented environment variables and private local values; do not commit or capture credentials. Confirm staff-role accounts through supported registration/admin review, not inferred default accounts. Use synthetic citizen data.
 
-Flyway runtime location is backend/src/main/resources/db/migration: V0–V24, 25 migrations. Keep Hibernate validation and existing data intact. Check health and schema history before demonstrating. Historical database/migrations scripts are not runtime inputs.
+Flyway runtime location is backend/src/main/resources/db/migration: V0–V26, 27 migrations. Keep Hibernate validation and existing data intact. Check health and schema history before demonstrating. Historical database/migrations scripts are not runtime inputs.
 
 ## Startup
 

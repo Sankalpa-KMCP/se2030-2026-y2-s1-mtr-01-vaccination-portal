@@ -6,6 +6,8 @@ import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistPromoti
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.appointment.exception.AppointmentNotFoundException;
 import com.se2030.vaccinationportal.appointment.event.AppointmentEvent;
+import com.se2030.vaccinationportal.appointment.event.Mf03HistoryRecorder;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentChangeType;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,6 +39,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AppointmentCancellationService {
+    private Mf03HistoryRecorder historyRecorder;
+
+    @Autowired(required = false)
+    void setHistoryRecorder(Mf03HistoryRecorder historyRecorder) { this.historyRecorder = historyRecorder; }
 
     private final ApplicationEventPublisher eventPublisher;
 
@@ -137,6 +143,13 @@ public class AppointmentCancellationService {
 
         appointment.cancel(effectiveNow);
         Appointment saved = appointmentRepository.save(appointment);
+        if (historyRecorder != null) {
+            String reason = isStaffOverride ? staffReason : "Citizen cancelled appointment";
+            historyRecorder.appointment(saved, AppointmentChangeType.CANCELLED,
+                    appointment.getSlotId(), null, reason, effectiveNow);
+            historyRecorder.notification(saved, AppointmentChangeType.CANCELLED,
+                    "Your vaccination appointment has been cancelled.");
+        }
         eventPublisher.publishEvent(AppointmentEvent.from(AppointmentEvent.Type.CANCELLED, saved));
 
         // Step 2e: Trigger automatic waitlist promotion if a waiter is queued for this freed capacity.

@@ -11,7 +11,9 @@ import com.se2030.vaccinationportal.appointment.exception.EmailVerificationRequi
 import com.se2030.vaccinationportal.appointment.exception.NotEligibleException;
 import com.se2030.vaccinationportal.appointment.exception.SlotFullException;
 import com.se2030.vaccinationportal.appointment.event.AppointmentEvent;
+import com.se2030.vaccinationportal.appointment.event.Mf03HistoryRecorder;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
+import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentChangeType;
 import com.se2030.vaccinationportal.appointment.persistence.model.AppointmentStatus;
 import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
@@ -55,6 +57,12 @@ public class AppointmentBookingService {
     private final EligibilityLookupPort eligibilityLookupPort;
     private final SlotCapacityPort slotCapacityPort;
     private final EmailVerificationStatusReader emailVerificationStatusReader;
+    private Mf03HistoryRecorder historyRecorder;
+
+    @Autowired(required = false)
+    void setHistoryRecorder(Mf03HistoryRecorder historyRecorder) {
+        this.historyRecorder = historyRecorder;
+    }
 
     @Autowired
     public AppointmentBookingService(
@@ -196,6 +204,12 @@ public class AppointmentBookingService {
         // Step 1f: Persist new CONFIRMED appointment entity within the same transaction.
         Appointment appointment = new Appointment(citizenId, campaignId, slotId, AppointmentStatus.CONFIRMED, Instant.now());
         Appointment saved = appointmentRepository.save(appointment);
+        if (historyRecorder != null) {
+            historyRecorder.appointment(saved, AppointmentChangeType.BOOKED, null, null,
+                    "Citizen booked appointment", saved.getBookedAt());
+            historyRecorder.notification(saved, AppointmentChangeType.BOOKED,
+                    "Your vaccination appointment is confirmed.");
+        }
         eventPublisher.publishEvent(AppointmentEvent.from(AppointmentEvent.Type.BOOKED, saved));
         return saved;
     }

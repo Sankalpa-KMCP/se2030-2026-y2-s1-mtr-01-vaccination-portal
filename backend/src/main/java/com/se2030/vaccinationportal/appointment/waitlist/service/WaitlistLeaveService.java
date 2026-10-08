@@ -6,8 +6,11 @@ import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.se2030.vaccinationportal.appointment.event.Mf03HistoryRecorder;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -27,6 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class WaitlistLeaveService {
+    private Mf03HistoryRecorder historyRecorder;
+
+    @Autowired(required = false)
+    void setHistoryRecorder(Mf03HistoryRecorder historyRecorder) { this.historyRecorder = historyRecorder; }
 
     private final WaitlistRepository waitlistRepository;
 
@@ -62,8 +69,13 @@ public class WaitlistLeaveService {
                     + ". Only WAITING entries can be cancelled voluntarily.");
         }
 
+        WaitlistStatus oldStatus = entry.getStatus();
         entry.cancel();
-        return waitlistRepository.save(entry);
+        WaitlistEntry saved = waitlistRepository.save(entry);
+        if (historyRecorder != null) {
+            historyRecorder.waitlist(saved, oldStatus, null, "Citizen left waitlist", Instant.now());
+        }
+        return saved;
     }
 
     /**
