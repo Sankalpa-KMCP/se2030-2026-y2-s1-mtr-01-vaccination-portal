@@ -14,7 +14,7 @@
     radial-gradient(circle at 86% 80%, rgba(53, 145, 181, .18), transparent 30%),
     linear-gradient(145deg, #f9fffd 0%, #edf9f5 52%, #f4fbff 100%);
   isolation: isolate;
-  animation: citizen-login-intro-exit .45s 2.75s ease-in forwards;
+  animation: citizen-login-intro-exit .3s 1.2s ease-in forwards;
 }
 
 .citizen-login-greeting__skip {
@@ -150,7 +150,7 @@
   border-radius: inherit;
   background: linear-gradient(90deg, #52cba9, var(--citizen-intro-green));
   transform-origin: left;
-  animation: citizen-login-progress 3.2s linear both;
+  animation: citizen-login-progress 1.5s linear both;
 }
 
 .citizen-login-greeting__halo {

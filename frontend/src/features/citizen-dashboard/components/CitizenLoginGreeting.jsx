@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import '../styles/citizen-login-greeting.css';
 
-export const CITIZEN_LOGIN_GREETING_DURATION_MS = 3200;
+export const CITIZEN_LOGIN_GREETING_DURATION_MS = 1500;
 
 export default function CitizenLoginGreeting({ name, onComplete }) {
   const skipButtonRef = useRef(null);
