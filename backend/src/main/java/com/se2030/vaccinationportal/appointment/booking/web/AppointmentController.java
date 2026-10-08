@@ -188,6 +188,7 @@ public class AppointmentController {
         Long effectiveCitizenId;
         if (isStaffOverride) {
             validateStaffOverrideAuthority();
+            requireCheckInAppointmentAccess(user, id);
             effectiveCitizenId = (request != null) ? request.requestingCitizenId() : null;
         } else {
             validateCitizenAuthority(user);
@@ -228,6 +229,7 @@ public class AppointmentController {
         Long effectiveCitizenId;
         if (isStaffOverride) {
             validateStaffOverrideAuthority();
+            requireCheckInAppointmentAccess(user, id);
             effectiveCitizenId = request.requestingCitizenId();
         } else {
             validateCitizenAuthority(user);

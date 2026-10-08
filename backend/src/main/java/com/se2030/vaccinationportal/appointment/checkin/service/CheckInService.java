@@ -138,8 +138,9 @@ public class CheckInService {
         if (slotCapacityPort != null) {
             Instant slotStart = slotCapacityPort.getSlotStartTime(appointment.getSlotId());
             if (slotStart != null) {
-                long minutesFromStart = Duration.between(slotStart, effectiveNow).toMinutes();
-                if (minutesFromStart < -30 || minutesFromStart > 30) {
+                Instant windowOpensAt = slotStart.minus(Duration.ofMinutes(30));
+                Instant windowClosesAt = slotStart.plus(Duration.ofMinutes(30));
+                if (effectiveNow.isBefore(windowOpensAt) || effectiveNow.isAfter(windowClosesAt)) {
                     if (!isStaffOverride) {
                         throw new InvalidCheckInWindowException("Check-in at " + effectiveNow
                                 + " is outside the allowable 30-minute window for slot start " + slotStart);
@@ -225,8 +226,8 @@ public class CheckInService {
         if (slotCapacityPort != null) {
             Instant slotStart = slotCapacityPort.getSlotStartTime(appointment.getSlotId());
             if (slotStart != null) {
-                long minutesFromStart = Duration.between(slotStart, effectiveNow).toMinutes();
-                if (minutesFromStart <= 30) {
+                Instant windowClosesAt = slotStart.plus(Duration.ofMinutes(30));
+                if (!effectiveNow.isAfter(windowClosesAt)) {
                     throw new InvalidCheckInWindowException("Cannot mark NO_SHOW before check-in window closes (slot start: "
                             + slotStart + ", current time: " + effectiveNow + ")");
                 }
