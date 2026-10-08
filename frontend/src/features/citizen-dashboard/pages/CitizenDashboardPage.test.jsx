@@ -86,7 +86,7 @@ describe('CitizenDashboardPage', () => {
   });
 
   it('shows and consumes the authenticated login welcome when routing replaces login first', () => {
-    mocks.auth.loginWelcome = { userId: '71' };
+    mocks.auth.loginWelcome = { audience: 'citizen', userId: '71' };
     renderDashboard();
 
     expect(screen.getByRole('dialog', { name: 'Welcome, Citizen User' })).toBeTruthy();

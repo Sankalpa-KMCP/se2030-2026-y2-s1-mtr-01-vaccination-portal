@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CitizenDashboardPage from '../../features/citizen-dashboard/pages/CitizenDashboardPage';
 import StaffDashboardPage from './StaffDashboardPage';
@@ -99,6 +99,28 @@ describe('role dashboards', () => {
     expect(within(checkInCard).getByText(/process arrivals/i)).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Check-In Queue' })).toBeNull();
     expect(screen.queryByText('Screening Review')).toBeNull();
+  });
+
+  it('shows the authenticated name in a one-time staff login greeting', () => {
+    const consumeLoginWelcome = vi.fn();
+    authState.current = {
+      consumeLoginWelcome,
+      loginWelcome: { audience: 'staff', userId: '44' },
+      user: {
+        id: 44,
+        fullName: 'Vera Vaccinator',
+        email: 'vera@example.gov',
+        roles: ['ROLE_VACCINATOR'],
+      },
+    };
+
+    renderPage(<StaffDashboardPage />);
+
+    expect(screen.getByRole('dialog', { name: 'Welcome, Vera Vaccinator' })).toBeTruthy();
+    expect(screen.getByText('Staff sign-in successful')).toBeTruthy();
+    expect(screen.getByText('Your secure operational workspace is ready.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+    expect(consumeLoginWelcome).toHaveBeenCalledTimes(1);
   });
 
   it('shows only screening review and clinical configuration cards on the healthcare officer dashboard', () => {

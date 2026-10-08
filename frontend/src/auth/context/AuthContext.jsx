@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { onUnauthorized, notifyUnauthorized, startAuthSession, endAuthSession, getToken, getSessionPrincipalId, normalizePrincipalId } from '../../shared/auth/authStorage';
 import { bootstrapSession } from '../../shared/api/apiClient';
 import { loginApi, getCurrentUserApi, logoutApi } from '../api/authApi';
-import { CITIZEN_ROLE } from '../constants/authRoles';
+import { ADMIN_ROLE, CITIZEN_ROLE, STAFF_DASHBOARD_ROLES, SUPER_ADMIN_ROLE } from '../constants/authRoles';
 import { hasRole } from '../utils/roleUtils';
 
 const AuthContext = createContext(null);
@@ -149,11 +149,17 @@ export function AuthProvider({ children }) {
         invalidatePendingAuth();
         setUser(data.user);
         setIsAuthenticated(true);
-        setLoginWelcome(
-          hasRole(data.user, CITIZEN_ROLE)
-            ? { userId: normalizePrincipalId(data.user.id) }
-            : null,
-        );
+        const audience = hasRole(data.user, CITIZEN_ROLE)
+          ? 'citizen'
+          : (
+            hasRole(data.user, ...STAFF_DASHBOARD_ROLES)
+            && !hasRole(data.user, ADMIN_ROLE, SUPER_ADMIN_ROLE)
+              ? 'staff'
+              : null
+          );
+        setLoginWelcome(audience
+          ? { audience, userId: normalizePrincipalId(data.user.id) }
+          : null);
         setInitializationError(null);
         setIsInitializing(false);
         return { success: true, user: data.user };

@@ -32,6 +32,7 @@ function AuthStateProbe() {
       <span data-testid="init-error">{initializationError || 'no-error'}</span>
       <span data-testid="auth-status">{isAuthenticated ? 'authenticated' : 'signed-out'}</span>
       <span data-testid="login-welcome">{loginWelcome?.userId ?? 'none'}</span>
+      <span data-testid="login-welcome-audience">{loginWelcome?.audience ?? 'none'}</span>
       <span>{user?.email || 'no-user'}</span>
       <span>{user?.fullName || 'no-name'}</span>
       <span>{user?.phoneNumber || 'no-phone'}</span>
@@ -170,6 +171,7 @@ describe('AuthProvider unauthorized handling', () => {
     expect(getToken()).toBe('citizen-token');
     expect(getSessionPrincipalId()).toBe('9');
     expect(screen.getByTestId('login-welcome').textContent).toBe('9');
+    expect(screen.getByTestId('login-welcome-audience').textContent).toBe('citizen');
     expect(window.sessionStorage.getItem('vaccination_portal_token')).toBeNull();
     expect(window.localStorage.getItem('vaccination_portal_token')).toBeNull();
 
@@ -181,6 +183,30 @@ describe('AuthProvider unauthorized handling', () => {
     expect(screen.getByText('+94 11 222 3333')).toBeTruthy();
     expect(screen.getByText('ROLE_CITIZEN')).toBeTruthy();
     expect(screen.getByText('ACTIVE')).toBeTruthy();
+  });
+
+  it('creates a one-time staff welcome after an operational staff login', async () => {
+    fetch
+      .mockResolvedValueOnce(response({ status: 401, statusText: 'Unauthorized' }))
+      .mockResolvedValueOnce(response({
+        body: JSON.stringify({
+          token: 'staff-token',
+          user: {
+            id: 14,
+            fullName: 'Vera Vaccinator',
+            email: 'vera@example.gov',
+            roles: ['ROLE_VACCINATOR'],
+          },
+        }),
+      }));
+
+    render(<AuthProvider><AuthStateProbe /></AuthProvider>);
+    await screen.findByText('signed-out');
+    fireEvent.click(screen.getByRole('button', { name: 'Test Login' }));
+
+    await screen.findByText('Vera Vaccinator');
+    expect(screen.getByTestId('login-welcome').textContent).toBe('14');
+    expect(screen.getByTestId('login-welcome-audience').textContent).toBe('staff');
   });
 
   it('revokes the server session on logout and clears in-memory state', async () => {

@@ -1,4 +1,4 @@
-.citizen-login-greeting {
+.post-login-greeting {
   --citizen-intro-green: #0d776f;
   position: fixed;
   inset: 0;
@@ -14,10 +14,10 @@
     radial-gradient(circle at 86% 80%, rgba(53, 145, 181, .18), transparent 30%),
     linear-gradient(145deg, #f9fffd 0%, #edf9f5 52%, #f4fbff 100%);
   isolation: isolate;
-  animation: citizen-login-intro-exit .3s 1.2s ease-in forwards;
+  animation: post-login-intro-exit .3s 1.2s ease-in forwards;
 }
 
-.citizen-login-greeting__skip {
+.post-login-greeting__skip {
   position: absolute;
   top: clamp(20px, 4vw, 42px);
   right: clamp(20px, 5vw, 64px);
@@ -35,19 +35,19 @@
   transition: background-color .2s ease, transform .2s ease;
 }
 
-.citizen-login-greeting__skip:hover,
-.citizen-login-greeting__skip:focus-visible {
+.post-login-greeting__skip:hover,
+.post-login-greeting__skip:focus-visible {
   background: #fff;
   transform: translateY(-2px);
 }
 
-.citizen-login-greeting__content {
+.post-login-greeting__content {
   width: min(100%, 700px);
   text-align: center;
-  animation: citizen-login-content-in .7s cubic-bezier(.2, .82, .2, 1) both;
+  animation: post-login-content-in .7s cubic-bezier(.2, .82, .2, 1) both;
 }
 
-.citizen-login-greeting__mark {
+.post-login-greeting__mark {
   position: relative;
   display: grid;
   place-items: center;
@@ -56,16 +56,16 @@
   margin: 0 auto 26px;
 }
 
-.citizen-login-greeting__orbit {
+.post-login-greeting__orbit {
   position: absolute;
   border: 2px solid rgba(13, 119, 111, .17);
   border-top-color: var(--citizen-intro-green);
   border-radius: 50%;
-  animation: citizen-login-orbit 2.4s linear infinite;
+  animation: post-login-orbit 2.4s linear infinite;
 }
 
-.citizen-login-greeting__orbit--outer { inset: 0; }
-.citizen-login-greeting__orbit--inner {
+.post-login-greeting__orbit--outer { inset: 0; }
+.post-login-greeting__orbit--inner {
   inset: 18px;
   border-top-color: transparent;
   border-right-color: #4cc7a7;
@@ -73,7 +73,7 @@
   animation-duration: 1.8s;
 }
 
-.citizen-login-greeting__shield {
+.post-login-greeting__shield {
   display: grid;
   place-items: center;
   width: 112px;
@@ -83,10 +83,10 @@
   background: linear-gradient(145deg, #18a68f, #075f5a);
   box-shadow: 0 20px 45px rgba(13, 119, 111, .28);
   font-size: 3rem;
-  animation: citizen-login-shield-pulse 1.7s ease-in-out infinite;
+  animation: post-login-shield-pulse 1.7s ease-in-out infinite;
 }
 
-.citizen-login-greeting__check {
+.post-login-greeting__check {
   position: absolute;
   right: 22px;
   bottom: 22px;
@@ -99,10 +99,10 @@
   color: #fff;
   background: #22a86f;
   font-size: 1rem;
-  animation: citizen-login-check-in .45s .45s cubic-bezier(.2, 1.5, .5, 1) both;
+  animation: post-login-check-in .45s .45s cubic-bezier(.2, 1.5, .5, 1) both;
 }
 
-.citizen-login-greeting__eyebrow {
+.post-login-greeting__eyebrow {
   display: inline-flex;
   align-items: center;
   gap: .5rem;
@@ -114,7 +114,7 @@
   text-transform: uppercase;
 }
 
-.citizen-login-greeting h1 {
+.post-login-greeting h1 {
   margin: 0;
   font-size: clamp(2.3rem, 7vw, 4.4rem);
   font-weight: 800;
@@ -122,19 +122,19 @@
   line-height: 1.05;
 }
 
-.citizen-login-greeting h1 span {
+.post-login-greeting h1 span {
   display: block;
   overflow-wrap: anywhere;
   color: var(--citizen-intro-green);
 }
 
-.citizen-login-greeting__message {
+.post-login-greeting__message {
   margin: 18px auto 28px;
   color: #607483;
   font-size: clamp(1rem, 2.5vw, 1.2rem);
 }
 
-.citizen-login-greeting__progress {
+.post-login-greeting__progress {
   overflow: hidden;
   width: min(100%, 340px);
   height: 5px;
@@ -143,28 +143,28 @@
   background: rgba(13, 119, 111, .12);
 }
 
-.citizen-login-greeting__progress span {
+.post-login-greeting__progress span {
   display: block;
   width: 100%;
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, #52cba9, var(--citizen-intro-green));
   transform-origin: left;
-  animation: citizen-login-progress 1.5s linear both;
+  animation: post-login-progress 1.5s linear both;
 }
 
-.citizen-login-greeting__halo {
+.post-login-greeting__halo {
   position: absolute;
   z-index: -1;
   width: 390px;
   height: 390px;
   border: 1px solid rgba(13, 119, 111, .12);
   border-radius: 50%;
-  animation: citizen-login-halo 5s ease-in-out infinite alternate;
+  animation: post-login-halo 5s ease-in-out infinite alternate;
 }
 
-.citizen-login-greeting__halo::before,
-.citizen-login-greeting__halo::after {
+.post-login-greeting__halo::before,
+.post-login-greeting__halo::after {
   position: absolute;
   content: '';
   border: 1px solid rgba(13, 119, 111, .09);
@@ -172,52 +172,52 @@
   inset: 34px;
 }
 
-.citizen-login-greeting__halo::after { inset: 72px; }
-.citizen-login-greeting__halo--left { top: -175px; left: -120px; }
-.citizen-login-greeting__halo--right { right: -135px; bottom: -185px; animation-delay: -1s; }
+.post-login-greeting__halo::after { inset: 72px; }
+.post-login-greeting__halo--left { top: -175px; left: -120px; }
+.post-login-greeting__halo--right { right: -135px; bottom: -185px; animation-delay: -1s; }
 
-@keyframes citizen-login-content-in {
+@keyframes post-login-content-in {
   from { opacity: 0; transform: translateY(24px) scale(.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@keyframes citizen-login-intro-exit { to { opacity: 0; visibility: hidden; } }
-@keyframes citizen-login-orbit { to { transform: rotate(360deg); } }
+@keyframes post-login-intro-exit { to { opacity: 0; visibility: hidden; } }
+@keyframes post-login-orbit { to { transform: rotate(360deg); } }
 
-@keyframes citizen-login-shield-pulse {
+@keyframes post-login-shield-pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.045); }
 }
 
-@keyframes citizen-login-check-in {
+@keyframes post-login-check-in {
   from { opacity: 0; transform: scale(.2) rotate(-30deg); }
   to { opacity: 1; transform: scale(1) rotate(0); }
 }
 
-@keyframes citizen-login-progress {
+@keyframes post-login-progress {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
 
-@keyframes citizen-login-halo {
+@keyframes post-login-halo {
   from { transform: translate3d(0, 0, 0) rotate(0); }
   to { transform: translate3d(14px, 20px, 0) rotate(8deg); }
 }
 
 @media (max-width: 575.98px) {
-  .citizen-login-greeting { padding: 18px; }
-  .citizen-login-greeting__mark { width: 140px; height: 140px; }
-  .citizen-login-greeting__shield { width: 88px; height: 88px; border-radius: 28px; font-size: 2.35rem; }
-  .citizen-login-greeting__check { right: 16px; bottom: 16px; width: 38px; height: 38px; }
+  .post-login-greeting { padding: 18px; }
+  .post-login-greeting__mark { width: 140px; height: 140px; }
+  .post-login-greeting__shield { width: 88px; height: 88px; border-radius: 28px; font-size: 2.35rem; }
+  .post-login-greeting__check { right: 16px; bottom: 16px; width: 38px; height: 38px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .citizen-login-greeting,
-  .citizen-login-greeting__content,
-  .citizen-login-greeting__orbit,
-  .citizen-login-greeting__shield,
-  .citizen-login-greeting__check,
-  .citizen-login-greeting__progress span,
-  .citizen-login-greeting__halo { animation: none; }
-  .citizen-login-greeting__skip { transition: none; }
+  .post-login-greeting,
+  .post-login-greeting__content,
+  .post-login-greeting__orbit,
+  .post-login-greeting__shield,
+  .post-login-greeting__check,
+  .post-login-greeting__progress span,
+  .post-login-greeting__halo { animation: none; }
+  .post-login-greeting__skip { transition: none; }
 }

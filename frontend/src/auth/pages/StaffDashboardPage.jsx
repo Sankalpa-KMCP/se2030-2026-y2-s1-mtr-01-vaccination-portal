@@ -1,7 +1,8 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import RoleDashboardHero from '../components/RoleDashboardHero';
+import PostLoginGreeting from '../components/PostLoginGreeting';
 import { getRoleLabel } from '../constants/authRoles';
 import {
   canViewAnalytics,
@@ -29,7 +30,16 @@ function StaffActionCard({ title, description, to, icon, decoration }) {
 }
 
 export default function StaffDashboardPage() {
-  const { user } = useAuth();
+  const { user, loginWelcome, consumeLoginWelcome } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const showLoginGreeting = loginWelcome?.audience === 'staff'
+    && loginWelcome.userId != null
+    && String(loginWelcome.userId) === String(user?.id);
+  const dismissLoginGreeting = useCallback(() => {
+    consumeLoginWelcome?.();
+    navigate(location.pathname, { replace: true, state: null });
+  }, [consumeLoginWelcome, location.pathname, navigate]);
   const isVaccinator = hasRole(user, 'ROLE_VACCINATOR');
   const canManageCheckIn = hasRole(user, 'ROLE_CENTER_MANAGER', 'ROLE_ADMIN');
   const isInventoryOfficer = hasRole(user, 'ROLE_INVENTORY_OFFICER');
@@ -120,7 +130,18 @@ export default function StaffDashboardPage() {
   ].filter(Boolean);
 
   return (
-    <div className="admin-dashboard role-dashboard role-dashboard--staff">
+    <>
+      {showLoginGreeting && (
+        <PostLoginGreeting
+          audience="staff"
+          name={user?.fullName?.trim() || user?.email || 'Staff Member'}
+          onComplete={dismissLoginGreeting}
+        />
+      )}
+      <div
+        className="admin-dashboard role-dashboard role-dashboard--staff"
+        inert={showLoginGreeting ? true : undefined}
+      >
       <RoleDashboardHero
         user={user}
         titleId="staff-dashboard-title"
@@ -159,6 +180,7 @@ export default function StaffDashboardPage() {
           </section>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
