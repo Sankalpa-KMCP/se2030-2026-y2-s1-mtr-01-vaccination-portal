@@ -3,6 +3,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { onUnauthorized, notifyUnauthorized, startAuthSession, endAuthSession, getToken, getSessionPrincipalId, normalizePrincipalId } from '../../shared/auth/authStorage';
 import { bootstrapSession } from '../../shared/api/apiClient';
 import { loginApi, getCurrentUserApi, logoutApi } from '../api/authApi';
+import { CITIZEN_ROLE } from '../constants/authRoles';
+import { hasRole } from '../utils/roleUtils';
 
 const AuthContext = createContext(null);
 
@@ -12,6 +14,7 @@ export function AuthProvider({ children }) {
   const [isInitializing, setIsInitializing] = useState(true);
   const [initializationError, setInitializationError] = useState(null);
   const [loginError, setLoginError] = useState(null);
+  const [loginWelcome, setLoginWelcome] = useState(null);
 
   const authGenerationRef = useRef(0);
   const bootstrapAttemptRef = useRef(0);
@@ -124,6 +127,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       setIsAuthenticated(false);
       setLoginError(null);
+      setLoginWelcome(null);
     });
 
     return () => {
@@ -145,6 +149,11 @@ export function AuthProvider({ children }) {
         invalidatePendingAuth();
         setUser(data.user);
         setIsAuthenticated(true);
+        setLoginWelcome(
+          hasRole(data.user, CITIZEN_ROLE)
+            ? { userId: normalizePrincipalId(data.user.id) }
+            : null,
+        );
         setInitializationError(null);
         setIsInitializing(false);
         return { success: true, user: data.user };
@@ -170,6 +179,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setIsAuthenticated(false);
     setLoginError(null);
+    setLoginWelcome(null);
     setInitializationError(null);
     setIsInitializing(false);
   }, [cancelBootstrapOwnership, invalidatePendingAuth]);
@@ -182,6 +192,10 @@ export function AuthProvider({ children }) {
 
   const clearLoginError = useCallback(() => {
     setLoginError(null);
+  }, []);
+
+  const consumeLoginWelcome = useCallback(() => {
+    setLoginWelcome(null);
   }, []);
 
   const updateCurrentUserProfile = useCallback((profile) => {
@@ -205,10 +219,12 @@ export function AuthProvider({ children }) {
     isInitializing,
     initializationError,
     loginError,
+    loginWelcome,
     login,
     logout,
     retryBootstrap,
     clearLoginError,
+    consumeLoginWelcome,
     updateCurrentUserProfile,
   };
 

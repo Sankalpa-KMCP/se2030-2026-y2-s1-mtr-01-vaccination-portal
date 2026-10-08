@@ -20,14 +20,16 @@ function formatStatus(status) {
 }
 
 export default function CitizenDashboardPage() {
-  const { user } = useAuth();
+  const { user, loginWelcome, consumeLoginWelcome } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const dashboardData = useCitizenDashboardData(user?.id);
-  const showLoginGreeting = location.state?.showCitizenWelcome === true;
+  const showLoginGreeting = location.state?.showCitizenWelcome === true
+    || (loginWelcome?.userId != null && String(loginWelcome.userId) === String(user?.id));
   const dismissLoginGreeting = useCallback(() => {
+    consumeLoginWelcome?.();
     navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, navigate]);
+  }, [consumeLoginWelcome, location.pathname, navigate]);
 
   return (
     <>

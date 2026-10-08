@@ -25,12 +25,13 @@ function response({ body = '', status = 200, statusText = 'OK' } = {}) {
 }
 
 function AuthStateProbe() {
-  const { isAuthenticated, isInitializing, initializationError, login, logout, retryBootstrap, updateCurrentUserProfile, user } = useAuth();
+  const { consumeLoginWelcome, isAuthenticated, isInitializing, initializationError, login, loginWelcome, logout, retryBootstrap, updateCurrentUserProfile, user } = useAuth();
   return (
     <div>
       <span data-testid="init-status">{isInitializing ? 'initializing' : 'initialized'}</span>
       <span data-testid="init-error">{initializationError || 'no-error'}</span>
       <span data-testid="auth-status">{isAuthenticated ? 'authenticated' : 'signed-out'}</span>
+      <span data-testid="login-welcome">{loginWelcome?.userId ?? 'none'}</span>
       <span>{user?.email || 'no-user'}</span>
       <span>{user?.fullName || 'no-name'}</span>
       <span>{user?.phoneNumber || 'no-phone'}</span>
@@ -38,6 +39,7 @@ function AuthStateProbe() {
       <span>{user?.accountStatus || 'no-status'}</span>
       <button type="button" onClick={() => login('citizen@example.com', 'Secret123!')}>Test Login</button>
       <button type="button" onClick={() => logout()}>Test Logout</button>
+      <button type="button" onClick={() => consumeLoginWelcome()}>Consume Welcome</button>
       <button type="button" onClick={() => retryBootstrap()}>Retry Bootstrap</button>
       <button type="button" onClick={() => updateCurrentUserProfile({ id: user?.id, fullName: 'Updated Name', phoneNumber: '+94 11 222 3333', accountStatus: 'ACTIVE', roles: ['ROLE_ADMIN'] })}>Update Profile</button>
     </div>
@@ -167,8 +169,12 @@ describe('AuthProvider unauthorized handling', () => {
     expect(screen.getByText('Citizen User')).toBeTruthy();
     expect(getToken()).toBe('citizen-token');
     expect(getSessionPrincipalId()).toBe('9');
+    expect(screen.getByTestId('login-welcome').textContent).toBe('9');
     expect(window.sessionStorage.getItem('vaccination_portal_token')).toBeNull();
     expect(window.localStorage.getItem('vaccination_portal_token')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Consume Welcome' }));
+    expect(screen.getByTestId('login-welcome').textContent).toBe('none');
 
     fireEvent.click(screen.getByRole('button', { name: 'Update Profile' }));
     expect(screen.getByText('Updated Name')).toBeTruthy();
