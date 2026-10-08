@@ -60,7 +60,7 @@ public class VaccinationCorrectionController {
     }
 
     @PostMapping("/records/{recordId}/corrections")
-    @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN') and !hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('CITIZEN', 'ADMIN', 'VACCINATOR') and !hasRole('SUPER_ADMIN')")
     public ResponseEntity<VaccinationCorrectionResponse> createCorrection(
             @PathVariable Long recordId,
             @Valid @RequestBody CreateVaccinationCorrectionRequest request,
@@ -80,9 +80,15 @@ public class VaccinationCorrectionController {
         }
 
         Long actorId = principal != null ? principal.getUserId() : (request != null ? request.correctedBy() : 1L);
-        VaccinationCorrection created = principal != null && isCitizen(principal)
-                ? correctionService.createCitizenCorrection(recordId, request, actorId)
-                : correctionService.createCorrection(recordId, request, actorId);
+        VaccinationCorrection created;
+        if (principal != null && isVaccinator(principal)) {
+            created = correctionService.createVaccinatorAmendment(recordId, request, actorId);
+        } else if (principal != null && isCitizen(principal)) {
+            created = correctionService.createCitizenCorrection(recordId, request, actorId);
+        } else {
+            created = correctionService.createCorrection(recordId, request, actorId);
+        }
+
         VaccinationCorrectionResponse response = VaccinationCorrectionMapper.toResponse(created);
         URI location = URI.create(
                 "/api/v1/vaccination/records/" + recordId + "/corrections/" + response.id()
@@ -211,5 +217,9 @@ public class VaccinationCorrectionController {
 
     private boolean isCitizen(UserPrincipal principal) {
         return principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CITIZEN"));
+    }
+
+    private boolean isVaccinator(UserPrincipal principal) {
+        return principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_VACCINATOR"));
     }
 }

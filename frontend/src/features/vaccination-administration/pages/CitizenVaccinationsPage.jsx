@@ -19,12 +19,13 @@ export default function CitizenVaccinationsPage() {
   const [selectedCert, setSelectedCert] = useState(null);
   const [copiedToken, setCopiedToken] = useState(false);
 
-  // Correction request modal state
-  const [correctionTarget, setCorrectionTarget] = useState(null);
-  const [correctionMessage, setCorrectionMessage] = useState('');
-  const [submittingCorrection, setSubmittingCorrection] = useState(false);
-  const [correctionError, setCorrectionError] = useState('');
-  const [correctionSuccess, setCorrectionSuccess] = useState('');
+  // Report Certificate / Record Issue modal state
+  const [issueTarget, setIssueTarget] = useState(null);
+  const [issueCategory, setIssueCategory] = useState('Certificate Discrepancy');
+  const [issueMessage, setIssueMessage] = useState('');
+  const [submittingIssue, setSubmittingIssue] = useState(false);
+  const [issueError, setIssueError] = useState('');
+  const [issueSuccess, setIssueSuccess] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -50,6 +51,7 @@ export default function CitizenVaccinationsPage() {
   }, []);
 
   const handleDownload = async (certId, certRef) => {
+    if (!certId) return;
     setDownloadingId(certId);
     setDownloadError('');
     try {
@@ -94,48 +96,102 @@ export default function CitizenVaccinationsPage() {
     return corrections.find((c) => c.vaccinationRecordId === recordId);
   };
 
-  const openCorrectionModal = (target) => {
-    setCorrectionTarget(target);
-    setCorrectionMessage('');
-    setCorrectionError('');
-    setCorrectionSuccess('');
+  const openIssueModal = (target) => {
+    setIssueTarget(target);
+    setIssueCategory('Certificate Discrepancy');
+    setIssueMessage('');
+    setIssueError('');
+    setIssueSuccess('');
   };
 
-  const closeCorrectionModal = () => {
-    setCorrectionTarget(null);
-    setCorrectionMessage('');
-    setCorrectionError('');
-    setCorrectionSuccess('');
+  const closeIssueModal = () => {
+    setIssueTarget(null);
+    setIssueCategory('Certificate Discrepancy');
+    setIssueMessage('');
+    setIssueError('');
+    setIssueSuccess('');
   };
 
-  const handleSubmitCorrection = async (e) => {
+  const handleSubmitIssue = async (e) => {
     e.preventDefault();
-    if (!correctionMessage.trim()) {
-      setCorrectionError('Please describe the problem you would like corrected.');
+    if (!issueMessage.trim()) {
+      setIssueError('Please describe the problem you would like corrected.');
       return;
     }
 
-    const recordId = correctionTarget.vaccinationRecordId || correctionTarget.id;
+    const recordId = issueTarget.vaccinationRecordId || issueTarget.id;
     if (!recordId) {
-      setCorrectionError('Associated vaccination record ID is missing.');
+      setIssueError('Associated vaccination record ID is missing.');
       return;
     }
 
-    setSubmittingCorrection(true);
-    setCorrectionError('');
+    setSubmittingIssue(true);
+    setIssueError('');
     try {
-      await requestVaccinationCorrection(recordId, correctionMessage.trim());
-      setCorrectionSuccess('Correction request submitted for review.');
+      await requestVaccinationCorrection(recordId, issueMessage.trim());
+      setIssueSuccess('Issue report submitted for review by clinic administrators.');
       await fetchData();
       setTimeout(() => {
-        closeCorrectionModal();
+        closeIssueModal();
       }, 1500);
     } catch (err) {
-      setCorrectionError(err.message || 'Failed to submit correction request. Please try again.');
+      setIssueError(err.message || 'Failed to submit issue report. Please try again.');
     } finally {
-      setSubmittingCorrection(false);
+      setSubmittingIssue(false);
     }
   };
+
+  // Build unified items from records and certificates
+  const unifiedItems = (() => {
+    if (records.length > 0) {
+      return records.map((rec, index) => {
+        const cert = certificates.find((c) => c.vaccinationRecordId === rec.id || c.id === rec.certificateId)
+          || (certificates.length === records.length ? certificates[index] : null)
+          || {
+            id: rec.certificateId,
+            certificateReference: rec.certificateReference,
+            status: rec.certificateStatus || 'VALID',
+            doseNumber: rec.doseNumber,
+            vaccineBatchId: rec.vaccineBatchId,
+            administrationTime: rec.administrationTime,
+          };
+        return {
+          id: rec.id,
+          recordId: rec.id,
+          vaccineName: rec.vaccineName || cert.vaccineName || 'Authorized Vaccine',
+          doseNumber: rec.doseNumber || cert.doseNumber || 1,
+          batchNumber: rec.batchNumber || cert.batchNumber || (rec.vaccineBatchId ? `Batch #${rec.vaccineBatchId}` : (cert.vaccineBatchId ? `Batch #${cert.vaccineBatchId}` : 'Authorized Batch')),
+          vaccineBatchId: rec.vaccineBatchId || cert.vaccineBatchId,
+          centerName: rec.centerName || cert.centerName || (rec.centerId ? `Center #${rec.centerId}` : 'Vaccination Center'),
+          administrationTime: rec.administrationTime || cert.administrationTime || cert.issuedAt,
+          nextDoseDate: rec.nextDoseDate,
+          certificate: cert,
+          certificateId: cert.id || rec.certificateId,
+          certificateReference: cert.certificateReference || rec.certificateReference,
+          certificateStatus: cert.status || rec.certificateStatus || 'VALID',
+        };
+      });
+    }
+
+    // Fallback if records endpoint is empty but certificates exist
+    return certificates.map((cert) => ({
+      id: cert.vaccinationRecordId || cert.id,
+      recordId: cert.vaccinationRecordId || cert.id,
+      vaccineName: cert.vaccineName || 'Authorized Vaccine',
+      doseNumber: cert.doseNumber || 1,
+      batchNumber: cert.batchNumber || (cert.vaccineBatchId ? `Batch #${cert.vaccineBatchId}` : 'Authorized Batch'),
+      vaccineBatchId: cert.vaccineBatchId,
+      centerName: cert.centerName || 'Vaccination Center',
+      administrationTime: cert.administrationTime || cert.issuedAt,
+      nextDoseDate: null,
+      certificate: cert,
+      certificateId: cert.id,
+      certificateReference: cert.certificateReference,
+      certificateStatus: cert.status || 'VALID',
+    }));
+  })();
+
+  const hasAnyItems = unifiedItems.length > 0;
 
   return (
     <div className="container py-4">
@@ -150,7 +206,7 @@ export default function CitizenVaccinationsPage() {
           </nav>
           <h1 className="h3 fw-bold text-dark mb-0">My Vaccinations &amp; Certificates</h1>
           <p className="text-secondary small mb-0">
-            View your permanent vaccination history and access officially signed digital certificates.
+            View your permanent vaccination history and download officially certified digital vaccination credentials.
           </p>
         </div>
         <div>
@@ -185,7 +241,7 @@ export default function CitizenVaccinationsPage() {
             </button>
           </div>
         </div>
-      ) : records.length === 0 ? (
+      ) : !hasAnyItems ? (
         <div className="card shadow-sm border-0 p-5 text-center bg-light">
           <div className="mb-3 text-secondary">
             <i className="bi bi-shield-check" style={{ fontSize: '3rem' }}></i>
@@ -202,73 +258,88 @@ export default function CitizenVaccinationsPage() {
         </div>
       ) : (
         <div className="row g-4">
-          {/* Certificates Section */}
+          {/* Single Unified Section */}
           <div className="col-12">
             <div className="card shadow-sm border-0 overflow-hidden">
               <div className="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                 <h5 className="h6 mb-0 fw-bold text-dark">
-                  <i className="bi bi-patch-check-fill text-primary me-2"></i>Digital Vaccination Certificates
+                  <i className="bi bi-patch-check-fill text-primary me-2"></i>Vaccination History &amp; Official Credentials
                 </h5>
                 <span className="badge bg-primary-subtle text-primary fw-semibold">
-                  {certificates.length} {certificates.length === 1 ? 'Certificate' : 'Certificates'}
+                  {unifiedItems.length} {unifiedItems.length === 1 ? 'Record' : 'Records'}
                 </span>
               </div>
               <div className="card-body p-0">
-                {certificates.length === 0 ? (
-                  <div className="p-4 text-center text-secondary small">
-                    No certificates have been issued yet.
-                  </div>
-                ) : (
-                  <div className="table-responsive">
-                    <table className="table table-hover align-middle mb-0">
-                      <thead className="table-light small text-uppercase text-secondary">
-                        <tr>
-                          <th className="ps-4">Certificate Reference</th>
-                          <th>Dose</th>
-                          <th>Status</th>
-                          <th>Correction</th>
-                          <th>Issued Date</th>
-                          <th className="text-end pe-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="small">
-                        {certificates.map((cert) => {
-                          const existingCorrection = findActiveCorrection(cert.vaccinationRecordId);
-                          return (
-                            <tr key={cert.id}>
-                              <td className="ps-4 font-monospace fw-semibold text-dark">
-                                {cert.certificateReference}
-                              </td>
-                              <td>Dose {cert.doseNumber || 1}</td>
-                              <td>{getStatusBadge(cert.status)}</td>
-                              <td>
-                                {existingCorrection ? (
-                                  getCorrectionBadge(existingCorrection.status)
-                                ) : (
-                                  <span className="text-muted">—</span>
-                                )}
-                              </td>
-                              <td className="text-secondary">
-                                {cert.issuedAt ? new Date(cert.issuedAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'N/A'}
-                              </td>
-                              <td className="text-end pe-4">
-                                <div className="d-flex justify-content-end gap-2 flex-wrap">
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light small text-uppercase text-secondary">
+                      <tr>
+                        <th className="ps-4">Vaccine &amp; Dose</th>
+                        <th>Administration Date</th>
+                        <th>Batch Code</th>
+                        <th>Center</th>
+                        <th>Certificate Ref</th>
+                        <th>Status</th>
+                        <th className="text-end pe-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="small">
+                      {unifiedItems.map((item) => {
+                        const existingCorrection = findActiveCorrection(item.recordId);
+                        const hasCert = Boolean(item.certificateId || item.certificateReference);
+                        return (
+                          <tr key={item.recordId}>
+                            <td className="ps-4">
+                              <div className="fw-bold text-dark">{item.vaccineName}</div>
+                              <span className="badge bg-light text-dark border">
+                                Dose {item.doseNumber}
+                              </span>
+                            </td>
+                            <td className="text-secondary">
+                              {item.administrationTime
+                                ? new Date(item.administrationTime).toLocaleDateString(undefined, { dateStyle: 'medium' })
+                                : 'N/A'}
+                            </td>
+                            <td className="font-monospace text-secondary">
+                              {item.batchNumber}
+                            </td>
+                            <td className="text-secondary">
+                              {item.centerName}
+                            </td>
+                            <td className="font-monospace fw-semibold text-dark">
+                              {item.certificateReference ? (
+                                item.certificateReference
+                              ) : (
+                                <span className="text-muted fst-italic">Pending issuance</span>
+                              )}
+                            </td>
+                            <td>
+                              <div className="d-flex align-items-center flex-wrap gap-1">
+                                {getStatusBadge(item.certificateStatus)}
+                                {existingCorrection && getCorrectionBadge(existingCorrection.status)}
+                              </div>
+                            </td>
+                            <td className="text-end pe-4">
+                              <div className="d-flex justify-content-end gap-2 flex-wrap">
+                                {hasCert && (
                                   <button
                                     type="button"
                                     className="btn btn-outline-secondary btn-sm"
-                                    onClick={() => setSelectedCert(cert)}
+                                    onClick={() => setSelectedCert(item.certificate)}
                                     title="View Certificate Details"
                                   >
                                     <i className="bi bi-eye me-1"></i>View
                                   </button>
+                                )}
+                                {hasCert && item.certificateId && (
                                   <button
                                     type="button"
                                     className="btn btn-outline-primary btn-sm"
-                                    disabled={downloadingId === cert.id}
-                                    onClick={() => handleDownload(cert.id, cert.certificateReference)}
+                                    disabled={downloadingId === item.certificateId}
+                                    onClick={() => handleDownload(item.certificateId, item.certificateReference)}
                                     title="Download Official PDF Certificate"
                                   >
-                                    {downloadingId === cert.id ? (
+                                    {downloadingId === item.certificateId ? (
                                       <>
                                         <span className="spinner-border spinner-border-sm me-1" role="status"></span>
                                         Downloading...
@@ -279,110 +350,18 @@ export default function CitizenVaccinationsPage() {
                                       </>
                                     )}
                                   </button>
-                                  {cert.verificationToken && (
-                                    <Link
-                                      to={`/verify-certificate?token=${encodeURIComponent(cert.verificationToken)}`}
-                                      className="btn btn-outline-success btn-sm"
-                                      title="Verify Publicly"
-                                    >
-                                      <i className="bi bi-qr-code me-1"></i>Verify
-                                    </Link>
-                                  )}
-                                  {cert.status === 'VALID' && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-outline-warning btn-sm text-dark"
-                                      onClick={() => openCorrectionModal(cert)}
-                                      title="Request Correction"
-                                    >
-                                      <i className="bi bi-pencil-square me-1"></i>Request Correction
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Vaccination History Records Section */}
-          <div className="col-12">
-            <div className="card shadow-sm border-0 overflow-hidden">
-              <div className="card-header bg-white py-3 border-bottom">
-                <h5 className="h6 mb-0 fw-bold text-dark">
-                  <i className="bi bi-journal-medical text-primary me-2"></i>Permanent Clinical Vaccination History
-                </h5>
-              </div>
-              <div className="card-body p-0">
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light small text-uppercase text-secondary">
-                      <tr>
-                        <th className="ps-4">Administered Date</th>
-                        <th>Dose</th>
-                        <th>Vaccine Batch</th>
-                        <th>Center</th>
-                        <th>Next Dose</th>
-                        <th>Certificate</th>
-                        <th className="text-end pe-4">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="small">
-                      {records.map((rec) => {
-                        const existingCorrection = findActiveCorrection(rec.id);
-                        return (
-                          <tr key={rec.id}>
-                            <td className="ps-4 fw-semibold text-dark">
-                              {rec.administrationTime ? new Date(rec.administrationTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-dark border">
-                                Dose {rec.doseNumber}
-                              </span>
-                            </td>
-                            <td className="font-monospace text-secondary">
-                              Batch #{rec.vaccineBatchId}
-                            </td>
-                            <td className="text-secondary">
-                              Center #{rec.centerId}
-                            </td>
-                            <td className="text-secondary">
-                              {rec.nextDoseDate ? new Date(rec.nextDoseDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'None required'}
-                            </td>
-                            <td>
-                              {rec.certificateStatus ? (
-                                <div className="d-flex align-items-center gap-2">
-                                  {getStatusBadge(rec.certificateStatus)}
-                                  {existingCorrection && getCorrectionBadge(existingCorrection.status)}
-                                  {rec.certificateId && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-link btn-sm p-0 text-decoration-none"
-                                      onClick={() => handleDownload(rec.certificateId, rec.certificateReference)}
-                                    >
-                                      <i className="bi bi-download"></i>
-                                    </button>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-muted fst-italic">None</span>
-                              )}
-                            </td>
-                            <td className="text-end pe-4">
-                              <button
-                                type="button"
-                                className="btn btn-outline-warning btn-sm text-dark"
-                                onClick={() => openCorrectionModal(rec)}
-                                title="Request Correction"
-                              >
-                                <i className="bi bi-pencil-square me-1"></i>Request Correction
-                              </button>
+                                )}
+                                {item.certificateStatus === 'VALID' && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-warning btn-sm text-dark"
+                                    onClick={() => openIssueModal(item)}
+                                    title="Report Certificate Issue"
+                                  >
+                                    <i className="bi bi-pencil-square me-1"></i>Request Correction
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -396,64 +375,82 @@ export default function CitizenVaccinationsPage() {
         </div>
       )}
 
-      {/* Citizen Request Correction Modal */}
-      {correctionTarget && (
+      {/* Citizen Report Issue / Request Correction Modal */}
+      {issueTarget && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content shadow border-0 overflow-hidden">
               <div className="modal-header bg-light border-bottom">
                 <h5 className="modal-title fw-bold text-dark">
                   <i className="bi bi-pencil-square text-warning me-2"></i>
-                  Request Correction
+                  Request Correction / Report Issue
                 </h5>
                 <button
                   type="button"
                   className="btn-close"
-                  onClick={closeCorrectionModal}
+                  onClick={closeIssueModal}
                   aria-label="Close"
-                  disabled={submittingCorrection}
+                  disabled={submittingIssue}
                 ></button>
               </div>
-              <form onSubmit={handleSubmitCorrection}>
+              <form onSubmit={handleSubmitIssue}>
                 <div className="modal-body p-4">
-                  {correctionSuccess && (
+                  {issueSuccess && (
                     <div className="alert alert-success d-flex align-items-center mb-3" role="alert">
                       <i className="bi bi-check-circle-fill me-2"></i>
-                      <div>{correctionSuccess}</div>
+                      <div>{issueSuccess}</div>
                     </div>
                   )}
 
-                  {correctionError && (
+                  {issueError && (
                     <div className="alert alert-danger d-flex align-items-center mb-3" role="alert">
                       <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                      <div>{correctionError}</div>
+                      <div>{issueError}</div>
                     </div>
                   )}
 
                   {/* Summary of Record */}
                   <div className="card bg-light border-0 p-3 mb-3 small">
                     <div className="row g-2">
-                      {correctionTarget.certificateReference && (
+                      {issueTarget.certificateReference && (
                         <div className="col-12">
                           <span className="text-secondary">Certificate:</span>{' '}
-                          <strong className="font-monospace text-dark">{correctionTarget.certificateReference}</strong>
+                          <strong className="font-monospace text-dark">{issueTarget.certificateReference}</strong>
                         </div>
                       )}
                       <div className="col-6">
                         <span className="text-secondary">Dose:</span>{' '}
-                        <strong>Dose {correctionTarget.doseNumber || 1}</strong>
+                        <strong>Dose {issueTarget.doseNumber || 1}</strong>
                       </div>
                       <div className="col-6">
                         <span className="text-secondary">Vaccine Batch:</span>{' '}
-                        <span className="font-monospace">#{correctionTarget.vaccineBatchId || 'N/A'}</span>
+                        <span className="font-monospace">#{issueTarget.vaccineBatchId || 'N/A'}</span>
                       </div>
-                      {(correctionTarget.administrationTime || correctionTarget.issuedAt) && (
+                      {(issueTarget.administrationTime || issueTarget.issuedAt) && (
                         <div className="col-12">
                           <span className="text-secondary">Vaccination Date:</span>{' '}
-                          <span>{new Date(correctionTarget.administrationTime || correctionTarget.issuedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+                          <span>{new Date(issueTarget.administrationTime || issueTarget.issuedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="issueCategory" className="form-label fw-semibold text-dark small">
+                      Issue Category
+                    </label>
+                    <select
+                      id="issueCategory"
+                      className="form-select form-select-sm"
+                      value={issueCategory}
+                      onChange={(e) => setIssueCategory(e.target.value)}
+                      disabled={submittingIssue}
+                    >
+                      <option value="Certificate Discrepancy">Certificate Discrepancy</option>
+                      <option value="Dose Number Discrepancy">Dose Number Discrepancy</option>
+                      <option value="Administration Date/Time Incorrect">Administration Date/Time Incorrect</option>
+                      <option value="Other Clinical Issue">Other Clinical Issue</option>
+                    </select>
                   </div>
 
                   <div className="mb-3">
@@ -464,12 +461,12 @@ export default function CitizenVaccinationsPage() {
                       id="correctionMessage"
                       rows={4}
                       className="form-control"
-                      placeholder="Example: My surname is displayed incorrectly, or the vaccination details do not match my records."
-                      value={correctionMessage}
-                      onChange={(e) => setCorrectionMessage(e.target.value)}
+                      placeholder="Example: My dose number is displayed incorrectly, or the vaccination date does not match my clinic card."
+                      value={issueMessage}
+                      onChange={(e) => setIssueMessage(e.target.value)}
                       maxLength={1000}
                       required
-                      disabled={submittingCorrection}
+                      disabled={submittingIssue}
                     />
                     <div className="form-text small text-secondary">
                       Max 1000 characters. Please provide clear details so clinical staff can verify your request.
@@ -485,17 +482,17 @@ export default function CitizenVaccinationsPage() {
                   <button
                     type="button"
                     className="btn btn-outline-secondary btn-sm"
-                    onClick={closeCorrectionModal}
-                    disabled={submittingCorrection}
+                    onClick={closeIssueModal}
+                    disabled={submittingIssue}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     className="btn btn-warning btn-sm fw-semibold text-dark"
-                    disabled={submittingCorrection || !correctionMessage.trim()}
+                    disabled={submittingIssue || !issueMessage.trim()}
                   >
-                    {submittingCorrection ? (
+                    {submittingIssue ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-1" role="status"></span>
                         Submitting...
@@ -535,7 +532,7 @@ export default function CitizenVaccinationsPage() {
                     <i className="bi bi-check-circle-fill fs-4 me-3"></i>
                     <div>
                       <strong>Official Valid Credential</strong>
-                      <div className="small">This certificate is active, cryptographically signed, and valid for travel and health clearance.</div>
+                      <div className="small">This certificate is active, cryptographically signed, and valid for health clearance.</div>
                     </div>
                   </div>
                 )}
@@ -642,31 +639,25 @@ export default function CitizenVaccinationsPage() {
                 >
                   Close
                 </button>
-                {selectedCert.verificationToken && (
-                  <Link
-                    to={`/verify-certificate?token=${encodeURIComponent(selectedCert.verificationToken)}`}
-                    className="btn btn-outline-success btn-sm"
+                {selectedCert.id && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm fw-semibold"
+                    disabled={downloadingId === selectedCert.id}
+                    onClick={() => handleDownload(selectedCert.id, selectedCert.certificateReference)}
                   >
-                    <i className="bi bi-qr-code me-1"></i>Verify Publicly
-                  </Link>
+                    {downloadingId === selectedCert.id ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-file-earmark-pdf-fill me-1"></i>Download Official PDF
+                      </>
+                    )}
+                  </button>
                 )}
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm fw-semibold"
-                  disabled={downloadingId === selectedCert.id}
-                  onClick={() => handleDownload(selectedCert.id, selectedCert.certificateReference)}
-                >
-                  {downloadingId === selectedCert.id ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-file-earmark-pdf-fill me-1"></i>Download Official PDF
-                    </>
-                  )}
-                </button>
               </div>
             </div>
           </div>

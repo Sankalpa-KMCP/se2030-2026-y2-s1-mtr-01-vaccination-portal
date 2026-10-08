@@ -105,6 +105,15 @@ export default function AdminCorrectionRequestsPage() {
     }
   };
 
+  const getRequestTypeBadge = (type) => {
+    switch (type) {
+      case 'VACCINATOR_RECORD_AMENDMENT':
+        return <span className="badge bg-primary-subtle text-primary border border-primary fw-semibold">Vaccinator Amendment</span>;
+      default:
+        return <span className="badge bg-info-subtle text-info border border-info fw-semibold">Citizen Issue</span>;
+    }
+  };
+
   const counts = {
     PENDING: requests.filter((r) => r.status === 'PENDING').length,
     APPROVED: requests.filter((r) => r.status === 'APPROVED').length,
@@ -293,10 +302,11 @@ export default function AdminCorrectionRequestsPage() {
               <thead className="table-light small text-uppercase text-secondary">
                 <tr>
                   <th className="ps-4">Request ID</th>
+                  <th>Type</th>
                   <th>Citizen</th>
                   <th>Record ID</th>
                   <th>Certificate Reference</th>
-                  <th>Citizen Message</th>
+                  <th>Message / Reason</th>
                   <th>Requested Date</th>
                   <th>Status</th>
                   <th className="text-end pe-4">Actions</th>
@@ -307,6 +317,9 @@ export default function AdminCorrectionRequestsPage() {
                   <tr key={req.id}>
                     <td className="ps-4 font-monospace fw-semibold text-dark">
                       #{req.id}
+                    </td>
+                    <td>
+                      {getRequestTypeBadge(req.requestType)}
                     </td>
                     <td>
                       <div className="fw-semibold text-dark">{req.citizenName || `Citizen #${req.citizenId}`}</div>
@@ -432,10 +445,26 @@ export default function AdminCorrectionRequestsPage() {
                         <span className="text-secondary">Requested Timestamp:</span>{' '}
                         <span>{formatDisplayDateTime(selectedRequest.correctedAt)}</span>
                       </div>
-                      <div className="col-12">
+                      <div className="col-12 col-md-6">
+                        <span className="text-secondary">Request Type:</span>{' '}
+                        <span>{getRequestTypeBadge(selectedRequest.requestType)}</span>
+                      </div>
+                      <div className="col-12 col-md-6">
                         <span className="text-secondary">Current Status:</span>{' '}
                         <span>{getStatusBadge(selectedRequest.status)}</span>
                       </div>
+                      {selectedRequest.fieldName && (
+                        <div className="col-12 col-md-6">
+                          <span className="text-secondary">Proposed Field:</span>{' '}
+                          <span className="font-monospace fw-semibold text-dark">{selectedRequest.fieldName}</span>
+                        </div>
+                      )}
+                      {selectedRequest.newValue && (
+                        <div className="col-12 col-md-6">
+                          <span className="text-secondary">Proposed Replacement:</span>{' '}
+                          <span className="font-monospace text-dark">{selectedRequest.newValue}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

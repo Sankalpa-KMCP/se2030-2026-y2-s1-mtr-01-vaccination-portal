@@ -10,6 +10,7 @@ import com.se2030.vaccinationportal.vaccination.administration.exception.Vaccina
 import com.se2030.vaccinationportal.vaccination.administration.mapper.VaccinationCorrectionMapper;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionType;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
@@ -71,19 +72,59 @@ public class VaccinationCorrectionService {
             CreateVaccinationCorrectionRequest request,
             Long actorId
     ) {
-        return createCorrection(vaccinationRecordId, request, actorId, false);
+        return createCorrection(vaccinationRecordId, request, actorId, false, VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE);
     }
 
     /** Citizen requests retain the existing one-active-request policy; admin history is unrestricted. */
     public VaccinationCorrection createCitizenCorrection(
             Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long actorId
     ) {
-        return createCorrection(vaccinationRecordId, request, actorId, true);
+        String reason = request != null ? request.reason() : null;
+        if (request != null && request.category() != null && !request.category().isBlank() && reason != null) {
+            reason = "[" + request.category().trim() + "] " + reason;
+        }
+        CreateVaccinationCorrectionRequest citizenRequest = new CreateVaccinationCorrectionRequest(
+                VaccinationCorrectionField.AUTHORIZED_NOTES.getApiName(),
+                null,
+                reason,
+                actorId,
+                request != null ? request.category() : null,
+                VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE.name()
+        );
+        return createCorrection(vaccinationRecordId, citizenRequest, actorId, true, VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE);
+    }
+
+    public VaccinationCorrection createVaccinatorAmendment(
+            Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long vaccinatorId
+    ) {
+        VaccinationRecord record = lockRecord(vaccinationRecordId);
+        if (record.getVaccinatorId() == null || !record.getVaccinatorId().equals(vaccinatorId)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Vaccinators may only request amendments for vaccinations they administered"
+            );
+        }
+        if (request == null || request.fieldName() == null || request.fieldName().trim().isEmpty()) {
+            throw new InvalidVaccinationCorrectionException("Proposed amendment field name is required");
+        }
+        String fieldName = request.fieldName().trim();
+        if ("vaccineBatchId".equalsIgnoreCase(fieldName) || "VACCINE_BATCH_ID".equalsIgnoreCase(fieldName)) {
+            throw new UnsupportedVaccinationCorrectionFieldException(
+                    "Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation."
+            );
+        }
+        VaccinationCorrectionField field = VaccinationCorrectionField.fromApiName(fieldName);
+        if (field == null || !field.isSupportedForCorrection()) {
+            throw new UnsupportedVaccinationCorrectionFieldException(
+                    "Unsupported vaccination correction field: " + request.fieldName()
+            );
+        }
+        return createCorrection(vaccinationRecordId, request, vaccinatorId, true, VaccinationCorrectionType.VACCINATOR_RECORD_AMENDMENT);
     }
 
     private VaccinationCorrection createCorrection(
             Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long actorId,
-            boolean requireSingleActiveRequest
+            boolean requireSingleActiveRequest,
+            VaccinationCorrectionType requestType
     ) {
         VaccinationRecord record = lockRecord(vaccinationRecordId);
         validateRequest(request, actorId);
@@ -131,7 +172,8 @@ public class VaccinationCorrectionService {
                 request.reason(),
                 actorId,
                 clock.instant(),
-                com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.PENDING
+                com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.PENDING,
+                requestType != null ? requestType : VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
         );
         return correctionRepository.save(correction);
     }
@@ -291,7 +333,8 @@ public class VaccinationCorrectionService {
                 correction.getStatus(),
                 correction.getReviewedBy(),
                 correction.getReviewedAt(),
-                correction.getReviewReason()
+                correction.getReviewReason(),
+                correction.getRequestType() != null ? correction.getRequestType() : VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
         );
     }
 

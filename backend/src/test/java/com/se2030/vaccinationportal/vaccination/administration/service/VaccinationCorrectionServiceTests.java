@@ -20,6 +20,7 @@ import com.se2030.vaccinationportal.vaccination.administration.exception.Vaccina
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionField;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionType;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
@@ -324,6 +325,73 @@ class VaccinationCorrectionServiceTests {
 
         assertSame(ordered, service.getCorrectionHistory(RECORD_ID));
         verify(correctionRepository).findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(RECORD_ID);
+    }
+
+    @Test
+    void createVaccinatorAmendmentSucceedsForAdministeringVaccinator() {
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
+        when(correctionRepository.save(any(VaccinationCorrection.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        VaccinationCorrection correction = service.createVaccinatorAmendment(
+                RECORD_ID,
+                request("doseNumber", "2", "Administered dose 2 instead of 1", 91L),
+                91L
+        );
+
+        assertEquals(RECORD_ID, correction.getVaccinationRecordId());
+        assertEquals(VaccinationCorrectionType.VACCINATOR_RECORD_AMENDMENT, correction.getRequestType());
+        assertEquals(VaccinationCorrectionField.DOSE_NUMBER, correction.getFieldName());
+        assertEquals("2", correction.getNewValue());
+        assertEquals(VaccinationCorrectionStatus.PENDING, correction.getStatus());
+    }
+
+    @Test
+    void createVaccinatorAmendmentRejectsDifferentVaccinator() {
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
+
+        org.springframework.security.access.AccessDeniedException ex = assertThrows(
+                org.springframework.security.access.AccessDeniedException.class,
+                () -> service.createVaccinatorAmendment(
+                        RECORD_ID,
+                        request("doseNumber", "2", "Wrong dose", 999L),
+                        999L
+                )
+        );
+
+        assertEquals("Vaccinators may only request amendments for vaccinations they administered", ex.getMessage());
+    }
+
+    @Test
+    void createVaccinatorAmendmentRejectsDisallowedField() {
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
+
+        UnsupportedVaccinationCorrectionFieldException ex = assertThrows(
+                UnsupportedVaccinationCorrectionFieldException.class,
+                () -> service.createVaccinatorAmendment(
+                        RECORD_ID,
+                        request("vaccineBatchId", "999", "Change batch", 91L),
+                        91L
+                )
+        );
+
+        assertEquals("Vaccine batch corrections are not supported through the vaccination correction workflow because batch changes require inventory reconciliation.", ex.getMessage());
+    }
+
+    @Test
+    void createCitizenCorrectionSetsCitizenCertificateIssueType() {
+        when(vaccinationRecordRepository.findByIdForUpdate(RECORD_ID)).thenReturn(Optional.of(record));
+        when(correctionRepository.save(any(VaccinationCorrection.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        CreateVaccinationCorrectionRequest req = new CreateVaccinationCorrectionRequest(
+                "doseNumber", "2", "Incorrect dose displayed", 55L, "DISCREPANCY", null
+        );
+
+        VaccinationCorrection correction = service.createCitizenCorrection(RECORD_ID, req, 55L);
+
+        assertEquals(VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE, correction.getRequestType());
+        assertEquals(VaccinationCorrectionStatus.PENDING, correction.getStatus());
     }
 
     private static Stream<Arguments> supportedCorrectionCases() {

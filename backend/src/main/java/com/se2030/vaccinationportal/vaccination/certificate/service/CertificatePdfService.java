@@ -14,8 +14,8 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 
 /**
- * Clean, lightweight server-side PDF generator for official digital vaccination certificates.
- * Generates standards-compliant PDF 1.4 documents with meaningful human-readable values.
+ * Server-side PDF generator for official digital vaccination certificates.
+ * Generates standards-compliant PDF 1.4 documents formatted as a formal medical vaccination certificate.
  */
 @Service
 public class CertificatePdfService {
@@ -73,131 +73,155 @@ public class CertificatePdfService {
 
         StringBuilder content = new StringBuilder();
 
-        // Background / Border
+        // 1. Formal double border (Medical document frame)
         content.append("q\n");
-        content.append("0.85 0.85 0.85 RG 1.5 w\n");
-        content.append("30 30 535 782 re S\n");
-        content.append("0.06 0.43 0.36 RG 3 w\n");
-        content.append("36 36 523 770 re S\n");
+        // Outer thin border
+        content.append("0.75 0.78 0.82 RG 1 w\n");
+        content.append("28 28 539 786 re S\n");
+        // Inner security border
+        content.append("0.12 0.28 0.42 RG 2 w\n");
+        content.append("34 34 527 774 re S\n");
         content.append("Q\n");
 
-        // Header Banner (dark teal)
+        // 2. Official Header Banner (Navy blue official banner)
         content.append("q\n");
-        content.append("0.06 0.43 0.36 rg\n");
-        content.append("36 716 523 90 re f\n");
+        content.append("0.08 0.22 0.36 rg\n");
+        content.append("35 722 525 85 re f\n");
         content.append("Q\n");
 
         // Header Text
         content.append("BT\n");
-        content.append("/F1 20 Tf 1 1 1 rg\n");
-        content.append("60 766 Td (NATIONAL VACCINATION PORTAL) Tj\n");
-        content.append("/F2 12 Tf 0.9 0.95 0.93 rg\n");
-        content.append("0 -22 Td (OFFICIAL DIGITAL VACCINATION CERTIFICATE) Tj\n");
+        content.append("/F1 11 Tf 0.85 0.90 0.95 rg\n");
+        content.append("50 782 Td (MINISTRY OF HEALTH \\(MOH\\) \\xb7 NATIONAL IMMUNIZATION REGISTRY) Tj\n");
+        content.append("/F1 18 Tf 1 1 1 rg\n");
+        content.append("0 -24 Td (OFFICIAL DIGITAL VACCINATION CERTIFICATE) Tj\n");
+        content.append("/F2 10 Tf 0.80 0.88 0.94 rg\n");
+        content.append("0 -16 Td (Government of Sri Lanka \\xb7 International Health Credential) Tj\n");
         content.append("ET\n");
 
-        // Status Banner
+        // 3. Status Banner
         content.append("q\n");
         if ("VALID".equalsIgnoreCase(status)) {
-            content.append("0.85 0.95 0.88 rg 0.18 0.55 0.34 RG 1 w\n");
+            content.append("0.90 0.96 0.92 rg 0.18 0.55 0.30 RG 1 w\n");
         } else if ("REVOKED".equalsIgnoreCase(status)) {
-            content.append("0.98 0.88 0.88 rg 0.78 0.15 0.15 RG 1 w\n");
+            content.append("0.98 0.90 0.90 rg 0.78 0.15 0.15 RG 1 w\n");
         } else {
-            content.append("0.99 0.95 0.85 rg 0.78 0.55 0.15 RG 1 w\n");
+            content.append("0.99 0.95 0.88 rg 0.78 0.55 0.15 RG 1 w\n");
         }
-        content.append("50 645 495 45 re B\n");
+        content.append("50 660 495 42 re B\n");
         content.append("Q\n");
 
         content.append("BT\n");
-        content.append("/F1 14 Tf\n");
+        content.append("/F1 13 Tf\n");
         if ("VALID".equalsIgnoreCase(status)) {
-            content.append("0.1 0.45 0.25 rg\n");
-            content.append("65 662 Td (STATUS: VALID / ACTIVE CREDENTIAL) Tj\n");
+            content.append("0.10 0.45 0.22 rg\n");
+            content.append("65 677 Td (STATUS: VALID / ACTIVE CREDENTIAL) Tj\n");
         } else if ("REVOKED".equalsIgnoreCase(status)) {
-            content.append("0.7 0.1 0.1 rg\n");
-            content.append("65 662 Td (STATUS: REVOKED - INVALID CREDENTIAL) Tj\n");
+            content.append("0.70 0.10 0.10 rg\n");
+            content.append("65 677 Td (STATUS: REVOKED - INVALID CREDENTIAL) Tj\n");
         } else {
-            content.append("0.65 0.4 0.1 rg\n");
-            content.append("65 662 Td (STATUS: SUPERSEDED - REPLACED BY NEW VERSION) Tj\n");
+            content.append("0.65 0.40 0.10 rg\n");
+            content.append("65 677 Td (STATUS: SUPERSEDED - REPLACED BY NEW VERSION) Tj\n");
         }
         content.append("ET\n");
 
-        // Certificate Details Box
+        // 4. Clinical Details Section (Structured Medical Record Table)
         content.append("q\n");
-        content.append("0.96 0.97 0.98 rg 0.8 0.85 0.9 RG 1 w\n");
-        content.append("50 240 495 380 re B\n");
+        content.append("0.98 0.98 0.99 rg 0.82 0.85 0.88 RG 1 w\n");
+        content.append("50 255 495 385 re B\n");
         content.append("Q\n");
 
-        // Details content
+        // Medical Details Content
         content.append("BT\n");
-        content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("70 585 Td (Certificate Reference:) Tj\n");
-        content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + ref + ") Tj\n");
+
+        // Section Header: Recipient Information
+        content.append("/F1 10 Tf 0.08 0.22 0.36 rg\n");
+        content.append("65 618 Td (SECTION 1: CERTIFICATE HOLDER & CITIZEN IDENTITY) Tj\n");
 
         if (recipientName != null) {
-            content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-            content.append("-150 -32 Td (Citizen Name:) Tj\n");
-            content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-            content.append("150 0 Td (" + escapePdfText(recipientName) + ") Tj\n");
+            content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+            content.append("0 -20 Td (Citizen Full Name:) Tj\n");
+            content.append("/F1 11 Tf 0.05 0.10 0.15 rg\n");
+            content.append("165 0 Td (" + escapePdfText(recipientName) + ") Tj\n");
         }
 
-        content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Vaccine / Formulation:) Tj\n");
-        content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + escapePdfText(vaccineName) + ") Tj\n");
+        // Section Header: Vaccination Details
+        content.append("/F1 10 Tf 0.08 0.22 0.36 rg\n");
+        content.append(recipientName != null ? "-165 -28 Td (SECTION 2: VACCINATION & CLINICAL ADMINISTRATION) Tj\n" : "0 -28 Td (SECTION 2: VACCINATION & CLINICAL ADMINISTRATION) Tj\n");
 
-        content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Vaccine Dose:) Tj\n");
-        content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + escapePdfText(dose) + ") Tj\n");
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("0 -20 Td (Vaccine Formulation:) Tj\n");
+        content.append("/F2 11 Tf 0.05 0.10 0.15 rg\n");
+        content.append("165 0 Td (" + escapePdfText(vaccineName) + ") Tj\n");
 
-        content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Vaccination Date:) Tj\n");
-        content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + escapePdfText(adminTime) + ") Tj\n");
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("-165 -22 Td (Dose Administered:) Tj\n");
+        content.append("/F1 11 Tf 0.05 0.10 0.15 rg\n");
+        content.append("165 0 Td (" + escapePdfText(dose) + ") Tj\n");
 
-        content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Batch Code / Number:) Tj\n");
-        content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + escapePdfText(batchNumber) + ") Tj\n");
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("-165 -22 Td (Administration Date:) Tj\n");
+        content.append("/F2 11 Tf 0.05 0.10 0.15 rg\n");
+        content.append("165 0 Td (" + escapePdfText(adminTime) + ") Tj\n");
 
-        content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Vaccination Center:) Tj\n");
-        content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + escapePdfText(centerName) + ") Tj\n");
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("-165 -22 Td (Vaccine Batch / Lot:) Tj\n");
+        content.append("/F1 11 Tf 0.10 0.15 0.25 rg\n");
+        content.append("165 0 Td (" + escapePdfText(batchNumber) + ") Tj\n");
 
-        content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Issued Date:) Tj\n");
-        content.append("/F2 11 Tf 0.1 0.1 0.1 rg\n");
-        content.append("150 0 Td (" + escapePdfText(issuedAt) + ") Tj\n");
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("-165 -22 Td (Administration Facility:) Tj\n");
+        content.append("/F2 11 Tf 0.05 0.10 0.15 rg\n");
+        content.append("165 0 Td (" + escapePdfText(centerName) + ") Tj\n");
 
-        content.append("/F1 11 Tf 0.2 0.2 0.2 rg\n");
-        content.append("-150 -32 Td (Verification Token:) Tj\n");
-        content.append("/F2 9 Tf 0.3 0.3 0.3 rg\n");
-        content.append("150 0 Td (" + token + ") Tj\n");
+        // Section Header: Certification Integrity
+        content.append("/F1 10 Tf 0.08 0.22 0.36 rg\n");
+        content.append("-165 -28 Td (SECTION 3: CERTIFICATION & AUDIT INTEGRITY) Tj\n");
+
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("0 -20 Td (Certificate Reference:) Tj\n");
+        content.append("/F1 11 Tf 0.08 0.22 0.36 rg\n");
+        content.append("165 0 Td (" + ref + ") Tj\n");
+
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("-165 -22 Td (Issuance Timestamp:) Tj\n");
+        content.append("/F2 10 Tf 0.05 0.10 0.15 rg\n");
+        content.append("165 0 Td (" + escapePdfText(issuedAt) + ") Tj\n");
+
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("-165 -22 Td (Verification Token:) Tj\n");
+        content.append("/F2 9 Tf 0.30 0.30 0.30 rg\n");
+        content.append("165 0 Td (" + token + ") Tj\n");
+
+        content.append("/F1 10 Tf 0.25 0.25 0.25 rg\n");
+        content.append("-165 -22 Td (Issuing Authority:) Tj\n");
+        content.append("/F2 10 Tf 0.05 0.10 0.15 rg\n");
+        content.append("165 0 Td (National Immunization Registry Authority) Tj\n");
+
         content.append("ET\n");
 
-        // Verification & Security Note Box
+        // 5. Verification & Authenticity Statement Box
         content.append("q\n");
-        content.append("0.93 0.95 0.94 rg 0.7 0.8 0.75 RG 1 w\n");
-        content.append("50 100 495 110 re B\n");
+        content.append("0.94 0.96 0.98 rg 0.70 0.78 0.85 RG 1 w\n");
+        content.append("50 110 495 125 re B\n");
         content.append("Q\n");
 
         content.append("BT\n");
-        content.append("/F1 10 Tf 0.06 0.43 0.36 rg\n");
-        content.append("65 180 Td (PUBLIC VERIFICATION AND AUTHENTICITY) Tj\n");
-        content.append("/F2 9 Tf 0.3 0.3 0.3 rg\n");
-        content.append("0 -18 Td (This certificate can be verified through the National Vaccination Portal at /verify-certificate.) Tj\n");
+        content.append("/F1 10 Tf 0.08 0.22 0.36 rg\n");
+        content.append("65 215 Td (SECTION 4: PUBLIC VERIFICATION & AUTHENTICITY NOTICE) Tj\n");
+        content.append("/F2 9 Tf 0.25 0.25 0.25 rg\n");
+        content.append("0 -17 Td (This certificate can be verified through the National Vaccination Portal at /verify-certificate.) Tj\n");
         content.append("0 -14 Td (Enter the certificate reference or verification token above to authenticate.) Tj\n");
         content.append("0 -14 Td (NFR-PRV-01 Privacy Compliant: Public verification displays minimal clinical details only.) Tj\n");
-        content.append("/F2 8 Tf 0.5 0.5 0.5 rg\n");
-        content.append("0 -20 Td (Issued under the authority of the Ministry of Health. Cryptographically generated.) Tj\n");
+        content.append("/F2 8.5 Tf 0.40 0.40 0.40 rg\n");
+        content.append("0 -18 Td (Issued under the legal authority of the Ministry of Health. Electronically generated and tamper-evident.) Tj\n");
+        content.append("0 -13 Td (Any unauthorized reproduction or alteration renders this official medical document invalid.) Tj\n");
         content.append("ET\n");
 
-        // Footer
+        // 6. Footer
         content.append("BT\n");
-        content.append("/F2 8 Tf 0.5 0.5 0.5 rg\n");
-        content.append("200 50 Td (Web-Based Vaccination Portal - Official Electronic Document) Tj\n");
+        content.append("/F2 8 Tf 0.45 0.45 0.45 rg\n");
+        content.append("140 50 Td (Web-Based Vaccination Portal \\xb7 Official Electronic Medical Document \\xb7 Page 1 of 1) Tj\n");
         content.append("ET\n");
 
         byte[] streamBytes = content.toString().getBytes(StandardCharsets.ISO_8859_1);

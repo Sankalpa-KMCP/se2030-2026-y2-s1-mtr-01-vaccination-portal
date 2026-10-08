@@ -14,16 +14,25 @@ public record CreateVaccinationCorrectionRequest(
 
         @NotBlank(message = "Correction reason is required")
         @Size(max = 1000, message = "Correction reason must not exceed 1000 characters")
-        @JsonAlias({"message"})
+        @JsonAlias({"message", "issueDescription", "description"})
         String reason,
 
-        Long correctedBy
+        Long correctedBy,
+
+        @Size(max = 64, message = "Category must not exceed 64 characters")
+        String category,
+
+        String requestType
 ) {
+    public CreateVaccinationCorrectionRequest(String fieldName, String newValue, String reason, Long correctedBy) {
+        this(fieldName, newValue, reason, correctedBy, null, null);
+    }
+
     public CreateVaccinationCorrectionRequest(String fieldName, String newValue, String reason) {
-        this(fieldName, newValue, reason, null);
+        this(fieldName, newValue, reason, null, null, null);
     }
 
     public CreateVaccinationCorrectionRequest(String reason) {
-        this(null, null, reason, null);
+        this(null, null, reason, null, null, null);
     }
 }
