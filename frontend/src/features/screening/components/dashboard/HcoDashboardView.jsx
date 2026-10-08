@@ -18,7 +18,7 @@ function sortOldestFirst(submissions = []) {
   });
 }
 
-export default function HcoDashboardView({ user }) {
+export default function HcoDashboardView({ user, showHeader = true, embedded = false }) {
   const [submissions, setSubmissions] = useState([]);
   const [queueLoading, setQueueLoading] = useState(true);
   const [awaitingQuestionnaireCount, setAwaitingQuestionnaireCount] = useState(null);
@@ -76,10 +76,10 @@ export default function HcoDashboardView({ user }) {
   ).length;
 
   return (
-    <div className="hco-dashboard">
+    <div className={`hco-dashboard${embedded ? ' hco-dashboard--embedded' : ''}`}>
       <div className="container-xl">
-        {/* Welcome & Compact Account Card */}
-        <HcoDashboardHeader user={user} />
+        {/* Welcome and account identity are supplied by the shared role dashboard when embedded. */}
+        {showHeader && <HcoDashboardHeader user={user} />}
 
         {/* 4 Summary Cards */}
         <HcoDashboardMetrics

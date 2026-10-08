@@ -94,10 +94,9 @@ describe('role dashboards', () => {
     renderPage(<StaffDashboardPage />);
     expect(screen.getByRole('heading', { name: 'Welcome, Center Manager' })).toBeTruthy();
     expect(screen.getByText('Center Manager', { selector: '.badge' })).toBeTruthy();
-    expect(screen.getAllByRole('link', { name: 'Open', exact: true }).length).toBeGreaterThan(0);
-    const checkInCard = screen.getByRole('heading', { name: 'Check-In & Queue Management' }).closest('.card');
-    expect(within(checkInCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
-    expect(within(checkInCard).getByText(/arrival check-ins/i)).toBeTruthy();
+    const checkInCard = screen.getByRole('link', { name: 'Open Check-In & Queue Management' });
+    expect(checkInCard.getAttribute('href')).toBe('/app/checkin/queue');
+    expect(within(checkInCard).getByText(/process arrivals/i)).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Check-In Queue' })).toBeNull();
     expect(screen.queryByText('Screening Review')).toBeNull();
   });
@@ -124,7 +123,7 @@ describe('role dashboards', () => {
     expect(screen.queryByRole('heading', { name: 'Sessions' })).toBeNull();
   });
 
-  it('renders the vaccinator workspace and draft tools while omitting large account summary card', () => {
+  it('renders the vaccinator workspace and draft tools inside the shared staff shell', () => {
     authState.current = { user: {
       fullName: 'Vera Vaccinator',
       email: 'vera@example.gov',
@@ -133,22 +132,16 @@ describe('role dashboards', () => {
     } };
     renderPage(<StaffDashboardPage />);
 
-    // Large Account Summary card should NOT be rendered for Vaccinator
-    expect(screen.queryByRole('heading', { name: 'Account Summary' })).toBeNull();
-
-    // Generic Staff Dashboard intro should NOT be rendered for Vaccinator
-    expect(screen.queryByText('Staff Dashboard', { selector: '.badge' })).toBeNull();
-    expect(screen.queryByText('Your available tools reflect your authoritative staff role.')).toBeNull();
-
-    // Compact identity line rendered in Vaccinator workspace
-    expect(screen.getByText('Welcome, Vera Vaccinator • Vaccinator')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Account Profile' })).toBeTruthy();
+    expect(screen.getByText('Vaccinator', { selector: '.admin-role-pill' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Welcome, Vera Vaccinator' })).toBeTruthy();
 
     const workspace = screen.getByRole('region', { name: /vaccinator workspace/i });
     expect(within(workspace).getByRole('heading', { name: 'Checked-In Queue' })).toBeTruthy();
     expect(within(workspace).getByRole('heading', { name: 'Active Work' })).toBeTruthy();
 
-    const queueCard = screen.getByRole('heading', { name: 'Check-In Queue' }).closest('.card');
-    expect(within(queueCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/checkin/queue');
+    const queueCard = screen.getByRole('link', { name: 'Open Check-In Queue' });
+    expect(queueCard.getAttribute('href')).toBe('/app/checkin/queue');
     expect(screen.queryByRole('heading', { name: 'Check-In & Queue Management' })).toBeNull();
   });
 
@@ -176,8 +169,8 @@ describe('role dashboards', () => {
     renderPage(<StaffDashboardPage />);
 
     expect(screen.getByRole('heading', { name: 'Welcome, Ian Inventory' })).toBeTruthy();
-    const inventoryCard = screen.getByRole('heading', { name: 'Inventory & Batches' }).closest('.card');
-    expect(within(inventoryCard).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('/app/inventory');
+    const inventoryCard = screen.getByRole('link', { name: 'Open Inventory & Batches' });
+    expect(inventoryCard.getAttribute('href')).toBe('/app/inventory');
     expect(screen.queryByRole('heading', { name: 'Check-In & Queue Management' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Check-In Queue' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Campaigns' })).toBeNull();
@@ -194,12 +187,11 @@ describe('role dashboards', () => {
     } };
     renderPage(<StaffDashboardPage />);
 
-    expect(screen.getByRole('heading', { name: 'Vaccinator Dashboard' })).toBeTruthy();
-    expect(screen.getByText('Welcome, Dual Role Staff • Vaccinator')).toBeTruthy();
-    expect(screen.queryByText('Staff Dashboard', { selector: '.badge' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Welcome, Dual Role Staff' })).toBeTruthy();
+    expect(screen.getByText('Center Manager · Vaccinator', { selector: '.admin-role-pill' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Check-In & Queue Management' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Check-In Queue' })).toBeNull();
-    const checkInLinks = screen.getAllByRole('link', { name: 'Open' })
+    const checkInLinks = screen.getAllByRole('link')
       .filter((link) => link.getAttribute('href') === '/app/checkin/queue');
     expect(checkInLinks).toHaveLength(1);
   });

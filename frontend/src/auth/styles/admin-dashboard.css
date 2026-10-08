@@ -477,3 +477,64 @@ body:has(.admin-dashboard) main.container {
   .admin-metric-card.card,
   .admin-action-card.card { transition: none; }
 }
+
+
+/* Shared citizen and staff dashboard shell --------------------------- */
+.role-dashboard.citizen-dashboard {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  gap: 18px;
+}
+
+.role-dashboard--citizen .admin-hero {
+  min-height: 308px;
+}
+
+.role-dashboard .admin-profile__link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: .42rem;
+  margin-top: 14px;
+  color: var(--admin-green);
+  font-size: .78rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.role-dashboard .admin-profile__link:hover {
+  color: #043f35;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.role-dashboard .admin-profile__link:focus-visible {
+  outline: 3px solid #0b7c65;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.role-dashboard--staff .admin-dashboard__section > .hco-dashboard--embedded {
+  margin-top: 0;
+}
+
+.hco-dashboard.hco-dashboard--embedded {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.hco-dashboard.hco-dashboard--embedded > .container-xl {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+.role-dashboard--staff [aria-label="Vaccinator Workspace"] {
+  margin-bottom: 0 !important;
+}
+
+@media (max-width: 1199px) {
+  .role-dashboard--citizen .admin-hero { min-height: auto; }
+}

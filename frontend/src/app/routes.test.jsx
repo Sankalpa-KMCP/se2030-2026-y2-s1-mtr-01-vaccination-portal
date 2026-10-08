@@ -105,8 +105,8 @@ describe('shared routing and role guards', () => {
   it('routes a Vaccinator to staff and shows draft navigation', () => {
     setAuth({ roles: ['ROLE_VACCINATOR'] });
     render(<MemoryRouter initialEntries={['/app']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Vaccinator Dashboard' })).toBeTruthy();
-    expect(screen.queryByText('Staff Dashboard')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
+    expect(screen.getByText('Vaccinator', { selector: '.admin-role-pill' })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: /Vaccination Drafts/ }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: 'Staff Requests' })).toBeNull();
   });
@@ -440,13 +440,13 @@ describe('shared routing and role guards', () => {
     setAuth({ roles: ['ROLE_CITIZEN'] });
     render(<MemoryRouter initialEntries={['/app/overview']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Welcome, user@example.gov' })).toBeTruthy();
-    expect(screen.getByText('Citizen Dashboard')).toBeTruthy();
+    expect(screen.getByText('Citizen', { selector: '.admin-role-pill' })).toBeTruthy();
   });
 
   it('allows only citizens to open the citizen dashboard', () => {
     setAuth({ roles: ['ROLE_CITIZEN'] });
     const view = render(<MemoryRouter initialEntries={['/app/citizen']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByText('Citizen Dashboard')).toBeTruthy();
+    expect(screen.getByText('Citizen', { selector: '.admin-role-pill' })).toBeTruthy();
 
     setAuth({ roles: ['ROLE_CENTER_MANAGER'] });
     view.rerender(<MemoryRouter initialEntries={['/app/citizen']}><PortalRoutes /></MemoryRouter>);
@@ -456,7 +456,7 @@ describe('shared routing and role guards', () => {
   it('allows canonical staff and denies citizens on the staff dashboard', () => {
     setAuth({ roles: ['ROLE_INVENTORY_OFFICER'] });
     const view = render(<MemoryRouter initialEntries={['/app/staff']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByText('Staff Dashboard')).toBeTruthy();
+    expect(screen.getByText('Inventory Officer', { selector: '.admin-role-pill' })).toBeTruthy();
 
     setAuth({ roles: ['ROLE_CITIZEN'] });
     view.rerender(<MemoryRouter initialEntries={['/app/staff']}><PortalRoutes /></MemoryRouter>);
@@ -543,7 +543,7 @@ describe('shared routing and role guards', () => {
   it('redirects authenticated users away from public pages to their role home', () => {
     setAuth({ roles: ['ROLE_CITIZEN'] });
     render(<MemoryRouter initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByText('Citizen Dashboard')).toBeTruthy();
+    expect(screen.getByText('Citizen', { selector: '.admin-role-pill' })).toBeTruthy();
   });
 
   describe('direct URL boundaries for ROLE_HEALTHCARE_OFFICER', () => {
@@ -563,7 +563,7 @@ describe('shared routing and role guards', () => {
     });
 
     it.each([
-      ['/app/staff', 'Healthcare Officer Dashboard'],
+      ['/app/staff', 'Screening Review Queue'],
       ['/app/staff/screening/reviews', 'HCO Screening Review Queue Test Page'],
       ['/app/staff/screening/reviews/42', 'HCO Screening Review Details Test Page'],
       ['/app/staff/screening/history/42', 'HCO Screening History Details Test Page'],
