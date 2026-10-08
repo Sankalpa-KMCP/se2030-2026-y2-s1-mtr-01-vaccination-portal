@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getRoleHomePath } from '../utils/roleRedirect';
 import { resendVerification } from '../api/authApi';
 import { ArrowIcon, EyeIcon } from '../components/AuthIcons';
+import { useAuthCharacters, usePasswordPrivacy } from '../components/authCharacterContext';
 
 function LoginForm() {
   const { login, loginError, clearLoginError } = useAuth();
@@ -11,6 +12,8 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const passwordPrivacy = usePasswordPrivacy(showPassword);
+  const { reportSubmission, reportResult } = useAuthCharacters();
   const [clientError, setClientError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -20,6 +23,11 @@ function LoginForm() {
     if (clientError) setClientError('');
     if (loginError) clearLoginError();
     if (resendSuccess) setResendSuccess('');
+  };
+
+  const rejectLogin = (message) => {
+    setClientError(message);
+    reportResult(false);
   };
 
   const handleResendVerification = async () => {
@@ -48,15 +56,17 @@ function LoginForm() {
     setResendSuccess('');
 
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) return setClientError('Email address is required.');
-    if (!trimmedEmail.includes('@') || trimmedEmail.startsWith('@') || trimmedEmail.endsWith('@')) return setClientError('Please enter a valid email address.');
-    if (trimmedEmail.length > 255) return setClientError('Email must not exceed 255 characters.');
-    if (!password) return setClientError('Password is required.');
-    if (password.length > 128) return setClientError('Password must not exceed 128 characters.');
+    if (!trimmedEmail) return rejectLogin('Email address is required.');
+    if (!trimmedEmail.includes('@') || trimmedEmail.startsWith('@') || trimmedEmail.endsWith('@')) return rejectLogin('Please enter a valid email address.');
+    if (trimmedEmail.length > 255) return rejectLogin('Email must not exceed 255 characters.');
+    if (!password) return rejectLogin('Password is required.');
+    if (password.length > 128) return rejectLogin('Password must not exceed 128 characters.');
 
     setIsSubmitting(true);
+    reportSubmission(true);
     try {
       const result = await login(trimmedEmail, password);
+      reportResult(result.success);
       if (result.success) {
         setPassword('');
         const homePath = getRoleHomePath(result.user);
@@ -65,6 +75,8 @@ function LoginForm() {
           state: homePath === '/app/citizen' ? { showCitizenWelcome: true } : null,
         });
       }
+    } catch (error) {
+      rejectLogin(error?.message || 'Unable to sign in. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -142,7 +154,7 @@ function LoginForm() {
               Forgot password?
             </Link>
           </div>
-          <div className="auth-password">
+          <div className="auth-password" {...passwordPrivacy}>
             <input
               type={showPassword ? 'text' : 'password'}
               id="login-password"

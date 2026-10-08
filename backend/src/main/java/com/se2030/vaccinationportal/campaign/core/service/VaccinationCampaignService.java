@@ -49,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Manages campaign configuration and status changes while protecting existing sessions. */
 @Service
+// Save each operation as one transaction; roll it back if a validation fails.
 @Transactional
 public class VaccinationCampaignService {
 
@@ -111,7 +112,7 @@ public class VaccinationCampaignService {
      * 9. Require exactly one effective CampaignQuestionnaireAssignment at serviceStartDate.
      * 10. Require at least one relevant overlapping ACTIVE CampaignCenterAssignment whose center is in ACTIVE status.
      *
-     * Note: OperatingHours, CenterClosure, and QuestionnaireVersion publication in MF-01 are NOT scheduling prerequisites.
+     * The assigned questionnaire must be published in MF-01. Operating hours and center closures are not checked here.
      *
      * @param campaignId ID of the VaccinationCampaign to schedule
      * @return Saved VaccinationCampaign in SCHEDULED status
@@ -121,6 +122,7 @@ public class VaccinationCampaignService {
             throw new IllegalArgumentException("Campaign ID is required");
         }
 
+        // Lock the campaign so another request cannot change it during these checks.
         VaccinationCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with ID: " + campaignId));
 
@@ -358,6 +360,7 @@ public class VaccinationCampaignService {
             throw new IllegalStateException("Campaign service start and end dates are required for activation");
         }
 
+        // Activation is allowed only between the campaign's start and end dates.
         if (today.isBefore(serviceStartDate)) {
             throw new IllegalStateException(
                     "Campaign service start date (" + serviceStartDate + ") has not been reached [current date: " + today + "]"
@@ -659,20 +662,24 @@ public class VaccinationCampaignService {
         if (bookingCloseAt == null) {
             throw new IllegalArgumentException("Booking close timestamp is required");
         }
+        // The campaign must end after its start date; the same date is not allowed.
         if (!serviceEndDate.isAfter(serviceStartDate)) {
             throw new IllegalArgumentException("Campaign service end date (" + serviceEndDate +
                     ") must be after service start date (" + serviceStartDate + ") [MF02-BR-01]");
         }
+        // Booking must close later than it opens.
         if (!bookingCloseAt.isAfter(bookingOpenAt)) {
             throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
                     ") must be after booking open time (" + bookingOpenAt + ") [MF02-BR-01]");
         }
+        // Compare the booking close date in UTC with the campaign's last service date.
         LocalDate bookingCloseDate = bookingCloseAt.atZone(ZoneOffset.UTC).toLocalDate();
         if (bookingCloseDate.isAfter(serviceEndDate)) {
             throw new IllegalArgumentException("Campaign booking close time (" + bookingCloseAt +
                     ") must not be after campaign service end date (" + serviceEndDate + ") [MF02-BR-01]");
         }
 
+        // Remove extra spaces and reject a code that is already in use.
         String normalizedCode = code != null ? code.trim() : null;
         if (campaignRepository.existsByCode(normalizedCode)) {
             throw new IllegalArgumentException("Campaign already exists with code: " + normalizedCode);
@@ -755,6 +762,7 @@ public class VaccinationCampaignService {
             }
         }
 
+        // Check that the selected vaccine type and target group exist in the database.
         VaccineType vaccineType = vaccineTypeRepository.findById(vaccineTypeId)
                 .orElseThrow(() -> new ResourceNotFoundException("VaccineType not found with ID: " + vaccineTypeId));
         TargetGroup targetGroup = targetGroupRepository.findById(targetGroupId)
@@ -786,6 +794,7 @@ public class VaccinationCampaignService {
         return campaign;
     }
 
+    // Change only the service dates while keeping existing sessions within the campaign.
     public VaccinationCampaign updateServiceDates(
             Long campaignId,
             LocalDate serviceStartDate,
@@ -809,6 +818,7 @@ public class VaccinationCampaignService {
                 .orElseThrow(() -> new IllegalArgumentException("Campaign not found with ID: " + campaignId));
         entityManager.refresh(campaign);
 
+        // Completed, cancelled and archived campaigns cannot have their dates changed.
         if (campaign.getStatus().isOperationallyClosed()) {
             throw new IllegalStateException(
                     "Cannot update service dates for campaign in " + campaign.getStatus() + " status"
@@ -869,6 +879,7 @@ public class VaccinationCampaignService {
         if (campaignId == null) {
             throw new IllegalArgumentException("Campaign ID is required");
         }
+        // Reject a missing name or a name containing only spaces.
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Campaign name is required");
         }
@@ -914,6 +925,7 @@ public class VaccinationCampaignService {
 
         validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
 
+        // Apply the new details only after the validations have passed.
         campaign.setName(name.trim());
         campaign.setDescription(description);
         campaign.setServiceStartDate(serviceStartDate);
@@ -942,6 +954,7 @@ public class VaccinationCampaignService {
                             "Questionnaire version " + questionnaireVersionId + " is not in PUBLISHED status in MF-01"
                     );
                 }
+                // Keep the questionnaire unchanged once citizens have submitted answers.
                 if (publicationPort.hasCampaignSubmissions(campaignId)) {
                     throw new IllegalStateException(
                             "Cannot change questionnaire assignment for a campaign with existing citizen screening submissions"
@@ -987,6 +1000,7 @@ public class VaccinationCampaignService {
                 });
     }
 
+    // Return an empty result if no campaign is found.
     @Transactional(readOnly = true)
     public Optional<VaccinationCampaign> getCampaignById(Long id) {
         if (id == null) {
@@ -995,6 +1009,7 @@ public class VaccinationCampaignService {
         return campaignRepository.findById(id);
     }
 
+    // Return the campaign, or report an error if it does not exist.
     @Transactional(readOnly = true)
     public VaccinationCampaign getRequiredCampaignById(Long id) {
         if (id == null) {
@@ -1006,6 +1021,7 @@ public class VaccinationCampaignService {
 
     @Transactional(readOnly = true)
     public List<VaccinationCampaign> getCampaigns(CampaignStatus status) {
+        // Filter by status when supplied; otherwise return every campaign.
         if (status != null) {
             return campaignRepository.findByStatus(status);
         }
@@ -1019,6 +1035,7 @@ public class VaccinationCampaignService {
             return List.of();
         }
         List<Long> campaignIds = campaigns.stream().map(VaccinationCampaign::getId).toList();
+        // Load questionnaire assignments together instead of querying once per campaign.
         List<CampaignQuestionnaireAssignment> assignments = questionnaireAssignmentRepository.findOpenEndedAssignmentsForCampaigns(campaignIds);
         java.util.Map<Long, Long> campaignToVersionMap = new java.util.HashMap<>();
         for (CampaignQuestionnaireAssignment assignment : assignments) {
@@ -1037,6 +1054,7 @@ public class VaccinationCampaignService {
         if (!campaignRepository.existsById(campaignId)) {
             throw new ResourceNotFoundException("Campaign not found with ID: " + campaignId);
         }
+        // Return the campaign's status-change history from oldest to newest.
         return campaignLifecycleEventRepository.findByCampaignIdOrderByCreatedAtAscIdAsc(campaignId);
     }
 
@@ -1057,10 +1075,12 @@ public class VaccinationCampaignService {
 
                 campaignId, BLOCKING_SESSION_STATUSES, clock.instant()
         );
+        // Reject new campaign dates that would leave an existing session outside the range.
         for (VaccinationSession session : blockingSessions) {
             ZoneId zoneId = ZoneId.of(session.getScheduleTimezone());
             ZonedDateTime startZdt = session.getStartAt().atZone(zoneId);
             LocalDate firstTouchedDate = startZdt.toLocalDate();
+            // A session ending at midnight belongs to the day before that midnight.
             Instant lastContainedInstant = session.getEndAt().minusNanos(1);
             LocalDate lastTouchedDate = lastContainedInstant.atZone(zoneId).toLocalDate();
 

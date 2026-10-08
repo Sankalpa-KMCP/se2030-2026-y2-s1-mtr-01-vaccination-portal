@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { usePasswordPrivacy } from '../components/authCharacterContext';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../api/authApi';
 import { ArrowIcon, EyeIcon, SuccessSealIcon } from '../components/AuthIcons';
@@ -38,6 +39,8 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const newPasswordPrivacy = usePasswordPrivacy(showPassword);
+  const confirmPasswordPrivacy = usePasswordPrivacy(showConfirmPassword);
   const [clientError, setClientError] = useState('');
   const [apiError, setApiError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -136,7 +139,7 @@ export default function ResetPasswordPage() {
           >
             <div className="auth-field">
               <label htmlFor="reset-new-password">New Password</label>
-              <div className="auth-password">
+              <div className="auth-password" {...newPasswordPrivacy}>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="reset-new-password"
@@ -170,7 +173,7 @@ export default function ResetPasswordPage() {
 
             <div className="auth-field">
               <label htmlFor="reset-confirm-password">Confirm New Password</label>
-              <div className="auth-password">
+              <div className="auth-password" {...confirmPasswordPrivacy}>
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   id="reset-confirm-password"
