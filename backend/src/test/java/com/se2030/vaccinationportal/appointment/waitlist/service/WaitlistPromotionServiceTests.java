@@ -499,7 +499,7 @@ class WaitlistPromotionServiceTests {
         assertTrue(promoted.isEmpty(), "No appointment may be created while every candidate is unverified");
         assertEquals(capacityBefore, slotCapacityPortDouble.getAvailableCapacity(slotId),
                 "No capacity may be reserved for unverified candidates");
-        assertEquals(2, waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(sessionId, WaitlistStatus.WAITING).size(),
+        assertEquals(2, waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAscIdAsc(sessionId, WaitlistStatus.WAITING).size(),
                 "All entries must remain WAITING without alteration");
     }
 

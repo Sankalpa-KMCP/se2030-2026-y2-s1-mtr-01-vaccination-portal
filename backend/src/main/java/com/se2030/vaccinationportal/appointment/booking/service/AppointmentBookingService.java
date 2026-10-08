@@ -159,7 +159,8 @@ public class AppointmentBookingService {
         // Step 1c-2: Check active waitlist duplicates (WAITING) under guard lock (Policy A - F05 invariant).
         // Viva note: A citizen cannot hold an active waitlist entry and an active appointment for the same campaign.
         // Citizen must explicitly leave the waitlist before direct booking. Checked before capacity reservation and persistence.
-        if (waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(citizenId, campaignId, WaitlistStatus.WAITING).isPresent()) {
+        if (waitlistRepository.findFirstByCitizenIdAndCampaignIdAndStatusOrderByJoinedAtDesc(
+                citizenId, campaignId, WaitlistStatus.WAITING).isPresent()) {
             throw new DuplicateWaitlistEntryException("Citizen already has an active waitlist entry for this campaign. Must leave waitlist before booking directly.");
         }
 

@@ -267,7 +267,7 @@ class EmailVerificationAppointmentEnforcementIntegrationTests {
 
         assertTrue(promoted.isEmpty());
         assertEquals(capacityBefore, slotCapacityPortDouble.getAvailableCapacity(SLOT_ID));
-        assertEquals(2, waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(SESSION_ID, WaitlistStatus.WAITING).size());
+        assertEquals(2, waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAscIdAsc(SESSION_ID, WaitlistStatus.WAITING).size());
     }
 
     @Test

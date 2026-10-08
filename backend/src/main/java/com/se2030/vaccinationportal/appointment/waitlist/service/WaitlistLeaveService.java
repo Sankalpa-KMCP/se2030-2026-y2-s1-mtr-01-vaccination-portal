@@ -78,7 +78,7 @@ public class WaitlistLeaveService {
         if (citizenId == null || campaignId == null) {
             return Optional.empty();
         }
-        Optional<WaitlistEntry> waiting = waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
+        Optional<WaitlistEntry> waiting = waitlistRepository.findFirstByCitizenIdAndCampaignIdAndStatusOrderByJoinedAtDesc(
                 citizenId, campaignId, WaitlistStatus.WAITING);
         if (waiting.isPresent()) {
             return waiting;
@@ -98,7 +98,7 @@ public class WaitlistLeaveService {
         if (entry == null || entry.getStatus() != WaitlistStatus.WAITING) {
             return null;
         }
-        List<WaitlistEntry> waitingEntries = waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(
+        List<WaitlistEntry> waitingEntries = waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAscIdAsc(
                 entry.getSessionId(), WaitlistStatus.WAITING);
 
         for (int i = 0; i < waitingEntries.size(); i++) {

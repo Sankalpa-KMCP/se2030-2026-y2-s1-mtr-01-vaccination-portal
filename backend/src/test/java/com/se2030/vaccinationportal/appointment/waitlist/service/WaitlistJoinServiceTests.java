@@ -106,6 +106,7 @@ class WaitlistJoinServiceTests {
         eligibilityPortDouble.setDefaultStatus(EligibilityStatus.ELIGIBLE);
         // Authoritative campaign/session relationships for R01 admission validation
         slotCapacityPortDouble.setSessionCampaign(3001L, 2001L);
+        slotCapacityPortDouble.setSessionCampaign(3002L, 2001L);
         slotCapacityPortDouble.setSessionCampaign(5001L, 4001L);
     }
 
@@ -228,6 +229,27 @@ class WaitlistJoinServiceTests {
                 () -> waitlistJoinService.joinWaitlist(citizenId, campaignId, sessionId, now)
         );
         assertTrue(ex.getMessage().contains("already has an active WAITING waitlist entry"));
+    }
+
+    @Test
+    void joinWaitlist_allowsSameCitizenToWaitForDifferentSessionsInCampaign() {
+        Long citizenId = 1004L;
+        Long campaignId = 2001L;
+        Instant joinedAt = Instant.parse("2026-10-01T10:00:00Z");
+        slotCapacityPortDouble.setSessionFull(3001L, true);
+        slotCapacityPortDouble.setSessionFull(3002L, true);
+
+        WaitlistEntry first = waitlistJoinService.joinWaitlist(
+                citizenId, campaignId, 3001L, joinedAt);
+        WaitlistEntry second = waitlistJoinService.joinWaitlist(
+                citizenId, campaignId, 3002L, joinedAt);
+
+        assertNotNull(first);
+        assertNotNull(second);
+        assertTrue(waitlistRepository.findByCitizenIdAndSessionIdAndStatus(
+                citizenId, 3001L, WaitlistStatus.WAITING).isPresent());
+        assertTrue(waitlistRepository.findByCitizenIdAndSessionIdAndStatus(
+                citizenId, 3002L, WaitlistStatus.WAITING).isPresent());
     }
 
     @Test

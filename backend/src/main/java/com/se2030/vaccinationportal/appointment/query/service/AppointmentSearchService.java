@@ -111,7 +111,7 @@ public class AppointmentSearchService {
         final var availableSlots = candidates;
 
         // Waitlists refer to sessions, while appointments refer to concrete time slots.
-        return waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
+        return waitlistRepository.findFirstByCitizenIdAndCampaignIdAndStatusOrderByJoinedAtDesc(
                         citizenId, campaignId, WaitlistStatus.WAITING)
                 .map(entry -> availableSlots.stream()
                         .filter(candidate -> !entry.getSessionId().equals(candidate.sessionId()))

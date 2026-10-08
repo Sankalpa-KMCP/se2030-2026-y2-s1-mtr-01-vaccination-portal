@@ -16,7 +16,7 @@ import java.time.Instant;
 
 /**
  * Core JPA entity representing a citizen waitlist entry for a vaccination session.
- * Enforces field list per canonical section 12.x and database conditional uniqueness on active WAITING status per campaign.
+ * Enforces field list per canonical section 12.x and database conditional uniqueness on active WAITING status per session.
  * Status mutation is restricted to package-private access; dedicated services handle state transitions.
  *
  * <p><b>User Story:</b>
@@ -27,8 +27,8 @@ import java.time.Instant;
  * <p><b>Business Rules Enforced:</b>
  * <ul>
  *   <li>MF03-BR-06: Deterministic FIFO queue ordering based on {@code joined_at} ascending, then {@code id} ascending;
- *       only one active WAITING entry allowed per citizen per campaign via generated column {@code active_campaign_id}
- *       and unique constraint {@code uk_waitlist_active_citizen_campaign}.</li>
+ *       only one active WAITING entry allowed per citizen per session via generated column {@code active_session_id}
+ *       and unique constraint {@code uk_waitlist_active_citizen_session}.</li>
  *   <li>MF03-BR-07: Ineligible or duplicate waiters are skipped during promotion and transition to terminal statuses
  *       ({@code SKIPPED_INELIGIBLE} or {@code SKIPPED_DUPLICATE_APPOINTMENT}).</li>
  *   <li>MF03-BR-08: Successful promotion transitions status to {@code PROMOTED}.</li>
@@ -39,8 +39,8 @@ import java.time.Instant;
 @Table(
     name = "waitlist_entry",
     uniqueConstraints = @UniqueConstraint(
-        name = "uk_waitlist_active_citizen_campaign",
-        columnNames = {"citizen_id", "active_campaign_id"}
+        name = "uk_waitlist_active_citizen_session",
+        columnNames = {"citizen_id", "active_session_id"}
     )
 )
 public class WaitlistEntry {
@@ -75,17 +75,17 @@ public class WaitlistEntry {
     private Long lockVersion = 0L;
 
     /**
-     * Database generated active campaign ID column.
-     * Evaluates to campaign_id while status = 'WAITING', and NULL otherwise.
+     * Database generated active session ID column.
+     * Evaluates to session_id while status = 'WAITING', and NULL otherwise.
      * Canonical Section 12.x conditional-uniqueness detail. Read-only in JPA.
      */
     @Column(
-        name = "active_campaign_id",
+        name = "active_session_id",
         insertable = false,
         updatable = false,
-        columnDefinition = "BIGINT GENERATED ALWAYS AS (CASE WHEN status = 'WAITING' THEN campaign_id ELSE NULL END)"
+        columnDefinition = "BIGINT GENERATED ALWAYS AS (CASE WHEN status = 'WAITING' THEN session_id ELSE NULL END)"
     )
-    private Long activeCampaignId;
+    private Long activeSessionId;
 
     public WaitlistEntry() {
     }
@@ -144,8 +144,8 @@ public class WaitlistEntry {
         return lockVersion;
     }
 
-    public Long getActiveCampaignId() {
-        return activeCampaignId;
+    public Long getActiveSessionId() {
+        return activeSessionId;
     }
 
     /**
@@ -172,7 +172,7 @@ public class WaitlistEntry {
      * Marks this waitlist entry as PROMOTED (MF03-BR-08).
      * <p>
      * <b>Viva Note:</b> Terminal success state for a waitlist entry. Causes the database generated column
-     * {@code active_campaign_id} to evaluate to {@code NULL}, releasing the active waitlist constraint
+     * {@code active_session_id} to evaluate to {@code NULL}, releasing the active waitlist constraint
      * so that the newly promoted confirmed appointment can be created safely.
      * </p>
      */
@@ -208,7 +208,7 @@ public class WaitlistEntry {
      * <p>
      * <b>Viva Note:</b> Terminal state reached when promotion evaluates an entry whose recorded campaign
      * does not match the authoritative campaign of its session. Transitioning away from WAITING sets
-     * active_campaign_id to NULL, releasing the active waitlist unique constraint so the citizen is not
+     * active_session_id to NULL, releasing the active waitlist unique constraint so the citizen is not
      * permanently locked out.
      * </p>
      */
@@ -236,7 +236,7 @@ public class WaitlistEntry {
                 ", status=" + status +
                 ", joinedAt=" + joinedAt +
                 ", lockVersion=" + lockVersion +
-                ", activeCampaignId=" + activeCampaignId +
+                ", activeSessionId=" + activeSessionId +
                 '}';
     }
 }

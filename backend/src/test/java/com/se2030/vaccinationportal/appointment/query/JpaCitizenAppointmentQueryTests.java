@@ -170,7 +170,7 @@ class JpaCitizenAppointmentQueryTests {
         assertThat(result.getFirst().queuePosition()).isEqualTo(3);
         assertThat(result.subList(1, 5)).allSatisfy(r -> assertThat(r.queuePosition()).isNull());
         verify(waitlist, times(1)).countQueuePosition(500L, WaitlistStatus.WAITING, joined, 9L);
-        verify(waitlist, org.mockito.Mockito.never()).findBySessionIdAndStatusOrderByJoinedAtAsc(500L, WaitlistStatus.WAITING);
+        verify(waitlist, org.mockito.Mockito.never()).findBySessionIdAndStatusOrderByJoinedAtAscIdAsc(500L, WaitlistStatus.WAITING);
         verifyNoInteractions(appointments, slots, clock);
     }
 

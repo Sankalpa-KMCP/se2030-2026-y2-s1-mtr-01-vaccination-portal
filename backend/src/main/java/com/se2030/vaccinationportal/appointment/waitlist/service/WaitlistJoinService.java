@@ -42,7 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>MF03-BR-02 &amp; MF03-BR-14: Citizen cannot join a waitlist if they already hold an active appointment
  *       (CONFIRMED or CHECKED_IN) for the same campaign.</li>
  *   <li>MF03-BR-06: Allowed only when all time slots of the session have zero remaining capacity;
- *       at most one active WAITING entry per citizen per campaign.</li>
+ *       at most one active WAITING entry per citizen per session.</li>
  *   <li>R01 campaign/session integrity: the requested session's authoritative campaign (resolved via
  *       the {@link com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort}) must match the
  *       requested campaign before any queue or capacity effects.</li>
@@ -90,7 +90,7 @@ public class WaitlistJoinService {
      *   <li><b>Verify Active Appointment Absence (MF03-BR-02, MF03-BR-14):</b> A citizen cannot hold a waitlist entry
      *       if they already have a CONFIRMED or CHECKED_IN appointment for the campaign.</li>
      *   <li><b>Verify Active Waitlist Absence (MF03-BR-06, MF03-BR-14):</b> Only one active WAITING entry per citizen
-     *       per campaign.</li>
+     *       per session.</li>
      *   <li><b>Confirm Session Is Truly Full (MF03-BR-06):</b> If bookable capacity still exists in any slot of the session,
      *       the citizen must book directly instead of joining a waitlist.</li>
      *   <li><b>Persist WaitlistEntry:</b> Saves the entry with {@link WaitlistStatus#WAITING} and the arrival timestamp.</li>
@@ -165,14 +165,13 @@ public class WaitlistJoinService {
                     + " already has an active appointment for campaign " + campaignId);
         }
 
-        // Step 2d: MF03-BR-06 / MF03-BR-14 - Reject if citizen already has an active WAITING waitlist entry for this campaign.
-        // Viva note: Ensures strict single-waitlist policy per citizen per campaign.
-        Optional<WaitlistEntry> existingWaiting = waitlistRepository.findByCitizenIdAndCampaignIdAndStatus(
-                citizenId, campaignId, WaitlistStatus.WAITING
+        // Step 2d: MF03-BR-06 / MF03-BR-14 - Reject duplicate WAITING entry for this session.
+        Optional<WaitlistEntry> existingWaiting = waitlistRepository.findByCitizenIdAndSessionIdAndStatus(
+                citizenId, sessionId, WaitlistStatus.WAITING
         );
         if (existingWaiting.isPresent()) {
             throw new DuplicateWaitlistEntryException("Citizen " + citizenId
-                    + " already has an active WAITING waitlist entry for campaign " + campaignId);
+                    + " already has an active WAITING waitlist entry for session " + sessionId);
         }
 
         // Step 2e: Confirm via SlotCapacityPort whether session is full (MF03-BR-06).

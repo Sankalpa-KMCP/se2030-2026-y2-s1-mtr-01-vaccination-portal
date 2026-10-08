@@ -108,7 +108,7 @@ public class WaitlistPromotionService {
             }
         }
 
-        List<WaitlistEntry> waitingEntries = waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAsc(
+        List<WaitlistEntry> waitingEntries = waitlistRepository.findBySessionIdAndStatusOrderByJoinedAtAscIdAsc(
                 sessionId, WaitlistStatus.WAITING);
 
         return processPromotionCandidates(waitingEntries, slotId, effectiveNow);
@@ -209,7 +209,7 @@ public class WaitlistPromotionService {
             // A malformed historical entry whose campaign does not authoritatively match its session
             // must never be promoted: it would create an appointment pairing the entry's campaign with
             // capacity from another campaign's session. The entry is marked SKIPPED_MALFORMED and saved,
-            // which sets active_campaign_id to NULL, releasing the unique constraint and queue position
+            // which sets active_session_id to NULL, releasing the unique constraint and queue position
             // without blocking FIFO promotion of valid waiters.
             if (slotCapacityPort != null) {
                 Optional<Long> authoritativeCampaign = slotCapacityPort.getCampaignIdForSession(entry.getSessionId());
