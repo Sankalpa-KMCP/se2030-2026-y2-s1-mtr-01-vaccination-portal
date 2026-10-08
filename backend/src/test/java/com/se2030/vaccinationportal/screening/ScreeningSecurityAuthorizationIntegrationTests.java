@@ -113,8 +113,13 @@ class ScreeningSecurityAuthorizationIntegrationTests {
                         .header(HttpHeaders.AUTHORIZATION, token("ROLE_HEALTHCARE_OFFICER")))
                 .andExpect(status().isNoContent());
 
+        mockMvc.perform(delete("/api/v1/screening/questionnaires/{id}", 3L)
+                        .header(HttpHeaders.AUTHORIZATION, token("ROLE_HEALTHCARE_OFFICER")))
+                .andExpect(status().isNoContent());
+
         verify(configurationService).deleteQuestion(1L);
         verify(questionnaireVersionService).deleteEligibilityRule(2L);
+        verify(configurationService).deleteQuestionnaire(3L);
     }
 
     @ParameterizedTest
@@ -125,6 +130,10 @@ class ScreeningSecurityAuthorizationIntegrationTests {
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(delete("/api/v1/screening/rules/{ruleId}", 2L)
+                        .header(HttpHeaders.AUTHORIZATION, token(role)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete("/api/v1/screening/questionnaires/{id}", 3L)
                         .header(HttpHeaders.AUTHORIZATION, token(role)))
                 .andExpect(status().isForbidden());
 
@@ -151,7 +160,8 @@ class ScreeningSecurityAuthorizationIntegrationTests {
                 "addAnswerOption",
                 "updateAnswerOption",
                 "removeAnswerOption",
-                "createQuestionnaire"
+                "createQuestionnaire",
+                "deleteQuestionnaire"
         );
         assertHealthcareOfficerOnly(
                 QuestionnaireController.class,

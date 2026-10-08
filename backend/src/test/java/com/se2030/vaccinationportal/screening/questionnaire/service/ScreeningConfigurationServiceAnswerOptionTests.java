@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionType;
 import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuestion;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.AnswerOptionRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireRepository;
+import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireVersionRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.ScreeningQuestionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,9 @@ class ScreeningConfigurationServiceAnswerOptionTests {
     @Mock
     private QuestionnaireRepository questionnaireRepository;
 
+    @Mock
+    private QuestionnaireVersionRepository questionnaireVersionRepository;
+
     private ScreeningConfigurationService service;
     private ScreeningQuestion question;
     private AnswerOption option;
@@ -45,6 +49,7 @@ class ScreeningConfigurationServiceAnswerOptionTests {
                 questionRepository,
                 answerOptionRepository,
                 questionnaireRepository,
+                questionnaireVersionRepository,
                 new QuestionnaireMutabilityValidator(questionRepository)
         );
 
