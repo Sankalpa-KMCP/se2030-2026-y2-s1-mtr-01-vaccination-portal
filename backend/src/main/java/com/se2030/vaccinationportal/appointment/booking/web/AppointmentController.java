@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.appointment.booking.dto.AppointmentReschedul
 import com.se2030.vaccinationportal.appointment.booking.dto.AppointmentResponse;
 import com.se2030.vaccinationportal.appointment.booking.dto.AvailableSessionResponse;
 import com.se2030.vaccinationportal.appointment.checkin.dto.CheckInRequest;
+import com.se2030.vaccinationportal.appointment.checkin.dto.CheckInReversalRequest;
 import com.se2030.vaccinationportal.appointment.persistence.model.Appointment;
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.booking.service.AppointmentBookingService;
@@ -265,8 +266,11 @@ public class AppointmentController {
 
     @PostMapping("/{id}/reverse-check-in")
     @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER')")
-    public ResponseEntity<AppointmentResponse> reverseCheckIn(@PathVariable("id") Long id) {
-        Appointment reversed = checkInService.reverseCheckIn(id);
+    public ResponseEntity<AppointmentResponse> reverseCheckIn(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody CheckInReversalRequest request
+    ) {
+        Appointment reversed = checkInService.reverseCheckIn(id, request.reason());
         return ResponseEntity.ok(AppointmentResponse.fromEntity(reversed));
     }
 

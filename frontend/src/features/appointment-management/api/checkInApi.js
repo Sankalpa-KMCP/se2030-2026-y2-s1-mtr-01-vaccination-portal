@@ -76,9 +76,10 @@ export async function checkIn(appointmentId, isStaffOverride = false, staffReaso
  * @param {number|string} appointmentId - Appointment identifier
  * @returns {Promise<Object>} Updated AppointmentResponse object (status: CONFIRMED)
  */
-export async function reverseCheckIn(appointmentId) {
+export async function reverseCheckIn(appointmentId, reason) {
   const response = await apiRequest(`/v1/appointments/${appointmentId}/reverse-check-in`, {
     method: 'POST',
+    body: JSON.stringify({ reason }),
   });
 
   const data = await response.json();

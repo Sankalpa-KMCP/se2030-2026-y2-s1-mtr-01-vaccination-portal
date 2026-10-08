@@ -1,6 +1,7 @@
 package com.se2030.vaccinationportal.appointment.checkin.service;
 
 import com.se2030.vaccinationportal.appointment.waitlist.service.WaitlistPromotionService;
+import com.se2030.vaccinationportal.appointment.api.vaccination.VaccinationStateQuery;
 
 
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
@@ -45,16 +46,19 @@ public class CheckInService {
     private final AppointmentRepository appointmentRepository;
     private final SlotCapacityPort slotCapacityPort;
     private final WaitlistPromotionService promotionService;
+    private final VaccinationStateQuery vaccinationStateQuery;
 
     @Autowired
     public CheckInService(
             AppointmentRepository appointmentRepository,
             @Autowired(required = false) SlotCapacityPort slotCapacityPort,
-            @Autowired(required = false) WaitlistPromotionService promotionService
+            @Autowired(required = false) WaitlistPromotionService promotionService,
+            VaccinationStateQuery vaccinationStateQuery
     ) {
         this.appointmentRepository = appointmentRepository;
         this.slotCapacityPort = slotCapacityPort;
         this.promotionService = promotionService;
+        this.vaccinationStateQuery = vaccinationStateQuery;
     }
 
     /**
@@ -157,9 +161,12 @@ public class CheckInService {
      * @param appointmentId Identifier of the appointment to revert
      * @return Updated {@link Appointment} in CONFIRMED status
      */
-    public Appointment reverseCheckIn(Long appointmentId) {
+    public Appointment reverseCheckIn(Long appointmentId, String reason) {
         if (appointmentId == null) {
             throw new IllegalArgumentException("Appointment ID is required");
+        }
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Reversal reason is required");
         }
 
         Appointment appointment = appointmentRepository.findById(appointmentId)
@@ -168,6 +175,15 @@ public class CheckInService {
         if (appointment.getStatus() != AppointmentStatus.CHECKED_IN) {
             throw new InvalidAppointmentStateException("Only CHECKED_IN appointments can be reversed. Current status: "
                     + appointment.getStatus());
+        }
+
+        if (vaccinationStateQuery.hasFinalizedRecordForAppointment(appointmentId)) {
+            throw new InvalidAppointmentStateException(
+                    "Check-in cannot be reversed after vaccination finalization");
+        }
+        if (vaccinationStateQuery.hasDraftForAppointment(appointmentId)) {
+            throw new InvalidAppointmentStateException(
+                    "Delete or explicitly invalidate the vaccination draft before reversing check-in");
         }
 
         appointment.reverseCheckIn();

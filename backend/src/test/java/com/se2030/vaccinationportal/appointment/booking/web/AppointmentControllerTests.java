@@ -453,7 +453,9 @@ class AppointmentControllerTests {
         Appointment appt = bookingService.bookAppointment(citizenId, campaignId, slotId);
         checkInService.checkIn(appt.getId(), now);
 
-        mockMvc.perform(post("/api/v1/appointments/" + appt.getId() + "/reverse-check-in"))
+        mockMvc.perform(post("/api/v1/appointments/" + appt.getId() + "/reverse-check-in")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Incorrect arrival selected\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("CONFIRMED")));
     }
@@ -471,7 +473,9 @@ class AppointmentControllerTests {
     @Test
     void getAppointment_notFound_returns404NotFound() throws Exception {
         authenticate(999L, "ROLE_CENTER_MANAGER");
-        mockMvc.perform(post("/api/v1/appointments/999999/reverse-check-in"))
+        mockMvc.perform(post("/api/v1/appointments/999999/reverse-check-in")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Incorrect arrival selected\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error", is("NOT_FOUND")));
     }

@@ -42,6 +42,7 @@ export default function CheckInPanel({
   const [activeDialog, setActiveDialog] = useState(null);
   const [isStaffOverride, setIsStaffOverride] = useState(false);
   const [staffReason, setStaffReason] = useState('');
+  const [reversalReason, setReversalReason] = useState('');
   const activeDialogRef = useRef(null);
   const triggerButtonRef = useRef(null);
   const dialogRef = useRef(null);
@@ -135,8 +136,9 @@ export default function CheckInPanel({
 
   const handleReverseSubmit = (e) => {
     e.preventDefault();
-    onReverseCheckIn(appointment.id);
+    onReverseCheckIn(appointment.id, reversalReason.trim());
     closeDialog();
+    setReversalReason('');
   };
 
   const handleNoShowSubmit = (e) => {
@@ -351,6 +353,19 @@ export default function CheckInPanel({
                   <p className="text-muted small mb-0">
                     This will reset the appointment status back to <strong>CONFIRMED</strong>.
                   </p>
+                  <div className="mt-3">
+                    <label htmlFor={`reversalReason_${appointment.id}`} className="form-label fw-semibold">
+                      Reversal Reason <span className="text-danger">*</span>
+                    </label>
+                    <textarea
+                      id={`reversalReason_${appointment.id}`}
+                      className="form-control"
+                      value={reversalReason}
+                      onChange={(event) => setReversalReason(event.target.value)}
+                      maxLength={500}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="modal-footer">
                   <button

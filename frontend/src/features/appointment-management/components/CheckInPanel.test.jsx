@@ -189,4 +189,19 @@ describe('CheckInPanel dialogs', () => {
     });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('requires and forwards the check-in reversal reason', () => {
+    render(<CheckInPanel {...callbacks} appointment={appointment('CHECKED_IN')} canMutate />);
+    fireEvent.click(screen.getByRole('button', { name: 'Reverse check-in for appointment 101' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Confirm Reverse Check-In' });
+    const reason = within(dialog).getByLabelText(/Reversal Reason/i);
+    expect(reason.required).toBe(true);
+
+    fireEvent.change(reason, { target: { value: '  Citizen selected incorrectly  ' } });
+    fireEvent.submit(dialog.querySelector('form'));
+
+    expect(callbacks.onReverseCheckIn).toHaveBeenCalledWith(101, 'Citizen selected incorrectly');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 });

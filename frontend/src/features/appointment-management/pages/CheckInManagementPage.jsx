@@ -181,14 +181,14 @@ export default function CheckInManagementPage() {
     }
   };
 
-  const handleReverseCheckIn = async (appointmentId) => {
+  const handleReverseCheckIn = async (appointmentId, reason) => {
     const actionSlotId = getCurrentMutationSlot(appointmentId);
     if (!actionSlotId) return;
     setProcessingId(appointmentId);
     setFeedback(null);
 
     try {
-      const updated = await reverseCheckIn(appointmentId);
+      const updated = await reverseCheckIn(appointmentId, reason);
       setFeedback({
         type: 'success',
         title: 'Check-In Reversed',

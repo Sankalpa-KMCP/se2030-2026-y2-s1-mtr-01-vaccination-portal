@@ -18,6 +18,10 @@ import com.se2030.vaccinationportal.appointment.persistence.model.WaitlistStatus
 import com.se2030.vaccinationportal.appointment.persistence.repository.AppointmentRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.CitizenCampaignBookingGuardRepository;
 import com.se2030.vaccinationportal.appointment.persistence.repository.WaitlistRepository;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationDraft;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
+import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationDraftRepository;
+import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -86,6 +90,12 @@ class CheckInServiceTests {
     private CitizenCampaignBookingGuardRepository guardRepository;
 
     @Autowired
+    private VaccinationDraftRepository vaccinationDraftRepository;
+
+    @Autowired
+    private VaccinationRecordRepository vaccinationRecordRepository;
+
+    @Autowired
     private TestEligibilityLookupPortDouble eligibilityPortDouble;
 
     @Autowired
@@ -95,6 +105,8 @@ class CheckInServiceTests {
     void setUp() {
         emailVerificationStatusReaderDouble.clear();
         emailVerificationStatusReaderDouble.markVerified(1001L, 1002L, 1003L, 1004L);
+        vaccinationRecordRepository.deleteAllInBatch();
+        vaccinationDraftRepository.deleteAllInBatch();
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
@@ -106,6 +118,8 @@ class CheckInServiceTests {
 
     @AfterEach
     void tearDown() {
+        vaccinationRecordRepository.deleteAllInBatch();
+        vaccinationDraftRepository.deleteAllInBatch();
         waitlistRepository.deleteAllInBatch();
         appointmentRepository.deleteAllInBatch();
         guardRepository.deleteAllInBatch();
@@ -196,8 +210,60 @@ class CheckInServiceTests {
         Appointment appt = bookingService.bookAppointment(citizenId, campaignId, slotId);
         checkInService.checkIn(appt.getId(), now);
 
-        Appointment reversed = checkInService.reverseCheckIn(appt.getId());
+        Appointment reversed = checkInService.reverseCheckIn(appt.getId(), "Incorrect arrival selected");
         assertEquals(AppointmentStatus.CONFIRMED, reversed.getStatus());
+    }
+
+    @Test
+    void reverseCheckIn_requiresReasonAndRejectsActiveVaccinationDraft() {
+        Long slotId = 4011L;
+        Instant slotStart = Instant.parse("2026-10-01T10:00:00Z");
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        slotCapacityPortDouble.setSlotStartTime(slotId, slotStart);
+
+        Appointment appointment = bookingService.bookAppointment(1001L, 2001L, slotId);
+        checkInService.checkIn(appointment.getId(), slotStart);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> checkInService.reverseCheckIn(appointment.getId(), " "));
+
+        vaccinationDraftRepository.saveAndFlush(new VaccinationDraft(appointment.getId()));
+
+        InvalidAppointmentStateException error = assertThrows(
+                InvalidAppointmentStateException.class,
+                () -> checkInService.reverseCheckIn(appointment.getId(), "Citizen selected incorrectly")
+        );
+        assertTrue(error.getMessage().contains("vaccination draft"));
+    }
+
+    @Test
+    void reverseCheckIn_rejectsFinalizedVaccinationRecord() {
+        Long slotId = 4012L;
+        Instant slotStart = Instant.parse("2026-10-01T10:00:00Z");
+        slotCapacityPortDouble.setAvailableCapacity(slotId, 5);
+        slotCapacityPortDouble.setSlotStartTime(slotId, slotStart);
+
+        Appointment appointment = bookingService.bookAppointment(1002L, 2001L, slotId);
+        checkInService.checkIn(appointment.getId(), slotStart);
+        vaccinationRecordRepository.saveAndFlush(new VaccinationRecord(
+                appointment.getId(),
+                appointment.getCitizenId(),
+                appointment.getCampaignId(),
+                5001L,
+                6001L,
+                7001L,
+                1,
+                slotStart,
+                null,
+                "Finalized vaccination",
+                slotStart.plusSeconds(60)
+        ));
+
+        InvalidAppointmentStateException error = assertThrows(
+                InvalidAppointmentStateException.class,
+                () -> checkInService.reverseCheckIn(appointment.getId(), "Incorrect check-in")
+        );
+        assertTrue(error.getMessage().contains("finalization"));
     }
 
     @Test
