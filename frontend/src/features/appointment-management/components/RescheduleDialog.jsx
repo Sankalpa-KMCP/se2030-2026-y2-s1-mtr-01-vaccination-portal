@@ -13,7 +13,7 @@ import { searchAvailableAppointments } from '../api/availabilityApi';
  *
  * <p><b>Business Rules Enforced in UI:</b>
  * <ul>
- *   <li>MF03-BR-04: Enforces 24-hour modification policy with staff override checkbox and reason input.</li>
+ *   <li>MF03-BR-04: Explains the 24-hour modification policy and directs late changes to authorized staff.</li>
  *   <li>MF03-BR-05: Coordinates atomic reserve-before-release slot reallocation via the backend.</li>
  * </ul>
  */
@@ -21,8 +21,6 @@ export default function RescheduleDialog({ appointment, citizenId, onClose, onSu
   const [newSlotId, setNewSlotId] = useState('');
   const [fromDate, setFromDate] = useState(() => getSearchDate());
   const [toDate, setToDate] = useState(() => getSearchDate(7));
-  const [isStaffOverride, setIsStaffOverride] = useState(false);
-  const [staffReason, setStaffReason] = useState('');
 
   const [availableSlots, setAvailableSlots] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -63,15 +61,15 @@ export default function RescheduleDialog({ appointment, citizenId, onClose, onSu
       const result = await rescheduleAppointment(appointment.id, {
         requestingCitizenId: citizenId,
         newSlotId,
-        isStaffOverride,
-        staffReason: isStaffOverride ? staffReason : null,
+        isStaffOverride: false,
+        staffReason: null,
       });
       onSuccess(result);
     } catch (err) {
       let userMessage = err.message || 'Failed to reschedule appointment.';
 
       if (err.status === 403 || err.error === 'FORBIDDEN') {
-        userMessage = '24-Hour Notice Rule (MF03-BR-04): Rescheduling within 24 hours of session start requires staff override with reason.';
+        userMessage = 'To reschedule within 24 hours of your appointment, contact your vaccination center staff.';
       } else if (err.status === 409 || err.error === 'CONFLICT') {
         userMessage = 'Slot Unavailable: The selected time slot does not have available capacity or conflicts with another booking.';
       }
@@ -203,35 +201,10 @@ export default function RescheduleDialog({ appointment, citizenId, onClose, onSu
                 />
               </div>
 
-              <div className="form-check mb-3">
-                <input
-                  type="checkbox"
-                  id="staffOverrideCheck"
-                  className="form-check-input"
-                  checked={isStaffOverride}
-                  onChange={(e) => setIsStaffOverride(e.target.checked)}
-                />
-                <label htmlFor="staffOverrideCheck" className="form-check-label small">
-                  Apply Staff Override (Required if within 24 hours of session start per MF03-BR-04)
-                </label>
-              </div>
-
-              {isStaffOverride && (
-                <div className="mb-3">
-                  <label htmlFor="staffReasonInput" className="form-label fw-semibold">
-                    Staff Override Reason <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="staffReasonInput"
-                    className="form-control"
-                    value={staffReason}
-                    onChange={(e) => setStaffReason(e.target.value)}
-                    placeholder="Enter reason for late rescheduling"
-                    required={isStaffOverride}
-                  />
-                </div>
-              )}
+              <p className="small text-muted">
+                You can reschedule until 24 hours before your appointment. For later changes,
+                contact your vaccination center staff.
+              </p>
 
               <div className="modal-footer px-0 pb-0">
                 <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
