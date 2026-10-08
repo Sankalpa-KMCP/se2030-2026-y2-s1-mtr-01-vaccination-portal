@@ -183,27 +183,15 @@ export default function PortalRoutes() {
     <Routes>
       <Route
         path="/"
-        element={
-          isAuthenticated
-            ? <RoleHomeRedirect user={user} />
-            : <LandingPage onLoginClick={() => navigate('/login')} />
-        }
+        element={<LandingPage onLoginClick={() => navigate('/login')} />}
       />
       <Route
         path="/how-it-works"
-        element={
-          isAuthenticated
-            ? <RoleHomeRedirect user={user} />
-            : <HowItWorksPage onLoginClick={() => navigate('/login')} />
-        }
+        element={<HowItWorksPage onLoginClick={() => navigate('/login')} />}
       />
       <Route
         path="/about"
-        element={
-          isAuthenticated
-            ? <RoleHomeRedirect user={user} />
-            : <AboutPage onLoginClick={() => navigate('/login')} />
-        }
+        element={<AboutPage onLoginClick={() => navigate('/login')} />}
       />
       <Route
         path="/verify-certificate"

@@ -540,10 +540,19 @@ describe('shared routing and role guards', () => {
     expect(screen.getByRole('heading', { level: 1, name: /a system built on responsibility/i })).toBeTruthy();
   });
 
-  it('redirects authenticated users away from public pages to their role home', () => {
+  it('keeps public information pages available when a user already has a session', () => {
     setAuth({ roles: ['ROLE_CITIZEN'] });
-    render(<MemoryRouter initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
-    expect(screen.getByText('Citizen', { selector: '.admin-role-pill' })).toBeTruthy();
+
+    render(<MemoryRouter key="home" initialEntries={['/']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /manage your vaccination journey in one place/i })).toBeTruthy();
+    cleanup();
+
+    render(<MemoryRouter key="how" initialEntries={['/how-it-works']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /one system, two journeys/i })).toBeTruthy();
+    cleanup();
+
+    render(<MemoryRouter key="about" initialEntries={['/about']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /a system built on responsibility/i })).toBeTruthy();
   });
 
   describe('direct URL boundaries for ROLE_HEALTHCARE_OFFICER', () => {
