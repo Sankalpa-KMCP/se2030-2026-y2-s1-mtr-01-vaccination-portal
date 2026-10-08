@@ -218,6 +218,28 @@ describe('role dashboards', () => {
     expect(checkInLinks).toHaveLength(1);
   });
 
+  it('shows the authenticated name in a one-time administrator login greeting', () => {
+    const consumeLoginWelcome = vi.fn();
+    authState.current = {
+      consumeLoginWelcome,
+      loginWelcome: { audience: 'admin', userId: '88' },
+      user: {
+        id: 88,
+        fullName: 'Portal Admin',
+        email: 'admin@example.com',
+        roles: ['ROLE_ADMIN'],
+      },
+    };
+
+    renderPage(<AdminDashboardPage />);
+
+    expect(screen.getByRole('dialog', { name: 'Welcome, Portal Admin' })).toBeTruthy();
+    expect(screen.getByText('Administrator sign-in successful')).toBeTruthy();
+    expect(screen.getByText('Your secure administration workspace is ready.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+    expect(consumeLoginWelcome).toHaveBeenCalledTimes(1);
+  });
+
   it('renders administrator profile, staff requests, and operational cards while excluding clinical screening', () => {
     authState.current = { user: {
       fullName: 'Portal Admin',

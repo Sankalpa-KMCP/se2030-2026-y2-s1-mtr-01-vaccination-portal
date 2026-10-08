@@ -14,6 +14,11 @@ const CONTENT = {
     message: 'Your secure operational workspace is ready.',
     icon: 'bi-person-badge-fill',
   },
+  admin: {
+    eyebrow: 'Administrator sign-in successful',
+    message: 'Your secure administration workspace is ready.',
+    icon: 'bi-shield-lock-fill',
+  },
 };
 
 export default function PostLoginGreeting({ audience = 'citizen', name, onComplete }) {

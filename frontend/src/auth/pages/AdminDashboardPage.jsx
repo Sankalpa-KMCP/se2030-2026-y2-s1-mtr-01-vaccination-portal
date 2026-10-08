@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PostLoginGreeting from '../components/PostLoginGreeting';
 import { listStaffRequests } from '../api/adminStaffRequestsApi';
 import { ADMIN_ROLE, getRoleLabel, SUPER_ADMIN_ROLE } from '../constants/authRoles';
 import { hasRole } from '../utils/roleUtils';
@@ -111,7 +112,16 @@ function ActionCard({ title, description, to, icon, decoration, featured = false
 }
 
 export default function AdminDashboardPage() {
-  const { user } = useAuth();
+  const { user, loginWelcome, consumeLoginWelcome } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const showLoginGreeting = loginWelcome?.audience === 'admin'
+    && loginWelcome.userId != null
+    && String(loginWelcome.userId) === String(user?.id);
+  const dismissLoginGreeting = useCallback(() => {
+    consumeLoginWelcome?.();
+    navigate(location.pathname, { replace: true, state: null });
+  }, [consumeLoginWelcome, location.pathname, navigate]);
   const isSuperAdmin = hasRole(user, SUPER_ADMIN_ROLE);
   const roleLabel = getRoleLabel(isSuperAdmin ? SUPER_ADMIN_ROLE : ADMIN_ROLE);
   const displayName = user?.fullName || user?.email || 'Administrator';
@@ -127,7 +137,15 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="admin-dashboard">
+    <>
+      {showLoginGreeting && (
+        <PostLoginGreeting
+          audience="admin"
+          name={displayName}
+          onComplete={dismissLoginGreeting}
+        />
+      )}
+      <div className="admin-dashboard" inert={showLoginGreeting ? true : undefined}>
       <section className="admin-hero" aria-labelledby="admin-dashboard-title">
         <div className="admin-hero__copy">
           <span className="admin-role-pill">{roleLabel}</span>
@@ -194,6 +212,7 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }

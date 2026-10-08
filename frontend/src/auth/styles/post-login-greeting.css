@@ -1,5 +1,5 @@
 .post-login-greeting {
-  --citizen-intro-green: #0d776f;
+  --post-login-accent: #0d776f;
   position: fixed;
   inset: 0;
   z-index: 1400;
@@ -59,7 +59,7 @@
 .post-login-greeting__orbit {
   position: absolute;
   border: 2px solid rgba(13, 119, 111, .17);
-  border-top-color: var(--citizen-intro-green);
+  border-top-color: var(--post-login-accent);
   border-radius: 50%;
   animation: post-login-orbit 2.4s linear infinite;
 }
@@ -107,7 +107,7 @@
   align-items: center;
   gap: .5rem;
   margin: 0 0 12px;
-  color: var(--citizen-intro-green);
+  color: var(--post-login-accent);
   font-size: .78rem;
   font-weight: 800;
   letter-spacing: .14em;
@@ -125,7 +125,7 @@
 .post-login-greeting h1 span {
   display: block;
   overflow-wrap: anywhere;
-  color: var(--citizen-intro-green);
+  color: var(--post-login-accent);
 }
 
 .post-login-greeting__message {
@@ -148,7 +148,7 @@
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #52cba9, var(--citizen-intro-green));
+  background: linear-gradient(90deg, #52cba9, var(--post-login-accent));
   transform-origin: left;
   animation: post-login-progress 1.5s linear both;
 }

@@ -209,6 +209,30 @@ describe('AuthProvider unauthorized handling', () => {
     expect(screen.getByTestId('login-welcome-audience').textContent).toBe('staff');
   });
 
+  it('creates a one-time administrator welcome after an administrator login', async () => {
+    fetch
+      .mockResolvedValueOnce(response({ status: 401, statusText: 'Unauthorized' }))
+      .mockResolvedValueOnce(response({
+        body: JSON.stringify({
+          token: 'admin-token',
+          user: {
+            id: 18,
+            fullName: 'Portal Admin',
+            email: 'admin@example.gov',
+            roles: ['ROLE_ADMIN'],
+          },
+        }),
+      }));
+
+    render(<AuthProvider><AuthStateProbe /></AuthProvider>);
+    await screen.findByText('signed-out');
+    fireEvent.click(screen.getByRole('button', { name: 'Test Login' }));
+
+    await screen.findByText('Portal Admin');
+    expect(screen.getByTestId('login-welcome').textContent).toBe('18');
+    expect(screen.getByTestId('login-welcome-audience').textContent).toBe('admin');
+  });
+
   it('revokes the server session on logout and clears in-memory state', async () => {
     fetch
       .mockResolvedValueOnce(response({ body: JSON.stringify({ token: 'bootstrap-token', user: { id: 2 } }) }))

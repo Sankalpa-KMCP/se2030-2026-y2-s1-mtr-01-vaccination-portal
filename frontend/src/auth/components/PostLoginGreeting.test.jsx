@@ -22,4 +22,18 @@ describe('PostLoginGreeting', () => {
     expect(screen.getByText('Staff sign-in successful')).toBeTruthy();
     expect(screen.getByText('Your secure operational workspace is ready.')).toBeTruthy();
   });
+
+  it('renders administrator-specific confirmation and the authenticated name', () => {
+    render(
+      <PostLoginGreeting
+        audience="admin"
+        name="Portal Admin"
+        onComplete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Welcome, Portal Admin' })).toBeTruthy();
+    expect(screen.getByText('Administrator sign-in successful')).toBeTruthy();
+    expect(screen.getByText('Your secure administration workspace is ready.')).toBeTruthy();
+  });
 });

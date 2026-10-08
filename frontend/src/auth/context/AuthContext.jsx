@@ -149,14 +149,15 @@ export function AuthProvider({ children }) {
         invalidatePendingAuth();
         setUser(data.user);
         setIsAuthenticated(true);
-        const audience = hasRole(data.user, CITIZEN_ROLE)
-          ? 'citizen'
-          : (
+        const audience = hasRole(data.user, ADMIN_ROLE, SUPER_ADMIN_ROLE)
+          ? 'admin'
+          : hasRole(data.user, CITIZEN_ROLE)
+            ? 'citizen'
+            : (
             hasRole(data.user, ...STAFF_DASHBOARD_ROLES)
-            && !hasRole(data.user, ADMIN_ROLE, SUPER_ADMIN_ROLE)
               ? 'staff'
               : null
-          );
+            );
         setLoginWelcome(audience
           ? { audience, userId: normalizePrincipalId(data.user.id) }
           : null);
