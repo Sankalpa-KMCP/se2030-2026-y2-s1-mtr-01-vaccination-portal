@@ -11,7 +11,7 @@ import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
-/** Plain reads; transaction and lock ownership remain with the existing caller. */
+/** Provides campaign, center and vaccine details needed by vaccination workflows. */
 @Component
 public class JpaCampaignVaccinationReader implements CampaignVaccinationReader {
     private final TimeSlotRepository slots;

@@ -38,10 +38,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Authoritative service evaluating operational readiness for vaccination session scheduling.
- * Enforces resource, staff, and capacity plan invariants under deterministic global pessimistic lock ordering.
- */
+/** Checks staff, resources and capacity plans before a session can be scheduled. */
 @Service
 public class SessionOperationalReadinessService {
 

@@ -15,15 +15,7 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Module: MF-02 — Vaccination Campaign, Center and Session Management
- * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
- * Responsibility: Session staff/resource assignment and capacity planning
- *
- * Domain service managing operational resource assignments for vaccination sessions.
- * Enforces DRAFT-only mutation, operating interval bounds, center ownership, ACTIVE resource status,
- * and deterministic pessimistic concurrency locking.
- */
+/** Assigns center resources to draft sessions while preventing conflicting use. */
 @Service
 @Transactional
 public class SessionResourceAssignmentService {

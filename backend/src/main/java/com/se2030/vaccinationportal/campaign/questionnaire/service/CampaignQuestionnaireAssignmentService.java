@@ -17,18 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service managing effective-dated assignments of published questionnaire versions to vaccination campaigns.
- * Defined by canonical specification WBVP-SE2030 section 2, 5, 6, 12 (MF02-BR-02 / MF02-BR-17).
- *
- * <p>Enforces:</p>
- * <ul>
- *   <li>Questionnaire versions must be in PUBLISHED status via {@link QuestionnaireVersionPublicationPort}.</li>
- *   <li>No overlapping effective periods for the same campaign (BR-028 / DEC-030; prerequisite for MF02-BR-02 publication).</li>
- *   <li>Atomic version transition: closing the previous open-ended version at the new assignment's exclusive start boundary.</li>
- *   <li>Immutable historical retention without hard deletion.</li>
- * </ul>
- */
+/** Links campaigns to published questionnaire versions without overlapping assignment periods. */
 @Service
 @Transactional
 public class CampaignQuestionnaireAssignmentService {

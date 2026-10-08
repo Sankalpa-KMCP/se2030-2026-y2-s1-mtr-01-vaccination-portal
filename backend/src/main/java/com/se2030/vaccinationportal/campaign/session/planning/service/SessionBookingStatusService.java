@@ -23,11 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Authoritative domain service deriving five-state {@link SessionBookingStatus}
- * based on campaign publication, session lifecycle, schedule intervals, and slot capacity.
- * Enforces single-query batch resolution to strictly eliminate N+1 database queries.
- */
+/** Derives each session's booking status from its campaign, schedule and available slots. */
 @Service
 @Transactional(readOnly = true)
 public class SessionBookingStatusService {

@@ -9,6 +9,7 @@ import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRep
 import java.util.List;
 import org.springframework.stereotype.Component;
 
+/** Adapts center and vaccine catalogs into reference data for other modules. */
 @Component
 public class JpaCampaignReferenceDataReader implements CampaignReferenceDataReader {
     private final VaccinationCenterRepository centers;

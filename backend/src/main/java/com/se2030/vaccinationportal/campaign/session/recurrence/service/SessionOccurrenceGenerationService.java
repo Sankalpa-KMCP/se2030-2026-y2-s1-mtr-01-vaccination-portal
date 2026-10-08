@@ -30,20 +30,7 @@ import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service responsible for materializing concrete DRAFT VaccinationSession occurrences
- * from an ACTIVE SessionRecurrenceRule.
- *
- * <p>Enforces:</p>
- * <ul>
- *   <li>Deterministic global lock ordering (campaign -&gt; center -&gt; rule) with post-lock entity refresh</li>
- *   <li>Authoritative ACTIVE rule status and strict rule/center timezone compatibility</li>
- *   <li>Deterministic rule-date enumeration and DST-safe local date/time conversion</li>
- *   <li>Stable occurrence identity ({@code <generationKey>:<originOccurrenceDate>})</li>
- *   <li>Shared {@link VaccinationSessionValidator} reuse for concrete schedule validity</li>
- *   <li>Idempotent repeated generation and all-or-nothing batch persistence</li>
- * </ul>
- */
+/** Creates missing draft sessions from an active recurrence rule without duplicating occurrences. */
 @Service
 @Transactional
 public class SessionOccurrenceGenerationService {

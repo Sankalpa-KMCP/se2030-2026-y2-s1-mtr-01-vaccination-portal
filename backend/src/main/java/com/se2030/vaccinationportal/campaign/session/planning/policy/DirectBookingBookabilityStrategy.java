@@ -7,7 +7,7 @@ import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationS
 import java.time.Instant;
 import org.springframework.stereotype.Component;
 
-/** Direct-booking admission checks, in their authoritative read-evaluation precedence. */
+/** Checks direct-booking rules in the order used to choose the rejection reason. */
 @Component("directBookingBookabilityStrategy")
 public class DirectBookingBookabilityStrategy implements SlotBookabilityStrategy {
     @Override

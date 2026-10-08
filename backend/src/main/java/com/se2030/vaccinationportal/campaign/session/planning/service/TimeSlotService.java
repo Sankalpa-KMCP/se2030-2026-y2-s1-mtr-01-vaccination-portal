@@ -18,10 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Service for managing MF-02 TimeSlots within vaccination sessions.
- * Enforces session approved capacity bounds, exact concurrent occupancy, and booking floor validation.
- */
+/** Manages session slots within approved capacity and occupancy limits. */
 @Service
 public class TimeSlotService {
 

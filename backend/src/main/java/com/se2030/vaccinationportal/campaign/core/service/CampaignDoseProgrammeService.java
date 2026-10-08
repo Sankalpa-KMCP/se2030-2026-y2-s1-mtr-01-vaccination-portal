@@ -13,10 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service managing CampaignDoseProgramme lifecycle, effective-dated versioning,
- * and overlap prevention per canonical rules WBVP-SE2030 / MF02-BR-02 / MF02-BR-18.
- */
+/** Keeps dated dose programme versions from overlapping within a campaign. */
 @Service
 @Transactional
 public class CampaignDoseProgrammeService {

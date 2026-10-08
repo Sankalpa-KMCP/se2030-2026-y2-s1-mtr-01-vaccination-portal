@@ -18,7 +18,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Manages retained center-closure history and its active-overlap invariant. */
+/** Manages center closures without overlapping active closures or blocking existing sessions. */
 @Service
 @Transactional
 public class CenterClosureService {

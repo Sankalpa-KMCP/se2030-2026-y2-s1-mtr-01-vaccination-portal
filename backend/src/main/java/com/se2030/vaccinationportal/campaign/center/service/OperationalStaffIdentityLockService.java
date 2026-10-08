@@ -9,10 +9,7 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Dedicated concurrency coordinator for operational staff identity anchor locks.
- * Guarantees atomic first-use anchor initialization and deterministic ascending userId lock ordering.
- */
+/** Locks staff identities in user ID order to coordinate assignments across centers. */
 @Service
 @Transactional
 public class OperationalStaffIdentityLockService {

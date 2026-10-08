@@ -25,7 +25,7 @@ import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Manages retained campaign-center authorization history and its active-overlap invariant. */
+/** Manages dated center assignments without losing campaign assignment history. */
 @Service
 @Transactional
 public class CampaignCenterAssignmentService {

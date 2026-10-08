@@ -8,9 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service providing master data lifecycle management for Vaccine Types.
- */
+/** Manages the vaccine types available for campaign configuration. */
 @Service
 @Transactional
 public class VaccineTypeService {

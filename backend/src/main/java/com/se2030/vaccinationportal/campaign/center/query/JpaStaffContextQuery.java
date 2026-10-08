@@ -19,6 +19,7 @@ import java.util.List;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import org.springframework.stereotype.Component;
 
+/** Adapts roster and session assignments into the signed-in staff member's profile and schedule. */
 @Component
 public class JpaStaffContextQuery implements StaffContextQuery {
     private static final int MAX_ROSTER = 10;

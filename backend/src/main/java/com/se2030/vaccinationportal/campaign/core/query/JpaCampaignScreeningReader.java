@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
+/** Adapts campaign and questionnaire assignment data into screening snapshots. */
 @Component
 public class JpaCampaignScreeningReader implements CampaignScreeningReader {
     private final VaccinationCampaignRepository campaigns;

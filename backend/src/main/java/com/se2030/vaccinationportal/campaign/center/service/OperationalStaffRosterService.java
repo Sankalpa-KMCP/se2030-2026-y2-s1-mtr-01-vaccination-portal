@@ -16,10 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Domain service managing operational staff rostering at vaccination centers.
- * Provides the stable operational locking anchor for staff scheduling.
- */
+/** Manages center staff rosters and protects sessions that rely on them. */
 @Service
 @Transactional
 public class OperationalStaffRosterService {

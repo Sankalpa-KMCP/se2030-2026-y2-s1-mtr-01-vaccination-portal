@@ -16,10 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Domain service managing center-owned physical operational resources.
- * Canonical Section 6.1, 6.4 and Table 12.1.
- */
+/** Manages center resources and checks how updates affect assigned sessions. */
 @Service
 @Transactional
 public class OperationalResourceService {

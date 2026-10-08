@@ -40,18 +40,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service for calculating, previewing, and orchestrating series-wide changes across
- * {@link SessionRecurrenceRule} definitions and their generated {@link VaccinationSession} occurrences.
- *
- * <p>Enforces:</p>
- * <ul>
- *   <li>Preservation of individually overridden occurrences as exceptions</li>
- *   <li>Read-only impact evaluation with real {@link SessionImpactReader} queries for SCHEDULED sessions</li>
- *   <li>Candidate schedule validation using shared {@link VaccinationSessionValidator}</li>
- *   <li>Deterministic SHA-256 fingerprinting for stale-preview protection</li>
- * </ul>
- */
+/** Previews and confirms recurring session changes while preserving individual overrides. */
 @Service
 @Transactional(readOnly = true)
 public class SessionSeriesChangeService {

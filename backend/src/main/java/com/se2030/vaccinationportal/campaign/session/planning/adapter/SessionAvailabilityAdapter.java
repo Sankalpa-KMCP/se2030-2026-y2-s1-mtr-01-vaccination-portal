@@ -18,22 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * MF-03 read adapter for the existing MF-02 session and slot services.
- * Does not access MF-02 repositories, mutate capacity, or reserve places.
- * Results are snapshots; the booking service still reserves capacity atomically.
- *
- * <p><b>User Story:</b>
- * <ul>
- *   <li>US-03: Search available vaccination appointment slots at nearby vaccination centers.</li>
- * </ul>
- *
- * <p><b>Viva / Architectural Separation Note:</b><br>
- * This adapter is deliberately read-only and decoupled from {@link SlotCapacityPort}.
- * Keeping the search path separate from the booking/reservation mutation path prevents read operations
- * from locking capacity rows and enables independent testability with lightweight doubles.
- * </p>
- */
+/** Adapts session and slot services to the availability port without reserving places. */
 @Component
 @Transactional(readOnly = true)
 public class SessionAvailabilityAdapter implements SlotAvailabilityPort {
@@ -58,6 +43,7 @@ public class SessionAvailabilityAdapter implements SlotAvailabilityPort {
         if (campaignId == null || fromDate == null || toDate == null || fromDate.isAfter(toDate)) {
             throw new IllegalArgumentException("Campaign and a valid inclusive date range are required");
         }
+        // Availability is a snapshot; booking must recheck it before reserving capacity.
         Instant now = clock.instant();
         return sessions.getSessions(campaignId, centerId, SessionLifecycleStatus.SCHEDULED).stream()
                 .filter(session -> acceptsBooking(session, now))

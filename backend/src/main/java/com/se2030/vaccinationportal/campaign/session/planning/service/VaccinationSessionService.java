@@ -33,12 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service for managing concrete vaccination sessions and individual session change workflows.
- * Enforces deterministic hierarchical parent locking (campaign -&gt; center(s) -&gt; session),
- * authoritative cross-component validation, stale-preview protection, and append-only
- * {@link SessionChangeEvent} audit logging.
- */
+/** Schedules sessions and confirms previewed changes while recording their booking impact. */
 @Service
 @Transactional
 public class VaccinationSessionService {
