@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
 import HeroSection from '../components/HeroSection';
@@ -11,6 +11,8 @@ import FinalCtaSection from '../components/FinalCtaSection';
 import CareProgressRail from '../components/CareProgressRail';
 import PublicFooter from '../components/PublicFooter';
 import PublicServiceGuide from '../components/PublicServiceGuide';
+import ConnectedCommunityIntro from '../components/ConnectedCommunityIntro';
+import { shouldShowConnectedCommunityIntro } from '../components/connectedCommunityIntroSession';
 import useLandingReveal from '../hooks/useLandingReveal';
 import usePublicPageTop from '../hooks/usePublicPageTop';
 import '../public-landing.css';
@@ -60,11 +62,14 @@ function ContinueBand() {
 
 export default function LandingPage({ onLoginClick }) {
   const rootRef = useRef(null);
+  const [showIntro, setShowIntro] = useState(shouldShowConnectedCommunityIntro);
+  const finishIntro = useCallback(() => setShowIntro(false), []);
   useLandingReveal(rootRef);
   usePublicPageTop();
 
   return (
-    <div className="lp-page lp-page--home" ref={rootRef}>
+    <>
+    <div className="lp-page lp-page--home" ref={rootRef} inert={showIntro}>
       <a className="lp-skip-link" href="#lp-main">
         Skip to main content
       </a>
@@ -120,5 +125,7 @@ export default function LandingPage({ onLoginClick }) {
       </main>
       <PublicFooter />
     </div>
+    {showIntro && <ConnectedCommunityIntro onComplete={finishIntro} />}
+    </>
   );
 }
