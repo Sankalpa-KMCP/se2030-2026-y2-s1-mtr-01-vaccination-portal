@@ -10,6 +10,8 @@ import com.se2030.vaccinationportal.campaign.session.planning.model.VaccinationS
 import com.se2030.vaccinationportal.campaign.session.planning.repository.TimeSlotRepository;
 import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.session.planning.repository.VaccinationSessionRepository;
+import com.se2030.vaccinationportal.campaign.session.planning.policy.SlotBookabilityStrategy;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,8 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
     private final TimeSlotRepository timeSlotRepository;
     private final VaccinationSessionRepository sessionRepository;
     private final VaccinationCampaignRepository campaignRepository;
+    private final SlotBookabilityStrategy directBookingStrategy;
+    private final SlotBookabilityStrategy waitlistPromotionStrategy;
 
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager entityManager;
@@ -38,11 +42,15 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
     public TimeSlotCapacityService(
             TimeSlotRepository timeSlotRepository,
             VaccinationSessionRepository sessionRepository,
-            VaccinationCampaignRepository campaignRepository
+            VaccinationCampaignRepository campaignRepository,
+            @Qualifier("directBookingBookabilityStrategy") SlotBookabilityStrategy directBookingStrategy,
+            @Qualifier("waitlistPromotionBookabilityStrategy") SlotBookabilityStrategy waitlistPromotionStrategy
     ) {
         this.timeSlotRepository = Objects.requireNonNull(timeSlotRepository, "TimeSlotRepository must not be null");
         this.sessionRepository = Objects.requireNonNull(sessionRepository, "VaccinationSessionRepository must not be null");
         this.campaignRepository = Objects.requireNonNull(campaignRepository, "VaccinationCampaignRepository must not be null");
+        this.directBookingStrategy = Objects.requireNonNull(directBookingStrategy, "Direct booking strategy must not be null");
+        this.waitlistPromotionStrategy = Objects.requireNonNull(waitlistPromotionStrategy, "Waitlist promotion strategy must not be null");
     }
 
     private void detachIfAttached(Class<?> entityClass, Object id) {
@@ -405,52 +413,21 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
     @Override
     @Transactional(readOnly = true)
     public SlotBookability evaluateBookabilityForNewBooking(Long slotId, Instant now) {
-        SlotEvaluationContext context = resolveSlotContext(slotId);
-        if (context.failure() != null) {
-            return context.failure();
-        }
-        VaccinationSession session = context.slot().getSession();
-        VaccinationCampaign campaign = session.getCampaign();
-
-        // Full booking policy — identical to the search/availability path (R03)
-        if (!campaign.isBookingWindowOpenAt(now)) {
-            return SlotBookability.CAMPAIGN_BOOKING_NOT_OPEN;
-        }
-        if (session.isBookingSuspended()) {
-            return SlotBookability.SESSION_BOOKING_SUSPENDED;
-        }
-        if (!now.isBefore(session.getBookingCloseAt())) {
-            return SlotBookability.SESSION_BOOKING_CLOSED;
-        }
-        if (!context.slot().getStartTime().isAfter(now)) {
-            return SlotBookability.SLOT_IN_PAST;
-        }
-        if (!context.slot().hasAvailableCapacity()) {
-            return SlotBookability.NO_CAPACITY;
-        }
-        return SlotBookability.BOOKABLE;
+        return evaluateBookability(slotId, now, directBookingStrategy);
     }
 
     @Override
     @Transactional(readOnly = true)
     public SlotBookability evaluateBookabilityForWaitlistPromotion(Long slotId, Instant now) {
+        return evaluateBookability(slotId, now, waitlistPromotionStrategy);
+    }
+
+    private SlotBookability evaluateBookability(Long slotId, Instant now, SlotBookabilityStrategy strategy) {
         SlotEvaluationContext context = resolveSlotContext(slotId);
         if (context.failure() != null) {
             return context.failure();
         }
-        VaccinationSession session = context.slot().getSession();
-        VaccinationCampaign campaign = session.getCampaign();
-
-        // Promotion fulfils an already-permitted queue join. Deliberately NOT enforced here
-        // (documented domain distinction): session booking suspension, session booking cutoff,
-        // and future-slot-time — cancellations and no-shows free capacity at/after slot start,
-        // past the cutoff, and that capacity must stay reachable by the FIFO queue (F04/F05).
-        // Campaign operational status IS enforced: an operationally closed campaign must not
-        // create new confirmed appointments via promotion.
-        if (!campaign.getStatus().isIntakePermitted()) {
-            return SlotBookability.CAMPAIGN_BOOKING_NOT_OPEN;
-        }
-        return SlotBookability.BOOKABLE;
+        return strategy.evaluate(context.slot(), now);
     }
 
     private SlotEvaluationContext resolveSlotContext(Long slotId) {
