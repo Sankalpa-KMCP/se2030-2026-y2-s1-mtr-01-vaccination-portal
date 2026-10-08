@@ -6,10 +6,7 @@ import com.se2030.vaccinationportal.campaign.session.planning.model.TimeSlot;
 import java.time.Instant;
 import org.springframework.stereotype.Component;
 
-/**
- * Promotion fulfils an existing queue admission, so suspension, cutoff and future-slot checks
- * are not reapplied. Capacity remains authoritative at the locked reservation boundary.
- */
+/** Checks campaign intake for promotion without reapplying direct-booking restrictions. */
 @Component("waitlistPromotionBookabilityStrategy")
 public class WaitlistPromotionBookabilityStrategy implements SlotBookabilityStrategy {
     @Override

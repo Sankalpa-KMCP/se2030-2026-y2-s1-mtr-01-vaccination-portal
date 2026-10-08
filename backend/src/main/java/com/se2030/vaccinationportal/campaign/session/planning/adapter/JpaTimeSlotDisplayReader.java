@@ -9,6 +9,7 @@ import com.se2030.vaccinationportal.campaign.session.planning.repository.TimeSlo
 import java.util.List;
 import org.springframework.stereotype.Component;
 
+/** Adapts slot and session data into display snapshots for appointment workflows. */
 @Component
 public class JpaTimeSlotDisplayReader implements TimeSlotDisplayReader {
     private final TimeSlotRepository slots;

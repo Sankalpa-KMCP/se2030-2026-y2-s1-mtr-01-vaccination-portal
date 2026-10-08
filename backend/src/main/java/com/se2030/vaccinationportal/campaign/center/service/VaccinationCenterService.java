@@ -24,18 +24,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service managing the physical vaccination center master registry.
- * Defined by canonical specification WBVP-SE2030 section 6.1 / 12 (Table 12.1).
- *
- * <p>Implementation Policies:</p>
- * <ul>
- *   <li>Code uniqueness is strictly validated prior to persistence.</li>
- *   <li>Center code is preserved as an immutable business identifier during update operations.</li>
- *   <li>Centers follow an activation/deactivation lifecycle; hard deletion is prohibited.</li>
- *   <li>Temporary facility closures are managed by {@code CenterClosure}, not by mutating {@code CenterStatus}.</li>
- * </ul>
- */
+/** Manages center details and checks how status or limit changes affect existing sessions. */
 @Service
 @Transactional
 public class VaccinationCenterService {

@@ -33,15 +33,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * Collaborator responsible for calculating recurrence schedule diffs, occurrence category classifications
- * (RETAINED, REMOVED, NEW, INELIGIBLE, PRESERVED_EXCEPTION), and deterministic SHA-256 fingerprint tokens
- * for session series preview and confirmation.
- *
- * <p>This component is repository-free and transaction-free. It delegates candidate schedule validation
- * to {@link VaccinationSessionValidator} and conditionally evaluates impact via {@link SessionImpactReader}
- * only when required for changed SCHEDULED sessions.</p>
- */
+/** Compares recurring schedules and creates tokens that detect stale change previews. */
 @Component
 public class SessionSeriesPreviewCalculator {
 

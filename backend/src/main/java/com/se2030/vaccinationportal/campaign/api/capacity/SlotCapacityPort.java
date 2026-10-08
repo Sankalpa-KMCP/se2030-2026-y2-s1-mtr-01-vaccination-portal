@@ -3,28 +3,7 @@ package com.se2030.vaccinationportal.campaign.api.capacity;
 import java.time.Instant;
 import java.util.Optional;
 
-/**
- * Cross-module integration port to check, reserve, release capacity, and inspect schedule details on an MF-02 TimeSlot.
- *
- * <p><b>User Stories:</b>
- * <ul>
- *   <li>US-03: Booking, cancellation, and atomic rescheduling of appointment slots.</li>
- *   <li>US-05: Verifying session full status before waitlist join, and reserving slot during promotion.</li>
- * </ul>
- *
- * <p><b>Business Rules:</b>
- * <ul>
- *   <li>MF03-BR-03: Atomic capacity allocation preventing two concurrent users from taking the last place.</li>
- *   <li>MF03-BR-04: 24-hour notice window checking via slot start timestamp.</li>
- *   <li>MF03-BR-05: Atomic release and reservation during rescheduling.</li>
- *   <li>MF03-BR-06: Verifies all session slots are full before permitting waitlist join.</li>
- * </ul>
- *
- * <p>
- * Implemented by MF-02 (Campaign, Center &amp; Session). Must be concurrency-safe on MF-02's side;
- * MF-03 must not write its own capacity decrement or increment against MF-02's tables.
- * </p>
- */
+/** Exposes slot checks and capacity changes without exposing session entities. */
 public interface SlotCapacityPort {
 
     /**

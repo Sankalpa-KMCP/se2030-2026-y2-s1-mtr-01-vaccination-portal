@@ -19,11 +19,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
-/**
- * Authoritative write-time validator for concrete vaccination sessions.
- * Evaluates candidate session parameters against locked campaign and center configuration state
- * to ensure compliance with MF02-BR-05 and MF02-BR-06 before persistence.
- */
+/** Checks proposed session schedules against campaign dates and center availability. */
 @Component
 public class VaccinationSessionValidator {
 

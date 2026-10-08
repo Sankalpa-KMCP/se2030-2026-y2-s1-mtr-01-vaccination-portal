@@ -45,9 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service managing VaccinationCampaign operational lifecycles and reverse configuration-impact rules.
- */
+/** Manages campaign configuration and status changes while protecting existing sessions. */
 @Service
 @Transactional
 public class VaccinationCampaignService {

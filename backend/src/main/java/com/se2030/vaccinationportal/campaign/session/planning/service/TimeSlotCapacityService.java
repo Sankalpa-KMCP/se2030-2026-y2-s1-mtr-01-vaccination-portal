@@ -20,13 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Authoritative MF-02 production adapter implementing MF-03's {@link SlotCapacityPort}.
- * Executes pessimistic row locking on {@link TimeSlot} rows to provide concurrency-safe
- * capacity check, reservation, and release operations within the caller's transaction.
- * Also owns the authoritative bookability policy (R03) so reservation mutations enforce
- * the same restrictions the availability/search path advertises.
- */
+/** Selects read-only booking strategies and reserves or releases capacity under database locks. */
 @Service
 public class TimeSlotCapacityService implements SlotCapacityPort {
 
@@ -101,7 +95,7 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         }
         Long campaignId = campaignIdOpt.get();
 
-        // Hierarchical lock order: Campaign -> Session -> Slot (F1-A / F1-B)
+        // Lock campaign, session and slot in the same order for every reservation.
         detachIfAttached(VaccinationCampaign.class, campaignId);
         Optional<VaccinationCampaign> campaignOpt = campaignRepository.findByIdForUpdate(campaignId);
         if (campaignOpt.isEmpty()) {
@@ -151,7 +145,7 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         }
         Long campaignId = campaignIdOpt.get();
 
-        // Hierarchical lock order: Campaign -> Session -> Slot (F1-A / F1-B)
+        // Lock campaign, session and slot in the same order for every reservation.
         detachIfAttached(VaccinationCampaign.class, campaignId);
         Optional<VaccinationCampaign> campaignOpt = campaignRepository.findByIdForUpdate(campaignId);
         if (campaignOpt.isEmpty()) {
@@ -173,13 +167,13 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         }
         TimeSlot slot = slotOpt.get();
 
-        // Verify structural relationship under lock
+        // Recheck parent relationships after locking; the earlier reads may be stale.
         if (session.getCampaign() == null || !campaignId.equals(session.getCampaign().getId())
                 || slot.getSession() == null || !sessionId.equals(slot.getSession().getId())) {
             return SlotReservationResult.NOT_BOOKABLE;
         }
 
-        // Authoritative bookability evaluation under locks (R03/F1-A)
+        // Recheck booking rules under locks before changing capacity.
         if (!campaign.isBookingWindowOpenAt(effectiveNow)) {
             return SlotReservationResult.NOT_BOOKABLE;
         }
@@ -226,7 +220,7 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         }
         Long campaignId = campaignIdOpt.get();
 
-        // Hierarchical lock order: Campaign -> Session -> Slot (F1-A / F1-B)
+        // Lock campaign, session and slot in the same order for every reservation.
         detachIfAttached(VaccinationCampaign.class, campaignId);
         Optional<VaccinationCampaign> campaignOpt = campaignRepository.findByIdForUpdate(campaignId);
         if (campaignOpt.isEmpty()) {
@@ -248,13 +242,13 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         }
         TimeSlot slot = slotOpt.get();
 
-        // Verify structural relationship under lock
+        // Recheck parent relationships after locking; the earlier reads may be stale.
         if (session.getCampaign() == null || !campaignId.equals(session.getCampaign().getId())
                 || slot.getSession() == null || !sessionId.equals(slot.getSession().getId())) {
             return SlotReservationResult.NOT_BOOKABLE;
         }
 
-        // Waitlist promotion narrower policy under lock (F1-A)
+        // Promotion skips direct-booking time checks, but still requires capacity.
         if (!campaign.getStatus().isIntakePermitted()) {
             return SlotReservationResult.NOT_BOOKABLE;
         }
@@ -290,7 +284,7 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         }
         Long campaignId = campaignIdOpt.get();
 
-        // Hierarchical lock order: Campaign -> Session -> Slot (F1-B)
+        // Use the reservation lock order when releasing capacity too.
         detachIfAttached(VaccinationCampaign.class, campaignId);
         Optional<VaccinationCampaign> campaignOpt = campaignRepository.findByIdForUpdate(campaignId);
         if (campaignOpt.isEmpty()) {
@@ -339,7 +333,7 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
             campaignRepository.findByIdForUpdate(campaignIdOpt.get());
         }
 
-        // Hierarchical lock order: Campaign -> Session -> Slots (F1-B)
+        // Lock the parent rows before checking all slots for remaining capacity.
         Optional<VaccinationSession> sessionOpt = sessionRepository.findByIdForUpdate(sessionId);
         if (sessionOpt.isEmpty()) {
             throw new IllegalArgumentException("Session not found with ID: " + sessionId);
@@ -437,6 +431,7 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
     }
 
     private SlotBookability evaluateBookability(Long slotId, Instant now, SlotBookabilityStrategy strategy) {
+        // Shared lookup failures take precedence over either booking policy.
         SlotEvaluationContext context = resolveSlotContext(slotId);
         if (context.failure() != null) {
             return context.failure();

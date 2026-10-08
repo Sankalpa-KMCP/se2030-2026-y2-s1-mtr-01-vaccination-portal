@@ -22,10 +22,7 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service for computing reconciled descriptive operational analytics for MF-02.
- * Canonical PB-10D, UC-10D, and Rule MF02-BR-19.
- */
+/** Summarizes campaign, session and capacity data for operational reporting. */
 @Service
 public class OperationalAnalyticsService {
 

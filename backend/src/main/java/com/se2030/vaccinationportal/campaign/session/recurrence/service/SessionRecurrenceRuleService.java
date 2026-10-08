@@ -23,7 +23,7 @@ import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Manages retained bounded recurrence definitions without generating concrete sessions. */
+/** Manages recurrence definitions; generating their sessions is a separate operation. */
 @Service
 @Transactional
 public class SessionRecurrenceRuleService {

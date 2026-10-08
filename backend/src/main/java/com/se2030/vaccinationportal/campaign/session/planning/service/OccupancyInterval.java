@@ -3,15 +3,7 @@ package com.se2030.vaccinationportal.campaign.session.planning.service;
 import java.time.Duration;
 import java.time.Instant;
 
-/**
- * Module: MF-02 — Vaccination Campaign, Center and Session Management
- * Use Case: UC-10B — Assign Staff / Resources and Approve Capacity
- * Responsibility: Session staff/resource assignment and capacity planning
- *
- * Pure immutable value object representing a time interval for concurrent occupancy evaluation.
- * Half-open interval semantics {@code [startAt, max(endAt, startAt + expectedDwellMinutes))}.
- * Canonical Section 6.4 and BR-043.
- */
+/** Represents occupancy from slot start until the later of slot end or expected dwell end. */
 public record OccupancyInterval(
         Instant startAt,
         Instant endAt,

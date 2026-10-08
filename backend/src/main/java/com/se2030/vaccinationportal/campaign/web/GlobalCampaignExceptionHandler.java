@@ -32,10 +32,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-/**
- * Centralized exception handler for Campaign REST API controllers.
- * Translates domain, validation, and transport exceptions into standard ApiErrorResponse structures.
- */
+/** Turns campaign API errors into consistent HTTP error responses. */
 @RestControllerAdvice(basePackageClasses = {
     OperationalAnalyticsController.class,
     CenterController.class,

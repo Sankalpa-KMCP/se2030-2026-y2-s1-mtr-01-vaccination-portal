@@ -23,11 +23,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service managing OperatingHours schedules, versioning, conflict enforcement,
- * and parent center write serialization for physical vaccination centers.
- * Defined by canonical specification WBVP-SE2030 / MF-02.
- */
+/** Manages dated opening hours and checks that existing sessions still fit. */
 @Service
 @Transactional
 public class OperatingHoursService {

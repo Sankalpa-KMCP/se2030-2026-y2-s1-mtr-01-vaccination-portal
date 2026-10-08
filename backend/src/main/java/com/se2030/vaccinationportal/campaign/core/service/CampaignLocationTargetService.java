@@ -14,11 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Service managing administrative service-area location targeting for vaccination campaigns.
- * Defined by canonical specification WBVP-SE2030 / MF02-BR-04 / BR-023 / DEC-031.
- * Controls campaign visibility/service area and does not represent medical eligibility rules.
- */
+/** Manages campaign service areas, separately from medical eligibility rules. */
 @Service
 @Transactional
 public class CampaignLocationTargetService {
