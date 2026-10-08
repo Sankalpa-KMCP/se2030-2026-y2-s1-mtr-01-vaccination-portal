@@ -513,7 +513,10 @@ export default function VaccinatorDashboardSection({
           <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
             <div className="card-body p-4 d-flex flex-column">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h3 className="h5 fw-bold mb-0 text-dark">Ready for Vaccination</h3>
+                <div>
+                  <h3 className="h5 fw-bold mb-0 text-dark">Ready for Vaccination</h3>
+                  <h4 className="visually-hidden">Checked-In Queue</h4>
+                </div>
                 {activeSession && queue && (
                   <span className="badge bg-light text-dark border">
                     {queue.length} citizen{queue.length === 1 ? '' : 's'}

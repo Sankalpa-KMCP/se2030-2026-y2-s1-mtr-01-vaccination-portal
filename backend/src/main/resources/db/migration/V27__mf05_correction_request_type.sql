@@ -1,4 +1,4 @@
--- Flyway Database Migration V26: Add request_type to vaccination_corrections
+-- Flyway Database Migration V27: Add request_type to vaccination_corrections
 -- Distinguishes CITIZEN_CERTIFICATE_ISSUE and VACCINATOR_RECORD_AMENDMENT
 -- Database: MySQL 8.0+ / 8.4+ LTS
 
