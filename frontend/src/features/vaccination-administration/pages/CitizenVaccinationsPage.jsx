@@ -258,15 +258,15 @@ export default function CitizenVaccinationsPage() {
         </div>
       ) : (
         <div className="row g-4">
-          {/* Single Unified Section */}
+          {/* Section A: Digital Vaccination Certificates (Primary) */}
           <div className="col-12">
             <div className="card shadow-sm border-0 overflow-hidden">
               <div className="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                <h5 className="h6 mb-0 fw-bold text-dark">
-                  <i className="bi bi-patch-check-fill text-primary me-2"></i>Vaccination History &amp; Official Credentials
-                </h5>
+                <h2 className="h6 mb-0 fw-bold text-dark">
+                  <i className="bi bi-patch-check-fill text-primary me-2"></i>Digital Vaccination Certificates
+                </h2>
                 <span className="badge bg-primary-subtle text-primary fw-semibold">
-                  {unifiedItems.length} {unifiedItems.length === 1 ? 'Record' : 'Records'}
+                  {unifiedItems.length} {unifiedItems.length === 1 ? 'Certificate' : 'Certificates'}
                 </span>
               </div>
               <div className="card-body p-0">
@@ -274,11 +274,9 @@ export default function CitizenVaccinationsPage() {
                   <table className="table table-hover align-middle mb-0">
                     <thead className="table-light small text-uppercase text-secondary">
                       <tr>
-                        <th className="ps-4">Vaccine &amp; Dose</th>
-                        <th>Administration Date</th>
-                        <th>Batch Code</th>
-                        <th>Center</th>
-                        <th>Certificate Ref</th>
+                        <th className="ps-4">Certificate Ref</th>
+                        <th>Vaccine &amp; Dose</th>
+                        <th>Date Administered</th>
                         <th>Status</th>
                         <th className="text-end pe-4">Actions</th>
                       </tr>
@@ -289,7 +287,14 @@ export default function CitizenVaccinationsPage() {
                         const hasCert = Boolean(item.certificateId || item.certificateReference);
                         return (
                           <tr key={item.recordId}>
-                            <td className="ps-4">
+                            <td className="ps-4 font-monospace fw-semibold text-dark">
+                              {item.certificateReference ? (
+                                item.certificateReference
+                              ) : (
+                                <span className="text-muted fst-italic">Pending issuance</span>
+                              )}
+                            </td>
+                            <td>
                               <div className="fw-bold text-dark">{item.vaccineName}</div>
                               <span className="badge bg-light text-dark border">
                                 Dose {item.doseNumber}
@@ -299,19 +304,6 @@ export default function CitizenVaccinationsPage() {
                               {item.administrationTime
                                 ? new Date(item.administrationTime).toLocaleDateString(undefined, { dateStyle: 'medium' })
                                 : 'N/A'}
-                            </td>
-                            <td className="font-monospace text-secondary">
-                              {item.batchNumber}
-                            </td>
-                            <td className="text-secondary">
-                              {item.centerName}
-                            </td>
-                            <td className="font-monospace fw-semibold text-dark">
-                              {item.certificateReference ? (
-                                item.certificateReference
-                              ) : (
-                                <span className="text-muted fst-italic">Pending issuance</span>
-                              )}
                             </td>
                             <td>
                               <div className="d-flex align-items-center flex-wrap gap-1">
@@ -366,6 +358,69 @@ export default function CitizenVaccinationsPage() {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section B: Clinical Vaccination History (Secondary / Informational / Read-Only) */}
+          <div className="col-12">
+            <div className="card shadow-sm border-0 overflow-hidden">
+              <div className="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h2 className="h6 mb-0 fw-bold text-dark">
+                  <i className="bi bi-journal-medical text-secondary me-2"></i>Vaccination History
+                </h2>
+                <span className="badge bg-secondary-subtle text-secondary fw-semibold">
+                  Read-Only Record
+                </span>
+              </div>
+              <div className="card-body p-0">
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light small text-uppercase text-secondary">
+                      <tr>
+                        <th className="ps-4">Vaccine &amp; Dose</th>
+                        <th>Administration Date</th>
+                        <th>Healthcare Center</th>
+                        <th>Batch Code</th>
+                        <th>Next Dose Date</th>
+                        <th className="text-end pe-4">Record Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="small">
+                      {unifiedItems.map((item) => (
+                        <tr key={`history-${item.recordId}`}>
+                          <td className="ps-4">
+                            <div className="fw-semibold text-dark">{item.vaccineName}</div>
+                            <span className="text-secondary small">Dose {item.doseNumber}</span>
+                          </td>
+                          <td className="text-secondary">
+                            {item.administrationTime
+                              ? new Date(item.administrationTime).toLocaleDateString(undefined, { dateStyle: 'medium' })
+                              : 'N/A'}
+                          </td>
+                          <td className="text-secondary">
+                            {item.centerName}
+                          </td>
+                          <td className="font-monospace text-secondary">
+                            {item.batchNumber}
+                          </td>
+                          <td className="text-secondary">
+                            {item.nextDoseDate ? (
+                              new Date(item.nextDoseDate).toLocaleDateString(undefined, { dateStyle: 'medium' })
+                            ) : (
+                              <span className="text-muted fst-italic">None scheduled</span>
+                            )}
+                          </td>
+                          <td className="text-end pe-4">
+                            <span className="badge bg-secondary-subtle text-secondary border border-secondary fw-semibold">
+                              Administered
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -435,6 +490,11 @@ export default function CitizenVaccinationsPage() {
                     </div>
                   </div>
 
+                  <div className="alert alert-secondary py-2 px-3 small mb-3">
+                    <i className="bi bi-shield-lock me-1"></i>
+                    <strong>Scope Restriction:</strong> Citizens may only request corrections for certificate-facing display issues (such as spelling or identification display issues). Clinical vaccination records, dose numbers, and vaccine batches cannot be altered by citizens.
+                  </div>
+
                   <div className="mb-3">
                     <label htmlFor="issueCategory" className="form-label fw-semibold text-dark small">
                       Issue Category
@@ -446,10 +506,10 @@ export default function CitizenVaccinationsPage() {
                       onChange={(e) => setIssueCategory(e.target.value)}
                       disabled={submittingIssue}
                     >
-                      <option value="Certificate Discrepancy">Certificate Discrepancy</option>
-                      <option value="Dose Number Discrepancy">Dose Number Discrepancy</option>
-                      <option value="Administration Date/Time Incorrect">Administration Date/Time Incorrect</option>
-                      <option value="Other Clinical Issue">Other Clinical Issue</option>
+                      <option value="Certificate Display Discrepancy">Certificate Display Discrepancy</option>
+                      <option value="Name / Personal Details Spelling Issue">Name / Personal Details Spelling Issue</option>
+                      <option value="Citizen ID / Identification Display Issue">Citizen ID / Identification Display Issue</option>
+                      <option value="Other Certificate Issue">Other Certificate Issue</option>
                     </select>
                   </div>
 
@@ -459,9 +519,10 @@ export default function CitizenVaccinationsPage() {
                     </label>
                     <textarea
                       id="correctionMessage"
+                      aria-label="Describe what you believe should be corrected"
                       rows={4}
                       className="form-control"
-                      placeholder="Example: My dose number is displayed incorrectly, or the vaccination date does not match my clinic card."
+                      placeholder="Example: My name is spelled incorrectly on the certificate, or my national identification number has a typo."
                       value={issueMessage}
                       onChange={(e) => setIssueMessage(e.target.value)}
                       maxLength={1000}
@@ -469,7 +530,7 @@ export default function CitizenVaccinationsPage() {
                       disabled={submittingIssue}
                     />
                     <div className="form-text small text-secondary">
-                      Max 1000 characters. Please provide clear details so clinical staff can verify your request.
+                      Max 1000 characters. Please provide clear details so administrators can verify your certificate issue.
                     </div>
                   </div>
 

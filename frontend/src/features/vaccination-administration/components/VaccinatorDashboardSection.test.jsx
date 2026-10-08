@@ -20,6 +20,7 @@ const draftApiMocks = vi.hoisted(() => ({
 
 const certificateApiMocks = vi.hoisted(() => ({
   listVaccinatorCorrectionRequests: vi.fn(),
+  listVaccinatorRecords: vi.fn(),
 }));
 
 vi.mock('../../../auth/context/AuthContext', () => ({
@@ -127,6 +128,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
     draftApiMocks.listMyVaccinationDrafts.mockResolvedValue([]);
     checkInApiMocks.getVaccinatorQueue.mockResolvedValue([]);
     certificateApiMocks.listVaccinatorCorrectionRequests.mockResolvedValue([]);
+    certificateApiMocks.listVaccinatorRecords.mockResolvedValue([]);
   });
 
   afterEach(cleanup);
@@ -161,10 +163,11 @@ describe('VaccinatorDashboardSection (Option B)', () => {
     expect(facilityImg).toBeTruthy();
     expect(facilityImg.getAttribute('src')).toBe('/images/vaccination-center.jpg');
 
-    // Summary Metric Cards
+    // Summary Metric Cards: 4 distinct operational indicators
     expect(screen.getByText('Ready Patients')).toBeTruthy();
-    expect(screen.getByText('Active Drafts')).toBeTruthy();
     expect(screen.getByText('Corrections Needed')).toBeTruthy();
+    expect(screen.getByText('Finalized Today')).toBeTruthy();
+    expect(screen.getByText("Today's Session")).toBeTruthy();
 
     // Two-Column Task Workspace
     expect(screen.getByRole('heading', { name: 'Ready for Vaccination' })).toBeTruthy();
@@ -175,10 +178,8 @@ describe('VaccinatorDashboardSection (Option B)', () => {
     expect(screen.queryByRole('button', { name: 'Load Queue' })).toBeNull();
     expect(screen.queryByText(/Morning Slot \(Slot #1\)/i)).toBeNull();
 
-    // View Full Check-In Queue link and Open Vaccination Drafts link
-    const queueLink = screen.getByRole('link', { name: 'View Full Check-In Queue' });
-    expect(queueLink).toBeTruthy();
-    expect(queueLink.getAttribute('href')).toBe('/app/staff/checkin-queue');
+    // View Full Check-In Queue link was removed from dashboard to reduce clutter
+    expect(screen.queryByRole('link', { name: 'View Full Check-In Queue' })).toBeNull();
 
     const openLink = screen.getByRole('link', { name: 'Open Vaccination Drafts' });
     expect(openLink).toBeTruthy();

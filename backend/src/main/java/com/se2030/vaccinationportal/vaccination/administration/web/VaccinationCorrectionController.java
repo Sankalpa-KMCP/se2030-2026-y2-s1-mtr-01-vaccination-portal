@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.vaccination.administration.dto.ReviewVaccina
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionDetailResponse;
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionLifecycleResponse;
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionResponse;
+import com.se2030.vaccinationportal.vaccination.administration.exception.InvalidVaccinationCorrectionException;
 import com.se2030.vaccinationportal.vaccination.administration.exception.VaccinationRecordNotFoundException;
 import com.se2030.vaccinationportal.vaccination.administration.mapper.VaccinationCorrectionMapper;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrection;
@@ -75,6 +76,15 @@ public class VaccinationCorrectionController {
                         ));
                 if (!record.getCitizenId().equals(principal.getUserId())) {
                     throw new AccessDeniedException("Citizens may only request corrections for their own vaccination records");
+                }
+            }
+            if (request != null && request.fieldName() != null && !request.fieldName().trim().isEmpty()) {
+                String fn = request.fieldName().trim();
+                if ("doseNumber".equalsIgnoreCase(fn) || "administrationTime".equalsIgnoreCase(fn)
+                        || "nextDoseDate".equalsIgnoreCase(fn) || "vaccineBatchId".equalsIgnoreCase(fn)) {
+                    throw new InvalidVaccinationCorrectionException(
+                            "Citizens may only request corrections for certificate display issues, not clinical vaccination data or inventory batches"
+                    );
                 }
             }
         }

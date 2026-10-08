@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { getVaccinatorQueue } from '../../appointment-management/api/checkInApi';
@@ -6,7 +6,10 @@ import {
   createVaccinationDraft,
   listMyVaccinationDrafts,
 } from '../api/vaccinationDraftApi';
-import { listVaccinatorCorrectionRequests } from '../api/certificateApi';
+import {
+  listVaccinatorCorrectionRequests,
+  listVaccinatorRecords,
+} from '../api/certificateApi';
 import AppointmentStatusBadge from '../../appointment-management/components/AppointmentStatusBadge';
 import { getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
 
@@ -85,6 +88,9 @@ export default function VaccinatorDashboardSection({
   // Correction requests state
   const [corrections, setCorrections] = useState(null);
 
+  // Administered records state for tracking finalized records today
+  const [records, setRecords] = useState(null);
+
   const refreshDrafts = useCallback(async () => {
     const requestId = ++draftsRequestRef.current;
     setDraftsLoading(true);
@@ -118,12 +124,32 @@ export default function VaccinatorDashboardSection({
     }
   }, []);
 
+  const refreshRecords = useCallback(async () => {
+    try {
+      const data = await listVaccinatorRecords();
+      setRecords(Array.isArray(data) ? data : []);
+    } catch {
+      setRecords([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (isVaccinator) {
       refreshDrafts();
       refreshCorrections();
+      refreshRecords();
     }
-  }, [isVaccinator, refreshDrafts, refreshCorrections]);
+  }, [isVaccinator, refreshDrafts, refreshCorrections, refreshRecords]);
+
+  const finalizedTodayCount = useMemo(() => {
+    if (!records) return 0;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return records.filter((r) => {
+      const d = (r.finalizedAt || r.administrationTime || '').slice(0, 10);
+      return d === todayStr;
+    }).length;
+  }, [records]);
 
   // Execute loading queue for a target slot ID
   const executeLoadQueue = useCallback(async (targetSlotId) => {
@@ -368,10 +394,10 @@ export default function VaccinatorDashboardSection({
         </div>
       </div>
 
-      {/* Top Summary Metrics */}
+      {/* Top Summary Metrics: 4 distinct operational indicators */}
       <div className="row g-3 mb-4">
-        {/* Ready Patients */}
-        <div className="col-12 col-sm-4">
+        {/* 1. Ready Patients */}
+        <div className="col-12 col-sm-6 col-lg-3">
           <div
             className="card border h-100"
             style={{
@@ -414,51 +440,8 @@ export default function VaccinatorDashboardSection({
           </div>
         </div>
 
-        {/* Active Drafts */}
-        <div className="col-12 col-sm-4">
-          <div
-            className="card border h-100"
-            style={{
-              borderRadius: '0.85rem',
-              backgroundColor: '#fffdfa',
-              borderColor: 'var(--accent-soft-border, #fde68a)',
-              boxShadow: '0 1px 2px rgba(245, 158, 11, 0.04)',
-            }}
-          >
-            <div className="card-body p-3 d-flex flex-column justify-content-between">
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <div className="d-flex align-items-center gap-2">
-                  <div
-                    className="rounded-2 p-1 text-warning d-inline-flex"
-                    style={{ background: 'var(--accent-soft-bg, #fef3c7)' }}
-                    aria-hidden="true"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                      <polyline points="10 9 9 9 8 9" />
-                    </svg>
-                  </div>
-                  <span className="small text-secondary fw-semibold">Active Drafts</span>
-                </div>
-                <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
-                  Active Work
-                </span>
-              </div>
-              <div>
-                <div className="h3 fw-bold mb-0 text-dark">
-                  {activeDrafts !== null ? activeDrafts.length : '…'}
-                </div>
-                <div className="small text-muted mt-1">Unfinalized drafts pending completion</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Corrections Needed */}
-        <div className="col-12 col-sm-4">
+        {/* 2. Corrections / Amendments Requiring Action */}
+        <div className="col-12 col-sm-6 col-lg-3">
           <div
             className="card border h-100"
             style={{
@@ -500,6 +483,90 @@ export default function VaccinatorDashboardSection({
                   {corrections !== null ? approvedCorrections.length : '…'}
                 </div>
                 <div className="small text-muted mt-1">Admin approved · Ready to apply</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Finalized Records Today */}
+        <div className="col-12 col-sm-6 col-lg-3">
+          <div
+            className="card border h-100"
+            style={{
+              borderRadius: '0.85rem',
+              backgroundColor: '#f8fafc',
+              borderColor: 'var(--border-subtle, #e2e8f0)',
+              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+            }}
+          >
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-2 p-1 d-inline-flex"
+                    style={{ background: '#ecfdf5', color: '#047857' }}
+                    aria-hidden="true"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      <path d="m9 12 2 2 4-4" />
+                    </svg>
+                  </div>
+                  <span className="small text-secondary fw-semibold">Finalized Today</span>
+                </div>
+                <span className="badge bg-success-subtle text-success border border-success-subtle small">
+                  Completed
+                </span>
+              </div>
+              <div>
+                <div className="h3 fw-bold mb-0 text-dark">
+                  {records !== null ? finalizedTodayCount : '…'}
+                </div>
+                <div className="small text-muted mt-1">Records finalized today</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Today's Session Summary */}
+        <div className="col-12 col-sm-6 col-lg-3">
+          <div
+            className="card border h-100"
+            style={{
+              borderRadius: '0.85rem',
+              backgroundColor: '#f8fafc',
+              borderColor: 'var(--border-subtle, #e2e8f0)',
+              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+            }}
+          >
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    className="rounded-2 p-1 d-inline-flex"
+                    style={{ background: '#f5f3ff', color: '#6d28d9' }}
+                    aria-hidden="true"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  </div>
+                  <span className="small text-secondary fw-semibold">Today's Session</span>
+                </div>
+                <span className={`badge ${activeSession ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'} small`}>
+                  {activeSession ? 'Scheduled' : 'Unassigned'}
+                </span>
+              </div>
+              <div>
+                <div className="h5 fw-bold mb-0 text-dark">
+                  {activeSession ? 'Assigned' : 'None Assigned'}
+                </div>
+                <div className="small text-muted mt-1 text-truncate">
+                  {activeSession ? `${activeSession.date} · ${activeSession.startTime || ''}–${activeSession.endTime || ''}` : 'No session assigned'}
+                </div>
               </div>
             </div>
           </div>
@@ -610,16 +677,6 @@ export default function VaccinatorDashboardSection({
                   ))}
                 </div>
               )}
-
-              {/* View Full Check-In Queue Link */}
-              <div className="mt-auto pt-2">
-                <Link
-                  to="/app/staff/checkin-queue"
-                  className="btn btn-outline-primary btn-sm w-100 fw-semibold"
-                >
-                  View Full Check-In Queue
-                </Link>
-              </div>
             </div>
           </div>
         </div>
@@ -631,6 +688,7 @@ export default function VaccinatorDashboardSection({
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
                   <h3 className="h5 fw-bold mb-0 text-dark">Active Work</h3>
+                  <div className="small text-muted">Active Drafts &amp; Alerts</div>
                   <h4 className="visually-hidden">My Active Drafts</h4>
                 </div>
                 <span className="badge text-bg-light border text-dark">
