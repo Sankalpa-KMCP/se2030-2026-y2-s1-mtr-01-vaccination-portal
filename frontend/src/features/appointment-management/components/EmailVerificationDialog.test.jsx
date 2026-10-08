@@ -21,13 +21,13 @@ function authError(code, status = 400, extra = {}) {
 }
 
 function enterOtp(value) {
-  fireEvent.change(screen.getByLabelText('Verification code'), { target: { value } });
+  fireEvent.change(screen.getByLabelText('Six-digit verification code'), { target: { value } });
 }
 
 async function renderDialog() {
   render(<EmailVerificationDialog onClose={vi.fn()} />);
   await waitFor(() => expect(getEmailVerificationStatus).toHaveBeenCalledTimes(1));
-  await screen.findByLabelText('Verification code');
+  await screen.findByLabelText('Six-digit verification code');
 }
 
 describe('EmailVerificationDialog', () => {
@@ -41,9 +41,9 @@ describe('EmailVerificationDialog', () => {
   it('renders the OTP entry dialog and requests verification status once', async () => {
     await renderDialog();
 
-    expect(screen.getByRole('dialog', { name: 'Verify your email' })).toBeTruthy();
-    expect(screen.getByLabelText('Verification code')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Verify' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Verify Your Email' })).toBeTruthy();
+    expect(screen.getByLabelText('Six-digit verification code')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verify Code' })).toBeTruthy();
     expect(getEmailVerificationStatus).toHaveBeenCalledTimes(1);
   });
 
@@ -53,7 +53,7 @@ describe('EmailVerificationDialog', () => {
     render(<EmailVerificationDialog onClose={vi.fn()} />);
 
     expect(await screen.findByText('Email verified successfully.')).toBeTruthy();
-    expect(screen.queryByLabelText('Verification code')).toBeNull();
+    expect(screen.queryByLabelText('Six-digit verification code')).toBeNull();
   });
 
   it('submits a six-digit OTP as a string with leading zeros preserved', async () => {
@@ -61,7 +61,7 @@ describe('EmailVerificationDialog', () => {
     await renderDialog();
 
     enterOtp('004281');
-    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }));
 
     await screen.findByText('Email verified successfully.');
     expect(verifyEmailOtp).toHaveBeenCalledTimes(1);
@@ -71,12 +71,22 @@ describe('EmailVerificationDialog', () => {
   it('rejects incomplete codes without calling the backend', async () => {
     await renderDialog();
 
-    const verifyButton = screen.getByRole('button', { name: 'Verify' });
+    const verifyButton = screen.getByRole('button', { name: 'Verify Code' });
     expect(verifyButton.disabled).toBe(true);
 
     enterOtp('0042');
     expect(verifyButton.disabled).toBe(true);
+    expect(screen.getByLabelText('Six-digit verification code').getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByLabelText('Six-digit verification code').getAttribute('aria-describedby')).toBe('email-verification-code-help');
     fireEvent.click(verifyButton);
+    expect(verifyEmailOtp).not.toHaveBeenCalled();
+  });
+
+  it('strips non-digits before validating the six-digit code', async () => {
+    await renderDialog();
+    enterOtp('12ab34');
+    expect(screen.getByLabelText('Six-digit verification code').value).toBe('1234');
+    expect(screen.getByRole('button', { name: 'Verify Code' }).disabled).toBe(true);
     expect(verifyEmailOtp).not.toHaveBeenCalled();
   });
 
@@ -85,7 +95,7 @@ describe('EmailVerificationDialog', () => {
     await renderDialog();
 
     enterOtp('999999');
-    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }));
 
     expect(await screen.findByText('That verification code is not valid.')).toBeTruthy();
     expect(screen.queryByText('Email verified successfully.')).toBeNull();
@@ -96,7 +106,7 @@ describe('EmailVerificationDialog', () => {
     await renderDialog();
 
     enterOtp('123456');
-    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }));
 
     expect(await screen.findByText('That verification code has expired. Request a new code.')).toBeTruthy();
   });
@@ -106,7 +116,7 @@ describe('EmailVerificationDialog', () => {
     await renderDialog();
 
     enterOtp('123456');
-    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }));
 
     expect(await screen.findByText('Too many incorrect attempts. Request a new verification code.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Resend code' })).toBeTruthy();
@@ -117,7 +127,7 @@ describe('EmailVerificationDialog', () => {
     await renderDialog();
 
     enterOtp('123456');
-    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }));
 
     expect(await screen.findByText('Email verified successfully.')).toBeTruthy();
   });
@@ -127,10 +137,10 @@ describe('EmailVerificationDialog', () => {
     await renderDialog();
 
     enterOtp('123456');
-    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }));
 
     expect(await screen.findByText('We could not verify that code right now. Please try again.')).toBeTruthy();
-    expect(screen.getByLabelText('Verification code')).toBeTruthy();
+    expect(screen.getByLabelText('Six-digit verification code')).toBeTruthy();
   });
 
   it('confirms a successful resend and clears the stale code', async () => {
@@ -140,8 +150,8 @@ describe('EmailVerificationDialog', () => {
     enterOtp('111111');
     fireEvent.click(screen.getByRole('button', { name: 'Resend code' }));
 
-    expect(await screen.findByText('A new code has been sent to your email.')).toBeTruthy();
-    expect(screen.getByLabelText('Verification code').value).toBe('');
+    expect(await screen.findByText('A new code was requested. Enter the latest code when available.')).toBeTruthy();
+    expect(screen.getByLabelText('Six-digit verification code').value).toBe('');
   });
 
   it('blocks resends inside the server-provided cooldown window', async () => {
@@ -183,14 +193,14 @@ describe('EmailVerificationDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Resend code' }));
 
     expect(await screen.findByText('We could not send a new code right now. Please try again shortly.')).toBeTruthy();
-    expect(screen.getByRole('dialog', { name: 'Verify your email' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Verify Your Email' })).toBeTruthy();
     expect(screen.queryByText('Email verified successfully.')).toBeNull();
   });
 
   it('closes through the close control', async () => {
     const onClose = vi.fn();
     render(<EmailVerificationDialog onClose={onClose} />);
-    await screen.findByLabelText('Verification code');
+    await screen.findByLabelText('Six-digit verification code');
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
@@ -201,10 +211,10 @@ describe('EmailVerificationDialog', () => {
     const onClose = vi.fn();
     verifyEmailOtp.mockResolvedValue({ emailVerified: true, emailVerifiedAt: '2026-10-05T09:00:00Z' });
     render(<EmailVerificationDialog onClose={onClose} />);
-    await screen.findByLabelText('Verification code');
+    await screen.findByLabelText('Six-digit verification code');
 
     enterOtp('123456');
-    fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Done' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);

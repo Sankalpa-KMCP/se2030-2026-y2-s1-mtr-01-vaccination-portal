@@ -11,21 +11,21 @@ const GENERIC_VERIFY_ERROR = 'We could not verify that code right now. Please tr
 const GENERIC_RESEND_ERROR = 'We could not send a new code right now. Please try again shortly.';
 
 /**
- * Contextual email OTP verification dialog for the authenticated citizen.
- * Opened from appointment acquisition feedback when the backend rejects an
- * action with EMAIL_VERIFICATION_REQUIRED. Verification state is decided only
- * by backend responses; the dialog never inspects cached account status.
- * Opening the dialog must not disturb any booking-page state: it renders as an
- * overlay and simply closes when done so the citizen can retry manually.
+ * Email OTP verification dialog for the authenticated citizen. It is opened
+ * from appointment feedback or the citizen profile. Verification state is
+ * decided only by backend responses; the dialog never inspects cached account
+ * status. It renders as an overlay without disturbing booking-page state.
  */
-export default function EmailVerificationDialog({ onClose }) {
+export default function EmailVerificationDialog({ onClose, initialResendNotice = null, context = 'appointment' }) {
   const [otp, setOtp] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [verified, setVerified] = useState(false);
-  const [verifiedNote, setVerifiedNote] = useState('Your email is verified. Retry your appointment action.');
+  const [verifiedNote, setVerifiedNote] = useState(context === 'appointment'
+    ? 'Your email is verified. Retry your appointment action.'
+    : 'Your email is verified and your citizen account is active.');
   const [errorText, setErrorText] = useState(null);
-  const [resendNotice, setResendNotice] = useState(null);
+  const [resendNotice, setResendNotice] = useState(initialResendNotice);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const inputRef = useRef(null);
 
@@ -37,7 +37,9 @@ export default function EmailVerificationDialog({ onClose }) {
         if (!active) return;
         if (status?.emailVerified) {
           setVerified(true);
-          setVerifiedNote('Your email is already verified. Retry your appointment action.');
+          setVerifiedNote(context === 'appointment'
+            ? 'Your email is already verified. Retry your appointment action.'
+            : 'Your email is already verified.');
         }
       })
       .catch(() => {
@@ -46,7 +48,7 @@ export default function EmailVerificationDialog({ onClose }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [context]);
 
   const coolingDown = cooldownSeconds > 0;
   useEffect(() => {
@@ -79,11 +81,15 @@ export default function EmailVerificationDialog({ onClose }) {
     try {
       await verifyEmailOtp(digits);
       setVerified(true);
-      setVerifiedNote('Your email is verified. Retry your appointment action.');
+      setVerifiedNote(context === 'appointment'
+        ? 'Your email is verified. Retry your appointment action.'
+        : 'Your email is verified and your citizen account is active.');
     } catch (err) {
       if (err.code === 'EMAIL_ALREADY_VERIFIED') {
         setVerified(true);
-        setVerifiedNote('Your email is already verified. Retry your appointment action.');
+        setVerifiedNote(context === 'appointment'
+          ? 'Your email is already verified. Retry your appointment action.'
+          : 'Your email is already verified.');
       } else {
         setErrorText(VERIFICATION_MESSAGES[err.code] || GENERIC_VERIFY_ERROR);
       }
@@ -100,7 +106,7 @@ export default function EmailVerificationDialog({ onClose }) {
     try {
       await resendEmailOtp();
       setOtp('');
-      setResendNotice('A new code has been sent to your email.');
+      setResendNotice('A new code was requested. Enter the latest code when available.');
     } catch (err) {
       if (err.status === 429 && err.retryAfterSeconds > 0) {
         setCooldownSeconds(err.retryAfterSeconds);
@@ -119,8 +125,8 @@ export default function EmailVerificationDialog({ onClose }) {
         <div className="modal-content border-0 shadow-lg">
           <div className="modal-header">
             <div>
-              <p className="text-uppercase text-primary small fw-bold mb-1">Appointment services</p>
-              <h2 id="email-verification-title" className="modal-title h5">Verify your email</h2>
+              <p className="text-uppercase text-primary small fw-bold mb-1">{context === 'appointment' ? 'Appointment services' : 'Citizen account'}</p>
+              <h2 id="email-verification-title" className="modal-title h5">Verify Your Email</h2>
             </div>
             <button type="button" className="btn-close" aria-label="Close" onClick={onClose} />
           </div>
@@ -135,8 +141,8 @@ export default function EmailVerificationDialog({ onClose }) {
           ) : (
             <form onSubmit={handleVerify}>
               <div className="modal-body">
-                <p className="mb-3">Enter the 6-digit code sent to your registered email address.</p>
-                <label className="form-label fw-semibold" htmlFor="email-verification-otp">Verification code</label>
+                <p className="mb-3">Enter the six-digit verification code issued for your registered email address.</p>
+                <label className="form-label fw-semibold" htmlFor="email-verification-otp">Six-digit verification code</label>
                 <input
                   id="email-verification-otp"
                   ref={inputRef}
@@ -148,11 +154,13 @@ export default function EmailVerificationDialog({ onClose }) {
                   value={otp}
                   onChange={handleOtpChange}
                   disabled={verifying}
+                  aria-describedby={otp.length > 0 && digits.length < 6 ? 'email-verification-code-help' : undefined}
+                  aria-invalid={otp.length > 0 && digits.length < 6}
                   placeholder="000000"
                   required
                 />
                 {otp.length > 0 && digits.length < 6 && (
-                  <div className="form-text">The code has exactly six digits.</div>
+                  <div className="form-text" id="email-verification-code-help">The code has exactly six digits.</div>
                 )}
                 {errorText && (
                   <div className="alert alert-warning mt-3 mb-0" role="alert">{errorText}</div>
@@ -178,8 +186,9 @@ export default function EmailVerificationDialog({ onClose }) {
                   </button>
                 </div>
                 <button type="submit" className="btn btn-primary" disabled={!canVerify}>
-                  {verifying ? 'Verifying…' : 'Verify'}
+                  {verifying ? 'Verifying…' : 'Verify Code'}
                 </button>
+                <button type="button" className="btn btn-outline-secondary" onClick={onClose}>Cancel</button>
               </div>
             </form>
           )}

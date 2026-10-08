@@ -42,6 +42,27 @@
   text-transform: uppercase;
 }
 
+.citizen-dashboard__verification {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #f4d699;
+  border-radius: var(--citizen-radius);
+  background: #fff9ec;
+}
+
+.citizen-dashboard__verification h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.citizen-dashboard__verification p {
+  margin: 0;
+}
+
 /* ==================================================
    1. TOP WELCOME AREA & HERO
 ================================================== */

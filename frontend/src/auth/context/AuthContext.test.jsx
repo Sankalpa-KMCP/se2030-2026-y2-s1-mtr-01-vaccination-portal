@@ -35,10 +35,11 @@ function AuthStateProbe() {
       <span>{user?.fullName || 'no-name'}</span>
       <span>{user?.phoneNumber || 'no-phone'}</span>
       <span>{user?.roles?.join(',') || 'no-roles'}</span>
+      <span>{user?.accountStatus || 'no-status'}</span>
       <button type="button" onClick={() => login('citizen@example.com', 'Secret123!')}>Test Login</button>
       <button type="button" onClick={() => logout()}>Test Logout</button>
       <button type="button" onClick={() => retryBootstrap()}>Retry Bootstrap</button>
-      <button type="button" onClick={() => updateCurrentUserProfile({ id: user?.id, fullName: 'Updated Name', phoneNumber: '+94 11 222 3333', roles: ['ROLE_ADMIN'] })}>Update Profile</button>
+      <button type="button" onClick={() => updateCurrentUserProfile({ id: user?.id, fullName: 'Updated Name', phoneNumber: '+94 11 222 3333', accountStatus: 'ACTIVE', roles: ['ROLE_ADMIN'] })}>Update Profile</button>
     </div>
   );
 }
@@ -152,7 +153,7 @@ describe('AuthProvider unauthorized handling', () => {
             fullName: 'Citizen User',
             email: 'citizen@example.com',
             phoneNumber: '+94 77 123 4567',
-            accountStatus: 'ACTIVE',
+            accountStatus: 'PENDING_VERIFICATION',
             roles: ['ROLE_CITIZEN'],
           },
         }),
@@ -173,6 +174,7 @@ describe('AuthProvider unauthorized handling', () => {
     expect(screen.getByText('Updated Name')).toBeTruthy();
     expect(screen.getByText('+94 11 222 3333')).toBeTruthy();
     expect(screen.getByText('ROLE_CITIZEN')).toBeTruthy();
+    expect(screen.getByText('ACTIVE')).toBeTruthy();
   });
 
   it('revokes the server session on logout and clears in-memory state', async () => {

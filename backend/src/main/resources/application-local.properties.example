@@ -48,10 +48,9 @@ app.bootstrap.admin.phone=0771234567
 # ------------------------------------------------------------
 # Authentication Delivery Mode (smtp / console / disabled)
 # ------------------------------------------------------------
-# Explicit Console Delivery Mode (Recommended for local evaluation & manual testing)
-# Outputs verification and password-reset links directly to backend console logs.
-# Note: citizen email OTP codes are NEVER logged in any delivery mode; use SMTP
-# delivery against a local mailbox tool when the code itself must be observed.
+# Explicit Console Delivery Mode (local evaluation and manual testing only).
+# Activate with SPRING_PROFILES_ACTIVE=local. Verification OTP codes and legacy
+# verification/password-reset links are displayed in backend console logs.
 app.security.auth.delivery-mode=console
 
 # Email OTP Verification Policy (defaults shown)

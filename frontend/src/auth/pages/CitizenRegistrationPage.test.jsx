@@ -109,7 +109,7 @@ describe('CitizenRegistrationPage', () => {
     fillCitizenForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create Citizen Account' }));
 
-    await screen.findByRole('heading', { name: 'A verification code has been sent to your email.' });
+    await screen.findByRole('heading', { name: 'Verify your email to activate your account.' });
     expect(registerCitizen).toHaveBeenCalledTimes(1);
     expect(registerCitizen).toHaveBeenCalledWith({
       fullName: 'Citizen User',
@@ -118,7 +118,7 @@ describe('CitizenRegistrationPage', () => {
       password: 'Secret123!',
     });
     expect(registerCitizen.mock.calls[0][0]).not.toHaveProperty('confirmPassword');
-    expect(screen.getByText(/Sign in, then verify your email with the code before booking an appointment./i)).toBeTruthy();
+    expect(screen.getByText(/Sign in, then open your profile to enter a verification code/i)).toBeTruthy();
     expect(screen.queryByText(/click the verification link/i)).toBeNull();
     expect(screen.getByRole('link', { name: 'Go to Citizen Login' }).getAttribute('href')).toBe('/login');
   });

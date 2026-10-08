@@ -6,6 +6,7 @@ import path from 'node:path';
 // Keep this list explicit so it cannot turn into an exemption for whole directories.
 const publicPresentation = new Set([
   'features/appointment-management/components/AppointmentStatusBadge',
+  'features/appointment-management/components/EmailVerificationDialog',
   'features/campaign-management/components/QuestionnaireAssignmentFormModal',
   'features/public-landing/components/PublicHeader',
   'features/public-landing/components/PublicFooter',
