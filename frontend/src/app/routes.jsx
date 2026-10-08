@@ -14,7 +14,6 @@ import ForgotPasswordPage from '../auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '../auth/pages/ResetPasswordPage';
 import VerifyEmailPage from '../auth/pages/VerifyEmailPage';
 import CitizenDashboardPage from '../features/citizen-dashboard/pages/CitizenDashboardPage';
-import CitizenLoginWelcome from '../features/citizen-dashboard/components/CitizenLoginWelcome';
 import StaffDashboardPage from '../auth/pages/StaffDashboardPage';
 import AdminDashboardPage from '../auth/pages/AdminDashboardPage';
 import PendingStaffRequestsPage from '../auth/pages/PendingStaffRequestsPage';
@@ -228,7 +227,6 @@ export default function PortalRoutes() {
           <Route path="not-authorized" element={<NotAuthorizedPage />} />
 
           <Route element={<ProtectedRoute allowedRoles={[CITIZEN_ROLE]} />}>
-            <Route path="citizen/welcome" element={<CitizenLoginWelcome />} />
             <Route path="citizen" element={<CitizenDashboardPage />} />
             <Route path="citizen/profile" element={<CitizenProfilePage />} />
             <Route path="citizen/vaccinations" element={<CitizenVaccinationsPage />} />

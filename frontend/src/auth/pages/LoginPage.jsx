@@ -59,15 +59,7 @@ function LoginForm() {
       const result = await login(trimmedEmail, password);
       if (result.success) {
         setPassword('');
-        const homePath = getRoleHomePath(result.user);
-        if (homePath === '/app/citizen') {
-          navigate('/app/citizen/welcome', {
-            replace: true,
-            state: { fromCitizenLogin: true },
-          });
-        } else {
-          navigate(homePath, { replace: true });
-        }
+        navigate(getRoleHomePath(result.user), { replace: true });
       }
     } finally {
       setIsSubmitting(false);

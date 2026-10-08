@@ -7,7 +7,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import LoginPage from './LoginPage';
 import { resendVerification } from '../api/authApi';
 
@@ -102,39 +102,6 @@ describe('LoginPage universal experience', () => {
 
     await waitFor(() => {
       expect(authState.current.login).toHaveBeenCalledWith('person@example.gov', 'Password123!');
-    });
-  });
-
-  it('shows the citizen welcome experience after successful citizen login', async () => {
-    authState.current.login.mockResolvedValue({
-      success: true,
-      user: {
-        id: 42,
-        fullName: 'Nimali Perera',
-        email: 'nimali@example.gov',
-        roles: ['ROLE_CITIZEN'],
-      },
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/login']}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/app/citizen/welcome" element={<h1>Citizen Welcome Transition</h1>} />
-        </Routes>
-      </MemoryRouter>,
-    );
-
-    fireEvent.change(screen.getByLabelText('Email Address'), {
-      target: { value: 'nimali@example.gov' },
-    });
-    fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'Password123!' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Citizen Welcome Transition' })).toBeTruthy();
     });
   });
 
