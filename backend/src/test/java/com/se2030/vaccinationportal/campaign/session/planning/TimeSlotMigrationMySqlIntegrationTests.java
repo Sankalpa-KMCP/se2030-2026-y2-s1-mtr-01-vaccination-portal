@@ -53,6 +53,9 @@ class TimeSlotMigrationMySqlIntegrationTests extends AbstractIsolatedMySqlMigrat
     @DynamicPropertySource
     static void isolatedDatabase(DynamicPropertyRegistry registry) {
         configureIsolatedDatabase(registry, "historical_slots_v3");
+        // Hibernate supplies fixture tables; this test alone applies the historical V3 SQL.
+        // Running all later migrations first adds foreign keys that did not exist at V3.
+        registry.add("spring.flyway.enabled", () -> "false");
     }
 
     @Autowired private VaccinationSessionRepository sessionRepository;

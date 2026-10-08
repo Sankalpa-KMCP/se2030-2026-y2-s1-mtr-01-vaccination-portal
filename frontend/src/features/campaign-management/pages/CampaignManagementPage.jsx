@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import '../campaign-management.css';
 import {
   listCampaigns,
   getCampaignById,
@@ -19,9 +20,7 @@ import CampaignForm from '../components/CampaignForm';
 import CampaignDetailsModal from '../components/CampaignDetailsModal';
 import CampaignActionModal from '../components/CampaignActionModal';
 import MasterDataManagementModal from '../components/MasterDataManagementModal';
-import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import ApiErrorAlert from '../../../components/common/ApiErrorAlert';
-import PageHeader from '../../../components/common/PageHeader';
 import SuccessAlert from '../../../components/common/SuccessAlert';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { canManageCampaigns } from '../../../auth/utils/roleUtils';
@@ -32,6 +31,8 @@ export default function CampaignManagementPage() {
 
   const [campaigns, setCampaigns] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const formRegion = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -59,6 +60,20 @@ export default function CampaignManagementPage() {
   const [pendingAction, setPendingAction] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
+
+  useEffect(() => {
+    if (showCreateForm || editingCampaign) {
+      formRegion.current?.scrollIntoView?.({ block: 'start' });
+      formRegion.current?.querySelector('input:not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])')?.focus();
+    }
+  }, [showCreateForm, editingCampaign]);
+
+  const openCreateForm = () => {
+    setEditingCampaign(null);
+    setEditError(null);
+    setShowCreateForm(true);
+    setCreateError(null);
+  };
 
   const fetchCampaigns = useCallback(async () => {
     setLoading(true);
@@ -209,20 +224,29 @@ export default function CampaignManagementPage() {
   };
 
   return (
-    <div>
-      <PageHeader
-        title="Vaccination Campaign Management"
-        subtitle="Define, schedule, activate, and manage vaccination campaigns and lifecycle states."
-        actions={isManager && (
+    <div className="campaign-page">
+      <header className="campaign-banner">
+        <div className="campaign-banner-copy">
+          <span className="campaign-eyebrow">Programme management</span>
+          <h1>Vaccination Campaigns</h1>
+          <p>Create and manage vaccination programmes.</p>
+        </div>
+        {isManager && (
+          <div className="campaign-header-actions">
+          <div className="campaign-header-buttons">
+          <button type="button" className="btn campaign-create-button" onClick={openCreateForm}>+ New Campaign</button>
           <button
             type="button"
-            className="btn btn-outline-primary btn-sm"
+            className="btn campaign-master-button"
             onClick={() => setShowMasterDataModal(true)}
           >
             Manage Master Data
           </button>
+          </div>
+          <p className="campaign-header-help">Master data manages vaccines and target groups.</p>
+          </div>
         )}
-      />
+      </header>
 
       {/* Success Notification Banner */}
       {successMessage && (
@@ -235,6 +259,7 @@ export default function CampaignManagementPage() {
       {/* Global Page Error */}
       <ApiErrorAlert error={error} onDismiss={() => setError(null)} />
 
+      <div ref={formRegion} className="campaign-form-region">
       {/* Create Campaign Form Card */}
       {isManager && showCreateForm && (
         <CampaignForm
@@ -262,25 +287,22 @@ export default function CampaignManagementPage() {
         />
       )}
 
+      </div>
       {/* Campaign List View */}
-      {loading ? (
-        <LoadingSpinner message="Fetching vaccination campaigns..." />
-      ) : (
         <CampaignList
           campaigns={campaigns}
           selectedStatus={selectedStatus}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onClearFilters={() => { setSearchQuery(''); setSelectedStatus(''); }}
+          loading={loading}
+          error={error}
           onStatusFilterChange={setSelectedStatus}
           onSelectCampaign={handleSelectCampaign}
           onInitiateAction={handleInitiateAction}
           onEditCampaign={handleInitiateEdit}
-          onCreateNew={() => {
-            setEditingCampaign(null);
-            setEditError(null);
-            setShowCreateForm(true);
-            setCreateError(null);
-          }}
+          onCreateNew={openCreateForm}
         />
-      )}
 
       {/* Master Data Management Modal */}
       {showMasterDataModal && (

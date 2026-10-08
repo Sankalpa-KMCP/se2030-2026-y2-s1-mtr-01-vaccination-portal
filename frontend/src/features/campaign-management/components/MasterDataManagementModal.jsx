@@ -28,7 +28,6 @@ export default function MasterDataManagementModal({ onClose }) {
   const [vFormId, setVFormId] = useState(null);
   const [vCode, setVCode] = useState('');
   const [vName, setVName] = useState('');
-  const [vDoseUnit, setVDoseUnit] = useState('dose');
   const [vSubmitting, setVSubmitting] = useState(false);
 
   // Target Groups State
@@ -88,13 +87,13 @@ export default function MasterDataManagementModal({ onClose }) {
         const created = await createVaccineType({
           code: vCode.trim(),
           name: vName.trim(),
-          doseUnit: vDoseUnit.trim() || 'dose',
+          doseUnit: 'dose',
         });
         setVSuccess(`Vaccine Type "${created.name}" created successfully.`);
       } else if (vFormMode === 'edit') {
         const updated = await updateVaccineType(vFormId, {
           name: vName.trim(),
-          doseUnit: vDoseUnit.trim() || 'dose',
+          doseUnit: 'dose',
         });
         setVSuccess(`Vaccine Type "${updated.name}" updated successfully.`);
       }
@@ -102,7 +101,6 @@ export default function MasterDataManagementModal({ onClose }) {
       setVFormId(null);
       setVCode('');
       setVName('');
-      setVDoseUnit('dose');
       await fetchVaccineTypes();
     } catch (err) {
       setVError(err);
@@ -284,18 +282,12 @@ export default function MasterDataManagementModal({ onClose }) {
                             />
                           </div>
                           <div className={vFormMode === 'create' ? 'col-md-3' : 'col-md-4'}>
-                            <label htmlFor="vDoseUnitInput" className="form-label small fw-semibold">
+                            <span id="vDoseUnitLabel" className="form-label small fw-semibold d-block">
                               Dose Unit
-                            </label>
-                            <input
-                              id="vDoseUnitInput"
-                              type="text"
-                              className="form-control form-control-sm"
-                              placeholder="dose"
-                              value={vDoseUnit}
-                              onChange={(e) => setVDoseUnit(e.target.value)}
-                              maxLength={32}
-                            />
+                            </span>
+                            <p className="form-control-plaintext form-control-sm mb-0" aria-labelledby="vDoseUnitLabel">
+                              dose
+                            </p>
                           </div>
                         </div>
                         <div className="d-flex justify-content-end gap-2 mt-3">
@@ -307,7 +299,6 @@ export default function MasterDataManagementModal({ onClose }) {
                               setVFormId(null);
                               setVCode('');
                               setVName('');
-                              setVDoseUnit('dose');
                             }}
                             disabled={vSubmitting}
                           >
@@ -338,7 +329,6 @@ export default function MasterDataManagementModal({ onClose }) {
                         setVFormId(null);
                         setVCode('');
                         setVName('');
-                        setVDoseUnit('dose');
                       }}
                     >
                       + Add Vaccine Type
@@ -394,7 +384,6 @@ export default function MasterDataManagementModal({ onClose }) {
                                     setVFormId(vt.id);
                                     setVCode(vt.code);
                                     setVName(vt.name);
-                                    setVDoseUnit(vt.doseUnit || 'dose');
                                   }}
                                 >
                                   Edit

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="544" height="128" viewBox="0 0 544 128" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Vaccination Portal</title>
+  <desc id="desc">Emerald shield, vaccine syringe and protection check beside the Vaccination Portal wordmark.</desc>
+  <path d="M64 8C79 18 96 21 112 24V61C112 88 91 108 64 120C37 108 16 88 16 61V24C32 21 49 18 64 8Z" fill="#075E50"/>
+  <path d="M64 18C77 26 90 29 102 32V61C102 82 86 99 64 110" stroke="#8DC9AD" stroke-width="2" stroke-linecap="round"/>
+  <g transform="rotate(42 64 60)">
+    <path d="M58 31V40M70 31V40M53 30H75" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="54" y="41" width="20" height="37" rx="4" fill="#FFFFFF"/>
+    <path d="M64 78V94" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+    <path d="M66 50H72M66 59H72M66 68H72" stroke="#075E50" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M49 41H79" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <circle cx="91" cy="88" r="18" fill="#BFE4CF" stroke="#075E50" stroke-width="5"/>
+  <path d="M83 88L89 94L100 82" stroke="#075E50" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="148" y="62" fill="#183B34" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="-1.2">Vaccination</text>
+  <text x="150" y="94" fill="#075E50" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="21" font-weight="600" letter-spacing="5">PORTAL</text>
+</svg>

@@ -263,11 +263,11 @@ describe('Healthcare Officer Dashboard (HcoDashboardView)', () => {
 
     renderComponent(<StaffDashboardPage />);
 
-    expect(screen.getByText('Healthcare Officer Dashboard')).toBeTruthy();
+    expect(screen.getByText('Healthcare Officer', { selector: '.admin-role-pill' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Welcome, Officer Jane' })).toBeTruthy();
   });
 
-  it('preserves existing staff dashboard layout for Center Manager without HCO redesign', async () => {
+  it('uses the shared staff dashboard shell for Center Manager without HCO tools', async () => {
     authState.user = {
       fullName: 'Manager Bob',
       email: 'bob@center.org',
@@ -276,7 +276,7 @@ describe('Healthcare Officer Dashboard (HcoDashboardView)', () => {
 
     renderComponent(<StaffDashboardPage />);
 
-    expect(screen.getByText('Staff Dashboard', { selector: '.badge' })).toBeTruthy();
+    expect(screen.getByText('Center Manager', { selector: '.admin-role-pill' })).toBeTruthy();
     expect(screen.queryByText('Healthcare Officer Dashboard')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Available Portal Areas' })).toBeTruthy();
   });

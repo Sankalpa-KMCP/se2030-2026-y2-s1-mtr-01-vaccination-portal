@@ -46,6 +46,7 @@ function formatDateTime(isoString) {
 export default function VaccinatorDashboardSection({
   sessions: propSessions,
   initialSlotId,
+  showHeader = true,
 } = {}) {
   const { user } = useAuth();
   const isVaccinator = Boolean(user?.roles?.includes(VACCINATOR_ROLE));
@@ -245,16 +246,18 @@ export default function VaccinatorDashboardSection({
 
   return (
     <section aria-label="Vaccinator Workspace" className="mb-5">
-      {/* Option B: Clean Header */}
-      <div className="mb-4">
-        <h2 className="h3 fw-bold mb-1" id="vaccinator-workspace-title">
-          Vaccinator Dashboard
-        </h2>
-        <div className="small text-secondary fw-medium mb-1">
-          Welcome, {user?.fullName || user?.email || 'Vaccinator'} • Vaccinator
+      {/* Standalone views keep their heading; the shared staff dashboard supplies it when embedded. */}
+      {showHeader && (
+        <div className="mb-4">
+          <h2 className="h3 fw-bold mb-1" id="vaccinator-workspace-title">
+            Vaccinator Dashboard
+          </h2>
+          <div className="small text-secondary fw-medium mb-1">
+            Welcome, {user?.fullName || user?.email || 'Vaccinator'} • Vaccinator
+          </div>
+          <p className="text-muted mb-0">Manage today&apos;s vaccination work</p>
         </div>
-        <p className="text-muted mb-0">Manage today&apos;s vaccination work</p>
-      </div>
+      )}
 
       {feedback && (
         <div className={`alert alert-${feedback.type} alert-dismissible fade show`} role="alert">

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/context/AuthContext';
-import CitizenWelcome from '../components/CitizenWelcome';
+import RoleDashboardHero from '../../../auth/components/RoleDashboardHero';
 import VaccinationJourneyStepper from '../components/VaccinationJourneyStepper';
 import ScreeningOverview from '../components/ScreeningOverview';
 import AppointmentOverview from '../components/AppointmentOverview';
@@ -11,15 +11,30 @@ import RecentActivity from '../components/RecentActivity';
 import BottomHealthBanner from '../components/BottomHealthBanner';
 import useCitizenDashboardData from '../hooks/useCitizenDashboardData';
 import '../citizen-dashboard.css';
+import '../../../auth/styles/admin-dashboard.css';
+
+function formatStatus(status) {
+  if (!status) return 'Active';
+  return status.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase());
+}
 
 export default function CitizenDashboardPage() {
   const { user } = useAuth();
   const dashboardData = useCitizenDashboardData(user?.id);
 
   return (
-    <section className="citizen-dashboard" aria-labelledby="citizen-dashboard-title">
-      {/* 1. Greeting + Citizen Context + Healthcare Visual Banner */}
-      <CitizenWelcome user={user} />
+    <div className="admin-dashboard role-dashboard role-dashboard--citizen citizen-dashboard">
+      <RoleDashboardHero
+        user={user}
+        titleId="citizen-dashboard-title"
+        roleLabel="Citizen"
+        description="Track your vaccination journey, complete campaign screening, and manage appointments from one secure dashboard."
+        profileDetails={[
+          { label: 'Citizen ID', value: user?.id != null ? `#${user.id}` : 'Not provided', icon: 'bi-person-vcard' },
+          { label: 'Account Status', value: formatStatus(user?.accountStatus), icon: 'bi-check-circle' },
+        ]}
+        profileLink={{ to: '/app/citizen/profile', label: 'View Profile' }}
+      />
 
       {user?.accountStatus === 'PENDING_VERIFICATION' && (
         <section className="citizen-dashboard__verification" aria-label="Email verification required">
@@ -31,24 +46,25 @@ export default function CitizenDashboardPage() {
         </section>
       )}
 
-      {/* 2. Main Status Row: Journey Card (45%) + Eligibility Card (27%) + Appointment Card (28%) */}
-      <section className="citizen-dashboard__status-row" aria-label="Vaccination status overview">
-        <VaccinationJourneyStepper dashboardData={dashboardData} />
-        <ScreeningOverview resource={dashboardData.screening} />
-        <AppointmentOverview resource={dashboardData.appointments} />
+      <section className="admin-dashboard__section" aria-labelledby="citizen-overview-title">
+        <div className="admin-section-heading">
+          <h2 id="citizen-overview-title">Vaccination Overview</h2>
+          <p>Your current journey, eligibility information, and appointment status.</p>
+        </div>
+        <div className="citizen-dashboard__status-row" aria-label="Vaccination status overview">
+          <VaccinationJourneyStepper dashboardData={dashboardData} />
+          <ScreeningOverview resource={dashboardData.screening} />
+          <AppointmentOverview resource={dashboardData.appointments} />
+        </div>
       </section>
 
-      {/* 3. Quick Actions: Full-Width White Card Row */}
       <QuickActions />
-
-      {/* 4. Available Campaigns Section */}
       <AvailableCampaigns dashboardData={dashboardData} />
 
-      {/* 5. Bottom Row: Recent Activity (Left) + Bottom Health Banner (Right) */}
       <section className="citizen-dashboard__bottom-row" aria-label="Recent activity and healthcare awareness">
         <RecentActivity dashboardData={dashboardData} />
         <BottomHealthBanner />
       </section>
-    </section>
+    </div>
   );
 }

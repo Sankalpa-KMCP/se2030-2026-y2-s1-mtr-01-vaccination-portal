@@ -300,7 +300,8 @@ public class CampaignUpdateIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Campaign service end date (2026-11-01) must be after service start date (2026-12-01)")));
+                .andExpect(jsonPath("$.fieldErrors[0].field", is("serviceEndDate")))
+                .andExpect(jsonPath("$.fieldErrors[0].message", is("Service end date must be after service start date")));
     }
 
     @Test
@@ -321,7 +322,8 @@ public class CampaignUpdateIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Campaign booking close time (2026-09-01T12:00:00Z) must be after booking open time (2026-09-30T12:00:00Z)")));
+                .andExpect(jsonPath("$.fieldErrors[0].field", is("bookingCloseAt")))
+                .andExpect(jsonPath("$.fieldErrors[0].message", is("Booking close time must be after booking open time")));
     }
 
     @Test
@@ -341,7 +343,8 @@ public class CampaignUpdateIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Campaign booking close time (2027-01-05T12:00:00Z) must not be after campaign service end date (2026-12-31)")));
+                .andExpect(jsonPath("$.fieldErrors[0].field", is("bookingCloseAt")))
+                .andExpect(jsonPath("$.fieldErrors[0].message", is("Booking close date must not be after campaign service end date")));
     }
 
     @Test
