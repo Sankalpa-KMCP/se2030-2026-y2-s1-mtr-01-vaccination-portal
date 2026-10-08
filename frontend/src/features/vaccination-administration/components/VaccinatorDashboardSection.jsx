@@ -370,7 +370,7 @@ export default function VaccinatorDashboardSection({
 
       {/* Top Summary Metrics */}
       <div className="row g-3 mb-4">
-        {/* Waiting in Queue */}
+        {/* Ready Patients */}
         <div className="col-12 col-sm-4">
           <div
             className="card border h-100"
@@ -396,7 +396,7 @@ export default function VaccinatorDashboardSection({
                       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                   </div>
-                  <span className="small text-secondary fw-semibold">Waiting in Queue</span>
+                  <span className="small text-secondary fw-semibold">Ready Patients</span>
                 </div>
                 <span className="badge bg-info-subtle text-info-emphasis border border-info-subtle small">
                   Live
@@ -508,12 +508,12 @@ export default function VaccinatorDashboardSection({
 
       {/* Two-Column Task Workspace */}
       <div className="row g-4">
-        {/* Left column: Checked-In Queue */}
+        {/* Left column: Ready for Vaccination Queue Preview */}
         <div className="col-lg-7">
           <div className="card border-0 shadow-sm h-100 bg-white" style={{ borderRadius: '0.85rem' }}>
-            <div className="card-body p-4">
+            <div className="card-body p-4 d-flex flex-column">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h3 className="h5 fw-bold mb-0 text-dark">Checked-In Queue</h3>
+                <h3 className="h5 fw-bold mb-0 text-dark">Ready for Vaccination</h3>
                 {activeSession && queue && (
                   <span className="badge bg-light text-dark border">
                     {queue.length} citizen{queue.length === 1 ? '' : 's'}
@@ -557,14 +557,14 @@ export default function VaccinatorDashboardSection({
               {/* Empty queue state */}
               {!queueLoading && !queueError && activeSession && queue !== null && queue.length === 0 && (
                 <div className="alert alert-light border text-center py-4 mb-0">
-                  <p className="text-muted small mb-0">No citizens are currently waiting for this session.</p>
+                  <p className="text-muted small mb-0">No checked-in patients are currently ready for vaccination.</p>
                 </div>
               )}
 
               {/* Loaded queue list */}
               {!queueLoading && !queueError && activeSession && queue !== null && queue.length > 0 && (
-                <div className="vstack gap-3">
-                  {queue.map((appointment) => (
+                <div className="vstack gap-3 mb-3 flex-grow-1">
+                  {queue.slice(0, 5).map((appointment) => (
                     <div key={appointment.id} className="border rounded-3 p-3 bg-white shadow-none">
                       <div className="d-flex justify-content-between align-items-start mb-2">
                         <div>
@@ -588,7 +588,7 @@ export default function VaccinatorDashboardSection({
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            aria-label={`Begin vaccination draft for appointment ${appointment.id}`}
+                            aria-label={`Start vaccination for appointment ${appointment.id}`}
                             disabled={pendingAppointmentIds.has(appointment.id)}
                             onClick={() => beginDraftFromAppointment(appointment)}
                           >
@@ -598,7 +598,7 @@ export default function VaccinatorDashboardSection({
                                 Starting…
                               </>
                             ) : (
-                              'Begin Vaccination Draft'
+                              'Start Vaccination'
                             )}
                           </button>
                         )}
@@ -607,6 +607,16 @@ export default function VaccinatorDashboardSection({
                   ))}
                 </div>
               )}
+
+              {/* View Full Check-In Queue Link */}
+              <div className="mt-auto pt-2">
+                <Link
+                  to="/app/staff/checkin-queue"
+                  className="btn btn-outline-primary btn-sm w-100 fw-semibold"
+                >
+                  View Full Check-In Queue
+                </Link>
+              </div>
             </div>
           </div>
         </div>

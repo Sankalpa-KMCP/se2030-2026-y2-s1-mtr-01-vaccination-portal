@@ -162,12 +162,12 @@ describe('VaccinatorDashboardSection (Option B)', () => {
     expect(facilityImg.getAttribute('src')).toBe('/images/vaccination-center.jpg');
 
     // Summary Metric Cards
-    expect(screen.getByText('Waiting in Queue')).toBeTruthy();
+    expect(screen.getByText('Ready Patients')).toBeTruthy();
     expect(screen.getByText('Active Drafts')).toBeTruthy();
     expect(screen.getByText('Corrections Needed')).toBeTruthy();
 
     // Two-Column Task Workspace
-    expect(screen.getByRole('heading', { name: 'Checked-In Queue' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Ready for Vaccination' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Active Work' })).toBeTruthy();
 
     // Raw Slot ID input should be completely absent
@@ -175,7 +175,11 @@ describe('VaccinatorDashboardSection (Option B)', () => {
     expect(screen.queryByRole('button', { name: 'Load Queue' })).toBeNull();
     expect(screen.queryByText(/Morning Slot \(Slot #1\)/i)).toBeNull();
 
-    // Open Vaccination Drafts link
+    // View Full Check-In Queue link and Open Vaccination Drafts link
+    const queueLink = screen.getByRole('link', { name: 'View Full Check-In Queue' });
+    expect(queueLink).toBeTruthy();
+    expect(queueLink.getAttribute('href')).toBe('/app/staff/checkin-queue');
+
     const openLink = screen.getByRole('link', { name: 'Open Vaccination Drafts' });
     expect(openLink).toBeTruthy();
     expect(openLink.getAttribute('href')).toBe('/app/staff/vaccination-drafts');
@@ -320,10 +324,10 @@ describe('VaccinatorDashboardSection (Option B)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Appointment #101')).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Begin vaccination draft for appointment 101' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Start vaccination for appointment 101' })).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Begin vaccination draft for appointment 101' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start vaccination for appointment 101' }));
 
     const expectedDate = toApiIsoDate(getLocalCalendarToday());
     await waitFor(() => {
@@ -345,8 +349,8 @@ describe('VaccinatorDashboardSection (Option B)', () => {
 
     renderSection({ sessions: mockSessions });
 
-    const firstButton = await screen.findByRole('button', { name: 'Begin vaccination draft for appointment 101' });
-    const secondButton = screen.getByRole('button', { name: 'Begin vaccination draft for appointment 102' });
+    const firstButton = await screen.findByRole('button', { name: 'Start vaccination for appointment 101' });
+    const secondButton = screen.getByRole('button', { name: 'Start vaccination for appointment 102' });
     fireEvent.click(firstButton);
     fireEvent.click(secondButton);
 
@@ -380,7 +384,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     await waitFor(() => {
-      expect(screen.getByText('No citizens are currently waiting for this session.')).toBeTruthy();
+      expect(screen.getByText('No checked-in patients are currently ready for vaccination.')).toBeTruthy();
     });
   });
 
@@ -393,7 +397,7 @@ describe('VaccinatorDashboardSection (Option B)', () => {
 
     renderSection({ sessions: mockSessions });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Begin vaccination draft for appointment 101' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start vaccination for appointment 101' }));
 
     await waitFor(() => {
       expect(screen.getByText('Draft Started')).toBeTruthy();

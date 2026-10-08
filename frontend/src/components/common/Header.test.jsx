@@ -86,7 +86,7 @@ describe('Header', () => {
     expect(screen.queryByText('Screening Review')).toBeNull();
   });
 
-  it('shows vaccination and read-only check-in queue links for a vaccinator', () => {
+  it('shows vaccination links and check-in queue for a vaccinator', () => {
     mockUser({
       id: 7,
       fullName: 'Vera Vaccinator',
@@ -97,13 +97,13 @@ describe('Header', () => {
     renderHeader('/app/staff');
 
     expect(screen.getByText('Dashboard').getAttribute('href')).toBe('/app/staff');
+    expect(screen.getByText('Check-In Queue').getAttribute('href')).toBe('/app/staff/checkin-queue');
     expect(screen.getByText('Vaccination Drafts').getAttribute('href')).toBe('/app/staff/vaccination-drafts');
     expect(screen.getByText('Vaccination Records').getAttribute('href')).toBe('/app/staff/vaccination-records');
     expect(screen.getByText('Correction Requests').getAttribute('href')).toBe('/app/staff/correction-requests');
-    expect(screen.getByText('Check-In Queue').getAttribute('href')).toBe('/app/checkin/queue');
   });
 
-  it('renders a compact profile dropdown control for a vaccinator without duplicate logout button', () => {
+  it('renders standard account presentation and logout button for a vaccinator', () => {
     const onLogout = vi.fn();
     mockUser({
       id: 7,
@@ -114,29 +114,13 @@ describe('Header', () => {
     });
     renderHeader('/app/staff', onLogout);
 
-    // Profile trigger button exists
-    const trigger = screen.getByRole('button', { name: /user profile and account menu/i });
-    expect(trigger).toBeTruthy();
     expect(screen.getByText('Dewmini Vaccinator')).toBeTruthy();
     expect(screen.getByText('Vaccinator')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /user profile and account menu/i })).toBeNull();
 
-    // Standalone logout button should NOT exist outside dropdown for Vaccinator
-    expect(screen.queryByRole('button', { name: 'Logout' })).toBeNull();
-
-    // Dropdown is initially closed
-    expect(screen.queryByRole('button', { name: 'Sign Out' })).toBeNull();
-
-    // Click trigger to open dropdown
-    fireEvent.click(trigger);
-
-    // Dropdown content visible
-    expect(screen.getByText('dewmini@gmail.com')).toBeTruthy();
-    expect(screen.getByText('0717040805')).toBeTruthy();
-    const signOutBtn = screen.getByRole('button', { name: 'Sign Out' });
-    expect(signOutBtn).toBeTruthy();
-
-    // Sign out works
-    fireEvent.click(signOutBtn);
+    const logoutBtn = screen.getByRole('button', { name: 'Logout' });
+    expect(logoutBtn).toBeTruthy();
+    fireEvent.click(logoutBtn);
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
 

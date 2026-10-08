@@ -62,7 +62,7 @@ export default function AppointmentCard({ appointment, onCancel, onReschedule })
             <span className="fw-semibold text-dark small">#{appointment.campaignId}</span>
           </div>
           <div className="col-sm-4">
-            <small className="text-secondary d-block">Slot / Session ID</small>
+            <small className="text-secondary d-block">Time Slot ID</small>
             <span className="fw-semibold text-dark small">#{appointment.slotId}</span>
           </div>
         </div>
