@@ -73,14 +73,14 @@ describe('CitizenDashboardPage', () => {
 
   it('shows the named greeting only after login and clears it when dismissed', () => {
     const view = renderDashboard({ fromLogin: true });
-    expect(screen.getByRole('status').textContent).toContain('Welcome, Citizen User');
+    expect(screen.getByRole('dialog', { name: 'Welcome, Citizen User' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close welcome message' }));
-    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
 
     view.unmount();
     renderDashboard();
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('reflects profile changes from shared authenticated user state', () => {

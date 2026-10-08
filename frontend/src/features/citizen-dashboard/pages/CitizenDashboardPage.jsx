@@ -30,13 +30,17 @@ export default function CitizenDashboardPage() {
   }, [location.pathname, navigate]);
 
   return (
-    <div className="admin-dashboard role-dashboard role-dashboard--citizen citizen-dashboard">
+    <>
       {showLoginGreeting && (
         <CitizenLoginGreeting
           name={user?.fullName?.trim() || user?.email || 'Citizen'}
           onComplete={dismissLoginGreeting}
         />
       )}
+      <div
+        className="admin-dashboard role-dashboard role-dashboard--citizen citizen-dashboard"
+        inert={showLoginGreeting ? true : undefined}
+      >
       <RoleDashboardHero
         user={user}
         titleId="citizen-dashboard-title"
@@ -78,6 +82,7 @@ export default function CitizenDashboardPage() {
         <RecentActivity dashboardData={dashboardData} />
         <BottomHealthBanner />
       </section>
-    </div>
+      </div>
+    </>
   );
 }
