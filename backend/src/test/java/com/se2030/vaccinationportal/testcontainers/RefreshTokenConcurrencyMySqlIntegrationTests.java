@@ -131,8 +131,8 @@ public class RefreshTokenConcurrencyMySqlIntegrationTests {
             assertEquals("MySQL", connection.getMetaData().getDatabaseProductName());
         }
         var applied = flyway.info().applied();
-        assertEquals(27, applied.length, "The fresh schema must contain Flyway V0 through V26");
-        assertEquals("26", flyway.info().current().getVersion().toString());
+        assertEquals(28, applied.length, "The fresh schema must contain Flyway V0 through V27");
+        assertEquals("27", flyway.info().current().getVersion().toString());
         assertTrue(Arrays.stream(applied).allMatch(migration -> migration.getState().isApplied()));
         cleanup();
         citizenRole = roleRepository.findByCode("ROLE_CITIZEN")
