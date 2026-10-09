@@ -49,6 +49,7 @@ import WaitlistPage from '../features/appointment-management/pages/WaitlistPage'
 import CheckInManagementPage from '../features/appointment-management/pages/CheckInManagementPage';
 import InventoryManagementPage from '../features/inventory-management/pages/InventoryManagementPage';
 import VaccinationDraftsPage from '../features/vaccination-administration/pages/VaccinationDraftsPage';
+import VaccinatorCheckInQueuePage from '../features/vaccination-administration/pages/VaccinatorCheckInQueuePage';
 import VaccinatorVaccinationRecordsPage from '../features/vaccination-administration/pages/VaccinatorVaccinationRecordsPage';
 import VaccinatorCorrectionRequestsPage from '../features/vaccination-administration/pages/VaccinatorCorrectionRequestsPage';
 import AdminCorrectionRequestsPage from '../features/vaccination-administration/pages/AdminCorrectionRequestsPage';
@@ -252,6 +253,7 @@ export default function PortalRoutes() {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['ROLE_VACCINATOR']} />}>
+            <Route path="staff/checkin-queue" element={<VaccinatorCheckInQueuePage />} />
             <Route path="staff/vaccination-drafts" element={<VaccinationDraftsPage />} />
             <Route path="staff/vaccination-records" element={<VaccinatorVaccinationRecordsPage />} />
             <Route path="staff/correction-requests" element={<VaccinatorCorrectionRequestsPage />} />

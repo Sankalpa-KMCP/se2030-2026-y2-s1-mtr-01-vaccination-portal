@@ -6,6 +6,7 @@ import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionnaireV
 import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuestion;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.AnswerOptionRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireRepository;
+import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireVersionRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.ScreeningQuestionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,9 @@ class ScreeningConfigurationServiceMutabilityTests {
     @Mock
     private QuestionnaireRepository questionnaireRepository;
 
+    @Mock
+    private QuestionnaireVersionRepository questionnaireVersionRepository;
+
     private ScreeningConfigurationService service;
     private ScreeningQuestion question;
     private AnswerOption option;
@@ -44,6 +48,7 @@ class ScreeningConfigurationServiceMutabilityTests {
                 questionRepository,
                 optionRepository,
                 questionnaireRepository,
+                questionnaireVersionRepository,
                 new QuestionnaireMutabilityValidator(questionRepository)
         );
         question = new ScreeningQuestion("ALLERGY", "Do you have allergies?", QuestionType.SINGLE_CHOICE, true, true);

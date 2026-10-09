@@ -7,7 +7,9 @@ import com.se2030.vaccinationportal.screening.questionnaire.model.QuestionType;
 import com.se2030.vaccinationportal.screening.questionnaire.model.ScreeningQuestion;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.AnswerOptionRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireRepository;
+import com.se2030.vaccinationportal.screening.questionnaire.repository.QuestionnaireVersionRepository;
 import com.se2030.vaccinationportal.screening.questionnaire.repository.ScreeningQuestionRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,17 +27,20 @@ public class ScreeningConfigurationService {
     private final ScreeningQuestionRepository questionRepository;
     private final AnswerOptionRepository answerOptionRepository;
     private final QuestionnaireRepository questionnaireRepository;
+    private final QuestionnaireVersionRepository questionnaireVersionRepository;
     private final QuestionnaireMutabilityValidator mutabilityValidator;
 
     public ScreeningConfigurationService(
             ScreeningQuestionRepository questionRepository,
             AnswerOptionRepository answerOptionRepository,
             QuestionnaireRepository questionnaireRepository,
+            QuestionnaireVersionRepository questionnaireVersionRepository,
             QuestionnaireMutabilityValidator mutabilityValidator
     ) {
         this.questionRepository = questionRepository;
         this.answerOptionRepository = answerOptionRepository;
         this.questionnaireRepository = questionnaireRepository;
+        this.questionnaireVersionRepository = questionnaireVersionRepository;
         this.mutabilityValidator = mutabilityValidator;
     }
 
@@ -222,5 +227,23 @@ public class ScreeningConfigurationService {
 
         Questionnaire questionnaire = new Questionnaire(code.trim(), name.trim(), description != null ? description.trim() : null);
         return questionnaireRepository.save(questionnaire);
+    }
+
+    public void deleteQuestionnaire(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Questionnaire ID cannot be null");
+        }
+        questionnaireRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Questionnaire not found with ID: " + id));
+        if (questionnaireVersionRepository.existsByQuestionnaireId(id)) {
+            throw new IllegalStateException("Questionnaire cannot be deleted because it contains versions");
+        }
+        try {
+            if (questionnaireRepository.deleteIfWithoutVersions(id) != 1) {
+                throw new IllegalStateException("Questionnaire cannot be deleted because it is now referenced by a version or another record");
+            }
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalStateException("Questionnaire cannot be deleted because it is referenced by another record", exception);
+        }
     }
 }

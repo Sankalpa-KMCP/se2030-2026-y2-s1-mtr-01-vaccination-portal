@@ -131,6 +131,42 @@ class VaccinationFinalizationServiceTests {
     }
 
     @Test
+    void finalize_whenDoseNumberIsTwo_deductsSingleUnitStockIndependentlyOfDoseNumber() {
+        VaccinationDraft draft = readyDraft(101L, 42L);
+        draft.setDoseNumber(2);
+        when(draftRepository.findById(101L)).thenReturn(Optional.of(draft));
+        when(recordRepository.existsByAppointmentId(42L)).thenReturn(false);
+
+        AppointmentValidationSnapshot appointment = new AppointmentValidationSnapshot(
+                42L, true, 501L, 601L, 701L, 10L, 1L
+        );
+        when(appointmentPort.findByAppointmentId(42L)).thenReturn(Optional.of(appointment));
+
+        BatchAvailability available = new BatchAvailability(
+                12L, 1L, BatchStatus.ACTIVE, LocalDate.of(2027, 1, 1), 50, BatchAvailabilityReason.AVAILABLE
+        );
+        when(inventoryPort.getBatchAvailability(10L, 12L)).thenReturn(available);
+
+        VaccinationRecord savedRecord = new VaccinationRecord(
+                42L, 501L, 601L, 10L, 201L, 12L, 2, NOW, null, "Authorized notes", NOW
+        );
+        ReflectionTestUtils.setField(savedRecord, "id", 888L);
+        when(recordRepository.saveAndFlush(any(VaccinationRecord.class))).thenReturn(savedRecord);
+
+        DigitalCertificate certificate = new DigitalCertificate(
+                savedRecord.getId(), "CERT-2026-DOSE2", "tok_verify_456", NOW
+        );
+        when(certificateService.issueCertificateForVaccinationRecord(savedRecord.getId())).thenReturn(certificate);
+
+        FinalizeVaccinationResponse response = finalizationService.finalizeDraft(101L, 201L);
+
+        assertNotNull(response);
+        assertEquals(888L, response.vaccinationRecordId());
+        assertEquals(VaccinationDraftStatus.FINALIZED, draft.getStatus());
+        verify(inventoryPort).deductVaccinationDose(10L, 12L, 888L);
+    }
+
+    @Test
     void finalize_draftWithoutPhysicalConfirmation_throwsException() {
         VaccinationDraft draft = new VaccinationDraft(42L);
         draft.setPhysicalAdministrationConfirmed(false);

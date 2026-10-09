@@ -24,6 +24,7 @@ import {
   deleteAnswerOption,
   deleteEligibilityRule,
   deleteQuestion,
+  deleteQuestionnaire,
   deleteQuestionnaireVersion,
   getAnswerOption,
   getActiveScreeningSubmission,
@@ -185,6 +186,11 @@ describe('screeningApi', () => {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  });
+
+  it('deletes a questionnaire container through the exact backend route', async () => {
+    await deleteQuestionnaire(7);
+    expect(clientMocks.apiRequest).toHaveBeenLastCalledWith('/v1/screening/questionnaires/7', { method: 'DELETE' });
   });
 
   it('uses the version list, retrieval, and bodyless draft-creation routes', async () => {

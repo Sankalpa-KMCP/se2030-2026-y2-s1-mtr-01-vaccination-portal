@@ -99,8 +99,39 @@ class CertificatePdfServiceTest {
         assertThat(pdfString).contains("Pfizer Comirnaty");
         assertThat(pdfString).contains("BATCH-2026-A");
         assertThat(pdfString).contains("Metro Vaccination Center");
+        assertThat(pdfString).contains("WEB-BASED VACCINATION PORTAL");
+        assertThat(pdfString).contains("DIGITAL VACCINATION CERTIFICATE");
+        assertThat(pdfString).contains("CERTIFICATE HOLDER");
+        assertThat(pdfString).contains("VACCINATION DETAILS");
+        assertThat(pdfString).contains("CERTIFICATE DETAILS");
+        assertThat(pdfString).contains("PUBLIC VERIFICATION");
+        assertThat(pdfString).contains("This certificate was generated from a finalized vaccination record maintained by the Web-Based Vaccination Portal.");
+        assertThat(pdfString).doesNotContain("Ministry of Health");
+        assertThat(pdfString).doesNotContain("National Immunization Registry");
+        assertThat(pdfString).doesNotContain("ISSUED & VERIFIED");
+        assertThat(pdfString).doesNotContain("government-grade");
+        assertThat(pdfString).doesNotContain("Government of Sri Lanka");
         assertThat(pdfString).doesNotContain("Citizen Subject ID:");
         assertThat(pdfString).doesNotContain("Vaccine Batch ID:");
         assertThat(pdfString).doesNotContain("Vaccination Center ID:");
+    }
+
+    @Test
+    void generatesValidPdfForSupersededCertificate() {
+        DigitalCertificate cert = new DigitalCertificate(
+                1L, "CERT-OLD-12345", "token-old-secret",
+                Instant.parse("2026-09-01T10:10:00Z"), null,
+                606L, 1, Instant.parse("2026-09-01T10:00:00Z")
+        );
+        cert.supersede(Instant.parse("2026-09-02T12:00:00Z"), 999L, "Replaced by updated record");
+
+        byte[] pdf = pdfService.generateCertificatePdf(cert, null);
+
+        assertThat(pdf).isNotNull();
+        String pdfString = new String(pdf, StandardCharsets.ISO_8859_1);
+        assertThat(pdfString).startsWith("%PDF-1.4");
+        assertThat(pdfString).contains("STATUS: SUPERSEDED");
+        assertThat(pdfString).doesNotContain("Ministry of Health");
+        assertThat(pdfString).doesNotContain("National Immunization Registry");
     }
 }

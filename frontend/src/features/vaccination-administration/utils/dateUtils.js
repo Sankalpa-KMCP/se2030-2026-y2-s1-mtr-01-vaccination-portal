@@ -24,13 +24,21 @@ export function formatLocalDateOnly(value) {
 }
 
 /**
- * Converts a local 'YYYY-MM-DD' date into the backend API ISO midnight format: `${dateStr}T00:00:00Z`.
+ * Converts a date string into an ISO-8601 string for the backend API.
+ * When the date string represents today's local calendar day, the current instant is returned
+ * to prevent UTC midnight from advancing into the future for timezones ahead of UTC (e.g. UTC+05:30).
  *
- * @param {string} dateStr - Date string in 'YYYY-MM-DD' format
- * @returns {string} ISO-8601 string at UTC midnight
+ * @param {string} dateStr - Date string in 'YYYY-MM-DD' format (or ISO string)
+ * @param {Date} [now=new Date()] - Reference current date
+ * @returns {string} ISO-8601 string
  */
-export function toApiIsoDate(dateStr) {
+export function toApiIsoDate(dateStr, now = new Date()) {
   if (!dateStr) return '';
+  if (dateStr.includes('T')) return dateStr;
+  const today = getLocalCalendarToday(now);
+  if (dateStr === today) {
+    return now.toISOString();
+  }
   return `${dateStr}T00:00:00Z`;
 }
 

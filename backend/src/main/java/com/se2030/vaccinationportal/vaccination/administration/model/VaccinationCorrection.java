@@ -71,6 +71,11 @@ public class VaccinationCorrection {
     @Column(name = "status", nullable = false, length = 16)
     private VaccinationCorrectionStatus status;
 
+    @NotNull(message = "Request type is required")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "request_type", nullable = false, length = 32)
+    private VaccinationCorrectionType requestType;
+
     @Column(name = "reviewed_by")
     private Long reviewedBy;
 
@@ -101,7 +106,8 @@ public class VaccinationCorrection {
                 reason,
                 correctedBy,
                 correctedAt,
-                VaccinationCorrectionStatus.PENDING
+                VaccinationCorrectionStatus.PENDING,
+                VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
         );
     }
 
@@ -114,6 +120,30 @@ public class VaccinationCorrection {
             Long correctedBy,
             Instant correctedAt,
             VaccinationCorrectionStatus status
+    ) {
+        this(
+                vaccinationRecordId,
+                fieldName,
+                oldValue,
+                newValue,
+                reason,
+                correctedBy,
+                correctedAt,
+                status,
+                VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
+        );
+    }
+
+    public VaccinationCorrection(
+            Long vaccinationRecordId,
+            VaccinationCorrectionField fieldName,
+            String oldValue,
+            String newValue,
+            String reason,
+            Long correctedBy,
+            Instant correctedAt,
+            VaccinationCorrectionStatus status,
+            VaccinationCorrectionType requestType
     ) {
         if (vaccinationRecordId == null || vaccinationRecordId <= 0) {
             throw new IllegalArgumentException("Vaccination record ID must be positive");
@@ -135,6 +165,7 @@ public class VaccinationCorrection {
         this.correctedBy = correctedBy;
         this.correctedAt = correctedAt;
         this.status = status != null ? status : VaccinationCorrectionStatus.PENDING;
+        this.requestType = requestType != null ? requestType : VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE;
     }
 
     public void approve(Long reviewerId, Instant reviewedAt, String reviewReason) {
@@ -239,6 +270,10 @@ public class VaccinationCorrection {
 
     public VaccinationCorrectionStatus getStatus() {
         return status;
+    }
+
+    public VaccinationCorrectionType getRequestType() {
+        return requestType;
     }
 
     public Long getReviewedBy() {
