@@ -31,6 +31,14 @@ import org.springframework.transaction.annotation.Transactional;
 @ActiveProfiles("test")
 @Transactional
 class VaccinationCampaignServiceQueryTests {
+    @org.springframework.boot.test.context.TestConfiguration
+    static class DateClockConfig {
+        @org.springframework.context.annotation.Bean
+        @org.springframework.context.annotation.Primary
+        java.time.Clock campaignDateClock() {
+            return java.time.Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), java.time.ZoneOffset.UTC);
+        }
+    }
 
     @Autowired
     private VaccinationCampaignService campaignService;
