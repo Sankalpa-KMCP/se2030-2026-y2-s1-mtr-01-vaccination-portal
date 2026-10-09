@@ -1,4 +1,5 @@
 .cc-intro {
+  --cc-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: fixed;
   inset: 0;
   z-index: 1100;
@@ -6,51 +7,58 @@
   place-items: center;
   overflow: hidden;
   padding: clamp(1rem, 3vw, 2rem);
-  background:
-    radial-gradient(circle at 50% 43%, #effcf6 0, #e5f6ef 34%, transparent 67%),
-    linear-gradient(145deg, #f9fffc, #e7f4ee);
+  background: radial-gradient(ellipse at 50% 44%, #e3f4ec 0, #f5f8ef 46%, #fafaf5 78%);
   color: #123b39;
   font-family: "Public Sans", system-ui, sans-serif;
-  animation: cc-intro-exit 1000ms ease-in-out 2600ms both;
+  animation: cc-intro-exit 600ms cubic-bezier(0.65, 0, 0.35, 1) 2600ms both;
+}
+
+.cc-intro::before,
+.cc-intro::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
 }
 
 .cc-intro::before {
-  position: absolute;
   inset: 0;
   background-image: radial-gradient(#0d776f 0.6px, transparent 0.6px);
-  background-size: 22px 22px;
-  content: "";
-  opacity: 0.07;
-  pointer-events: none;
+  background-size: 24px 24px;
+  opacity: 0.055;
+}
+
+.cc-intro::after {
+  width: min(80vw, 920px);
+  aspect-ratio: 1;
+  border: 1px solid #cfe4d780;
+  border-radius: 50%;
+  box-shadow: 0 0 0 70px #dcebe52b, 0 0 0 140px #dcebe51a;
+  animation: cc-intro-field 1800ms var(--cc-ease) both;
 }
 
 .cc-intro__skip {
   position: absolute;
   top: clamp(1rem, 3vw, 2rem);
   right: clamp(1rem, 3vw, 2.5rem);
-  z-index: 1;
-  padding: 0.65rem 1rem;
-  border: 1px solid #9ccfc2;
+  z-index: 2;
+  padding: 0.7rem 1.1rem;
+  min-height: 44px;
+  border: 1px solid #bfd8cc;
   border-radius: 999px;
-  background: #fff;
+  background: #ffffffc9;
   color: #0a625d;
   font: 600 0.875rem "Public Sans", system-ui, sans-serif;
   cursor: pointer;
-  box-shadow: 0 5px 18px rgba(13, 119, 111, 0.08);
+  transition: background 160ms ease, border-color 160ms ease;
 }
 
-.cc-intro__skip:hover {
-  border-color: #0d776f;
-  background: #eefaf4;
-}
-
-.cc-intro__skip:focus-visible {
-  outline: 3px solid #0d776f;
-  outline-offset: 3px;
-}
+.cc-intro__skip span { margin-left: 0.7rem; }
+.cc-intro__skip:hover { border-color: #0d776f; background: #fff; }
+.cc-intro__skip:focus-visible { outline: 3px solid #0d776f; outline-offset: 4px; }
 
 .cc-intro__content {
   position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,131 +67,152 @@
 }
 
 .cc-intro__eyebrow {
-  margin: 0;
+  margin: 0 0 0.3rem;
   color: #398a79;
-  font-size: clamp(0.7rem, 1.7vw, 0.82rem);
+  font-size: clamp(0.65rem, 1.7vw, 0.78rem);
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  opacity: 0;
-  animation: cc-intro-appear 300ms ease-out 1100ms both;
+  animation: cc-intro-message 650ms var(--cc-ease) 180ms both;
 }
 
 .cc-intro__art {
   display: block;
   width: min(100%, 760px);
-  max-height: min(58vh, 440px);
+  max-height: min(54svh, 440px);
   overflow: visible;
 }
 
 .cc-intro__halo {
-  opacity: 0;
-  transform: scale(0.7);
   transform-origin: 380px 218px;
-  animation: cc-intro-halo 620ms ease-out 1180ms both;
+  animation: cc-intro-halo 1000ms var(--cc-ease) 700ms both;
 }
 
 .cc-intro__halo-ring {
-  opacity: 0;
-  animation: cc-intro-appear 480ms ease-out 1200ms both;
+  transform-origin: 380px 218px;
+  animation: cc-intro-ring 1200ms var(--cc-ease) 800ms both;
+}
+
+.cc-intro__orbit {
+  transform-origin: 380px 218px;
+  animation: cc-intro-orbit 2000ms var(--cc-ease) 300ms both;
 }
 
 .cc-intro__citizen {
-  opacity: 0;
-  animation: cc-intro-citizen 200ms ease-out calc(20ms + var(--cc-index) * 50ms) both;
+  animation: cc-intro-citizen 380ms var(--cc-ease) calc(var(--cc-index) * 44ms) both;
 }
 
 .cc-intro__connection {
-  opacity: 0.82;
   stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: cc-intro-connect 420ms ease-out calc(500ms + var(--cc-index) * 55ms) both;
+  animation: cc-intro-connect 700ms var(--cc-ease) calc(450ms + var(--cc-index) * 45ms) both;
+}
+
+.cc-intro__signal {
+  stroke-dasharray: 0.075 0.925;
+  animation: cc-intro-signal 760ms cubic-bezier(0.4, 0, 0.2, 1) calc(750ms + var(--cc-index) * 65ms) both;
 }
 
 .cc-intro__shield {
-  opacity: 0;
-  transform: scale(0.72);
   transform-origin: 380px 218px;
-  filter: drop-shadow(0 8px 18px rgba(13, 119, 111, 0.16));
-  animation: cc-intro-shield 580ms cubic-bezier(0.2, 1.1, 0.4, 1) 1200ms both;
+  filter: drop-shadow(0 12px 20px #0d776f20);
+  animation: cc-intro-shield 700ms var(--cc-ease) 1000ms both;
 }
 
-.cc-intro__syringe {
-  opacity: 0;
-  animation: cc-intro-appear 320ms ease-out 1480ms both;
-}
+.cc-intro__syringe { animation: cc-intro-appear 420ms ease-out 1350ms both; }
 
 .cc-intro__pulse {
-  opacity: 0;
   transform-origin: 380px 218px;
-  animation: cc-intro-pulse 650ms ease-out 1550ms both;
+  animation: cc-intro-pulse 900ms ease-out 1500ms both;
 }
 
 .cc-intro__message {
-  margin-top: -0.75rem;
-  opacity: 0;
-  transform: translateY(12px);
-  animation: cc-intro-message 500ms ease-out 1800ms both;
+  margin-top: -0.5rem;
+  animation: cc-intro-message 600ms var(--cc-ease) 1500ms both;
 }
 
 .cc-intro__message h1 {
   margin: 0;
   color: #0b4e48;
-  font-size: clamp(1.7rem, 4vw, 2.7rem);
+  font-size: clamp(1.9rem, 4.5vw, 3.2rem);
   font-weight: 750;
-  letter-spacing: -0.035em;
-  line-height: 1.2;
+  letter-spacing: -0.045em;
+  line-height: 1.15;
 }
 
 .cc-intro__message p {
-  margin: 0.55rem 0 0;
+  margin: 0.75rem 0 0;
   color: #4e716b;
   font-size: clamp(0.85rem, 2vw, 1.05rem);
   line-height: 1.5;
+  animation: cc-intro-message 500ms var(--cc-ease) 1700ms both;
 }
 
 @keyframes cc-intro-citizen {
-  from { opacity: 0; transform: scale(0.72); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateY(14px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 @keyframes cc-intro-connect {
-  to { stroke-dashoffset: 0; }
+  from { opacity: 0; stroke-dashoffset: 1; }
+  to { opacity: 0.65; stroke-dashoffset: 0; }
 }
-
+@keyframes cc-intro-signal {
+  0% { opacity: 0; stroke-dashoffset: 0.075; }
+  15%, 75% { opacity: 1; }
+  100% { opacity: 0; stroke-dashoffset: -1; }
+}
 @keyframes cc-intro-halo {
-  to { opacity: 0.78; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.65); }
+  to { opacity: 0.6; transform: scale(1); }
 }
-
-@keyframes cc-intro-shield {
+@keyframes cc-intro-ring {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 0.75; transform: scale(1); }
+}
+@keyframes cc-intro-orbit {
+  from { opacity: 0; transform: rotate(-18deg) scale(0.9); }
+  to { opacity: 0.6; transform: rotate(0) scale(1); }
+}
+@keyframes cc-intro-field {
+  from { opacity: 0; transform: scale(0.85); }
   to { opacity: 1; transform: scale(1); }
 }
-
-@keyframes cc-intro-appear {
-  to { opacity: 1; }
+@keyframes cc-intro-shield {
+  from { opacity: 0; transform: translateY(12px) scale(0.85); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
+@keyframes cc-intro-appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cc-intro-pulse {
-  35% { opacity: 0.65; }
-  to { opacity: 0; transform: scale(1.55); }
+  0% { opacity: 0; transform: scale(1); }
+  25% { opacity: 0.5; }
+  100% { opacity: 0; transform: scale(1.85); }
 }
-
 @keyframes cc-intro-message {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes cc-intro-exit {
-  to { opacity: 0; visibility: hidden; }
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.025); visibility: hidden; }
 }
 
 @media (max-width: 600px) {
-  .cc-intro__content { width: 100%; }
-  .cc-intro__art { width: min(100%, 440px); max-height: 45vh; }
-  .cc-intro__message { margin-top: 0; }
-  .cc-intro__skip { padding: 0.6rem 0.85rem; }
+  .cc-intro__art { width: 100%; max-height: 42svh; }
+  .cc-intro__content { padding-top: 2rem; }
+  .cc-intro__message { margin-top: 0.5rem; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .cc-intro__content { width: min(100%, 560px); }
+  .cc-intro__art { max-height: 50svh; }
+  .cc-intro__eyebrow { font-size: 0.6rem; }
+  .cc-intro__message h1 { font-size: 1.5rem; }
+  .cc-intro__message p { margin-top: 0.3rem; font-size: 0.8rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cc-intro,
-  .cc-intro * { animation: none !important; }
+  .cc-intro, .cc-intro *, .cc-intro::before, .cc-intro::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .cc-intro__signal, .cc-intro__pulse { opacity: 0; }
 }
