@@ -44,6 +44,9 @@ import PortalRoutes from './routes';
 vi.mock('../features/vaccination-administration/pages/VaccinationDraftsPage', () => ({
   default: () => 'Vaccination Drafts Test Page',
 }));
+vi.mock('../features/vaccination-administration/pages/VaccinatorCheckInQueuePage', () => ({
+  default: () => 'Vaccinator Check-In Queue Test Page',
+}));
 
 vi.mock('../features/screening/pages/CitizenEligibilityPage', () => ({ default: () => 'Citizen Eligibility Test Page' }));
 vi.mock('../features/screening/pages/CitizenScreeningHistoryPage', () => ({ default: () => 'Citizen History Test Page' }));
@@ -116,6 +119,19 @@ describe('shared routing and role guards', () => {
     setAuth({ roles: ['ROLE_VACCINATOR'] });
     render(<MemoryRouter initialEntries={['/app/staff/vaccination-drafts']}><PortalRoutes /></MemoryRouter>);
     expect(screen.getByText('Vaccination Drafts Test Page')).toBeTruthy();
+  });
+
+  it('allows a Vaccinator to open check-in queue', () => {
+    setAuth({ roles: ['ROLE_VACCINATOR'] });
+    render(<MemoryRouter initialEntries={['/app/staff/checkin-queue']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByText('Vaccinator Check-In Queue Test Page')).toBeTruthy();
+  });
+
+  it.each(['ROLE_CITIZEN', 'ROLE_ADMIN', 'ROLE_HEALTHCARE_OFFICER'])('denies check-in queue to %s', (role) => {
+    setAuth({ roles: [role] });
+    render(<MemoryRouter initialEntries={['/app/staff/checkin-queue']}><PortalRoutes /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Not Authorized' })).toBeTruthy();
+    expect(screen.queryByText('Vaccinator Check-In Queue Test Page')).toBeNull();
   });
 
   it.each(['ROLE_CITIZEN', 'ROLE_ADMIN', 'ROLE_HEALTHCARE_OFFICER'])('denies draft CRUD to %s', (role) => {

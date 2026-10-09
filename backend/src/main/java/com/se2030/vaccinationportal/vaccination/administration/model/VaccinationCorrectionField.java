@@ -32,7 +32,7 @@ public enum VaccinationCorrectionField {
         }
         String normalized = apiName.trim();
         return Arrays.stream(values())
-                .filter(field -> field.apiName.equalsIgnoreCase(normalized))
+                .filter(field -> field.apiName.equalsIgnoreCase(normalized) || field.name().equalsIgnoreCase(normalized))
                 .findFirst()
                 .orElse(null);
     }

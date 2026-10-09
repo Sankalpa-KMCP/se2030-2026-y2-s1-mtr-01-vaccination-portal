@@ -109,7 +109,7 @@ public class ClinicalLifecycleConcurrencyIntegrationTests {
     void applicationAndRejectionKeepEffectiveRecordAndCertificateConsistent(boolean applicationWins) throws Exception {
         Long recordId = record();
         Long originalId = certificateService.issueCertificateForVaccinationRecord(recordId).getId();
-        Long correctionId = correctionService.createCitizenCorrection(recordId, request(), 41L).getId();
+        Long correctionId = correctionService.createVaccinatorAmendment(recordId, vaccinatorRequest(), 43L).getId();
         correctionService.approveCorrection(recordId, correctionId, 42L, "Confirmed");
         Callable<?> application = () -> lifecycle.applyApprovedCorrection(recordId, correctionId, 43L);
         Callable<?> rejection = () -> correctionService.rejectCorrection(recordId, correctionId, 42L, "Rejected");
@@ -133,8 +133,8 @@ public class ClinicalLifecycleConcurrencyIntegrationTests {
     void concurrentCitizenCreationPersistsOnlyOneActiveRequest() throws Exception {
         Long id = record();
         Throwable loser = compete(() -> records.findByIdForUpdate(id).orElseThrow(),
-                () -> correctionService.createCitizenCorrection(id, request(), 41L),
-                () -> correctionService.createCitizenCorrection(id, request(), 41L));
+                () -> correctionService.createCitizenCorrection(id, citizenRequest(), 41L),
+                () -> correctionService.createCitizenCorrection(id, citizenRequest(), 41L));
         assertInstanceOf(DuplicateVaccinationCorrectionException.class, loser);
         var history = corrections.findByVaccinationRecordIdOrderByCorrectedAtAscIdAsc(id);
         assertEquals(1, history.size());
@@ -146,7 +146,7 @@ public class ClinicalLifecycleConcurrencyIntegrationTests {
     void manualReissueAndApplicationShareRecordGuard(boolean applicationWins) throws Exception {
         Long id = record();
         certificateService.issueCertificateForVaccinationRecord(id);
-        Long correctionId = correctionService.createCitizenCorrection(id, request(), 41L).getId();
+        Long correctionId = correctionService.createVaccinatorAmendment(id, vaccinatorRequest(), 43L).getId();
         correctionService.approveCorrection(id, correctionId, 42L, "Confirmed");
         Callable<?> application = () -> lifecycle.applyApprovedCorrection(id, correctionId, 43L);
         Callable<?> reissue = () -> certificateService.reissueCertificate(id, "Manual replacement", 42L);
@@ -193,8 +193,17 @@ public class ClinicalLifecycleConcurrencyIntegrationTests {
         return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     }
 
-    private CreateVaccinationCorrectionRequest request() {
-        return new CreateVaccinationCorrectionRequest("doseNumber", "2", "Correct dose", 41L);
+    private CreateVaccinationCorrectionRequest citizenRequest() {
+        return new CreateVaccinationCorrectionRequest(
+                "authorizedNotes",
+                "Certificate display correction",
+                "Correct certificate display information",
+                41L
+        );
+    }
+
+    private CreateVaccinationCorrectionRequest vaccinatorRequest() {
+        return new CreateVaccinationCorrectionRequest("doseNumber", "2", "Correct dose", 43L);
     }
 
     private Long record() {

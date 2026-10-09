@@ -7,6 +7,7 @@ import com.se2030.vaccinationportal.campaign.api.staff.StaffContextQuery;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -43,11 +44,26 @@ class CheckInCenterAuthorizationServiceTests {
     void appointmentAuthorizationUsesItsAuthoritativeSlot() {
         UserPrincipal vaccinator = principal(42L, "ROLE_VACCINATOR");
         when(appointments.findById(77L)).thenReturn(Optional.of(new Appointment(1L, 2L, 4002L)));
-        when(slots.getCenterIdForSlot(4002L)).thenReturn(Optional.of(502L));
-        when(staff.isActiveAtCenter(vaccinator, 502L)).thenReturn(true);
+        when(slots.getSessionIdForSlot(4002L)).thenReturn(Optional.of(602L));
+        when(staff.isAssignedToSession(org.mockito.ArgumentMatchers.eq(vaccinator),
+                org.mockito.ArgumentMatchers.eq(602L), org.mockito.ArgumentMatchers.any(Instant.class)))
+                .thenReturn(true);
 
         assertDoesNotThrow(() -> service.requireAppointmentAccess(vaccinator, 77L));
-        verify(staff).isActiveAtCenter(vaccinator, 502L);
+        verify(staff).isAssignedToSession(org.mockito.ArgumentMatchers.eq(vaccinator),
+                org.mockito.ArgumentMatchers.eq(602L), org.mockito.ArgumentMatchers.any(Instant.class));
+    }
+
+    @Test
+    void vaccinatorCannotReadQueueForUnassignedSession() {
+        UserPrincipal vaccinator = principal(42L, "ROLE_VACCINATOR");
+        when(slots.getSessionIdForSlot(4003L)).thenReturn(Optional.of(603L));
+        when(staff.isAssignedToSession(org.mockito.ArgumentMatchers.eq(vaccinator),
+                org.mockito.ArgumentMatchers.eq(603L), org.mockito.ArgumentMatchers.any(Instant.class)))
+                .thenReturn(false);
+
+        assertThrows(AccessDeniedException.class,
+                () -> service.requireSlotAccess(vaccinator, 4003L));
     }
 
     @Test

@@ -10,9 +10,11 @@ import com.se2030.vaccinationportal.vaccination.administration.exception.Vaccina
 import com.se2030.vaccinationportal.vaccination.administration.mapper.VaccinationCorrectionMapper;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionType;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationRecord;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationCorrectionRepository;
 import com.se2030.vaccinationportal.vaccination.administration.repository.VaccinationRecordRepository;
+import com.se2030.vaccinationportal.vaccination.administration.strategy.CorrectionRequestStrategy;
 import com.se2030.vaccinationportal.vaccination.certificate.repository.DigitalCertificateRepository;
 import com.se2030.vaccinationportal.vaccination.query.model.EffectiveVaccinationRecordSnapshot;
 import com.se2030.vaccinationportal.vaccination.query.service.EffectiveVaccinationRecordService;
@@ -36,16 +38,7 @@ public class VaccinationCorrectionService {
     private final Clock clock;
     private final DigitalCertificateRepository digitalCertificateRepository;
     private final AccountDisplayReader accountDisplayReader;
-
-    public VaccinationCorrectionService(
-            VaccinationRecordRepository vaccinationRecordRepository,
-            VaccinationCorrectionRepository correctionRepository,
-            EffectiveVaccinationRecordService effectiveRecordService,
-            VaccinationCorrectionValueCodec valueCodec,
-            Clock clock
-    ) {
-        this(vaccinationRecordRepository, correctionRepository, effectiveRecordService, valueCodec, clock, null, null);
-    }
+    private final List<CorrectionRequestStrategy> correctionRequestStrategies;
 
     @Autowired
     public VaccinationCorrectionService(
@@ -55,7 +48,8 @@ public class VaccinationCorrectionService {
             VaccinationCorrectionValueCodec valueCodec,
             Clock clock,
             DigitalCertificateRepository digitalCertificateRepository,
-            AccountDisplayReader accountDisplayReader
+            AccountDisplayReader accountDisplayReader,
+            List<CorrectionRequestStrategy> correctionRequestStrategies
     ) {
         this.vaccinationRecordRepository = vaccinationRecordRepository;
         this.correctionRepository = correctionRepository;
@@ -64,6 +58,7 @@ public class VaccinationCorrectionService {
         this.clock = clock != null ? clock : Clock.systemUTC();
         this.digitalCertificateRepository = digitalCertificateRepository;
         this.accountDisplayReader = accountDisplayReader;
+        this.correctionRequestStrategies = List.copyOf(correctionRequestStrategies);
     }
 
     public VaccinationCorrection createCorrection(
@@ -71,25 +66,64 @@ public class VaccinationCorrectionService {
             CreateVaccinationCorrectionRequest request,
             Long actorId
     ) {
-        return createCorrection(vaccinationRecordId, request, actorId, false);
+        return createCorrection(vaccinationRecordId, request, actorId, false, VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE);
     }
 
     /** Citizen requests retain the existing one-active-request policy; admin history is unrestricted. */
     public VaccinationCorrection createCitizenCorrection(
             Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long actorId
     ) {
-        return createCorrection(vaccinationRecordId, request, actorId, true);
+        return createUsingStrategy(
+                vaccinationRecordId,
+                request,
+                actorId,
+                VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
+        );
+    }
+
+    public VaccinationCorrection createVaccinatorAmendment(
+            Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long vaccinatorId
+    ) {
+        return createUsingStrategy(
+                vaccinationRecordId,
+                request,
+                vaccinatorId,
+                VaccinationCorrectionType.VACCINATOR_RECORD_AMENDMENT
+        );
+    }
+
+    private VaccinationCorrection createUsingStrategy(
+            Long vaccinationRecordId,
+            CreateVaccinationCorrectionRequest request,
+            Long actorId,
+            VaccinationCorrectionType requestType
+    ) {
+        VaccinationRecord record = lockRecord(vaccinationRecordId);
+        CorrectionRequestStrategy strategy = strategyFor(requestType);
+        CreateVaccinationCorrectionRequest preparedRequest = strategy.prepareCreate(record, request, actorId);
+        return createCorrection(record, preparedRequest, actorId, true, requestType);
     }
 
     private VaccinationCorrection createCorrection(
             Long vaccinationRecordId, CreateVaccinationCorrectionRequest request, Long actorId,
-            boolean requireSingleActiveRequest
+            boolean requireSingleActiveRequest,
+            VaccinationCorrectionType requestType
     ) {
         VaccinationRecord record = lockRecord(vaccinationRecordId);
+        return createCorrection(record, request, actorId, requireSingleActiveRequest, requestType);
+    }
+
+    private VaccinationCorrection createCorrection(
+            VaccinationRecord record,
+            CreateVaccinationCorrectionRequest request,
+            Long actorId,
+            boolean requireSingleActiveRequest,
+            VaccinationCorrectionType requestType
+    ) {
         validateRequest(request, actorId);
         // A parent row exists even when there are no corrections. Lock it before the
         // current locking read, avoiding both an empty-result race and stale MySQL snapshots.
-        if (requireSingleActiveRequest && !correctionRepository.findActiveByRecordForUpdate(vaccinationRecordId).isEmpty()) {
+        if (requireSingleActiveRequest && !correctionRepository.findActiveByRecordForUpdate(record.getId()).isEmpty()) {
             throw new DuplicateVaccinationCorrectionException(
                     "An active correction request is already pending for this vaccination record");
         }
@@ -131,9 +165,27 @@ public class VaccinationCorrectionService {
                 request.reason(),
                 actorId,
                 clock.instant(),
-                com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.PENDING
+                com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionStatus.PENDING,
+                requestType != null ? requestType : VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
         );
         return correctionRepository.save(correction);
+    }
+
+    private CorrectionRequestStrategy strategyFor(VaccinationCorrectionType requestType) {
+        List<CorrectionRequestStrategy> matching = correctionRequestStrategies.stream()
+                .filter(strategy -> strategy.supports(requestType))
+                .toList();
+        if (matching.isEmpty()) {
+            throw new InvalidVaccinationCorrectionException(
+                    "No correction request strategy configured for type: " + requestType
+            );
+        }
+        if (matching.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple correction request strategies configured for type: " + requestType
+            );
+        }
+        return matching.get(0);
     }
 
     public VaccinationCorrection createCorrection(
@@ -291,7 +343,8 @@ public class VaccinationCorrectionService {
                 correction.getStatus(),
                 correction.getReviewedBy(),
                 correction.getReviewedAt(),
-                correction.getReviewReason()
+                correction.getReviewReason(),
+                correction.getRequestType() != null ? correction.getRequestType() : VaccinationCorrectionType.CITIZEN_CERTIFICATE_ISSUE
         );
     }
 

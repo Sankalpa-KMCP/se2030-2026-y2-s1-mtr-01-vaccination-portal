@@ -230,6 +230,16 @@ class VaccinationCorrectionSecurityAuthorizationIntegrationTests {
     // --- ADMIN TESTS ---
 
     @Test
+    @DisplayName("Admin reviews requests but cannot submit a correction request")
+    void adminCannotSubmitCorrectionRequest() throws Exception {
+        mockMvc.perform(post(BASE + "/records/{recordId}/corrections", recordA.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ADMIN_ID, "ROLE_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Admin must not submit corrections\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("6. Admin can list all correction requests")
     void adminCanListCorrectionRequests() throws Exception {
         correctionRepository.saveAndFlush(new VaccinationCorrection(

@@ -126,6 +126,18 @@ class VaccinationDraftControllerTests {
     }
 
     @Test
+    void createDraft_futureAdministrationTime_returns400() throws Exception {
+        String futureInstant = Instant.now().plusSeconds(86400).toString();
+        mockMvc.perform(post("/api/v1/vaccination/drafts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"appointmentId\":101,\"administrationTime\":\"" + futureInstant + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.fieldErrors[0].field", is("administrationTime")))
+                .andExpect(jsonPath("$.fieldErrors[0].message", containsString("cannot be in the future")));
+    }
+
+    @Test
     void createDraft_duplicateAppointment_returns409() throws Exception {
         when(draftService.createDraft(any(CreateVaccinationDraftRequest.class), eq(201L)))
                 .thenThrow(new DuplicateVaccinationDraftException(

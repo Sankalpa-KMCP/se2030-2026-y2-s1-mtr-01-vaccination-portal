@@ -173,13 +173,13 @@ class FreshDatabaseBootstrapMySqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Should apply all migration versions V0 through V26 with SUCCESS status")
+    @DisplayName("Should apply all migration versions V0 through V27 with SUCCESS status")
     void shouldApplyAllMigrationsSuccessfully() {
         assertNotNull(flyway, "Flyway bean must be configured and injected");
         MigrationInfo[] appliedMigrations = flyway.info().all();
-        assertEquals(27, appliedMigrations.length, "Expected exactly 27 migrations (V0-V26)");
+        assertEquals(28, appliedMigrations.length, "Expected exactly 28 migrations (V0-V27)");
 
-        for (int i = 0; i <= 26; i++) {
+        for (int i = 0; i <= 27; i++) {
             String expectedVersion = String.valueOf(i);
             MigrationInfo info = appliedMigrations[i];
             assertEquals(expectedVersion, info.getVersion().getVersion(), "Migration version mismatch at index " + i);

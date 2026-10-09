@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { vaccinationDraftApi } from '../api/vaccinationDraftApi';
 import { getAvailableBatches } from '../api/certificateApi';
 import { formatLocalDateOnly, getLocalCalendarToday, toApiIsoDate } from '../utils/dateUtils';
@@ -31,13 +31,23 @@ const emptyForm = {
   authorizedNotes: '',
 };
 const editableStatuses = ['IN_PROGRESS'];
-const fields = [
-  ['appointmentId', 'Appointment ID', 'number'],
-  ['vaccineBatchId', 'Vaccine batch ID', 'number'],
-  ['doseNumber', 'Dose number', 'number'],
-  ['administrationTime', 'Administration date', 'date'],
-  ['nextDoseDate', 'Next dose date', 'date'],
-];
+const DRAFT_STATUS_LABELS = {
+  IN_PROGRESS: 'In Progress',
+  READY_FOR_FINALIZATION: 'Ready for Finalization',
+  FINALIZED: 'Finalized',
+};
+
+function getDraftStatusBadge(status) {
+  const label = DRAFT_STATUS_LABELS[status] || status;
+  const badgeClass = status === 'IN_PROGRESS'
+    ? 'bg-info-subtle text-info-emphasis border border-info-subtle'
+    : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+  return (
+    <span className={`badge ${badgeClass} fw-semibold`}>
+      {label}
+    </span>
+  );
+}
 
 function draftForm(draft) {
   return {
@@ -51,10 +61,14 @@ function draftForm(draft) {
 }
 
 export default function VaccinationDraftsPage() {
+  const location = useLocation();
+  const preselectedAppointment = location.state?.preselectedAppointment || null;
+
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(null);
+  const [activeAppointmentContext, setActiveAppointmentContext] = useState(null);
   const [initialForm, setInitialForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [viewingDraft, setViewingDraft] = useState(null);
@@ -62,7 +76,6 @@ export default function VaccinationDraftsPage() {
   const [message, setMessage] = useState('');
   const [availableBatches, setAvailableBatches] = useState([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
-  const [manualBatchEntry, setManualBatchEntry] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -106,7 +119,26 @@ export default function VaccinationDraftsPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const resetForm = () => { setForm(null); setEditingId(null); };
+  // If navigated from Check-In Queue with a preselected appointment, auto-initialize draft form
+  useEffect(() => {
+    if (preselectedAppointment && preselectedAppointment.id) {
+      setActiveAppointmentContext(preselectedAppointment);
+      const values = {
+        ...emptyForm,
+        appointmentId: String(preselectedAppointment.id),
+        administrationTime: getLocalCalendarToday(),
+      };
+      setForm(values);
+      setInitialForm(values);
+      setEditingId(null);
+    }
+  }, [preselectedAppointment]);
+
+  const resetForm = () => {
+    setForm(null);
+    setEditingId(null);
+    setActiveAppointmentContext(null);
+  };
 
   const view = async (id) => {
     setBusy(true);
@@ -127,6 +159,7 @@ export default function VaccinationDraftsPage() {
     setForm(values);
     setInitialForm(values);
     setEditingId(null);
+    setActiveAppointmentContext(null);
     setError(null);
     setMessage('');
   };
@@ -224,12 +257,6 @@ export default function VaccinationDraftsPage() {
           <p className="text-muted mb-0">Manage unfinished vaccination drafts through physical administration and finalization. Permanent records are available in Vaccination Records.</p>
         </div>
         <div className="d-flex gap-2">
-          <Link
-            to="/app/staff/vaccination-records"
-            className="btn btn-outline-secondary"
-          >
-            Vaccination Records
-          </Link>
           <button type="button" className="btn btn-outline-primary" disabled={loading || busy}
             onClick={() => { setError(null); load(); }}>Refresh</button>
           <button type="button" className="btn btn-primary" disabled={loading || busy} onClick={create}>Create Draft</button>
@@ -265,102 +292,209 @@ export default function VaccinationDraftsPage() {
       </div></div>}
 
       {form && <div className="card shadow-sm mb-4"><div className="card-body">
-        <h2 className="h5">{editingId !== null ? `Edit draft ${editingId}` : 'Create draft'}</h2>
-        <p className="small text-muted">Appointment ID is required. Other fields may be left blank when creating an incomplete draft.</p>
+        <h2 className="h5">{editingId !== null ? `Edit draft ${editingId}` : 'Create Vaccination Draft'}</h2>
+        <p className="small text-muted mb-4">Checked-in appointment ID is required. Other fields may be completed during clinical administration.</p>
         <form onSubmit={submit} aria-label="Vaccination draft form">
           <fieldset disabled={busy}>
-            <div className="row g-3">
-              {fields.map(([field, label, type]) => {
-                if (field === 'vaccineBatchId') {
-                  const showSelect = availableBatches.length > 0 && !manualBatchEntry;
-                  return (
-                    <div key={field} className="col-12 col-md-6">
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <label className="form-label mb-0" htmlFor={`draft-${field}`}>{label}</label>
-                        {availableBatches.length > 0 && (
-                          <button
-                            type="button"
-                            className="btn btn-link btn-sm p-0 text-decoration-none"
-                            onClick={() => setManualBatchEntry(!manualBatchEntry)}
-                          >
-                            {manualBatchEntry ? 'Select from list' : 'Enter ID manually'}
-                          </button>
-                        )}
+            {/* Section 1: Patient & Appointment Identification */}
+            <div className="mb-4">
+              <h3 className="h6 text-uppercase text-secondary fw-semibold border-bottom pb-2 mb-3">
+                Patient / Appointment
+              </h3>
+              {activeAppointmentContext ? (
+                <div className="card border bg-light p-3" aria-label="Patient and appointment summary">
+                  <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                      <div className="fw-bold fs-6 text-dark">
+                        {activeAppointmentContext.citizenName || `Citizen #${activeAppointmentContext.citizenId}`}
                       </div>
-                      {showSelect ? (
-                        <select
-                          id={`draft-${field}`}
-                          className="form-select"
-                          value={form[field]}
-                          onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
-                        >
-                          <option value="">-- Select an available batch (optional) --</option>
-                          {availableBatches.map((b) => (
-                            <option key={b.id} value={String(b.id)}>
-                              {b.batchNumber} — {b.vaccineName} (Qty: {b.availableQuantity}, Exp: {b.expiryDate})
-                            </option>
-                          ))}
-                          {form[field] && !availableBatches.some((b) => String(b.id) === String(form[field])) && (
-                            <option value={form[field]}>
-                              Batch #{form[field]} (Selected)
-                            </option>
-                          )}
-                        </select>
-                      ) : (
-                        <input
-                          id={`draft-${field}`}
-                          className="form-control"
-                          type="number"
-                          min="1"
-                          step="1"
-                          placeholder={availableBatches.length > 0 ? 'Enter batch ID' : 'Vaccine batch ID'}
-                          value={form[field]}
-                          onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
-                        />
-                      )}
-                      {loadingBatches && (
-                        <div className="form-text text-primary small">
-                          <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                          Loading compatible batches…
-                        </div>
-                      )}
-                      {!loadingBatches && form.appointmentId && availableBatches.length === 0 && (
-                        <div className="form-text text-muted small">
-                          No active inventory batches with available quantity found for this appointment.
-                        </div>
-                      )}
+                      <div className="text-secondary small">
+                        Appointment #{activeAppointmentContext.id}
+                        {activeAppointmentContext.campaignName ? ` · ${activeAppointmentContext.campaignName}` : (activeAppointmentContext.campaignId ? ` · Campaign #${activeAppointmentContext.campaignId}` : '')}
+                      </div>
                     </div>
-                  );
-                }
-                return (
-                  <div key={field} className="col-12 col-md-6">
-                    <label className="form-label" htmlFor={`draft-${field}`}>{label}</label>
-                    <input
-                      id={`draft-${field}`}
-                      className="form-control"
-                      type={type}
-                      value={form[field]}
-                      required={field === 'appointmentId'}
-                      min={type === 'number' ? 1 : undefined}
-                      step={type === 'number' ? 1 : undefined}
-                      disabled={
-                        (field === 'appointmentId' && editingId !== null) ||
-                        field === 'administrationTime'
-                      }
-                      onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
-                    />
+                    <div>
+                      <span className="badge bg-success-subtle text-success-emphasis border border-success-subtle fw-semibold">
+                        Checked In ✓
+                      </span>
+                    </div>
                   </div>
-                );
-              })}
-              <div className="col-12">
-                <label className="form-label" htmlFor="draft-notes">Authorized notes</label>
-                <textarea id="draft-notes" className="form-control" maxLength={2000} rows={3} value={form.authorizedNotes}
-                  onChange={(event) => setForm((current) => ({ ...current, authorizedNotes: event.target.value }))} />
+                </div>
+              ) : (
+                <div className="row g-3">
+                  <div className="col-12 col-md-6">
+                    <label className="form-label fw-medium" htmlFor="draft-appointmentId">
+                      Appointment ID
+                    </label>
+                    <input
+                      id="draft-appointmentId"
+                      aria-label="Appointment ID"
+                      className="form-control"
+                      type="number"
+                      value={form.appointmentId}
+                      required
+                      min="1"
+                      step="1"
+                      disabled={editingId !== null}
+                      placeholder="e.g. 112"
+                      onChange={(event) => setForm((current) => ({ ...current, appointmentId: event.target.value }))}
+                    />
+                    <div className="form-text text-muted small">
+                      Enter a checked-in appointment number.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Section 2: Clinical Vaccination Details */}
+            <div className="mb-4">
+              <h3 className="h6 text-uppercase text-secondary fw-semibold border-bottom pb-2 mb-3">
+                Vaccination Details
+              </h3>
+              <div className="row g-3">
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-medium" htmlFor="draft-vaccineBatchId">
+                    Vaccine Batch *
+                  </label>
+                  {availableBatches.length > 0 || form.vaccineBatchId ? (
+                    <select
+                      id="draft-vaccineBatchId"
+                      aria-label="Vaccine Batch"
+                      className="form-select"
+                      required
+                      value={form.vaccineBatchId}
+                      onChange={(event) => setForm((current) => ({ ...current, vaccineBatchId: event.target.value }))}
+                    >
+                      <option value="">-- Select an available batch --</option>
+                      {availableBatches.map((b) => (
+                        <option key={b.id} value={String(b.id)}>
+                          {b.batchNumber} — {b.vaccineName} — {b.availableQuantity} available · Expires {b.expiryDate}
+                        </option>
+                      ))}
+                      {form.vaccineBatchId && !availableBatches.some((b) => String(b.id) === String(form.vaccineBatchId)) && (
+                        <option value={form.vaccineBatchId}>
+                          Batch #{form.vaccineBatchId} (Selected)
+                        </option>
+                      )}
+                    </select>
+                  ) : (
+                    <select
+                      id="draft-vaccineBatchId"
+                      aria-label="Vaccine Batch"
+                      className="form-select"
+                      disabled
+                      value=""
+                    >
+                      <option value="">
+                        {loadingBatches ? 'Loading available batches…' : 'No compatible batches available'}
+                      </option>
+                    </select>
+                  )}
+                  {loadingBatches && (
+                    <div className="form-text text-primary small">
+                      <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                      Loading compatible batches…
+                    </div>
+                  )}
+                  {!loadingBatches && form.appointmentId && availableBatches.length === 0 && (
+                    <div className="form-text text-danger small">
+                      No compatible vaccine batches with available stock are currently available for this appointment.
+                    </div>
+                  )}
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-medium" htmlFor="draft-doseNumber">
+                    Dose Number *
+                  </label>
+                  <input
+                    id="draft-doseNumber"
+                    aria-label="Dose Number"
+                    className="form-control"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="e.g. 1"
+                    required
+                    value={form.doseNumber}
+                    onChange={(event) => setForm((current) => ({ ...current, doseNumber: event.target.value }))}
+                  />
+                  <div className="form-text text-muted small">
+                    Enter the dose sequence being administered, e.g. 1 for first dose or 2 for second dose.
+                  </div>
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-medium" htmlFor="draft-administrationTime">
+                    Administration date
+                  </label>
+                  <input
+                    id="draft-administrationTime"
+                    aria-label="Administration date"
+                    className="form-control"
+                    type="date"
+                    value={form.administrationTime}
+                    disabled
+                  />
+                  <div className="form-text text-muted small">
+                    Set automatically to today's date for clinical administration.
+                  </div>
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-medium" htmlFor="draft-nextDoseDate">
+                    Next Dose Date (optional)
+                  </label>
+                  <input
+                    id="draft-nextDoseDate"
+                    aria-label="Next dose date"
+                    className="form-control"
+                    type="date"
+                    value={form.nextDoseDate}
+                    min={form.administrationTime || undefined}
+                    onChange={(event) => setForm((current) => ({ ...current, nextDoseDate: event.target.value }))}
+                  />
+                  <div className="form-text text-muted small">
+                    Leave blank if no further dose is currently required or scheduled.
+                  </div>
+                </div>
+
+                <div className="col-12">
+                  <label className="form-label fw-medium" htmlFor="draft-notes">
+                    Authorized notes
+                  </label>
+                  <textarea
+                    id="draft-notes"
+                    aria-label="Authorized notes"
+                    className="form-control"
+                    maxLength={2000}
+                    rows={3}
+                    placeholder="Enter clinical observations, manufacturer details, or special administration notes..."
+                    value={form.authorizedNotes}
+                    onChange={(event) => setForm((current) => ({ ...current, authorizedNotes: event.target.value }))}
+                  />
+                </div>
               </div>
-              <div className="col-12 d-flex gap-2">
-                <button type="submit" className="btn btn-primary">{editingId !== null ? 'Update Draft' : 'Create Draft'}</button>
-                <button type="button" className="btn btn-outline-secondary" onClick={resetForm}>Cancel</button>
-              </div>
+            </div>
+
+            <div className="d-flex gap-2 pt-2">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={
+                  !form.appointmentId ||
+                  !form.vaccineBatchId ||
+                  (editingId === null && availableBatches.length === 0) ||
+                  !form.doseNumber ||
+                  Number(form.doseNumber) < 1
+                }
+              >
+                {editingId !== null ? 'Update Draft' : 'Create Draft'}
+              </button>
+              <button type="button" className="btn btn-outline-secondary" onClick={resetForm}>
+                Cancel
+              </button>
             </div>
           </fieldset>
         </form>
@@ -394,7 +528,7 @@ export default function VaccinationDraftsPage() {
                     <td>{formatLocalDateOnly(draft.administrationTime) || '—'}</td>
                     <td>{draft.nextDoseDate || '—'}</td>
                     <td className="text-break"><TruncatedNotes text={draft.authorizedNotes} /></td>
-                    <td>{draft.status}</td>
+                    <td>{getDraftStatusBadge(draft.status)}</td>
                     <td>{draft.physicalAdministrationConfirmed ? 'Confirmed' : 'Not confirmed'}</td>
                     <td className="text-nowrap">
                       <button type="button" className="btn btn-sm btn-outline-secondary me-2" aria-label={`View draft ${draft.id}`}
@@ -432,9 +566,7 @@ export default function VaccinationDraftsPage() {
                         Appt #{draft.appointmentId} · Admin: {formatLocalDateOnly(draft.administrationTime) || '—'}
                       </div>
                     </div>
-                    <span className={`badge ${draft.status === 'IN_PROGRESS' ? 'text-bg-info' : 'text-bg-warning'}`}>
-                      Status: {draft.status}
-                    </span>
+                    {getDraftStatusBadge(draft.status)}
                   </div>
 
                   <div className="small text-secondary mb-2">
