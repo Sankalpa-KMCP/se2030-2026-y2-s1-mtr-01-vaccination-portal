@@ -7,15 +7,21 @@ import {
   updateVaccineType,
   activateVaccineType,
   deactivateVaccineType,
+  deleteVaccineType,
   listAllTargetGroups,
   createTargetGroup,
   updateTargetGroup,
   activateTargetGroup,
   deactivateTargetGroup,
+  deleteTargetGroup,
 } from '../api/campaignApi';
 
 export default function MasterDataManagementModal({ onClose }) {
   const [activeTab, setActiveTab] = useState('vaccineTypes'); // 'vaccineTypes' | 'targetGroups'
+
+  const [deleteEntry, setDeleteEntry] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
 
   // Vaccine Types State
   const [vaccineTypes, setVaccineTypes] = useState([]);
@@ -113,6 +119,7 @@ export default function MasterDataManagementModal({ onClose }) {
   const handleVToggleStatus = async (vt) => {
     setVError(null);
     setVSuccess(null);
+    setStatusSubmitting(true);
     try {
       if (vt.active) {
         await deactivateVaccineType(vt.id);
@@ -124,6 +131,8 @@ export default function MasterDataManagementModal({ onClose }) {
       await fetchVaccineTypes();
     } catch (err) {
       setVError(err);
+    } finally {
+      setStatusSubmitting(false);
     }
   };
 
@@ -162,6 +171,7 @@ export default function MasterDataManagementModal({ onClose }) {
   const handleTgToggleStatus = async (tg) => {
     setTgError(null);
     setTgSuccess(null);
+    setStatusSubmitting(true);
     try {
       if (tg.active) {
         await deactivateTargetGroup(tg.id);
@@ -173,8 +183,64 @@ export default function MasterDataManagementModal({ onClose }) {
       await fetchTargetGroups();
     } catch (err) {
       setTgError(err);
+    } finally {
+      setStatusSubmitting(false);
     }
   };
+
+  const handleDelete = async () => {
+    if (!deleteEntry || deleting) return;
+    const { type, entry } = deleteEntry;
+    const isVaccine = type === 'vaccineTypes';
+    const setError = isVaccine ? setVError : setTgError;
+    const setSuccess = isVaccine ? setVSuccess : setTgSuccess;
+    setError(null);
+    setSuccess(null);
+    setDeleting(true);
+    try {
+      if (isVaccine) {
+        await deleteVaccineType(entry.id);
+        setVaccineTypes((items) => items.filter((item) => item.id !== entry.id));
+        if (vFormId === entry.id) {
+          setVFormMode(null);
+          setVFormId(null);
+          setVCode('');
+          setVName('');
+        }
+      } else {
+        await deleteTargetGroup(entry.id);
+        setTargetGroups((items) => items.filter((item) => item.id !== entry.id));
+        if (tgFormId === entry.id) {
+          setTgFormMode(null);
+          setTgFormId(null);
+          setTgCode('');
+          setTgDescription('');
+        }
+      }
+      setSuccess(`${isVaccine ? 'Vaccine Type' : 'Target Group'} "${entry.code}" deleted successfully.`);
+      setDeleteEntry(null);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const deleteConfirmation = deleteEntry && (
+    <div className="alert alert-warning mb-3" role="alert">
+      <p className="mb-2">
+        Permanently delete {deleteEntry.type === 'vaccineTypes' ? 'vaccine type' : 'target group'}{' '}
+        <strong>{deleteEntry.entry.code}</strong> ({deleteEntry.entry.name || deleteEntry.entry.description})?
+        {' '}This action cannot be undone. Entries in use cannot be deleted; deactivate them instead.
+      </p>
+      <div className="d-flex gap-2">
+        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={deleting}
+          onClick={() => setDeleteEntry(null)}>Cancel</button>
+        <button type="button" className="btn btn-sm btn-danger" disabled={deleting || statusSubmitting || vSubmitting || tgSubmitting}
+          onClick={handleDelete}>{deleting ? 'Deleting...' : 'Delete permanently'}</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -187,7 +253,7 @@ export default function MasterDataManagementModal({ onClose }) {
               type="button"
               className="btn-close"
               aria-label="Close"
-              onClick={onClose}
+              disabled={deleting} onClick={onClose}
             />
           </div>
 
@@ -202,8 +268,10 @@ export default function MasterDataManagementModal({ onClose }) {
               <li className="nav-item">
                 <button
                   type="button"
+                  disabled={deleting}
                   className={`nav-link fw-semibold ${activeTab === 'vaccineTypes' ? 'active' : ''}`}
                   onClick={() => {
+                    setDeleteEntry(null);
                     setActiveTab('vaccineTypes');
                     setVError(null);
                     setVSuccess(null);
@@ -215,8 +283,10 @@ export default function MasterDataManagementModal({ onClose }) {
               <li className="nav-item ms-2">
                 <button
                   type="button"
+                  disabled={deleting}
                   className={`nav-link fw-semibold ${activeTab === 'targetGroups' ? 'active' : ''}`}
                   onClick={() => {
+                    setDeleteEntry(null);
                     setActiveTab('targetGroups');
                     setTgError(null);
                     setTgSuccess(null);
@@ -237,6 +307,7 @@ export default function MasterDataManagementModal({ onClose }) {
                   </div>
                 )}
                 <ApiErrorAlert error={vError} onDismiss={() => setVError(null)} />
+                {deleteConfirmation}
 
                 {/* Create / Edit Form Card */}
                 {vFormMode && (
@@ -300,14 +371,14 @@ export default function MasterDataManagementModal({ onClose }) {
                               setVCode('');
                               setVName('');
                             }}
-                            disabled={vSubmitting}
+                            disabled={vSubmitting || deleting}
                           >
                             Cancel
                           </button>
                           <button
                             type="submit"
                             className="btn btn-sm btn-primary"
-                            disabled={vSubmitting}
+                            disabled={vSubmitting || deleting}
                           >
                             {vSubmitting ? 'Saving...' : vFormMode === 'create' ? 'Create Vaccine Type' : 'Save Changes'}
                           </button>
@@ -323,6 +394,7 @@ export default function MasterDataManagementModal({ onClose }) {
                   {!vFormMode && (
                     <button
                       type="button"
+                      disabled={deleting}
                       className="btn btn-sm btn-primary shadow-sm"
                       onClick={() => {
                         setVFormMode('create');
@@ -378,6 +450,7 @@ export default function MasterDataManagementModal({ onClose }) {
                               <td className="text-end">
                                 <button
                                   type="button"
+                                  disabled={deleting || statusSubmitting || vSubmitting || tgSubmitting}
                                   className="btn btn-sm btn-outline-secondary me-2 py-0 px-2"
                                   onClick={() => {
                                     setVFormMode('edit');
@@ -390,12 +463,19 @@ export default function MasterDataManagementModal({ onClose }) {
                                 </button>
                                 <button
                                   type="button"
+                                  disabled={deleting || statusSubmitting || vSubmitting || tgSubmitting}
                                   className={`btn btn-sm py-0 px-2 ${
                                     vt.active ? 'btn-outline-warning' : 'btn-outline-success'
                                   }`}
                                   onClick={() => handleVToggleStatus(vt)}
                                 >
                                   {vt.active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button type="button" className="btn btn-sm btn-outline-danger ms-2 py-0 px-2"
+                                  disabled={deleting || statusSubmitting || vSubmitting || tgSubmitting}
+                                  aria-label={`Delete ${vt.code}`}
+                                  onClick={() => setDeleteEntry({ type: 'vaccineTypes', entry: vt })}>
+                                  Delete
                                 </button>
                               </td>
                             </tr>
@@ -418,6 +498,7 @@ export default function MasterDataManagementModal({ onClose }) {
                   </div>
                 )}
                 <ApiErrorAlert error={tgError} onDismiss={() => setTgError(null)} />
+                {deleteConfirmation}
 
                 {/* Create / Edit Form Card */}
                 {tgFormMode && (
@@ -473,14 +554,14 @@ export default function MasterDataManagementModal({ onClose }) {
                               setTgCode('');
                               setTgDescription('');
                             }}
-                            disabled={tgSubmitting}
+                            disabled={tgSubmitting || deleting}
                           >
                             Cancel
                           </button>
                           <button
                             type="submit"
                             className="btn btn-sm btn-primary"
-                            disabled={tgSubmitting}
+                            disabled={tgSubmitting || deleting}
                           >
                             {tgSubmitting ? 'Saving...' : tgFormMode === 'create' ? 'Create Target Group' : 'Save Changes'}
                           </button>
@@ -496,6 +577,7 @@ export default function MasterDataManagementModal({ onClose }) {
                   {!tgFormMode && (
                     <button
                       type="button"
+                      disabled={deleting}
                       className="btn btn-sm btn-primary shadow-sm"
                       onClick={() => {
                         setTgFormMode('create');
@@ -549,6 +631,7 @@ export default function MasterDataManagementModal({ onClose }) {
                               <td className="text-end">
                                 <button
                                   type="button"
+                                  disabled={deleting || statusSubmitting || vSubmitting || tgSubmitting}
                                   className="btn btn-sm btn-outline-secondary me-2 py-0 px-2"
                                   onClick={() => {
                                     setTgFormMode('edit');
@@ -561,12 +644,19 @@ export default function MasterDataManagementModal({ onClose }) {
                                 </button>
                                 <button
                                   type="button"
+                                  disabled={deleting || statusSubmitting || vSubmitting || tgSubmitting}
                                   className={`btn btn-sm py-0 px-2 ${
                                     tg.active ? 'btn-outline-warning' : 'btn-outline-success'
                                   }`}
                                   onClick={() => handleTgToggleStatus(tg)}
                                 >
                                   {tg.active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button type="button" className="btn btn-sm btn-outline-danger ms-2 py-0 px-2"
+                                  disabled={deleting || statusSubmitting || vSubmitting || tgSubmitting}
+                                  aria-label={`Delete ${tg.code}`}
+                                  onClick={() => setDeleteEntry({ type: 'targetGroups', entry: tg })}>
+                                  Delete
                                 </button>
                               </td>
                             </tr>
@@ -582,7 +672,7 @@ export default function MasterDataManagementModal({ onClose }) {
 
           {/* Footer */}
           <div className="modal-footer bg-light py-2">
-            <button type="button" className="btn btn-sm btn-secondary" onClick={onClose}>
+            <button type="button" className="btn btn-sm btn-secondary" disabled={deleting} onClick={onClose}>
               Close
             </button>
           </div>

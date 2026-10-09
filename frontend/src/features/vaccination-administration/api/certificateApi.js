@@ -147,16 +147,20 @@ export async function getAvailableBatches(appointmentId) {
 }
 
 /**
- * Submits a correction request from a citizen for their own vaccination record.
+ * Submits a correction request from a citizen or amendment request from a vaccinator.
  *
  * @param {number|string} recordId
- * @param {string} message
+ * @param {string|Object} payloadOrMessage
  * @returns {Promise<Object>}
  */
-export async function requestVaccinationCorrection(recordId, message) {
+export async function requestVaccinationCorrection(recordId, payloadOrMessage) {
+  const body = typeof payloadOrMessage === 'string'
+    ? { message: payloadOrMessage }
+    : payloadOrMessage;
+
   const response = await apiRequest(`/v1/vaccination/records/${recordId}/corrections`, {
     method: 'POST',
-    body: JSON.stringify({ message }),
+    body: JSON.stringify(body),
   });
   return parseApiResponse(response);
 }

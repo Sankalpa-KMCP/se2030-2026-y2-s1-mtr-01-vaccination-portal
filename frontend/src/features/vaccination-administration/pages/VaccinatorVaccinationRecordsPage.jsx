@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listVaccinatorRecords, downloadCertificate } from '../api/certificateApi';
+import {
+  listVaccinatorRecords,
+  downloadCertificate,
+  requestVaccinationCorrection,
+} from '../api/certificateApi';
 
 export default function VaccinatorVaccinationRecordsPage() {
   const [records, setRecords] = useState([]);
@@ -10,6 +14,15 @@ export default function VaccinatorVaccinationRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
   const [downloadError, setDownloadError] = useState('');
+
+  // Clinical record amendment modal state (Vaccinator proposing amendment)
+  const [amendmentRecord, setAmendmentRecord] = useState(null);
+  const [amendmentField, setAmendmentField] = useState('doseNumber');
+  const [amendmentValue, setAmendmentValue] = useState('');
+  const [amendmentReason, setAmendmentReason] = useState('');
+  const [submittingAmendment, setSubmittingAmendment] = useState(false);
+  const [amendmentError, setAmendmentError] = useState('');
+  const [amendmentSuccess, setAmendmentSuccess] = useState('');
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -38,6 +51,92 @@ export default function VaccinatorVaccinationRecordsPage() {
       setDownloadError(err.message || 'Could not download certificate PDF. Please try again.');
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const openAmendmentModal = (rec) => {
+    setAmendmentRecord(rec);
+    setAmendmentField('doseNumber');
+    setAmendmentValue(String(rec.doseNumber || '1'));
+    setAmendmentReason('');
+    setAmendmentError('');
+    setAmendmentSuccess('');
+  };
+
+  const closeAmendmentModal = () => {
+    setAmendmentRecord(null);
+    setAmendmentField('doseNumber');
+    setAmendmentValue('');
+    setAmendmentReason('');
+    setAmendmentError('');
+    setAmendmentSuccess('');
+  };
+
+  const handleAmendmentFieldChange = (field) => {
+    setAmendmentField(field);
+    setAmendmentError('');
+    if (!amendmentRecord) return;
+    switch (field) {
+      case 'doseNumber':
+        setAmendmentValue(String(amendmentRecord.doseNumber || '1'));
+        break;
+      case 'administrationTime':
+        setAmendmentValue(amendmentRecord.administrationTime ? amendmentRecord.administrationTime.slice(0, 16) : '');
+        break;
+      case 'nextDoseDate':
+        setAmendmentValue(amendmentRecord.nextDoseDate ? amendmentRecord.nextDoseDate.slice(0, 10) : '');
+        break;
+      case 'authorizedNotes':
+        setAmendmentValue(amendmentRecord.authorizedNotes || '');
+        break;
+      default:
+        setAmendmentValue('');
+    }
+  };
+
+  const handleSubmitAmendment = async (e) => {
+    e.preventDefault();
+    if (!amendmentReason.trim()) {
+      setAmendmentError('Please provide a clinical justification for the proposed amendment.');
+      return;
+    }
+    if (!amendmentValue || !amendmentValue.trim()) {
+      setAmendmentError('Please provide the proposed replacement value.');
+      return;
+    }
+
+    setSubmittingAmendment(true);
+    setAmendmentError('');
+    try {
+      let formattedValue = amendmentValue.trim();
+      if (amendmentField === 'administrationTime' && formattedValue && !formattedValue.endsWith('Z')) {
+        try {
+          formattedValue = new Date(formattedValue).toISOString();
+        } catch {
+          // keep original
+        }
+      } else if (amendmentField === 'nextDoseDate' && formattedValue) {
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(formattedValue)) {
+          const [m, d, y] = formattedValue.split('/');
+          formattedValue = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+      }
+
+      await requestVaccinationCorrection(amendmentRecord.id, {
+        fieldName: amendmentField,
+        newValue: formattedValue,
+        reason: amendmentReason.trim(),
+      });
+
+      setAmendmentSuccess('Clinical amendment request submitted for Administrative review.');
+      await fetchRecords();
+      setTimeout(() => {
+        closeAmendmentModal();
+      }, 1500);
+    } catch (err) {
+      setAmendmentError(err.message || 'Failed to submit amendment request. Please try again.');
+    } finally {
+      setSubmittingAmendment(false);
     }
   };
 
@@ -85,7 +184,7 @@ export default function VaccinatorVaccinationRecordsPage() {
             <h1 className="h3 fw-bold text-dark mb-0">Administered Vaccination Records</h1>
           </div>
           <p className="text-secondary small mb-0 mt-1">
-            Permanent, immutable records of vaccinations administered by your account with access to official certificates.
+            Permanent, immutable records of vaccinations administered by your account with access to official certificates and controlled amendments.
           </p>
         </div>
         <div className="d-flex gap-2">
@@ -242,6 +341,15 @@ export default function VaccinatorVaccinationRecordsPage() {
                           >
                             <i className="bi bi-eye me-1"></i>View
                           </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline-warning btn-sm me-2 text-dark"
+                            onClick={() => openAmendmentModal(rec)}
+                            aria-label={`Request amendment for record ${rec.id}`}
+                            title="Propose clinical record amendment"
+                          >
+                            <i className="bi bi-pencil-square me-1"></i>Request Amendment
+                          </button>
                           {rec.certificateId && (
                             <button
                               type="button"
@@ -297,13 +405,20 @@ export default function VaccinatorVaccinationRecordsPage() {
                       <div><strong>Ref:</strong> <span className="font-monospace">{rec.certificateReference}</span></div>
                     )}
                   </div>
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-2 flex-wrap">
                     <button
                       type="button"
                       className="btn btn-outline-secondary btn-sm flex-fill"
                       onClick={() => setSelectedRecord(rec)}
                     >
-                      <i className="bi bi-eye me-1"></i>View Details
+                      <i className="bi bi-eye me-1"></i>View
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-warning btn-sm text-dark flex-fill"
+                      onClick={() => openAmendmentModal(rec)}
+                    >
+                      <i className="bi bi-pencil-square me-1"></i>Request Amendment
                     </button>
                     {rec.certificateId && (
                       <button
@@ -441,12 +556,180 @@ export default function VaccinatorVaccinationRecordsPage() {
               <div className="modal-footer bg-light border-top">
                 <button
                   type="button"
+                  className="btn btn-warning btn-sm me-auto text-dark fw-semibold"
+                  onClick={() => {
+                    const rec = selectedRecord;
+                    setSelectedRecord(null);
+                    openAmendmentModal(rec);
+                  }}
+                >
+                  <i className="bi bi-pencil-square me-1"></i>Request Amendment
+                </button>
+                <button
+                  type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => setSelectedRecord(null)}
                 >
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Propose Record Amendment Modal */}
+      {amendmentRecord && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content shadow border-0 overflow-hidden">
+              <div className="modal-header bg-light border-bottom">
+                <h5 className="modal-title fw-bold text-dark">
+                  <i className="bi bi-pencil-square text-warning me-2"></i>
+                  Request Record Amendment #{amendmentRecord.id}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeAmendmentModal}
+                  aria-label="Close"
+                  disabled={submittingAmendment}
+                ></button>
+              </div>
+              <form onSubmit={handleSubmitAmendment}>
+                <div className="modal-body p-4">
+                  {amendmentSuccess && (
+                    <div className="alert alert-success d-flex align-items-center mb-3" role="alert">
+                      <i className="bi bi-check-circle-fill me-2"></i>
+                      <div>{amendmentSuccess}</div>
+                    </div>
+                  )}
+
+                  {amendmentError && (
+                    <div className="alert alert-danger d-flex align-items-center mb-3" role="alert">
+                      <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                      <div>{amendmentError}</div>
+                    </div>
+                  )}
+
+                  {/* Locked fields disclaimer */}
+                  <div className="alert alert-secondary py-2 px-3 small mb-3 border">
+                    <i className="bi bi-lock-fill me-1 text-primary"></i>
+                    <strong>Protected Clinical Audit:</strong> Batch code, citizen identity, center, and appointment cannot be amended. Only clinical dose, timestamps, next dose, or authorized notes can be proposed for Administrative review.
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="amendmentFieldSelect" className="form-label fw-semibold text-dark small">
+                      Select Clinical Field to Amend <span className="text-danger">*</span>
+                    </label>
+                    <select
+                      id="amendmentFieldSelect"
+                      className="form-select form-select-sm"
+                      value={amendmentField}
+                      onChange={(e) => handleAmendmentFieldChange(e.target.value)}
+                      disabled={submittingAmendment}
+                    >
+                      <option value="doseNumber">Dose Number (e.g. 1, 2, 3)</option>
+                      <option value="administrationTime">Administration Date &amp; Time</option>
+                      <option value="nextDoseDate">Next Dose Follow-up Date</option>
+                      <option value="authorizedNotes">Authorized Clinical Notes</option>
+                    </select>
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="amendmentValueInput" className="form-label fw-semibold text-dark small">
+                      Proposed Replacement Value <span className="text-danger">*</span>
+                    </label>
+                    {amendmentField === 'doseNumber' ? (
+                      <input
+                        id="amendmentValueInput"
+                        type="number"
+                        min="1"
+                        max="10"
+                        className="form-control form-control-sm"
+                        value={amendmentValue}
+                        onChange={(e) => setAmendmentValue(e.target.value)}
+                        required
+                        disabled={submittingAmendment}
+                      />
+                    ) : amendmentField === 'administrationTime' ? (
+                      <input
+                        id="amendmentValueInput"
+                        type="datetime-local"
+                        className="form-control form-control-sm"
+                        value={amendmentValue}
+                        onChange={(e) => setAmendmentValue(e.target.value)}
+                        required
+                        disabled={submittingAmendment}
+                      />
+                    ) : amendmentField === 'nextDoseDate' ? (
+                      <input
+                        id="amendmentValueInput"
+                        type="date"
+                        className="form-control form-control-sm"
+                        value={amendmentValue}
+                        onChange={(e) => setAmendmentValue(e.target.value)}
+                        required
+                        disabled={submittingAmendment}
+                      />
+                    ) : (
+                      <textarea
+                        id="amendmentValueInput"
+                        rows={3}
+                        className="form-control form-control-sm"
+                        value={amendmentValue}
+                        onChange={(e) => setAmendmentValue(e.target.value)}
+                        required
+                        disabled={submittingAmendment}
+                      />
+                    )}
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="amendmentReasonInput" className="form-label fw-semibold text-dark small">
+                      Clinical Justification / Reason <span className="text-danger">*</span>
+                    </label>
+                    <textarea
+                      id="amendmentReasonInput"
+                      rows={3}
+                      className="form-control form-control-sm"
+                      placeholder="Explain why this clinical record requires amendment..."
+                      value={amendmentReason}
+                      onChange={(e) => setAmendmentReason(e.target.value)}
+                      maxLength={1000}
+                      required
+                      disabled={submittingAmendment}
+                    />
+                    <div className="form-text small text-secondary">
+                      Max 1000 characters. Reviewed by Center Admin.
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer bg-light border-top">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={closeAmendmentModal}
+                    disabled={submittingAmendment}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-warning btn-sm fw-semibold text-dark"
+                    disabled={submittingAmendment || !amendmentReason.trim() || !amendmentValue.trim()}
+                  >
+                    {submittingAmendment ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Amendment Request'
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

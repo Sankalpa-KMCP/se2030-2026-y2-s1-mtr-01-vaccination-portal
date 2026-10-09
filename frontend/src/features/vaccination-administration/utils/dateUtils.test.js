@@ -42,8 +42,24 @@ describe('dateUtils', () => {
   });
 
   describe('toApiIsoDate', () => {
-    it('appends UTC midnight format to YYYY-MM-DD', () => {
-      expect(toApiIsoDate('2026-09-21')).toBe('2026-09-21T00:00:00Z');
+    it('appends UTC midnight format to past YYYY-MM-DD dates', () => {
+      // Provided date is not today
+      expect(toApiIsoDate('2026-09-21', new Date('2026-09-25T10:00:00Z'))).toBe('2026-09-21T00:00:00Z');
+    });
+
+    it('returns current instant for today date without advancing to future UTC midnight in early-morning timezone', () => {
+      // Simulate client in UTC+05:30 at 01:15 AM on Oct 9 (UTC is Oct 8 at 19:45)
+      // When client local calendar date is 2026-10-09, UTC midnight would be 2026-10-09T00:00:00Z (4h15m in future)
+      const simulatedNow = new Date('2026-10-08T19:45:00.000Z');
+      const clientLocalDate = getLocalCalendarToday(simulatedNow);
+      const result = toApiIsoDate(clientLocalDate, simulatedNow);
+
+      expect(result).toBe('2026-10-08T19:45:00.000Z');
+      expect(Date.parse(result)).toBeLessThanOrEqual(simulatedNow.getTime());
+    });
+
+    it('returns ISO string unchanged if already containing T', () => {
+      expect(toApiIsoDate('2026-10-08T19:45:00.000Z')).toBe('2026-10-08T19:45:00.000Z');
     });
 
     it('returns empty string for empty input', () => {

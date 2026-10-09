@@ -1,9 +1,12 @@
 package com.se2030.vaccinationportal.campaign.reference.service;
 
+import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.reference.model.VaccineType;
 import com.se2030.vaccinationportal.campaign.reference.repository.VaccineTypeRepository;
+import com.se2030.vaccinationportal.inventory.dependency.InventoryBatchPort;
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,9 +17,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class VaccineTypeService {
 
     private final VaccineTypeRepository vaccineTypeRepository;
+    private final VaccinationCampaignRepository campaignRepository;
+    private final InventoryBatchPort inventoryBatchPort;
 
-    public VaccineTypeService(VaccineTypeRepository vaccineTypeRepository) {
+    public VaccineTypeService(VaccineTypeRepository vaccineTypeRepository,
+            VaccinationCampaignRepository campaignRepository, InventoryBatchPort inventoryBatchPort) {
         this.vaccineTypeRepository = vaccineTypeRepository;
+        this.campaignRepository = campaignRepository;
+        this.inventoryBatchPort = inventoryBatchPort;
     }
 
     /**
@@ -108,5 +116,23 @@ public class VaccineTypeService {
                 .orElseThrow(() -> new ResourceNotFoundException("VaccineType not found with ID: " + id));
         vaccineType.setActive(false);
         return vaccineTypeRepository.save(vaccineType);
+    }
+
+    /** Permanently remove an unused vaccine type, preserving all historical references. */
+    public void deleteVaccineType(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Vaccine type ID is required");
+        }
+        VaccineType entry = vaccineTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("VaccineType not found with ID: " + id));
+        if (campaignRepository.existsByVaccineType_Id(id) || inventoryBatchPort.hasBatchesForVaccineType(id)) {
+            throw new IllegalStateException("This vaccine type is used by a campaign or inventory batch. Deactivate it instead.");
+        }
+        try {
+            vaccineTypeRepository.delete(entry);
+            vaccineTypeRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new IllegalStateException("This vaccine type is used by a campaign or inventory batch. Deactivate it instead.", ex);
+        }
     }
 }

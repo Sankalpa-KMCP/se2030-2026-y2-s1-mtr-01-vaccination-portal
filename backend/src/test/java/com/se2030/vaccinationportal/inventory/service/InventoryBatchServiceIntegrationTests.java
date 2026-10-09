@@ -89,6 +89,16 @@ class InventoryBatchServiceIntegrationTests {
     }
 
     @Test
+    void vaccineTypeUsageIncludesEveryBatchStatus() {
+        Long vaccineTypeId = batches.findById(batchId).orElseThrow().getVaccineTypeId();
+        for (BatchStatus status : BatchStatus.values()) {
+            changeStatus(status);
+            assertThat(inventoryPort.hasBatchesForVaccineType(vaccineTypeId)).isTrue();
+        }
+        assertThat(inventoryPort.hasBatchesForVaccineType(Long.MAX_VALUE)).isFalse();
+    }
+
+    @Test
     void availableBatchLookupExcludesMismatchedInactiveExpiredAndEmptyStock() {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         var batch = batches.findById(batchId).orElseThrow();

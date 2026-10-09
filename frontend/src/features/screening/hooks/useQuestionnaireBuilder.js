@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { addQuestionnaireItem, createAnswerOption, createEligibilityRule, createQuestion, createQuestionnaire, createQuestionnaireVersion, deleteEligibilityRule, deleteQuestionnaireVersion, getQuestionnaire, getQuestionnaireVersion, listAnswerOptions, listEligibilityRules, listQuestionnaires, listQuestionnaireVersions, listQuestions, publishQuestionnaireVersion, removeQuestionnaireItem, reorderQuestionnaireItems, retireQuestionnaireVersion, updateEligibilityRule, updateQuestionnaireItem } from "../api/screeningApi";
+import { addQuestionnaireItem, createAnswerOption, createEligibilityRule, createQuestion, createQuestionnaire, createQuestionnaireVersion, deleteEligibilityRule, deleteQuestionnaire, deleteQuestionnaireVersion, getQuestionnaire, getQuestionnaireVersion, listAnswerOptions, listEligibilityRules, listQuestionnaires, listQuestionnaireVersions, listQuestions, publishQuestionnaireVersion, removeQuestionnaireItem, reorderQuestionnaireItems, retireQuestionnaireVersion, updateEligibilityRule, updateQuestionnaireItem } from "../api/screeningApi";
 import { listCampaigns } from "../../campaign-management/api/campaignApi";
 import { assignQuestionnaire, getPublishedQuestionnaireVersions } from "../../campaign-management/api/campaignConfigurationApi";
 import { useAuth } from "../../../auth/context/AuthContext";
@@ -469,6 +469,14 @@ export default function useQuestionnaireBuilder() {
         confirmLabel: 'Delete Draft',
         danger: true,
       },
+      'delete-questionnaire': {
+        kind,
+        target,
+        title: 'Delete Questionnaire?',
+        message: `Are you sure you want to permanently delete '${target.name}'? This action cannot be undone.`,
+        confirmLabel: 'Delete Questionnaire',
+        danger: true,
+      },
       'delete-rule': {
         kind,
         target,
@@ -498,6 +506,19 @@ export default function useQuestionnaireBuilder() {
         setVersions((current) => current.filter((version) => version.id !== confirmation.target.id));
         setSelectedVersion(null);
         setSuccessMessage('Draft questionnaire version deleted.');
+      } else if (confirmation.kind === 'delete-questionnaire') {
+        await deleteQuestionnaire(confirmation.target.id);
+        setQuestionnaires((current) => current.filter((questionnaire) => questionnaire.id !== confirmation.target.id));
+        setSelectedQuestionnaire(null);
+        setVersions([]);
+        setSelectedVersion(null);
+        setSuccessMessage('Questionnaire deleted successfully.');
+        try {
+          const refreshed = await listQuestionnaires();
+          setQuestionnaires(Array.isArray(refreshed) ? refreshed : []);
+        } catch (refreshError) {
+          setLoadError(refreshError);
+        }
       } else if (confirmation.kind === 'delete-rule') {
         await deleteEligibilityRule(confirmation.target.id);
         replaceVersion({
@@ -513,6 +534,12 @@ export default function useQuestionnaireBuilder() {
       setConfirmation(null);
     } catch (error) {
       setFormError(error);
+      if (confirmation.kind === 'delete-questionnaire' && error?.status === 409) {
+        await selectQuestionnaire(confirmation.target);
+        setConfirmation(null);
+        setFormError(null);
+        setBuilderError(error);
+      }
     } finally {
       setProcessing(false);
     }

@@ -32,7 +32,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST Controller exposing vaccination campaign management and lifecycle state transition endpoints.
+ * Handles campaign requests and passes business rules to the service.
+ * Campaigns are cancelled or archived rather than permanently deleted.
  */
 @RestController
 @RequestMapping("/api/v1/campaigns")
@@ -44,6 +45,7 @@ public class CampaignController {
         this.campaignService = campaignService;
     }
 
+    /** Create a draft campaign; @Valid checks the submitted fields. */
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> createCampaign(@Valid @RequestBody CreateCampaignRequest request) {
@@ -63,6 +65,7 @@ public class CampaignController {
         return ResponseEntity.created(location).body(toResponseWithQuestionnaire(created));
     }
 
+    /** Read the full details of one campaign. */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<CampaignResponse> getCampaignById(@PathVariable Long id) {
@@ -70,6 +73,7 @@ public class CampaignController {
         return ResponseEntity.ok(toResponseWithQuestionnaire(campaign));
     }
 
+    /** Update campaign details; the service checks business rules. */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> updateCampaign(
@@ -96,6 +100,7 @@ public class CampaignController {
         return CampaignDtoMapper.toResponse(campaign, assignedVersionId);
     }
 
+    /** Read the campaign list, optionally filtered by status. */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'CENTER_MANAGER', 'HEALTHCARE_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignSummaryResponse>> getCampaigns(
@@ -105,6 +110,7 @@ public class CampaignController {
         return ResponseEntity.ok(response);
     }
 
+    /** Read the history of campaign status changes. */
     @GetMapping("/{id}/lifecycle-events")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER', 'MANAGEMENT_USER')")
     public ResponseEntity<List<CampaignLifecycleEventResponse>> getCampaignLifecycleEvents(@PathVariable Long id) {
@@ -115,6 +121,7 @@ public class CampaignController {
         return ResponseEntity.ok(response);
     }
 
+    /** Move a draft campaign to Scheduled. */
     @PostMapping("/{id}/schedule")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> scheduleCampaign(@PathVariable Long id) {
@@ -122,6 +129,7 @@ public class CampaignController {
         return ResponseEntity.ok(toResponseWithQuestionnaire(scheduled));
     }
 
+    /** Publish a campaign after the service checks its setup. */
     @PostMapping("/{id}/publish")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> publishCampaign(@PathVariable Long id) {
@@ -129,6 +137,7 @@ public class CampaignController {
         return ResponseEntity.ok(toResponseWithQuestionnaire(published));
     }
 
+    /** Activate a published campaign only within its service dates. */
     @PostMapping("/{id}/activate")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> activateCampaign(@PathVariable Long id) {
@@ -136,6 +145,7 @@ public class CampaignController {
         return ResponseEntity.ok(toResponseWithQuestionnaire(activated));
     }
 
+    /** Pause a campaign and record the reason and acting user. */
     @PostMapping("/{id}/suspend")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> suspendCampaign(
@@ -148,6 +158,7 @@ public class CampaignController {
         return ResponseEntity.ok(toResponseWithQuestionnaire(suspended));
     }
 
+    /** Resume a suspended campaign and record the reason. */
     @PostMapping("/{id}/resume")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> resumeCampaign(
@@ -160,6 +171,7 @@ public class CampaignController {
         return ResponseEntity.ok(toResponseWithQuestionnaire(resumed));
     }
 
+    /** Mark a campaign as finished and keep its history. */
     @PostMapping("/{id}/complete")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> completeCampaign(
@@ -172,6 +184,7 @@ public class CampaignController {
         return ResponseEntity.ok(toResponseWithQuestionnaire(completed));
     }
 
+    /** Cancel a campaign while keeping its record in the database. */
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<CampaignResponse> cancelCampaign(
@@ -184,6 +197,7 @@ public class CampaignController {
         return ResponseEntity.ok(toResponseWithQuestionnaire(cancelled));
     }
 
+    /** Archive a completed or cancelled campaign; only admins can do this. */
     @PostMapping("/{id}/archive")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CampaignResponse> archiveCampaign(

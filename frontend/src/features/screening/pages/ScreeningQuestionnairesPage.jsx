@@ -172,6 +172,19 @@ return (
                       <span className="small text-muted font-monospace">{selectedQuestionnaire.code}</span>
                     </div>
                     <button type="button" className="btn btn-outline-primary btn-sm" onClick={handleCreateVersion} disabled={processing}>Create Draft Version</button>
+                    <div>
+                      <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => openConfirmation('delete-questionnaire', selectedQuestionnaire)}
+                        disabled={processing || versionsLoading || versions.length > 0}
+                      >
+                        Delete Questionnaire
+                      </button>
+                      {!versionsLoading && versions.length > 0 && (
+                        <div className="small text-muted mt-1">Questionnaires with existing versions cannot be deleted.</div>
+                      )}
+                    </div>
                   </div>
                   <div className="card-body">
                     <ApiErrorAlert error={builderError} onDismiss={() => setBuilderError(null)} />

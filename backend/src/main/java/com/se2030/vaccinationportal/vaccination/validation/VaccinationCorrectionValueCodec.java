@@ -136,6 +136,12 @@ public class VaccinationCorrectionValueCodec {
         try {
             return LocalDate.parse(normalized).toString();
         } catch (DateTimeParseException ex) {
+            try {
+                java.time.format.DateTimeFormatter slashFormatter = java.time.format.DateTimeFormatter.ofPattern("M/d/yyyy");
+                return LocalDate.parse(normalized, slashFormatter).toString();
+            } catch (Exception ignored) {
+                // fall through to exception
+            }
             throw invalid("Next dose date must be an ISO-8601 date");
         }
     }

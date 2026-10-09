@@ -1,9 +1,11 @@
 package com.se2030.vaccinationportal.campaign.reference.service;
 
+import com.se2030.vaccinationportal.campaign.core.repository.VaccinationCampaignRepository;
 import com.se2030.vaccinationportal.campaign.exception.ResourceNotFoundException;
 import com.se2030.vaccinationportal.campaign.reference.model.TargetGroup;
 import com.se2030.vaccinationportal.campaign.reference.repository.TargetGroupRepository;
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,9 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class TargetGroupService {
 
     private final TargetGroupRepository targetGroupRepository;
+    private final VaccinationCampaignRepository campaignRepository;
 
-    public TargetGroupService(TargetGroupRepository targetGroupRepository) {
+    public TargetGroupService(TargetGroupRepository targetGroupRepository,
+            VaccinationCampaignRepository campaignRepository) {
         this.targetGroupRepository = targetGroupRepository;
+        this.campaignRepository = campaignRepository;
     }
 
     /**
@@ -104,5 +109,23 @@ public class TargetGroupService {
                 .orElseThrow(() -> new ResourceNotFoundException("TargetGroup not found with ID: " + id));
         targetGroup.setActive(false);
         return targetGroupRepository.save(targetGroup);
+    }
+
+    /** Permanently remove an unused target group, preserving all historical references. */
+    public void deleteTargetGroup(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Target group ID is required");
+        }
+        TargetGroup entry = targetGroupRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("TargetGroup not found with ID: " + id));
+        if (campaignRepository.existsByTargetGroup_Id(id)) {
+            throw new IllegalStateException("This target group is used by a campaign. Deactivate it instead.");
+        }
+        try {
+            targetGroupRepository.delete(entry);
+            targetGroupRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new IllegalStateException("This target group is used by a campaign. Deactivate it instead.", ex);
+        }
     }
 }

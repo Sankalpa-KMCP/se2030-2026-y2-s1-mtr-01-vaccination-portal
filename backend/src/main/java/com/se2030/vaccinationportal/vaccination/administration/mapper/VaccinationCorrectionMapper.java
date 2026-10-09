@@ -4,6 +4,7 @@ import com.se2030.vaccinationportal.vaccination.administration.dto.CreateVaccina
 import com.se2030.vaccinationportal.vaccination.administration.dto.VaccinationCorrectionResponse;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrection;
 import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionField;
+import com.se2030.vaccinationportal.vaccination.administration.model.VaccinationCorrectionType;
 import java.time.Instant;
 
 /** Pure transformations for vaccination correction creation and API responses. */
@@ -44,7 +45,8 @@ public final class VaccinationCorrectionMapper {
                 correction.getReason(),
                 correction.getCorrectedBy(),
                 correction.getCorrectedAt(),
-                correction.getStatus()
+                correction.getStatus(),
+                correction.getRequestType()
         );
     }
 }

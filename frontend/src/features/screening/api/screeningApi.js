@@ -76,6 +76,10 @@ export function createQuestionnaire(payload) {
   });
 }
 
+export function deleteQuestionnaire(questionnaireId) {
+  return screeningRequest(`/questionnaires/${questionnaireId}`, { method: 'DELETE' });
+}
+
 // Questionnaire versions and their item snapshots
 export function listQuestionnaireVersions(questionnaireId) {
   return screeningRequest(`/questionnaires/${questionnaireId}/versions`, { method: 'GET' });

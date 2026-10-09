@@ -210,4 +210,83 @@ describe('CitizenVaccinationsPage', () => {
       expect(certificateApi.requestVaccinationCorrection).toHaveBeenCalledWith(1, 'My dose number is actually dose 2');
     });
   });
+
+  it('renders a single unified table without redundant separate vaccination history section', async () => {
+    const mockRecords = [
+      {
+        id: 1,
+        doseNumber: 1,
+        vaccineBatchId: 10,
+        centerId: 5,
+        administrationTime: '2026-09-01T09:00:00Z',
+        certificateId: 101,
+        certificateReference: 'CERT-001',
+        certificateStatus: 'VALID',
+      },
+    ];
+    const mockCerts = [
+      {
+        id: 101,
+        certificateReference: 'CERT-001',
+        status: 'VALID',
+        doseNumber: 1,
+      },
+    ];
+
+    certificateApi.listMyVaccinations.mockResolvedValue(mockRecords);
+    certificateApi.listMyCertificates.mockResolvedValue(mockCerts);
+
+    render(
+      <MemoryRouter>
+        <CitizenVaccinationsPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Vaccination Records & Certificates/i)).toBeTruthy();
+    });
+
+    // Verify there is only one table
+    const tables = screen.getAllByRole('table');
+    expect(tables.length).toBe(1);
+
+    // Verify redundant "Vaccination History" section heading is NOT present
+    expect(screen.queryByRole('heading', { name: /^Vaccination History$/i })).toBeNull();
+
+    // Verify no logged-in "Verify" button is present
+    expect(screen.queryByRole('button', { name: /^Verify$/i })).toBeNull();
+  });
+
+  it('gracefully handles a record without a certificate by showing pending issuance', async () => {
+    const mockRecords = [
+      {
+        id: 2,
+        doseNumber: 1,
+        vaccineBatchId: 15,
+        centerId: 5,
+        administrationTime: '2026-09-02T09:00:00Z',
+        certificateId: null,
+        certificateReference: null,
+        certificateStatus: null,
+      },
+    ];
+
+    certificateApi.listMyVaccinations.mockResolvedValue(mockRecords);
+    certificateApi.listMyCertificates.mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <CitizenVaccinationsPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Pending issuance/i)).toBeTruthy();
+      expect(screen.getByText('Batch #15')).toBeTruthy();
+    });
+
+    // View and PDF buttons should NOT be rendered when certificate is absent
+    expect(screen.queryByRole('button', { name: /View/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /PDF/i })).toBeNull();
+  });
 });

@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface VaccineBatchRepository extends JpaRepository<VaccineBatch, Long> {
+    boolean existsByVaccineTypeId(Long vaccineTypeId);
+
     boolean existsByManufacturerId(Long manufacturerId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from VaccineBatch b where b.id = :id")

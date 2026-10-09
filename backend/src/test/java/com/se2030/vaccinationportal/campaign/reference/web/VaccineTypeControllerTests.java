@@ -8,6 +8,8 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -244,5 +246,29 @@ class VaccineTypeControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(101)))
                 .andExpect(jsonPath("$.active", is(false)));
+    }
+
+    @Test
+    void deleteUnused_returnsNoContent() throws Exception {
+        mockMvc.perform(delete("/api/v1/vaccine-types/101"))
+                .andExpect(status().isNoContent());
+        verify(vaccineTypeService).deleteVaccineType(101L);
+    }
+
+    @Test
+    void deleteMissing_returnsNotFound() throws Exception {
+        doThrow(new ResourceNotFoundException("Missing entry"))
+                .when(vaccineTypeService).deleteVaccineType(999L);
+        mockMvc.perform(delete("/api/v1/vaccine-types/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteUsed_returnsConflict() throws Exception {
+        doThrow(new IllegalStateException("Entry is used. Deactivate it instead."))
+                .when(vaccineTypeService).deleteVaccineType(101L);
+        mockMvc.perform(delete("/api/v1/vaccine-types/101"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", is("Entry is used. Deactivate it instead.")));
     }
 }

@@ -5,6 +5,7 @@ import com.se2030.vaccinationportal.appointment.persistence.repository.Appointme
 import com.se2030.vaccinationportal.campaign.api.capacity.SlotCapacityPort;
 import com.se2030.vaccinationportal.campaign.api.staff.StaffContextQuery;
 import com.se2030.vaccinationportal.shared.auth.security.UserPrincipal;
+import java.time.Instant;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,16 @@ public class CheckInCenterAuthorizationService {
         if (hasGlobalAccess(principal)) {
             return;
         }
+        if (isVaccinator(principal)) {
+            Long sessionId = slots.getSessionIdForSlot(slotId)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Unable to resolve a vaccination session for slot " + slotId));
+            if (!staffContext.isAssignedToSession(principal, sessionId, Instant.now())) {
+                throw new AccessDeniedException(
+                        "Vaccinator is not assigned to the vaccination session for slot " + slotId);
+            }
+            return;
+        }
         Long centerId = slots.getCenterIdForSlot(slotId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Unable to resolve a vaccination center for slot " + slotId));
@@ -57,5 +68,9 @@ public class CheckInCenterAuthorizationService {
     private static boolean hasGlobalAccess(UserPrincipal principal) {
         return principal.hasRole("ROLE_ADMIN") || principal.hasRole("ADMIN")
                 || principal.hasRole("ROLE_SUPER_ADMIN") || principal.hasRole("SUPER_ADMIN");
+    }
+
+    private static boolean isVaccinator(UserPrincipal principal) {
+        return principal.hasRole("ROLE_VACCINATOR") || principal.hasRole("VACCINATOR");
     }
 }

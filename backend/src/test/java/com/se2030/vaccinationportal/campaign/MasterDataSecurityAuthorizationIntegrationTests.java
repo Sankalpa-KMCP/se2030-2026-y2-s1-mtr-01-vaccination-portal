@@ -3,6 +3,7 @@ package com.se2030.vaccinationportal.campaign;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -324,6 +325,31 @@ public class MasterDataSecurityAuthorizationIntegrationTests {
                             .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    void authorizedRolesCanDeleteBothCategories() throws Exception {
+        for (String role : List.of("ROLE_ADMIN", "ROLE_CAMPAIGN_OFFICER")) {
+            var vaccine = vaccineTypeRepository.saveAndFlush(new VaccineType("DEL-" + role, "Delete permission", "dose", true));
+            var group = targetGroupRepository.saveAndFlush(new TargetGroup("DEL-" + role, "Delete permission", false));
+            String auth = token(1L, "delete@portal.gov", List.of(role));
+            mockMvc.perform(delete("/api/v1/vaccine-types/" + vaccine.getId()).header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isNoContent());
+            mockMvc.perform(delete("/api/v1/target-groups/" + group.getId()).header(HttpHeaders.AUTHORIZATION, auth))
+                    .andExpect(status().isNoContent());
+        }
+    }
+
+    @Test
+    void otherRolesAndUnauthenticatedRequestsCannotDelete() throws Exception {
+        for (String route : List.of("vaccine-types", "target-groups")) {
+            for (String role : List.of("ROLE_CENTER_MANAGER", "ROLE_HEALTHCARE_OFFICER", "ROLE_MANAGEMENT_USER", "ROLE_CITIZEN", "ROLE_INVENTORY_OFFICER")) {
+                mockMvc.perform(delete("/api/v1/" + route + "/999")
+                        .header(HttpHeaders.AUTHORIZATION, token(1L, "denied@portal.gov", List.of(role))))
+                        .andExpect(status().isForbidden());
+            }
+            mockMvc.perform(delete("/api/v1/" + route + "/999")).andExpect(status().is4xxClientError());
         }
     }
 }
