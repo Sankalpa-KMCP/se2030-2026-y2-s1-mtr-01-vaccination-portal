@@ -356,3 +356,13 @@ export async function deactivateTargetGroup(id) {
   });
   return handleResponse(response);
 }
+
+export async function deleteVaccineType(id) {
+  const response = await apiRequest(`/v1/vaccine-types/${id}`, { method: 'DELETE' });
+  return handleResponse(response);
+}
+
+export async function deleteTargetGroup(id) {
+  const response = await apiRequest(`/v1/target-groups/${id}`, { method: 'DELETE' });
+  return handleResponse(response);
+}

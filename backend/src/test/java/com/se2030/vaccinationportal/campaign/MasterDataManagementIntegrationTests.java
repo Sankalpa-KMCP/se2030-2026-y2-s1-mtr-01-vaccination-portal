@@ -45,6 +45,46 @@ class MasterDataManagementIntegrationTests {
     @Autowired
     private VaccinationCampaignRepository campaignRepository;
 
+    @Autowired
+    private com.se2030.vaccinationportal.inventory.repository.VaccineBatchRepository batchRepository;
+
+    @Autowired
+    private com.se2030.vaccinationportal.inventory.repository.ManufacturerRepository manufacturerRepository;
+
+    @Test
+    void deleteUnusedActiveAndInactiveEntriesAndReuseCodes() {
+        for (boolean active : List.of(true, false)) {
+            String suffix = active ? "ACTIVE" : "INACTIVE";
+            VaccineType vaccine = vaccineTypeService.createVaccineType("DEL-V-" + suffix, "Delete vaccine", "dose");
+            TargetGroup group = targetGroupService.createTargetGroup("DEL-T-" + suffix, "Delete group");
+            if (!active) {
+                vaccineTypeService.deactivateVaccineType(vaccine.getId());
+                targetGroupService.deactivateTargetGroup(group.getId());
+            }
+            vaccineTypeService.deleteVaccineType(vaccine.getId());
+            targetGroupService.deleteTargetGroup(group.getId());
+            assertThat(vaccineTypeRepository.findById(vaccine.getId())).isEmpty();
+            assertThat(targetGroupRepository.findById(group.getId())).isEmpty();
+            assertThat(vaccineTypeService.getVaccineTypes(true)).noneMatch(v -> v.getId().equals(vaccine.getId()));
+            assertThat(targetGroupService.getTargetGroups(true)).noneMatch(g -> g.getId().equals(group.getId()));
+            assertThat(vaccineTypeService.createVaccineType(vaccine.getCode(), "Reused", "dose").getId()).isNotEqualTo(vaccine.getId());
+            assertThat(targetGroupService.createTargetGroup(group.getCode(), "Reused").getId()).isNotEqualTo(group.getId());
+        }
+    }
+
+    @Test
+    void inventoryBatchBlocksVaccineDeletion() {
+        VaccineType vaccine = vaccineTypeService.createVaccineType("DEL-INVENTORY", "Inventory vaccine", "dose");
+        var manufacturer = manufacturerRepository.save(new com.se2030.vaccinationportal.inventory.model.Manufacturer("DEL-MFR", "Delete test manufacturer"));
+        var batch = batchRepository.saveAndFlush(new com.se2030.vaccinationportal.inventory.model.VaccineBatch(
+                manufacturer.getId(), vaccine.getId(), "DEL-BATCH", LocalDate.now().minusDays(1),
+                LocalDate.now().plusDays(10), com.se2030.vaccinationportal.inventory.model.BatchStatus.ACTIVE));
+        assertThatThrownBy(() -> vaccineTypeService.deleteVaccineType(vaccine.getId()))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("Deactivate it instead");
+        assertThat(vaccineTypeRepository.findById(vaccine.getId())).isPresent();
+        assertThat(batchRepository.findById(batch.getId()).orElseThrow().getVaccineTypeId()).isEqualTo(vaccine.getId());
+    }
+
     @Test
     @DisplayName("VaccineType lifecycle: create, update, deactivate, reactivate and filter by active status")
     void vaccineTypeLifecycle() {
@@ -188,6 +228,11 @@ class MasterDataManagementIntegrationTests {
         // Deactivate master data
         vaccineTypeService.deactivateVaccineType(vt.getId());
         targetGroupService.deactivateTargetGroup(tg.getId());
+
+        assertThatThrownBy(() -> vaccineTypeService.deleteVaccineType(vt.getId()))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("Deactivate it instead");
+        assertThatThrownBy(() -> targetGroupService.deleteTargetGroup(tg.getId()))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("Deactivate it instead");
 
         // Verify campaign still references the entities and can be loaded
         VaccinationCampaign loaded = campaignRepository.findById(campaign.getId()).orElseThrow();

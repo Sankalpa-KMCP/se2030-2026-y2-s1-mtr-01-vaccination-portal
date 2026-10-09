@@ -52,6 +52,12 @@ public class InventoryBatchService implements InventoryBatchPort {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean hasBatchesForVaccineType(Long vaccineTypeId) {
+        return batches.existsByVaccineTypeId(vaccineTypeId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public BatchAvailability getBatchAvailability(Long centerId, Long batchId) {
         requireIds(centerId, batchId);
         VaccineBatch batch = batches.findById(batchId).orElse(null);

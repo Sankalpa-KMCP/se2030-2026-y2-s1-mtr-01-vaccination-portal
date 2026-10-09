@@ -48,6 +48,10 @@ public interface VaccinationCampaignRepository extends JpaRepository<Vaccination
      */
     boolean existsByCode(String code);
 
+    boolean existsByVaccineType_Id(Long vaccineTypeId);
+
+    boolean existsByTargetGroup_Id(Long targetGroupId);
+
     /**
      * List all campaigns with a specific lifecycle status.
      *

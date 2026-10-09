@@ -12,6 +12,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST Controller exposing master data endpoints for Vaccine Types.
+ * Handles vaccine type CRUD requests and passes business rules to the service.
  */
 @RestController
 @RequestMapping("/api/v1/vaccine-types")
@@ -33,12 +34,7 @@ public class VaccineTypeController {
         this.vaccineTypeService = vaccineTypeService;
     }
 
-    /**
-     * List vaccine types, defaulting to active-only for selector lookups.
-     *
-     * @param includeInactive if true, includes inactive records for management views
-     * @return List of VaccineTypeSummaryResponse objects
-     */
+    /** Read active vaccine types, or include inactive types for management. */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<List<VaccineTypeSummaryResponse>> getVaccineTypes(
@@ -51,6 +47,7 @@ public class VaccineTypeController {
         return ResponseEntity.ok(response);
     }
 
+    /** Create an active vaccine type; @Valid checks the submitted fields. */
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<VaccineTypeSummaryResponse> createVaccineType(
@@ -65,6 +62,7 @@ public class VaccineTypeController {
         return ResponseEntity.created(location).body(CampaignDtoMapper.toSummaryResponse(created));
     }
 
+    /** Update the vaccine name and dose unit; its code stays the same. */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<VaccineTypeSummaryResponse> updateVaccineType(
@@ -79,6 +77,7 @@ public class VaccineTypeController {
         return ResponseEntity.ok(CampaignDtoMapper.toSummaryResponse(updated));
     }
 
+    /** Make an existing vaccine type available for new campaigns. */
     @PostMapping("/{id}/activate")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<VaccineTypeSummaryResponse> activateVaccineType(@PathVariable Long id) {
@@ -86,10 +85,19 @@ public class VaccineTypeController {
         return ResponseEntity.ok(CampaignDtoMapper.toSummaryResponse(activated));
     }
 
+    /** Stop new campaigns from selecting this type; keep the record. */
     @PostMapping("/{id}/deactivate")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
     public ResponseEntity<VaccineTypeSummaryResponse> deactivateVaccineType(@PathVariable Long id) {
         VaccineType deactivated = vaccineTypeService.deactivateVaccineType(id);
         return ResponseEntity.ok(CampaignDtoMapper.toSummaryResponse(deactivated));
+    }
+
+    /** Permanently delete an unused type; the service blocks types in use. */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAMPAIGN_OFFICER')")
+    public ResponseEntity<Void> deleteVaccineType(@PathVariable Long id) {
+        vaccineTypeService.deleteVaccineType(id);
+        return ResponseEntity.noContent().build();
     }
 }
