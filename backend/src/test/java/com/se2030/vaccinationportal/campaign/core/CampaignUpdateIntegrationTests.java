@@ -56,6 +56,14 @@ import org.springframework.transaction.annotation.Transactional;
 @ActiveProfiles("test")
 @Transactional
 public class CampaignUpdateIntegrationTests {
+    @org.springframework.boot.test.context.TestConfiguration
+    static class DateClockConfig {
+        @org.springframework.context.annotation.Bean
+        @org.springframework.context.annotation.Primary
+        Clock campaignDateClock() {
+            return Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), java.time.ZoneOffset.UTC);
+        }
+    }
 
     @Autowired private MockMvc mockMvc;
     @Autowired private JwtTokenService jwtTokenService;

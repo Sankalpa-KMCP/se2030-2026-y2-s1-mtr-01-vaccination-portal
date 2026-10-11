@@ -77,6 +77,7 @@ public class VaccinationCampaign {
     @Column(name = "booking_close_at", nullable = false)
     private Instant bookingCloseAt;
 
+    // OOP encapsulation: status is private and changed through lifecycle methods.
     @NotNull(message = "Campaign status is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
@@ -295,6 +296,7 @@ public class VaccinationCampaign {
      * Allowed only from PUBLISHED or ACTIVE status.
      */
     public void suspend() {
+        // Check the allowed current status before changing the campaign's private state.
         if (this.status != CampaignStatus.PUBLISHED && this.status != CampaignStatus.ACTIVE) {
             throw new IllegalStateException(
                     "Cannot suspend campaign in " + this.status + " status. Only PUBLISHED or ACTIVE campaigns can be suspended."

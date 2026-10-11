@@ -36,6 +36,8 @@ describe('CampaignForm — Create and Edit Modes', () => {
   };
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-31T12:00:00Z'));
     vi.clearAllMocks();
     apiMocks.listVaccineTypes.mockResolvedValue([
       { id: 1, code: 'VAX-01', name: 'Vaccine One' },
@@ -56,6 +58,7 @@ describe('CampaignForm — Create and Edit Modes', () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it('edit mode prefills approved values and displays Edit Campaign header', () => {
@@ -374,5 +377,93 @@ describe('CampaignForm — Create and Edit Modes', () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const payload = onSubmit.mock.calls[0][0];
     expect(payload.questionnaireVersionId).toBeUndefined();
+  });
+});
+
+describe('CampaignForm current-day limits', () => {
+  const localInput = (iso) => {
+    const date = new Date(iso);
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+  const campaign = {
+    id: 10, code: 'DATE-CHECK', name: 'Date check',
+    serviceStartDate: '2026-10-09', serviceEndDate: '2026-10-10',
+    bookingOpenAt: '2026-10-08T18:30:00Z', bookingCloseAt: '2026-10-08T19:30:00Z',
+  };
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    // It is already October 9 in Sri Lanka while UTC is still October 8.
+    vi.setSystemTime(new Date('2026-10-08T20:00:00Z'));
+    apiMocks.listVaccineTypes.mockResolvedValue([{ id: 1 }]);
+    apiMocks.listTargetGroups.mockResolvedValue([{ id: 2 }]);
+  });
+  afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+  it('sets picker minimums to the start of today in Sri Lanka', () => {
+    render(<CampaignForm initialCampaign={campaign} onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/Service Start Date/i).min).toBe('2026-10-09');
+    expect(screen.getByLabelText(/Service End Date/i).min).toBe('2026-10-09');
+    expect(screen.getByLabelText(/Citizen Booking Open Timestamp/i).min).toBe(localInput(campaign.bookingOpenAt));
+    expect(screen.getByLabelText(/Citizen Booking Close Timestamp/i).min).toBe(localInput(campaign.bookingOpenAt));
+  });
+
+  it.each([
+    [/Service Start Date/i, '2026-10-08'],
+    [/Service End Date/i, '2026-10-08'],
+    [/Citizen Booking Open Timestamp/i, '2026-10-08T18:29:00Z'],
+    [/Citizen Booking Close Timestamp/i, '2026-10-08T18:29:00Z'],
+  ])('rejects manually entered past values for %s', (label, value) => {
+    const onSubmit = vi.fn();
+    render(<CampaignForm initialCampaign={campaign} onSubmit={onSubmit} />);
+    const input = screen.getByLabelText(label);
+    fireEvent.change(input, { target: { value: value.includes('T') ? localInput(value) : value } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(input.classList.contains('is-invalid')).toBe(true);
+  });
+
+  it('allows today, including booking times earlier today', () => {
+    const onSubmit = vi.fn();
+    render(<CampaignForm initialCampaign={campaign} onSubmit={onSubmit} />);
+    fireEvent.change(screen.getByLabelText(/Citizen Booking Open Timestamp/i), {
+      target: { value: localInput('2026-10-08T18:45:00Z') },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks today on submission after midnight', () => {
+    const onSubmit = vi.fn();
+    render(<CampaignForm onSubmit={onSubmit} />);
+    fireEvent.change(screen.getByLabelText(/Service Start Date/i), { target: { value: '2026-10-09' } });
+    vi.setSystemTime(new Date('2026-10-09T18:30:00Z'));
+    fireEvent.submit(screen.getByLabelText(/Service Start Date/i).closest('form'));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText('Service start date cannot be before today.')).toBeTruthy();
+  });
+
+  it('blocks creation with past dates in all four fields', async () => {
+    const onSubmit = vi.fn();
+    render(<CampaignForm onSubmit={onSubmit} />);
+    await waitFor(() => expect(screen.getByLabelText(/Vaccine Type/i).disabled).toBe(false));
+    for (const [label, value] of [
+      [/Campaign Code/i, 'PAST'], [/Campaign Name/i, 'Past dates'],
+      [/Service Start Date/i, '2026-10-07'], [/Service End Date/i, '2026-10-08'],
+      [/Citizen Booking Open Timestamp/i, localInput('2026-10-07T08:00:00Z')],
+      [/Citizen Booking Close Timestamp/i, localInput('2026-10-08T08:00:00Z')],
+    ]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Campaign/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getAllByText(/cannot be before today\./)).toHaveLength(4);
+  });
+
+  it('preserves unchanged historical dates when editing other details', () => {
+    const onSubmit = vi.fn();
+    render(<CampaignForm initialCampaign={{ ...campaign, serviceStartDate: '2026-10-01', bookingOpenAt: '2026-09-01T00:00:59Z' }} onSubmit={onSubmit} />);
+    fireEvent.change(screen.getByLabelText(/Campaign Name/i), { target: { value: 'Updated name' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].bookingOpenAt).toBe('2026-09-01T00:00:59.000Z');
   });
 });

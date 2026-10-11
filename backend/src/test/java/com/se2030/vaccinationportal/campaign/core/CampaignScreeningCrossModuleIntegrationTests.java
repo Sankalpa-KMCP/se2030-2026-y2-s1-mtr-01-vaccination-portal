@@ -146,7 +146,7 @@ public class CampaignScreeningCrossModuleIntegrationTests {
         // 2. Assign Version B specifically to a test campaign with an open booking window
         Instant bookingOpenAt = clock.instant().minusSeconds(3600);
         Instant bookingCloseAt = clock.instant().plusSeconds(86400 * 30);
-        LocalDate serviceStartDate = today.minusDays(1);
+        LocalDate serviceStartDate = today;
         LocalDate serviceEndDate = today.plusDays(30);
 
         VaccinationCampaign campaign = campaignService.createCampaign(

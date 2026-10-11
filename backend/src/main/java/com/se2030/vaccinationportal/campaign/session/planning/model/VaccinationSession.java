@@ -53,6 +53,7 @@ public class VaccinationSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // OOP association: a session refers to a campaign and a hosting center.
     @NotNull(message = "Campaign is required")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "campaign_id", nullable = false, updatable = false)

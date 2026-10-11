@@ -64,6 +64,13 @@ export default function LandingPage({ onLoginClick, isInitialHomeLoad = false, o
   const rootRef = useRef(null);
   const [showIntro, setShowIntro] = useState(() => shouldShowConnectedCommunityIntro(isInitialHomeLoad));
   const finishIntro = useCallback(() => setShowIntro(false), []);
+  const introWasShownRef = useRef(showIntro);
+  useEffect(() => {
+    if (!showIntro && introWasShownRef.current) {
+      rootRef.current?.querySelector('#lp-main')?.focus({ preventScroll: true });
+      introWasShownRef.current = false;
+    }
+  }, [showIntro]);
   useEffect(() => {
     if (isInitialHomeLoad) onIntroAttempted?.();
   }, [isInitialHomeLoad, onIntroAttempted]);
@@ -72,7 +79,7 @@ export default function LandingPage({ onLoginClick, isInitialHomeLoad = false, o
 
   return (
     <>
-    <div className="lp-page lp-page--home" ref={rootRef} inert={showIntro}>
+    <div className="lp-page lp-page--home" data-intro-playing={showIntro ? '' : undefined} ref={rootRef} inert={showIntro}>
       <a className="lp-skip-link" href="#lp-main">
         Skip to main content
       </a>

@@ -24,6 +24,8 @@ function formatForDateTimeLocal(dateVal) {
 
 export default function CampaignForm({ onSubmit, onCancel, loading, error, initialCampaign = null }) {
   const isEditMode = Boolean(initialCampaign);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Colombo' }).format(new Date());
+  const todayStart = formatForDateTimeLocal(`${today}T00:00:00+05:30`);
 
   const [code, setCode] = useState(initialCampaign?.code || '');
   const [name, setName] = useState(initialCampaign?.name || '');
@@ -141,6 +143,9 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
 
   const validateForm = () => {
     const errs = {};
+    // Recompute on submission in case the form was left open across midnight.
+    const currentDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Colombo' }).format(new Date());
+    const dayStart = new Date(`${currentDay}T00:00:00+05:30`).getTime();
 
     if (!isEditMode) {
       if (!code.trim()) {
@@ -197,6 +202,18 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
       }
     }
 
+    // Existing historical dates may remain unchanged when editing other details.
+    for (const [field, value, original, label, isTimestamp] of [
+      ['serviceStartDate', serviceStartDate, initialCampaign?.serviceStartDate, 'Service start date', false],
+      ['serviceEndDate', serviceEndDate, initialCampaign?.serviceEndDate, 'Service end date', false],
+      ['bookingOpenAt', bookingOpenAt, formatForDateTimeLocal(initialCampaign?.bookingOpenAt), 'Citizen booking open date', true],
+      ['bookingCloseAt', bookingCloseAt, formatForDateTimeLocal(initialCampaign?.bookingCloseAt), 'Citizen booking close date', true],
+    ]) {
+      const isPast = isTimestamp ? new Date(value).getTime() < dayStart : value < currentDay;
+      if (value && isPast && (!isEditMode || value !== original) && !errs[field]) {
+        errs[field] = `${label} cannot be before today.`;
+      }
+    }
     return errs;
   };
 
@@ -218,8 +235,11 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
         description: description.trim() || null,
         serviceStartDate,
         serviceEndDate,
-        bookingOpenAt: new Date(bookingOpenAt).toISOString(),
-        bookingCloseAt: new Date(bookingCloseAt).toISOString(),
+        // Preserve seconds on unchanged stored timestamps; the inputs display minutes.
+        bookingOpenAt: bookingOpenAt === formatForDateTimeLocal(initialCampaign.bookingOpenAt)
+          ? new Date(initialCampaign.bookingOpenAt).toISOString() : new Date(bookingOpenAt).toISOString(),
+        bookingCloseAt: bookingCloseAt === formatForDateTimeLocal(initialCampaign.bookingCloseAt)
+          ? new Date(initialCampaign.bookingCloseAt).toISOString() : new Date(bookingCloseAt).toISOString(),
       };
 
       onSubmit(payload);
@@ -465,6 +485,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                 type="date"
                 className={`form-control ${fieldErrors.serviceStartDate ? 'is-invalid' : ''}`}
                 value={serviceStartDate}
+                min={today}
                 max={serviceEndDate || undefined}
                 onChange={(e) => {
                   setServiceStartDate(e.target.value);
@@ -485,7 +506,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                 type="date"
                 className={`form-control ${fieldErrors.serviceEndDate ? 'is-invalid' : ''}`}
                 value={serviceEndDate}
-                min={serviceStartDate || undefined}
+                min={serviceStartDate > today ? serviceStartDate : today}
                 onChange={(e) => {
                   setServiceEndDate(e.target.value);
                   clearFieldErrors('serviceStartDate', 'serviceEndDate', 'bookingCloseAt');
@@ -506,6 +527,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                 type="datetime-local"
                 className={`form-control ${fieldErrors.bookingOpenAt ? 'is-invalid' : ''}`}
                 value={bookingOpenAt}
+                min={todayStart}
                 max={bookingCloseAt || (serviceEndDate ? `${serviceEndDate}T23:59` : undefined)}
                 onChange={(e) => {
                   setBookingOpenAt(e.target.value);
@@ -526,7 +548,7 @@ export default function CampaignForm({ onSubmit, onCancel, loading, error, initi
                 type="datetime-local"
                 className={`form-control ${fieldErrors.bookingCloseAt ? 'is-invalid' : ''}`}
                 value={bookingCloseAt}
-                min={bookingOpenAt || undefined}
+                min={bookingOpenAt > todayStart ? bookingOpenAt : todayStart}
                 max={serviceEndDate ? `${serviceEndDate}T23:59` : undefined}
                 onChange={(e) => {
                   setBookingCloseAt(e.target.value);

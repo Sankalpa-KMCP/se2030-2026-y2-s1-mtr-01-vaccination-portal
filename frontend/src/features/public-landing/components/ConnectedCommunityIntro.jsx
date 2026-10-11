@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import '../connected-community-intro.css';
 
-const INTRO_DURATION_MS = 3600;
+const INTRO_DURATION_MS = 3200;
 const ANIMATION_FALLBACK_MS = 100;
 
 const CITIZENS = [
@@ -30,21 +30,17 @@ function CommunityArtwork() {
 
       <circle className="cc-intro__halo" cx="380" cy="218" r="135" fill="#D9F4EA" />
       <circle className="cc-intro__halo-ring" cx="380" cy="218" r="148" stroke="#A4DDD0" />
+      <circle className="cc-intro__orbit" cx="380" cy="218" r="172" stroke="#BBD9CE" strokeDasharray="3 12" />
 
-      {CITIZENS.map(({ x, y }, index) => (
-        <line
-          key={`connection-${x}-${y}`}
-          className="cc-intro__connection"
-          style={{ '--cc-index': index }}
-          x1={x}
-          y1={y}
-          x2="380"
-          y2="218"
-          pathLength="1"
-          stroke="url(#cc-intro-line)"
-          strokeWidth="2"
-        />
-      ))}
+      {CITIZENS.map(({ x, y }, index) => {
+        const path = `M${x} ${y} C${x} 218 ${x < 380 ? 270 : 490} ${y} 380 218`;
+        return (
+          <g key={`connection-${x}-${y}`} style={{ '--cc-index': index }}>
+            <path className="cc-intro__connection" d={path} pathLength="1" stroke="url(#cc-intro-line)" strokeWidth="1.5" />
+            <path className="cc-intro__signal" d={path} pathLength="1" stroke="#1CA58D" strokeWidth="3" strokeLinecap="round" />
+          </g>
+        );
+      })}
 
       {CITIZENS.map(({ x, y }, index) => (
         <g
@@ -52,7 +48,8 @@ function CommunityArtwork() {
           transform={`translate(${x} ${y})`}
         >
           <g className="cc-intro__citizen" style={{ '--cc-index': index }}>
-            <circle r="32" fill="#F7FEFB" stroke="#A9DACC" strokeWidth="2" />
+            <circle r="40" stroke="#B8DCCE" strokeWidth="1" />
+            <circle r="32" fill="#F7FEFB" stroke="#A9DACC" strokeWidth="1.5" />
             <circle cy="-8" r="8" fill="#188477" />
             <path d="M-16 16c1-10 7-15 16-15s15 5 16 15" stroke="#188477" strokeWidth="6" strokeLinecap="round" />
           </g>
@@ -83,6 +80,12 @@ function CommunityArtwork() {
 
 export default function ConnectedCommunityIntro({ onComplete }) {
   const skipRef = useRef(null);
+  const completedRef = useRef(false);
+  const complete = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    onComplete();
+  }, [onComplete]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -90,27 +93,38 @@ export default function ConnectedCommunityIntro({ onComplete }) {
     skipRef.current?.focus({ preventScroll: true });
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onComplete();
+      if (event.key === 'Escape') complete();
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        skipRef.current?.focus({ preventScroll: true });
+      }
     };
+    const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const handleMotionChange = (event) => {
+      if (event.matches) complete();
+    };
+    motionQuery?.addEventListener?.('change', handleMotionChange);
+    if (motionQuery?.matches) complete();
     window.addEventListener('keydown', handleKeyDown);
-    const timeout = window.setTimeout(onComplete, INTRO_DURATION_MS + ANIMATION_FALLBACK_MS);
+    const timeout = window.setTimeout(complete, INTRO_DURATION_MS + ANIMATION_FALLBACK_MS);
 
     return () => {
       window.clearTimeout(timeout);
       window.removeEventListener('keydown', handleKeyDown);
+      motionQuery?.removeEventListener?.('change', handleMotionChange);
       document.body.style.overflow = previousOverflow;
     };
-  }, [onComplete]);
+  }, [complete]);
 
   const handleAnimationEnd = (event) => {
-    if (event.target === event.currentTarget) {
-      onComplete();
+    if (event.target === event.currentTarget && event.animationName === 'cc-intro-exit') {
+      complete();
     }
   };
 
   return (
     <div className="cc-intro" role="dialog" aria-modal="true" aria-labelledby="cc-intro-title" aria-describedby="cc-intro-subtitle" onAnimationEnd={handleAnimationEnd}>
-      <button ref={skipRef} className="cc-intro__skip" type="button" onClick={onComplete}>
+      <button ref={skipRef} className="cc-intro__skip" type="button" onClick={complete}>
         Skip Intro <span aria-hidden="true">→</span>
       </button>
       <div className="cc-intro__content">

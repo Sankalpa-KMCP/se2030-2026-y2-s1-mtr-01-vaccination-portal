@@ -680,6 +680,7 @@ public class VaccinationCampaignService {
         }
 
         // Remove extra spaces and reject a code that is already in use.
+        validateNewCampaignDates(serviceStartDate, serviceEndDate, bookingOpenAt, bookingCloseAt, null);
         String normalizedCode = code != null ? code.trim() : null;
         if (campaignRepository.existsByCode(normalizedCode)) {
             throw new IllegalArgumentException("Campaign already exists with code: " + normalizedCode);
@@ -835,6 +836,8 @@ public class VaccinationCampaignService {
         }
         validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
 
+        validateNewCampaignDates(serviceStartDate, serviceEndDate,
+                campaign.getBookingOpenAt(), campaign.getBookingCloseAt(), campaign);
         campaign.setServiceStartDate(serviceStartDate);
         campaign.setServiceEndDate(serviceEndDate);
 
@@ -926,6 +929,7 @@ public class VaccinationCampaignService {
         validateCampaignServiceDateReverseImpact(campaignId, serviceStartDate, serviceEndDate);
 
         // Apply the new details only after the validations have passed.
+        validateNewCampaignDates(serviceStartDate, serviceEndDate, bookingOpenAt, bookingCloseAt, campaign);
         campaign.setName(name.trim());
         campaign.setDescription(description);
         campaign.setServiceStartDate(serviceStartDate);
@@ -1064,6 +1068,26 @@ public class VaccinationCampaignService {
             return Optional.empty();
         }
         return campaignRepository.findByCode(code.trim());
+    }
+
+    /** New dates must be today or later; unchanged historical values remain editable. */
+    private void validateNewCampaignDates(LocalDate start, LocalDate end, Instant open, Instant close,
+                                          VaccinationCampaign existing) {
+        ZoneId zone = ZoneId.of("Asia/Colombo");
+        LocalDate today = LocalDate.now(clock.withZone(zone));
+        Instant dayStart = today.atStartOfDay(zone).toInstant();
+        if (start.isBefore(today) && (existing == null || !start.equals(existing.getServiceStartDate()))) {
+            throw new IllegalArgumentException("Service start date cannot be before today");
+        }
+        if (end.isBefore(today) && (existing == null || !end.equals(existing.getServiceEndDate()))) {
+            throw new IllegalArgumentException("Service end date cannot be before today");
+        }
+        if (open != null && open.isBefore(dayStart) && (existing == null || !open.equals(existing.getBookingOpenAt()))) {
+            throw new IllegalArgumentException("Citizen booking open date cannot be before today");
+        }
+        if (close != null && close.isBefore(dayStart) && (existing == null || !close.equals(existing.getBookingCloseAt()))) {
+            throw new IllegalArgumentException("Citizen booking close date cannot be before today");
+        }
     }
 
     private void validateCampaignServiceDateReverseImpact(

@@ -50,7 +50,7 @@ The backend follows an explicit hexagonal / ports-and-adapters architecture unde
 
 Database schema versioning is managed strictly through Flyway migrations located in `src/main/resources/db/migration/`.
 
-- **Active Migration Range**: Current migrations span `V0` through `V24` (25 active migrations).
+- **Active Migration Range**: Current migrations span `V0` through `V27` (28 active migrations).
 - **Migration Execution**: Flyway migrations run automatically upon application startup when connected to a configured MySQL database.
 - **DDL Validation**: Production safety is enforced via `spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:validate}`, verifying that Hibernate entities match the Flyway-applied schema without runtime auto-modification.
 - **Testing Profile (`application-test.properties`)**: Standard unit and integration tests run against an in-memory H2 database (`MODE=MySQL`) with `create-drop` lifecycle for fast, isolated execution.

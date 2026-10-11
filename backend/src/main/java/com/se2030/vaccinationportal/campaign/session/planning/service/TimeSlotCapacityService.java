@@ -436,6 +436,7 @@ public class TimeSlotCapacityService implements SlotCapacityPort {
         if (context.failure() != null) {
             return context.failure();
         }
+        // OOP polymorphism: run evaluate() from the selected direct-booking or waitlist strategy.
         return strategy.evaluate(context.slot(), now);
     }
 

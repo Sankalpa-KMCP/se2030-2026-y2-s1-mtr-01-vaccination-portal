@@ -99,6 +99,10 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .lp-page--home[data-intro-playing] .home-hero--simplified * {
+    animation-play-state: paused !important;
+  }
+
   .lp-page--home.lp-motion-ready .home-hero--simplified :is(
     .hospital-eyebrow,
     h1,
