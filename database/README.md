@@ -8,7 +8,7 @@ See the [current architecture and file tree](../docs/Web_Based_Vaccination_Porta
 
 ## Declared Technology Baseline
 
-- **Database Engine**: MySQL 8.4.10 LTS
+- **Database Engine**: MySQL 8.4 LTS
 - **Local Runtime Environment**: Docker Compose (recommended reproducible development workflow)
 - **Port**: 3306 (default local mapping)
 - **Database Name**: `vaccination_portal`
@@ -16,7 +16,7 @@ See the [current architecture and file tree](../docs/Web_Based_Vaccination_Porta
 
 ## Database Architecture & Flyway Migrations
 
-Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V24` (25 active migrations).
+Database schema versioning is managed via Flyway migrations located in [`../backend/src/main/resources/db/migration/`](../backend/src/main/resources/db/migration/). Flyway automatically executes pending migrations upon Spring Boot application startup against the configured MySQL instance. Current active migrations span `V0` through `V27` (28 active migrations).
 
 ### Active Migration Schedule
 
@@ -35,18 +35,21 @@ Database schema versioning is managed via Flyway migrations located in [`../back
 | `V10` | `V10__mf02_campaign_session_supporting_tables.sql` | MF-02: Recurrence rules, Rosters, Closures, Location targets |
 | `V11` | `V11__mf05_vaccination_foundation.sql` | MF-05: Vaccination administration, Drafts & Certificates |
 | `V12` | `V12__shared_auth_registration_foundation.sql` | Shared Auth: Citizen self-registration & staff registration request audit |
-| `V13` | `V13__mf02_time_slot_integrity_constraints.sql` | mf02 time slot integrity constraints |
-| `V14` | `V14__citizen_profile_foundation.sql` | citizen profile foundation |
-| `V15` | `V15__mf04_inventory_foundation.sql` | mf04 inventory foundation |
-| `V16` | `V16__add_super_admin_role.sql` | add super admin role |
-| `V17` | `V17__auth_verification_and_password_recovery.sql` | auth verification and password recovery |
-| `V18` | `V18__mf05_correction_certificate_lifecycle.sql` | mf05 correction certificate lifecycle |
-| `V19` | `V19__add_vaccinator_auth_role.sql` | add vaccinator auth role |
-| `V20` | `V20__vaccination_draft_deletion_audit.sql` | vaccination draft deletion audit |
-| `V21` | `V21__screening_submission_active_uniqueness.sql` | screening submission active uniqueness |
-| `V22` | `V22__add_email_verification.sql` | Citizen OTP challenge and existing-active verification backfill |
-| `V23` | `V23__user_account_login_lockout.sql` | Failed-login counters and timed lock state |
-| `V24` | `V24__add_refresh_token_sessions_family_revocation_index.sql` | Refresh-family revocation index (token_family_id, revoked_at) |
+| `V13` | `V13__mf02_time_slot_integrity_constraints.sql` | MF-02: Time slot integrity constraints |
+| `V14` | `V14__citizen_profile_foundation.sql` | Citizen Profile: Demographic and contact profile foundation |
+| `V15` | `V15__mf04_inventory_foundation.sql` | MF-04: Vaccine batches, manufacturers, center stock & transactions |
+| `V16` | `V16__add_super_admin_role.sql` | Shared Auth: Super Admin role definition |
+| `V17` | `V17__auth_verification_and_password_recovery.sql` | Shared Auth: Verification & password recovery tokens |
+| `V18` | `V18__mf05_correction_certificate_lifecycle.sql` | MF-05: Certificate lifecycle, revocation audit & corrections |
+| `V19` | `V19__add_vaccinator_auth_role.sql` | Shared Auth: Dedicated Vaccinator role definition |
+| `V20` | `V20__vaccination_draft_deletion_audit.sql` | MF-05: Vaccination draft deletion audit ledger |
+| `V21` | `V21__screening_submission_active_uniqueness.sql` | MF-01: Screening submission active uniqueness |
+| `V22` | `V22__add_email_verification.sql` | Shared Auth: Citizen OTP challenge and active verification backfill |
+| `V23` | `V23__user_account_login_lockout.sql` | Shared Auth: Failed-login counters and timed lockout state |
+| `V24` | `V24__add_refresh_token_sessions_family_revocation_index.sql` | Shared Auth: Refresh-family revocation index (token_family_id, revoked_at) |
+| `V25` | `V25__mf03_waitlist_session_uniqueness.sql` | MF-03: Session-level waitlist uniqueness constraint |
+| `V26` | `V26__mf03_history_and_event_consumption.sql` | MF-03: Appointment history, event consumption & notification outbox |
+| `V27` | `V27__mf05_correction_request_type.sql` | MF-05: Vaccination correction request type categorization |
 
 ## Directory Structure
 

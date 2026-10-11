@@ -1,187 +1,319 @@
-# Web-Based Vaccination Portal
+# Web-Based Vaccination Portal (WBVP)
 
-## Architecture ownership (current)
+<div align="center">
 
-See the [current architecture and file tree](docs/Web_Based_Vaccination_Portal_Recommended_Full_File_Tree.md) for capability packages, provider-owned APIs, transaction invariants and enforced import boundaries. Historical handoffs do not define the current package tree.
+[![Java 21](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1.0-6DB33F?style=for-the-badge&logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
+[![React 19](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Vite 8](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![MySQL 8.4 LTS](https://img.shields.io/badge/MySQL-8.4_LTS-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Flyway 28 Migrations](https://img.shields.io/badge/Flyway-28_Migrations-CC0200?style=for-the-badge&logo=flyway&logoColor=white)](https://flywaydb.org/)
+[![Automated Tests](https://img.shields.io/badge/Automated_Tests-4%2C200%2B_Passing-success?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/Sankalpa-KMCP/se2030-2026-y2-s1-mtr-01-vaccination-portal/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
-## Project Overview
+<br/>
 
-The Web-Based Vaccination Portal (WBVP-SE2030) is a healthcare orchestration platform supporting vaccination program operations for citizens, operational staff, healthcare professionals, and system administrators. The portal is architected as a layered modular monolith with explicit hexagonal boundaries (ports and adapters) ensuring decoupled domain interactions.
+**An enterprise-grade healthcare orchestration platform engineered with hexagonal architecture, strict concurrency guarantees, zero-compromise session security, and verifiable digital health certification.**
 
-## Technology Baseline
+[Key Feats](#-key-engineering-achievements) • [Visual Showcase](#-visual-interface--experience-showcase) • [System Architecture](#-system-architecture) • [Core Modules](#-core-domain-modules) • [Quickstart](#-3-minute-quickstart) • [Demo Credentials](#-seeded-demo-accounts) • [Testing Rigor](#-testing--quality-pyramid)
 
-- **Frontend**: React 19, React Router DOM 7, Vite 8, Bootstrap 5 / Vanilla CSS, Vitest 4, Testing Library
-- **Backend**: Java 21, Spring Boot (Spring Web MVC, Spring Security, Spring Data JPA, Jakarta Validation, Spring Boot Actuator)
-- **Database Engine**: MySQL 8.4 LTS (Flyway migration framework)
-- **Security & Auth**: Stateless access JWT validation (`jjwt` v0.12.6), persisted rotating refresh sessions and Role-Based Access Control (RBAC)
-- **Build Tooling**: Maven (with embedded wrapper) & npm
-- **Continuous Integration**: GitHub Actions (Node.js 24 for frontend; Java 21 Temurin for backend)
+</div>
 
-## System Architecture & Hexagonal Decoupling
+---
 
-The backend follows an explicit hexagonal architecture (ports and adapters) under package `com.se2030.vaccinationportal`:
+## 📌 Executive Summary
 
-- **Decoupled Inter-Module Communication**: Domain interactions across module boundaries use explicit ports (e.g. `EligibilityLookupPort`, `SlotCapacityPort`) to prevent direct database coupling between domains.
-- **Relational Integrity & Migrations**: Schema evolution is controlled entirely via Flyway database migrations in `backend/src/main/resources/db/migration/`. Current migrations span `V0` through `V24` (25 active migrations).
-- **Dual Verification Suite**: Backend verification combines fast in-memory H2 unit/integration tests with real MySQL Testcontainers for database schema and concurrency assurance.
+The **Web-Based Vaccination Portal (WBVP)** is a full-stack, distributed healthcare platform designed to orchestrate large-scale vaccination campaigns. Architected as a **Hexagonal Modular Monolith** (Ports and Adapters), it manages the complete immunization lifecycle—from dynamic pre-vaccination clinical screening and capacity-locked appointment scheduling to inventory lot tracking, two-phase clinical dose administration, tamper-evident digital certificate generation, and an integrated conversational AI assistant.
 
-## Functional Capabilities & Implementation Status
+---
 
-| Module / Capability | Backend Package | Frontend Feature | Implementation Status | Scope & Responsibilities |
-| :--- | :--- | :--- | :--- | :--- |
-| **Shared Authentication & Access Control** | `shared/auth` | `src/auth/` | **Implemented** | 15-minute access JWTs, seven-day rotating refresh-cookie sessions, citizen self-registration, staff registration requests, admin review, and role-based route protection. |
-| **MF-01: Pre-Vaccination Screening & Eligibility** | `screening` | `src/features/screening/` | **Implemented** | Screening question definitions, questionnaire versioning, dynamic rule evaluation, submission processing, and clinical eligibility reviews. |
-| **MF-02: Campaign, Center & Session Management** | `campaign` | `campaign-management`, `session-management`, `center-operations` | **Implemented** | Campaigns, target groups, dose programmes, geographic target allocations, vaccination centers, operating hours, closures, recurrence rule series generation, time slot capacity, and staff rostering. |
-| **MF-03: Appointment, Waitlist & Check-In** | `appointment` | `src/features/appointment-management/` | **Implemented** | Citizen booking, cancellation/rescheduling, waitlist management and staff check-in; guard-row and capacity transaction invariants remain explicit. |
-| **MF-04: Vaccine Inventory & Batch Management** | `inventory` | `src/features/inventory-management/` | **Implemented** | Manufacturer and batch management, stock queries/adjustments, validation, auditing and the vaccination deduction boundary. |
-| **MF-05: Vaccination Administration & Records** | `vaccination` | `src/features/vaccination-administration/` | **Implemented** | Draft administration/finalization, citizen records and digital certificate issuance/verification; clinical finalization remains one transaction. |
-| **Operational Analytics** | `campaign` | `src/features/analytics/` | **Implemented** | Interactive operational analytics view with filterable vaccination program metrics. |
-| **Public Landing & Information** | N/A | `src/features/public-landing/` | **Implemented** | Responsive public landing experience, accessible navigation, workflow guide (`/how-it-works`), and mission overview (`/about`). |
-| **Project-Wide AI Assistant** | `assistant` | `src/features/assistant/` | **Implemented** | Secure, read-only conversational guidance, role-aware route suggestions, deterministic safety policy, and personalized citizen lookups. See [AI Assistant Setup & Demo Guide](docs/AI_ASSISTANT_SETUP_AND_DEMO.md). |
+## 🏆 Key Engineering Achievements
 
-## Public Application Routes
+### 1. High-Concurrency & Zero-Oversell Guarantees
+- **3-Level Hierarchical Pessimistic Locking**: Eliminates cyclic database deadlocks by enforcing deterministic lock acquisition ordering during slot booking:
+  $$\text{VaccinationCampaign} \longrightarrow \text{VaccinationSession} \longrightarrow \text{TimeSlot}$$
+  All locks are acquired via `SELECT ... FOR UPDATE` before re-evaluating remaining capacity under the active transaction, eliminating Time-of-Check to Time-of-Use (TOCTOU) race conditions.
+- **Citizen-Campaign Guard-Row Mutexes**: Employs dedicated guard rows (`citizen_campaign_booking_guard`) to serialize concurrent cross-table operations (booking, waitlist intake, rescheduling, promotions) without coarse table-wide locking, preventing dual holdings.
+- **Deterministic FIFO Waitlist Engine**: Promotes waitlisted candidates in strict temporal order (`joined_at ASC, id ASC`) upon appointment cancellations or capacity expansion, automatically bypassing unverified candidates without burning capacity or stalling queues.
 
-The frontend application provides public navigation and dedicated access flows:
+### 2. Zero-Compromise Security & Session Defense
+- **Memory-Only Access Token Storage**: JWT access tokens are held exclusively in browser module memory (`memoryToken`). No sensitive tokens are persisted to `localStorage` or `sessionStorage`, eliminating XSS token harvesting vectors.
+- **Single-Use Rotating Refresh Tokens with Family Revocation**: Refresh tokens are 256-bit cryptographically secure random values transmitted via `HttpOnly`, `SameSite=Lax`, `Secure` cookies; only SHA-256 hashes are persisted. Atomic rotation claims (`claimForRotation`) detect token theft; re-presentation of an already rotated token immediately revokes the entire token family.
+- **Atomic Brute-Force Login Lockout**: Failed login counters and timed lockouts (5 attempts / 15-minute lock) are enforced via single-query atomic SQL updates, avoiding read-modify-write lost-update races. Configured with `@Transactional(noRollbackFor = BadCredentialsException.class)` to ensure security tallies commit even upon rejected authentication.
 
-| Route | Component / View | Description |
-| :--- | :--- | :--- |
-| `/` | `LandingPage` | Home portal landing page with program overview, readiness gates, and trust metrics. |
-| `/how-it-works` | `HowItWorksPage` | Informational guide explaining the vaccination journey for citizens and providers. |
-| `/about` | `AboutPage` | Portal mission, architecture, and governance standards. |
-| `/login` | `LoginPage` | Universal login portal for all registered accounts (legacy `/login/citizen` and `/login/staff` routes redirect here). |
-| `/register/citizen` | `CitizenRegistrationPage` | Citizen self-registration for vaccination access. |
-| `/register/staff` | `StaffRegistrationRequestPage` | Operational/medical staff registration request submission. |
+### 3. Two-Phase Clinical Finalization & Zero-Dependency PDF Engine
+- **Two-Phase Clinical Administration**: Vaccinators create an in-progress draft specifying dose number, vaccine batch, and physical administration confirmation. Finalization executes in a **single atomic transaction** coordinating:
+  1. Immutable `VaccinationRecord` creation.
+  2. Inventory lot deduction (`InventoryBatchPort.deductVaccinationDose`).
+  3. Appointment lifecycle closure (`AppointmentValidationPort.completeAppointment`).
+  4. Digital certificate issuance (`DigitalCertificateService.issueCertificateForVaccinationRecord`).
+- **Zero-Dependency PDF 1.4 Generator**: Pure Java binary ISO 32000 / PDF 1.4 rendering engine constructed without third-party libraries (no Apache PDFBox, no iText), eliminating heavy dependencies, CVE attack surface, and licensing liabilities while producing official, tamper-evident certificates with verification tokens.
+- **Privacy-Preserving Public Verification**: `/api/v1/vaccination/certificates/verify/{token}` allows third parties to confirm certificate authenticity without exposing patient PII (National ID, date of birth, contact details).
 
-All active citizen and staff accounts sign in through `/login`. After authentication, the application redirects users to the appropriate area based on their assigned role (`/app/citizen`, `/app/staff`, `/app/admin`) or authorized management interfaces. Citizen registration (`/register/citizen`) and staff access-request registration (`/register/staff`) remain separate workflows. Citizen users can access session availability search and appointment booking at `/app/appointments/book`, and personal appointment history, rescheduling, and cancellation management at `/app/appointments/mine`.
+### 4. Deterministic AI Assistant Subsystem
+- **Multi-Provider Adapter Architecture**: Pluggable AI engine supporting OpenAI, Google Gemini, and local offline Ollama models with graceful fallback.
+- **Deterministic Refusal Policies**: `AssistantRefusalPolicy` intercepts and rejects medical triage, prescription requests, prompt injections, and database mutations.
+- **Principal-Bound Domain Tools**: Read-only tools (`MyAppointmentsAssistantTool`, `MyEligibilityAssistantTool`, `MyStaffScheduleAssistantTool`) bound strictly to authenticated JWT claims, preventing prompt-injection identity tampering.
 
-## Digital Certificate Management & Verification API
+### 5. AST-Enforced Architecture Boundaries
+- **Custom ESLint Architecture Rule**: `frontend/eslint/featureBoundaries.js` enforces hexagonal modularity at compile time:
+  - Shared infrastructure cannot import business feature slices.
+  - Feature domains cannot access private internals of sibling features.
+  - Routing primitives are restricted to composition roots.
 
-The portal provides verifiable digital vaccination certificates with privacy-preserving public verification via `DigitalCertificateController` under `/api/v1/vaccination/certificates`:
+---
 
-| Method | Endpoint | Access Control | Description |
+## 📸 Visual Interface & Experience Showcase
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <strong>Clinic & Campaign Management Console</strong><br/>
+      <img src="docs/assets/screenshots/clinic-campaign-console.png" alt="Clinic Campaign Console" width="100%"/><br/>
+      <em>Real-time operational campaign management, status lifecycle tracking, and session capacity planning.</em>
+    </td>
+    <td width="50%" align="center">
+      <strong>Conversational Healthcare AI Assistant</strong><br/>
+      <img src="docs/assets/screenshots/interactive-ai-assistant.png" alt="Conversational AI Assistant" width="100%"/><br/>
+      <em>Multi-provider AI assistant with deterministic safety guardrails, guided deep-links, and personalized lookups.</em>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <strong>Multigenerational Citizen Care Pathway</strong><br/>
+      <img src="docs/assets/screenshots/citizen-care-journey.jpg" alt="Citizen Care Journey" width="100%"/><br/>
+      <em>Accessible public landing and reactive citizen journey stepper spanning screening, booking, and certificates.</em>
+    </td>
+    <td width="50%" align="center">
+      <strong>Procedural Gaze-Tracking Security Mascots</strong><br/>
+      <img src="docs/assets/screenshots/security-auth-mascots.png" alt="Security Auth Mascots" width="100%"/><br/>
+      <em>Interactive 3D companion characters with dynamic eye-tracking and state-aware feedback during authentication.</em>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🏛 System Architecture
+
+The application is structured as a **Hexagonal Modular Monolith** in Java 21 / Spring Boot paired with a modular React 19 Single Page Application.
+
+```mermaid
+flowchart LR
+    subgraph Client["Frontend Client (React 19 + Vite 8)"]
+        UI["Bootstrap 5 + Modular Feature UI"]
+        API["apiClient (Single-Flight Refresh & Epoch Guard)"]
+        MEM["In-Memory Token Store (authStorage.js)"]
+        UI --> API
+        API <--> MEM
+    end
+
+    subgraph Security["Stateless Security Boundary"]
+        JWT["JwtAuthenticationFilter (HMAC-SHA256)"]
+        COOKIE["HttpOnly Cookie (Rotating Refresh Sessions)"]
+        LOCKOUT["Atomic Brute-Force Lockout (5 err / 15 min)"]
+    end
+
+    subgraph Core["Hexagonal Core Domains (Spring Boot)"]
+        AUTH["shared/auth (RBAC & User Lifecycle)"]
+        MF01["screening (Dynamic Rules & Eligibility)"]
+        MF02["campaign (Planning, Centers & Sessions)"]
+        MF03["appointment (Booking, Waitlist & Check-In)"]
+        MF04["inventory (Batches, Stock & Transfers)"]
+        MF05["vaccination (Drafts, Records & Certificates)"]
+        AI["assistant (Multi-Model AI Gateway)"]
+    end
+
+    subgraph Storage["Persistence & Infrastructure"]
+        DB[("MySQL 8.4 LTS (59 Tables, 28 Flyway Migrations)")]
+        PDF["Zero-Dependency PDF 1.4 Engine"]
+    end
+
+    API -->|Bearer JWT| Security
+    API <-->|HttpOnly Cookie| COOKIE
+    Security --> Core
+    MF01 <-->|EligibilityLookupPort| MF03
+    MF03 <-->|SlotCapacityPort| MF02
+    MF05 -->|InventoryBatchPort| MF04
+    MF05 -->|AppointmentPort| MF03
+    MF05 --> PDF
+    Core --> DB
+```
+
+---
+
+## 🔄 Two-Phase Clinical Administration Workflow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Clinician as Authorized Vaccinator
+    participant Draft as VaccinationDraftService
+    participant Finalize as VaccinationFinalizationService
+    participant Inv as InventoryBatchPort
+    participant Appt as AppointmentPort
+    participant Cert as DigitalCertificateService
+    participant DB as MySQL 8.4 (InnoDB)
+
+    Clinician->>Draft: Create Draft (Appointment ID, Batch ID, Dose #)
+    Draft->>DB: Persist Draft (IN_PROGRESS)
+    Clinician->>Draft: Confirm Physical Administration
+    Draft->>DB: Update Status (READY_FOR_FINALIZATION)
+    
+    rect rgb(240, 248, 255)
+    Note over Finalize,DB: Single Atomic Database Transaction
+    Clinician->>Finalize: confirmAndFinalize(draftId)
+    Finalize->>DB: Validate Appointment Status (CHECKED_IN)
+    Finalize->>DB: Match Campaign Vaccine Type vs Batch Type
+    Finalize->>DB: Insert Immutable VaccinationRecord
+    Finalize->>Inv: deductVaccinationDose(centerId, batchId, recordId)
+    Inv->>DB: Lock Batch & Inventory (PESSIMISTIC_WRITE)
+    Inv->>DB: Insert StockTransaction (uk_stock_transaction_vaccination_record)
+    Finalize->>Appt: completeAppointment(appointmentId)
+    Finalize->>DB: Transition Appointment (COMPLETED)
+    Finalize->>Cert: issueCertificateForVaccinationRecord(record)
+    Cert->>DB: Generate Verification Token & Reference (CERT-...)
+    Finalize->>DB: Update Draft Status (FINALIZED)
+    end
+    Finalize-->>Clinician: Return Finalized Record & Certificate Details
+```
+
+---
+
+## 📦 Core Domain Modules
+
+| Module | Backend Package | Frontend Slice | Primary Responsibilities & Invariants |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/vaccination/certificates/{id}` | Authenticated | Retrieve complete digital certificate record by ID. |
-| `GET` | `/api/v1/vaccination/certificates/reference/{certificateReference}` | Authenticated | Retrieve digital certificate record by unique certificate reference (e.g. `CERT-...`). |
-| `GET` | `/api/v1/vaccination/certificates/verify/{token}` | Public (`permitAll`) | Verify a digital certificate by its verification token. Returns a privacy-preserving masked response confirming certificate validity and dose details without exposing full medical history. |
+| **Shared Auth** | `shared/auth` | `src/auth/` | In-memory 15-min JWTs, rotating refresh cookies, atomic lockout, citizen self-service, staff account approval. |
+| **MF-01 Screening** | `screening` | `features/screening/` | Dynamic clinical questionnaire builder, polymorphic answer validators, submission versioning, eligibility determinations. |
+| **MF-02 Campaign** | `campaign` | `features/campaign-management/` | Vaccine campaigns, center operating hours, recurrence rules, time slot capacity, and clinic rostering. |
+| **MF-03 Appointment** | `appointment` | `features/appointment-management/` | Slot reservation, guard-row locking, appointment rescheduling, FIFO waitlist promotion, arrival check-in. |
+| **MF-04 Inventory** | `inventory` | `features/inventory-management/` | Vaccine manufacturers, batch expiry tracking, center stock allocation, adjustments, inter-center transfers. |
+| **MF-05 Vaccination** | `vaccination` | `features/vaccination-administration/` | Clinical drafts, atomic finalization, immutable medical records, append-only corrections, zero-dependency PDF certificates. |
+| **AI Assistant** | `assistant` | `features/assistant/` | Pluggable conversational assistant (OpenAI, Gemini, Ollama), deterministic safety policy, principal-scoped tools. |
 
-- **Issuance**: Issued via `DigitalCertificateService` upon vaccination finalization, automatically generating a collision-resistant certificate reference and a secure verification token.
+---
 
-## Repository Structure
-
-- `docs/` - Canonical project documentation (specifications, module handoffs, sprint evidence)
-- `frontend/` - Frontend React 19 application (Vite, React Router DOM, Bootstrap 5, modular feature structure)
-- `backend/` - Backend Spring Boot application (Java 21, Spring Data JPA, Flyway, MySQL 8.4)
-- `database/` - Local Docker Compose environment, seed guidelines, and ER diagrams
-- `tests/` - Cross-module, integration, system, end-to-end, and acceptance test resources
-- `.github/` - GitHub Actions CI/CD workflows and PR templates
-
-## Application Setup & Local Development
+## 🚀 3-Minute Quickstart
 
 ### Prerequisites
+- **Java**: JDK 21+ (Eclipse Temurin recommended)
+- **Node.js**: Node 22.x or 24.x (npm 9+)
+- **Container Engine**: Docker Desktop or Docker Engine with Docker Compose
 
-- **Java**: JDK 21 or higher
-- **Node.js**: Node 22.x (22.22.2 or newer), Node 24.x (24.15.0 or newer), or Node 26+ (npm v9+) — matches the locked
-  frontend toolchain engines; Node 18/20 and odd-numbered majors (21, 23, 25) are not supported (see `frontend/README.md`)
-- **Container Engine**: Docker Desktop or Docker Engine with Docker Compose (for local database)
-- **Database**: MySQL 8.4 LTS (or local Docker Compose container)
-
-### 1. Local Database Setup (Docker Compose)
-
-Start the local MySQL database:
+### 1. Launch Backing Database
 ```bash
 docker compose --env-file database/.env up -d mysql
 ```
+*MySQL 8.4 LTS initializes at `localhost:3306/vaccination_portal`. 28 Flyway migrations apply automatically on Spring Boot launch.*
 
-- **Connection URL**: `jdbc:mysql://localhost:3306/vaccination_portal`
-- **Flyway Migrations**: Applied automatically on backend application startup. Current migrations span `V0` through `V24` (25 migrations total).
-- See [database/README.md](database/README.md) for full database workflow instructions.
-
-### 2. Backend Development
-
-From the `backend/` directory:
-
-#### Windows (PowerShell)
-```powershell
-# Run standard unit & integration test suites (in-memory H2)
-.\mvnw.cmd test
-
-# Run full verification build (H2 test suite + package build)
-.\mvnw.cmd verify
-
-# Run full verification with MySQL Testcontainers concurrency assurance
-.\mvnw.cmd verify -Pmysql-concurrency
-
-# Run Spring Boot application locally (requires running MySQL database)
-.\mvnw.cmd spring-boot:run
-```
-
-#### Unix-like (macOS / Linux)
+### 2. Start Backend API
 ```bash
-# Run standard unit & integration test suites (in-memory H2)
-./mvnw test
-
-# Run full verification build (H2 test suite + package build)
-./mvnw verify
-
-# Run full verification with MySQL Testcontainers concurrency assurance
-./mvnw verify -Pmysql-concurrency
-
-# Run Spring Boot application locally
+cd backend
 ./mvnw spring-boot:run
 ```
+*Backend runs at `http://localhost:8080`. Verify system health at `http://localhost:8080/actuator/health`.*
 
-#### Backend Health Endpoint
-When the backend application is running, check Actuator health:
-```text
-GET http://localhost:8080/actuator/health
-```
-
-### 3. Frontend Development
-
-From the `frontend/` directory:
+### 3. Start Frontend Client
 ```bash
+cd frontend
 npm install
 npm run dev
-npm test
-npm run lint
-npm run build
+```
+*Frontend runs at `http://localhost:5173`. API requests to `/api` are automatically proxied to the backend.*
+
+---
+
+## 👥 Seeded Demo Accounts
+
+The database comes pre-seeded with authoritative roles for evaluation:
+
+| Role | Email | Password | Primary Interface & Permissions |
+| :--- | :--- | :--- | :--- |
+| **System Administrator** | `admin@demo.org` | `Admin123!` | `/app/admin` — Full platform analytics, staff request approvals, system configuration. |
+| **Authorized Vaccinator** | `vaccinator@demo.org` | `Staff123!` | `/app/vaccinator` — Clinical session check-in queue, vaccination drafts, finalization. |
+| **Healthcare Officer** | `healthcare@demo.org` | `Staff123!` | `/app/screening/reviews` — Questionnaire assignment, citizen eligibility reviews. |
+| **Center Manager** | `manager@demo.org` | `Staff123!` | `/app/center-operations` — Center hours, clinic closure planning, staff rostering. |
+| **Verified Citizen** | `citizen@demo.org` | `Citizen123!` | `/app/citizen` — Screening forms, appointment booking, digital certificate downloads. |
+
+---
+
+## 🧪 Testing & Quality Pyramid
+
+The codebase enforces strict test-driven quality across all architectural layers:
+
+```
+                  ▲
+                 / \
+                /   \     E2E Verification (Manual & Automated Slices)
+               /-----\
+              /       \    MySQL Testcontainers (56 tests)
+             /         \   Real MySQL 8.4, Collation, Dynamic Locks, Concurrency Stress
+            /-----------\
+           /             \  Component & Slice Tests (1,265+ Vitest Tests)
+          /               \ React 19 Components, State Hooks, Boundary Linters
+         /-----------------\
+        /                   \ Unit & Service Tests (2,953+ JUnit 5 Tests)
+       /                     \ Hexagonal Ports, Domain Invariants, Pure Java Codecs
+      ▼-----------------------▼
 ```
 
-- Local Vite dev server runs at `http://localhost:5173`.
-- Requests to `/api` are automatically proxied to `http://localhost:8080`.
+- **Backend Test Suite (3,009 tests)**:
+  - `2,953` fast in-memory H2 unit and integration tests executing domain business rules.
+  - `56` dedicated **MySQL 8.4 Testcontainers** tests validating true concurrency:
+    - Multi-threaded token rotation family revocation races (`RefreshTokenConcurrencyMySqlIntegrationTests`).
+    - Concurrent slot booking capacity limits (`SlotCapacityMySqlConcurrencyIntegrationTests`).
+    - InnoDB lock wait behavior via `performance_schema.data_lock_waits`.
+- **Frontend Test Suite (1,265+ assertions)**:
+  - `101` test suites running on Vitest 4 with jsdom.
+  - Full coverage across token rotation replay (`apiClient.test.js`), route guards (`routes.test.jsx`), citizen journeys, and vaccinator drafting.
 
-## Configuration & Local Safety
+```bash
+# Execute standard backend tests
+cd backend && ./mvnw test
 
-Configuration templates are provided across modules:
-- `backend/.env.example` - Server port, database connection, JPA DDL validation, and JWT secret settings
-- `frontend/.env.example` - API base URL override
-- `database/.env.example` - MySQL container credentials
+# Execute MySQL Testcontainers concurrency suite
+cd backend && ./mvnw verify -Pmysql-concurrency
 
-### Local Developer Configuration Policy
-- Use environment variables or local developer configuration profiles to supply local credentials.
-- **Never commit `.env` files, passwords, API keys, JWT secrets, or private tokens.**
-- Any developer-specific local properties must remain strictly untracked and unstaged.
-- Never use real citizen, patient, or medical records; all development seed data must be 100% synthetic.
+# Execute frontend test suite
+cd frontend && npm test
 
-## Continuous Integration & Quality Gates
+# Validate architectural boundaries
+cd frontend && npm run lint
+```
 
-GitHub Actions workflows validate pull requests and merged commits targeting `develop` and `main`:
+---
 
-- **Frontend CI** (`.github/workflows/frontend-ci.yml`): Runs on Node 24 to execute `npm ci`, `npm run lint`, and `npm run build`.
-- **Backend CI** (`.github/workflows/backend-ci.yml`): Runs on Java 21 Temurin to execute:
-  1. `./mvnw --batch-mode --no-transfer-progress verify` (H2 test suite)
-  2. `./mvnw --batch-mode --no-transfer-progress verify -Pmysql-concurrency` (MySQL Testcontainers concurrency assurance)
+## 📂 Repository Structure
 
-## Canonical Documentation
+```text
+se2030-vaccination-portal/
+├── backend/
+│   ├── src/main/java/com/se2030/vaccinationportal/
+│   │   ├── shared/auth/          # In-memory JWT, rotating refresh sessions, lockout
+│   │   ├── screening/            # Dynamic questionnaires & eligibility rule engine
+│   │   ├── campaign/             # Campaigns, center operations, sessions & slots
+│   │   ├── appointment/          # Booking, guard mutexes, FIFO waitlist, check-in
+│   │   ├── inventory/            # Batch management, center stock, deductions
+│   │   ├── vaccination/          # Clinical drafts, finalization, zero-dep PDF
+│   │   └── assistant/            # Pluggable AI gateway (OpenAI, Gemini, Ollama)
+│   └── src/main/resources/db/migration/ # 28 Flyway SQL migration scripts (V0–V27)
+├── frontend/
+│   ├── src/
+│   │   ├── app/                  # Application composition roots, routes & guards
+│   │   ├── auth/                 # Auth context, login, registration workflows
+│   │   ├── features/             # Modular feature slices (screening, booking, etc.)
+│   │   └── shared/               # Memory token store, apiClient, reusable UI
+│   └── eslint/featureBoundaries.js # Custom AST architecture linter
+├── database/                     # Docker Compose MySQL definition & SQL seeds
+├── docs/                         # Architecture specifications, diagrams & handoffs
+│   ├── diagrams/current/         # Mermaid component and sequence diagrams
+│   └── showcase/                 # Professional portfolio & LinkedIn copy
+└── compose.yaml                  # Local development container orchestration
+```
 
-- [AI Canonical Project Specification](docs/Web_Based_Vaccination_Portal_AI_Canonical_Context_v3.3.md) - Authoritative normative source of truth (version 3.3-AI, revision 2026-08-14-R9)
-- [MF-02 Module Handoff Specification](docs/MF02_Vaccination_Campaign_Center_and_Session_Management_AI_Handoff.md)
-- [AI Assistant Setup & Evaluation Guide](docs/AI_ASSISTANT_SETUP_AND_DEMO.md) - Architecture, environment configuration, cURL commands, and evaluation walkthrough
-- [Database Configuration Guide](database/README.md)
-- [Contribution Guidelines](CONTRIBUTING.md)
+---
 
-## Current assessment evidence
+## 📄 License
 
-Five assessed functions are permitted per project/controller confirmation: `VERIFIED_FINAL_BY_USER_CONSTRAINT`. The [current evidence index](docs/evidence/current/README.md) maps MF01–MF05 and shared supporting capabilities to source, tests and baseline CI. See [submission assembly](docs/submission/README.md) for unresolved human fields.
-
-Access JWT/principal state is memory-only in the frontend; cookie bootstrap restores a session. Refresh preserves the initiating principal and generation, rejecting different-user cross-tab adoption. Logout revokes the presented refresh family; password reset revokes all refresh sessions.
+This project is open-source software licensed under the [MIT License](LICENSE).

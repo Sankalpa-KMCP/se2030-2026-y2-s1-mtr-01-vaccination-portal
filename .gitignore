@@ -25,6 +25,7 @@ build/
 target/
 backend/target/
 out/
+output/
 coverage/
 .flattened-pom.xml
 
@@ -94,6 +95,7 @@ testcontainers.log
 .cursor/
 .fleet/
 .zed/
+.zcode/
 
 # Operating system files
 .DS_Store

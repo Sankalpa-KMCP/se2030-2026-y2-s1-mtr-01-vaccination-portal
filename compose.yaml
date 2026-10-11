@@ -1,14 +1,16 @@
 services:
   mysql:
-    image: mysql:8.4.10
+    image: mysql:8.4
     container_name: vaccination-portal-mysql
     restart: unless-stopped
+    env_file:
+      - database/.env
 
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vaccination_portal}
+      MYSQL_USER: ${MYSQL_USER:-vaccination_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-replace_with_local_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-replace_with_local_root_password}
 
     ports:
       - "${MYSQL_PORT:-3306}:3306"
