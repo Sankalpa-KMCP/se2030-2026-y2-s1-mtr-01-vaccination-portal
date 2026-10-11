@@ -56,6 +56,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ActiveProfiles("test")
 class CampaignAssignmentReverseImpactConcurrencyIntegrationTests {
 
+    @org.springframework.boot.test.context.TestConfiguration
+    static class DateClockConfig {
+        @org.springframework.context.annotation.Bean
+        @org.springframework.context.annotation.Primary
+        Clock campaignDateClock() {
+            return Clock.fixed(java.time.Instant.parse("2026-05-01T12:00:00Z"), java.time.ZoneOffset.UTC);
+        }
+    }
+
     @Autowired private VaccinationCampaignService campaignService;
     @Autowired private CampaignCenterAssignmentService assignmentService;
     @Autowired private VaccinationSessionService sessionService;

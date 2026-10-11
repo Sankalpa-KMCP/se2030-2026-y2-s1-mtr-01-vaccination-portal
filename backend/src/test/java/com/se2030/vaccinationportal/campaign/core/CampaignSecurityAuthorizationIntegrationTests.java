@@ -288,7 +288,7 @@ public class CampaignSecurityAuthorizationIntegrationTests {
                         "targetGroupId": %d,
                         "serviceStartDate": "2026-11-01",
                         "serviceEndDate": "2026-11-30",
-                        "bookingOpenAt": "2026-10-01T00:00:00Z",
+                        "bookingOpenAt": "2026-10-20T00:00:00Z",
                         "bookingCloseAt": "2026-10-31T00:00:00Z"
                     }
                     """, vaccine.getId(), targetGroup.getId());
@@ -313,7 +313,7 @@ public class CampaignSecurityAuthorizationIntegrationTests {
                         "targetGroupId": %d,
                         "serviceStartDate": "2026-11-01",
                         "serviceEndDate": "2026-11-30",
-                        "bookingOpenAt": "2026-10-01T00:00:00Z",
+                        "bookingOpenAt": "2026-10-20T00:00:00Z",
                         "bookingCloseAt": "2026-10-31T00:00:00Z"
                     }
                     """, vaccine.getId(), targetGroup.getId());
@@ -339,7 +339,7 @@ public class CampaignSecurityAuthorizationIntegrationTests {
                         "targetGroupId": %d,
                         "serviceStartDate": "2026-11-01",
                         "serviceEndDate": "2026-11-30",
-                        "bookingOpenAt": "2026-10-01T00:00:00Z",
+                        "bookingOpenAt": "2026-10-20T00:00:00Z",
                         "bookingCloseAt": "2026-10-31T00:00:00Z"
                     }
                     """, vaccine.getId(), targetGroup.getId());
